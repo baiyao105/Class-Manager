@@ -1,5 +1,4 @@
 ::coding: gb2312
-::?????,,,
 @echo off
 chcp 936 >nul
 cd /d "%~dp0"
