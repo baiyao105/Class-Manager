@@ -53,8 +53,8 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pyinstaller main.py ^
-            --icon "img/favicon.ico" ^
             -n "main" ^
+            --icon "img/favicon.ico" ^
             --add-data "audio;audio" ^
             --add-data "img;img" ^
             --add-data "ui;ui" ^
