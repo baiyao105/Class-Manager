@@ -37,20 +37,20 @@ jobs:
           cache-dependency-path: |
             **/requirements*.txt
 
+      - name: Init zip Folder
+        run: mkdir zip
+
+      - name: Init temp files
+        run: |
+          xcopy "utils\\bak\\default.py" "utils\\" /Y
+          xcopy "utils\\bak\\login.py" "utils\\" /Y
+
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
           pip install pyinstaller Pillow
 
-      - name: 复制临时文件
-        run: |
-          xcopy "utils\\bak\\default.py" "utils\\" /Y
-          xcopy "utils\\bak\\login.py" "utils\\" /Y
-
-      - name: Create Output Folder
-        run: mkdir zip
-
-      - name: 进行 PyInstaller 编译
+      - name: Build with PyInstaller
         run: |
           pyinstaller main.py ^
             --icon "img/favicon.ico" ^
@@ -69,7 +69,7 @@ jobs:
             --workpath "build" ^
             --noconfirm
 
-      - name: 构建压缩包
+      - name: Package
         run: |
           choco install -y 7zip
           7z a -tzip "zip/ClassManager_Latest_Windows-x64.zip" dist/* -r
