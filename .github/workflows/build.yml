@@ -49,12 +49,17 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pyinstaller Pillow
+          Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.2.2/upx-4.2.2-win64.zip" -OutFile "upx.zip"
+          Expand-Archive -Path "upx.zip" -DestinationPath "upx" -Force
+          Move-Item -Path "upx/upx-4.2.2-win64/upx.exe" -Destination "upx.exe" -Force
+          Remove-Item -Path "upx" -Recurse -Force
+          Remove-Item -Path "upx.zip" -Force
 
       - name: Build with PyInstaller
         run: |
           pyinstaller main.py -w `
           --icon               "img/favicon.ico" `
-          -n                   "main" `
+          -n                   "ClassManager" `
           --contents-directory "." `
           --add-data           "audio;audio" `
           --add-data           "img;img" `
@@ -67,14 +72,41 @@ jobs:
           --hidden-import      "PyQt6.QtWebEngine" `
           --exclude-module     "PyQt5" `
           --exclude-module     "PyQt6" `
+          --exclude-module     "tkinter" `
+          --exclude-module     "matplotlib" `
+          --exclude-module     "numpy.random._examples" `
+          --exclude-module     "numpy.core._dotblas" `
+          --exclude-module     "scipy" `
+          --exclude-module     "PIL._imagingtk" `
+          --exclude-module     "PIL._tkinter_finder" `
+          --exclude-module     "win32com" `
+          --exclude-module     "win32api" `
+          --exclude-module     "win32wnet" `
+          --exclude-module     "IPython" `
+          --exclude-module     "notebook" `
+          --exclude-module     "tornado" `
+          --exclude-module     "zmq" `
+          --exclude-module     "docutils" `
+          --exclude-module     "setuptools" `
+          --exclude-module     "distutils" `
+          --strip `
+          --upx-dir           "." `
+          --clean `
           --distpath           "dist" `
           --workpath           "build" `
           --noconfirm
 
+      - name: Clean Unnecessary Files
+        run: |
+          Remove-Item -Path "dist/ClassManager/audio/video" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "dist/ClassManager/img/demo" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "dist/ClassManager/img/tips" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "dist/ClassManager/ui/*.ui" -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "dist/ClassManager/ui/0-*.bat" -Force -ErrorAction SilentlyContinue
+
       - name: Package
         run: |
-          choco install -y 7zip
-          7z a -tzip "zip/ClassManager_latest_Windows-x64.zip" dist/* -r
+          Compress-Archive -Path "dist/ClassManager/*" -DestinationPath "zip/ClassManager_latest_Windows-x64.zip" -CompressionLevel Optimal -Force
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.4.2
