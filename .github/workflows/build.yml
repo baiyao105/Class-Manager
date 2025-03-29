@@ -42,6 +42,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller Pillow
 
+      - name: 复制临时文件
+        run: |
+          xcopy "utils\\bak\\default.py" "utils\\" /Y
+          xcopy "utils\\bak\\login.py" "utils\\" /Y
+
       - name: Create Output Folder
         run: mkdir zip
 
