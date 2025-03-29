@@ -72,10 +72,17 @@ jobs:
       - name: Package
         run: |
           choco install -y 7zip
-          7z a -tzip "zip/ClassManager_Latest_Windows-x64.zip" dist/* -r
+          7z a -tzip "zip/ClassManager_latest_Windows-x64.zip" dist/* -r
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.4.2
         with:
-          name: windows-x64
+          name: ClassManager_latest_Windows-x64
           path: ./zip
+
+  release:
+    needs: [builder_matrix]
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    uses: ./.github/workflows/release.yml
+    with:
+        run_id: ${{ github.run_id }}
