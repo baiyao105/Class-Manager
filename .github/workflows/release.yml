@@ -9,7 +9,7 @@ on:
         type: string
   push:
     tags:
-      - 'release:*'
+      - 'release/*'
 
 jobs:
   release:
@@ -33,12 +33,21 @@ jobs:
           echo "version=${GITHUB_REF#refs/tags/release/}" >> $GITHUB_OUTPUT
 
       - name: Init Changelog
+        id: init_changelog
         uses: mikepenz/release-changelog-builder-action@v3
         with:
           configuration: |
+            template: |+
+              ## 更新日志 🎉
+              {{ changelog }}
+              **完整更新日志**: {{releaseUrl}}
+            commitMode: "angular"
+            failOnError: false
             exclude:
               labels:
                 - 'skip-changelog'
+                - 'duplicate'
+                - 'invalid'
             categories:
               - title: '🚀 新功能'
                 labels:
@@ -49,23 +58,35 @@ jobs:
                 labels:
                   - 'bug'
                   - 'fix'
+              - title: '⚡ 性能优化'
+                labels:
+                  - 'perf'
+                  - 'performance'
+              - title: '💄 界面优化'
+                labels:
+                  - 'style'
+                  - 'ui'
               - title: '📚 文档更新'
                 labels:
                   - 'docs'
-              - title: '🔧 其他'
-                labels:
-                  - 'chore'
-              - title: '🔧 重构'
+                  - 'documentation'
+              - title: '♻️ 代码重构'
                 labels:
                   - 'refactor'
+              - title: '🔧 其他更新'
+                labels:
+                  - 'chore'
+                  - 'build'
+                  - 'ci'
+                  - 'test'
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: release/${{ steps.get_version.outputs.version }}
           name: 版本 ${{ steps.get_version.outputs.version }}
-          body: ${{ steps.init-changelog.outputs.changelog }}
+          body: ${{ steps.init_changelog.outputs.changelog }}
           prerelease: false
           draft: false
           files: |
-            zip/ClassManager_latest_Windows-x64.zip
+            zip/*.zip

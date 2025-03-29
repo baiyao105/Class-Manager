@@ -80,9 +80,26 @@ jobs:
           name: ClassManager_latest_Windows-x64
           path: ./zip
 
-  release:
-    needs: [builder_matrix]
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
-    uses: ./.github/workflows/release.yml
-    with:
-        run_id: ${{ github.run_id }}
+      - name: Check Commit Message
+        id: check_commit
+        run: |
+          $commit_msg = git log -1 --pretty=%B
+          if ($commit_msg -match '^chore: Release v\d+\.\d+\.\d+(\.[0-9]+)?$') {
+            $version = $commit_msg -replace '^chore: Release (v\d+\.\d+\.\d+(\.[0-9]+)?)$', '$1'
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+            echo "should_release=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "should_release=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Create Release Tag
+        if: steps.check_commit.outputs.should_release == 'true'
+        run: |
+          git tag ${{ steps.check_commit.outputs.version }}
+          git push origin ${{ steps.check_commit.outputs.version }}
+
+      - name: Release
+        if: steps.check_commit.outputs.should_release == 'true'
+        uses: ./.github/workflows/release.yml
+        with:
+          run_id: ${{ github.run_id }}
