@@ -52,22 +52,24 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller main.py `
-            -n "main" `
-            --icon "img/favicon.ico" `
-            --add-data "audio;audio" `
-            --add-data "img;img" `
-            --add-data "ui;ui" `
-            --add-data "utils;utils" `
-            --add-data "LICENSE;." `
-            --add-data "src;src" `
-            --add-data "version;." `
-            --hidden-import "PyQt6.QtWebEngine" `
-            --exclude-module "PyQt5" `
-            --exclude-module "PyQt6" `
-            --distpath "dist" `
-            --workpath "build" `
-            --noconfirm
+          pyinstaller main.py -w `
+          --icon               "img/favicon.ico" `
+          -n                   "main" `
+          --contents-directory "." `
+          --add-data           "audio;audio" `
+          --add-data           "img;img" `
+          --add-data           "ui;ui" `
+          --add-data           "utils;utils" `
+          --add-data           "LICENSE;." `
+          --add-data           "src;src" `
+          --add-data           "version;." `
+          --add-data           "main.py;." `
+          --hidden-import      "PyQt6.QtWebEngine" `
+          --exclude-module     "PyQt5" `
+          --exclude-module     "PyQt6" `
+          --distpath           "dist" `
+          --workpath           "build" `
+          --noconfirm
 
       - name: Package
         run: |
