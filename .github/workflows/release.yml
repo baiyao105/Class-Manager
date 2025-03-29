@@ -1,0 +1,71 @@
+name: 发布版本
+
+on:
+  workflow_call:
+    inputs:
+      run_id:
+        description: 'Get RunID'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'release:*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: zip
+          run_id: ${{ inputs.run_id }}
+
+      - name: Get Version
+        id: get_version
+        run: |
+          echo "version=${GITHUB_REF#refs/tags/release/}" >> $GITHUB_OUTPUT
+
+      - name: Init Changelog
+        uses: mikepenz/release-changelog-builder-action@v3
+        with:
+          configuration: |
+            exclude:
+              labels:
+                - 'skip-changelog'
+            categories:
+              - title: '🚀 新功能'
+                labels:
+                  - 'feat'
+                  - 'feature'
+                  - 'enhancement'
+              - title: '🐛 Bug修复'
+                labels:
+                  - 'bug'
+                  - 'fix'
+              - title: '📚 文档更新'
+                labels:
+                  - 'docs'
+              - title: '🔧 其他'
+                labels:
+                  - 'chore'
+              - title: '🔧 重构'
+                labels:
+                  - 'refactor'
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: release/${{ steps.get_version.outputs.version }}
+          name: 版本 ${{ steps.get_version.outputs.version }}
+          body: ${{ steps.init-changelog.outputs.changelog }}
+          prerelease: false
+          draft: false
+          files: |
+            zip/ClassManager_latest_Windows-x64.zip
