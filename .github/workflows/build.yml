@@ -1,0 +1,76 @@
+name: 构建
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  builder_matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64]
+        os: [windows-latest]
+        exclude: []
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: '3.8.10'
+          architecture: ${{ matrix.arch }}
+          cache: 'pip'
+          cache-dependency-path: |
+            **/requirements*.txt
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller Pillow
+
+      - name: Create Output Folder
+        run: mkdir zip
+
+      - name: 进行 PyInstaller 编译
+        run: |
+          pyinstaller main.py ^
+            --icon "img/favicon.ico" ^
+            -n "main" ^
+            --add-data "audio;audio" ^
+            --add-data "img;img" ^
+            --add-data "ui;ui" ^
+            --add-data "utils;utils" ^
+            --add-data "LICENSE;." ^
+            --add-data "src;src" ^
+            --add-data "version;." ^
+            --hidden-import "PyQt6.QtWebEngine" ^
+            --exclude-module "PyQt5" ^
+            --exclude-module "PyQt6" ^
+            --distpath "dist" ^
+            --workpath "build" ^
+            --noconfirm
+
+      - name: 构建压缩包
+        run: |
+          choco install -y 7zip
+          7z a -tzip "zip/ClassManager_Latest_Windows-x64.zip" dist/* -r
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4.4.2
+        with:
+          name: windows-x64
+          path: ./zip
