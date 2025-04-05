@@ -2,33 +2,22 @@ import time
 import sys
 import traceback
 import os
-import pickle
-import dill as pickle
 import threading
 import ctypes
-from threading import Thread
-from typing import (List, Tuple, Optional, Union, Dict, Any, SupportsIndex, Generic,
-                    Literal, final, overload, TypeVar, Callable, Iterable, Iterator,
-                    Type)
-from collections import OrderedDict
 import datetime
 import copy
 import math
-import pickle
-import dill as pickle
-import inspect
-from queue import Queue
-import platform
-from typing_extensions import Iterable, Mapping
-import inspect
-from typing import Callable
-from queue import Queue
 import random
-import json
+import inspect
+from queue import Queue
 from abc import ABC, abstractmethod
+from types import TracebackType
 from collections import OrderedDict
-from types import TracebackType, FrameType
-import multiprocessing as mp
+from threading import Thread as OrigThread
+from typing import (List, Tuple, Optional, Union, Dict, Any, Generic,
+                    Literal, final, TypeVar, Callable, Iterable, Iterator,
+                    Type)
+from typing_extensions import Mapping
 
 try:
     from utils.consts import log_style
@@ -38,12 +27,12 @@ except ImportError:
 
 
 try:
-    from utils.system import system, SystemLogger
-    from utils.high_precision_operation import HighPrecision
+    from utils.system import SystemLogger
+    # from utils.high_precision_operation import HighPrecision
 except ImportError:
     traceback.print_exc()
-    from system import system, SystemLogger
-    from high_precision_operation import HighPrecision
+    from system import SystemLogger
+    # from high_precision_operation import HighPrecision
 
 from types import TracebackType
 
@@ -95,6 +84,25 @@ if sys.stdout is None:
         sys.stderr = sys.__stderr__
 
 
+def steprange(start:Union[int, float], stop:Union[int, float], step:int) -> List[float]:
+    """生成step步长的从start到stop的列表
+    
+    :param start: 起始值
+    :param stop: 结束值
+    :param step: 步长
+    :return: 从start到stop的列表
+
+    举个例子
+
+    >>> steprange(0, 10, 5)
+    [0, 2.5, 5.0, 7.5, 10]
+    """
+    if (stop - start) % step != 0:
+        return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [stop]
+    else:
+        return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
+
+
 def get_function_namespace(func) -> str:
     """获取函数的命名空间
     
@@ -105,17 +113,17 @@ def get_function_namespace(func) -> str:
     if not hasattr(func, "__module__"):
         try:
             return func.__qualname__
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             try:
                 return func.__name__
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
                 elif isinstance(func, classmethod):
                     return str(func.__func__.__qualname__)
                 try:
                     return func.__class__.__qualname__
-                except BaseException as unused:
+                except BaseException as unused:    # pylint: disable=broad-exception-caught
                     return func.__class__.__name__            
     if module is None:
         module_name = func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
@@ -174,7 +182,7 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
         def __init__(self, value: _cinttype):
             try:
                 value = int(value)
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 value = int(value.value)
 
             self._dtype: _cinttype = dtype
@@ -498,26 +506,9 @@ class Stack(Generic[DT]):
         self.items = []
 
 
-def steprange(start:Union[int, float], stop:Union[int, float], step:int) -> List[float]:
-    """生成step步长的从start到stop的列表
-    
-    :param start: 起始值
-    :param stop: 结束值
-    :param step: 步长
-    :return: 从start到stop的列表
-
-    举个例子
-
-    >>> steprange(0, 10, 5)
-    [0, 2.5, 5.0, 7.5, 10]
-    """
-    if (stop - start) % step != 0:
-        return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [stop]
-    else:
-        return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
 
 
-class Thread(threading.Thread):
+class Thread(OrigThread):
     "自己做的一个可以返回数据的Thread"
 
     def __init__(
@@ -738,13 +729,7 @@ class Object(object):
         "返回这个对象的表达式"
         return f"{self.__class__.__name__}({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})"
         # 我个人认为不要把下划线开头的变量输出出来（不过只以一个下划线开头的还得考虑考虑）
-    
-def utc(precision:int=3):
-    """返回当前时间戳
 
-    :param precision: 精度，默认为3
-    """
-    return int(time.time() * pow(10, precision))
 
 # 初始化日志配置
 logger.remove()
@@ -768,105 +753,9 @@ logger.add(
 )
 
 
-import colorama
 
-colorama.init(autoreset=True)
-class Color:
-    """颜色类（给终端文字上色的）
-    
-    :example:
-    
-    >>> print(Color.RED + "Hello, " + Color.End + "World!")
-    Hello, World!       (红色Hello，默认颜色的World)
-    
-    """
-    RED     =   colorama.Fore.RED
-    "红色"
-    GREEN   =   colorama.Fore.GREEN
-    "绿色"
-    YELLOW  =   colorama.Fore.YELLOW
-    "黄色"
-    BLUE    =   colorama.Fore.BLUE
-    "蓝色"
-    MAGENTA =   colorama.Fore.MAGENTA
-    "品红色"
-    CYAN    =   colorama.Fore.CYAN
-    "青色"
-    WHITE   =   colorama.Fore.WHITE
-    "白色"
-    BLACK   =   colorama.Fore.BLACK
-    "黑色"
-    END     =   colorama.Fore.RESET
-    "着色结束"
-    @staticmethod
-    @final
-    def from_rgb(r:int, g:int, b:int) -> str:
-        "从RGB数值中生成颜色"
-        return f"\033[38;2;{r};{g};{b}m"
 
 log_file = open(LOG_FILE_PATH, "a", buffering=1, encoding="utf-8")
-
-class Mutex:
-    "一个简单的互斥锁"
-    def __init__(self):
-        self.locked = False
-
-    def lock(self):
-        "锁定"
-        if self.locked:
-            raise RuntimeError("互斥锁已经被锁定")
-        self.locked = True
-
-    def unlock(self):
-        "解锁"
-        if not self.locked:
-            raise RuntimeError("互斥锁没有被锁定")
-        self.locked = False
-
-    def __enter__(self):
-        self.lock()
-    
-    def __exit__(self, exc_type:type, exc_val:Exception, exc_tb:traceback.StackSummary):
-        self.unlock()
-
-
-
-class FrameCounter:
-    "帧计数器"
-    def __init__(self, maxcount: Optional[int] = None, timeout: Optional[float] = None):
-        "初始化帧计数器"
-        self.maxcount = maxcount
-        self.timeout = timeout
-        self._c = 0
-        self.running = False
-        
-    @property
-    def _t(self):
-        "获取当前时间戳"
-        return time.time()
-    
-    @property
-    def framerate(self):
-        "获取帧率"
-        if self._c == 0 or not self.running:
-            return 0
-        return self._c / self._t
-
-
-    def start(self):
-        "启动计数器"
-        if self.running:
-            raise RuntimeError("这个计数器已经启动过了！")
-        self._c = 0
-        self.running = True
-        while (self.maxcount is None or self._c < self.maxcount) and (self.timeout is None or time.time() - self._t <= self.timeout) and self.running:
-            self._c += 1
-
-    def stop(self):
-        "停止计数器"
-        self.running = False
-
-
 
 
 
@@ -933,112 +822,114 @@ class Base(Object):
     if log_style == "new":
         @staticmethod
         def log(msg_type:Literal["I", "W", "E", "F", "D", "C"], msg:str, source:str="MainThread"):
-                    """
-                    向控制台和日志输出信息
-                    :param level: 日志级别 (I=INFO, W=WARNING, E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
-                    :param msg: 日志消息
-                    :param source: 日志来源
-                    """
-                    # 如果日志等级太低就不记录
-                    if (msg_type == "D" and Base.log_level not in ("D"))                \
-                            or (msg_type == "I" and Base.log_level not in ("D", "I"))            \
-                            or (msg_type == "W" and Base.log_level not in ("D", "I", "W"))        \
-                            or (msg_type == "E" and Base.log_level not in ("D", "I", "W", "E"))    \
-                            or (msg_type == "F" or msg_type == "C" and Base.log_level not in ("D", "I", "W", "E", "F", "C")):
-                        return
+            """
+            向控制台和日志输出信息
+            :param level: 日志级别 (I=INFO, W=WARNING, E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
+            :param msg: 日志消息
+            :param source: 日志来源
+            """
+            # 如果日志等级太低就不记录
+            if (msg_type == "D" and Base.log_level not in ("D"))                \
+                    or (msg_type == "I" and Base.log_level not in ("D", "I"))            \
+                    or (msg_type == "W" and Base.log_level not in ("D", "I", "W"))        \
+                    or (msg_type == "E" and Base.log_level not in ("D", "I", "W", "E"))    \
+                    or (msg_type == "F" or msg_type == "C" and 
+                        Base.log_level not in ("D", "I", "W", "E", "F", "C")):
+                return
 
-                    if not isinstance(msg, str):
-                        msg = msg.__repr__()
-                    for m in msg.splitlines():
-                        if not m.strip():
-                            continue
-                        frame = inspect.currentframe()
-                        file = frame.f_back.f_code.co_filename.replace(cwd, "")
-                        if file == "<string>":
-                            lineno = 0
-                        if file.startswith(("/", "\\")):
-                            file = file[1:]
-                        frame = inspect.currentframe()
-                        caller_frame = frame.f_back
-                        # caller_function = caller_frame.f_code.co_name
-                        # 如果不是从SystemLogger的function回调中调用的，才使用loguru记录日志
-                        # if not (caller_function == 'write' or caller_function == 'writelines'):
-                        log_level = {
-                            "I": "INFO",
-                            "W": "WARNING",
-                            "E": "ERROR",
-                            "F": "CRITICAL",
-                            "C": "CRITICAL",
-                            "D": "DEBUG"
-                        }.get(msg_type, "INFO")
+            if not isinstance(msg, str):
+                msg = repr(msg)
+            for m in msg.splitlines():
+                if not m.strip():
+                    continue
+                frame = inspect.currentframe()
+                file = frame.f_back.f_code.co_filename.replace(cwd, "")
+                if file == "<string>":
+                    lineno = 0
+                if file.startswith(("/", "\\")):
+                    file = file[1:]
+                frame = inspect.currentframe()
+                caller_frame = frame.f_back
+                # caller_function = caller_frame.f_code.co_name
+                # 如果不是从SystemLogger的function回调中调用的，才使用loguru记录日志
+                # if not (caller_function == 'write' or caller_function == 'writelines'):
+                log_level = {
+                    "I": "INFO",
+                    "W": "WARNING",
+                    "E": "ERROR",
+                    "F": "CRITICAL",
+                    "C": "CRITICAL",
+                    "D": "DEBUG"
+                }.get(msg_type, "INFO")
 
-                        # 避免日志套娃，只在loguru中记录一次
+                # 避免日志套娃，只在loguru中记录一次
 
-                        # 据我所知，用python的dict.get好像会比if-else慢一点，可以试着考虑改回来
+                # 据我所知，用python的dict.get好像会比if-else慢一点，可以试着考虑改回来
 
-                        # 其实不需要考虑这些，只要一开始就给log写到原始输出而不是sys.stdout就行了
-                        filename = (caller_frame.f_code.co_filename)
-                        file_basename = os.path.basename(filename)
-                        # func_name = caller_frame.f_code.co_name
-                        lineno = caller_frame.f_lineno
-                        logger.bind(file=file_basename, 
-                                    source=source, 
-                                    lineno=lineno, 
-                                    full_file=file, 
-                                    source_with_lineno=f"{source}:{lineno}").log(log_level, m)
-                        short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
-                        Base.short_log_info.append(short_info)
-                        short_info = short_info[-Base.short_log_keep_length:]
-                        Base.logged_count += 1
+                # 其实不需要考虑这些，只要一开始就给log写到原始输出而不是sys.stdout就行了
+                filename = caller_frame.f_code.co_filename
+                file_basename = os.path.basename(filename)
+                # func_name = caller_frame.f_code.co_name
+                lineno = caller_frame.f_lineno
+                logger.bind(file=file_basename, 
+                            source=source, 
+                            lineno=lineno, 
+                            full_file=file, 
+                            source_with_lineno=f"{source}:{lineno}").log(log_level, m)
+                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
+                Base.short_log_info.append(short_info)
+                short_info = short_info[-Base.short_log_keep_length:]
+                Base.logged_count += 1
     else:
         @staticmethod
         def log(msg_type:Literal["I", "W", "E", "F", "D", "C"], msg:str, source:str="MainThread"):
-                """
-                向控制台和日志输出信息
+            """
+            向控制台和日志输出信息
 
-                :param type: 类型
-                :param msg: 信息
-                :param send: 发送者
-                :return: None
-                """
-                if not isinstance(msg, str):
-                    msg = msg.__repr__()
-                for m in msg.splitlines():
-                    if msg_type == "I":
-                        color = Color.GREEN
-                    elif msg_type == "W":
-                        color = Color.YELLOW
-                    elif msg_type == "E":
-                        color = Color.RED
-                    elif msg_type == "F" or msg_type == "C":
-                        color = Color.MAGENTA
-                    elif msg_type == "D":
-                        color = Color.CYAN
-                    else:
-                        color = Color.WHITE
-                    
-                    if not m.strip():
-                        continue
-                    frame = inspect.currentframe()
-                    lineno = frame.f_back.f_lineno
-                    file = frame.f_back.f_code.co_filename.replace(cwd, "")
-                    if file == "<string>":
-                        lineno = 0
-                    if file.startswith(("/", "\\")):
-                        file = file[1:]
-                    cm = f"{Color.BLUE}{Base.gettime()}{Color.END} {color}{msg_type}{Color.END} {Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}"
-                    # lm = f"{Base.gettime()} {msg_type} {(source).ljust(35)} {m}" 
-                    lfm = f"{Base.gettime()} {msg_type} {(source + f' -> {file}:{lineno}').ljust(60)} {m}"
-                    # Base.window_log_queue.put(lm)
-                    Base.console_log_queue.put(cm)
-                    Base.logfile_log_queue.put(lfm)
-                    # Base.log_file.write(lfm + "\n")
-                    # print(lfm, file=Base.fast_log_file)2
-                    # Base.log_file.flush()
-                    short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
-                    Base.short_log_info.append(short_info)
-                    Base.short_log_info = Base.short_log_info[-Base.short_log_keep_length:]
-                    Base.logged_count += 1
+            :param type: 类型
+            :param msg: 信息
+            :param send: 发送者
+            :return: None
+            """
+            if not isinstance(msg, str):
+                msg = repr(msg)
+            for m in msg.splitlines():
+                if msg_type == "I":
+                    color = Color.GREEN
+                elif msg_type == "W":
+                    color = Color.YELLOW
+                elif msg_type == "E":
+                    color = Color.RED
+                elif msg_type == "F" or msg_type == "C":
+                    color = Color.MAGENTA
+                elif msg_type == "D":
+                    color = Color.CYAN
+                else:
+                    color = Color.WHITE
+                
+                if not m.strip():
+                    continue
+                frame = inspect.currentframe()
+                lineno = frame.f_back.f_lineno
+                file = frame.f_back.f_code.co_filename.replace(cwd, "")
+                if file == "<string>":
+                    lineno = 0
+                if file.startswith(("/", "\\")):
+                    file = file[1:]
+                cm = f"{Color.BLUE}{Base.gettime()}{Color.END} {color}{msg_type}{Color.END} {Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}"
+                # lm = f"{Base.gettime()} {msg_type} {(source).ljust(35)} {m}" 
+                lfm = f"{Base.gettime()} {msg_type} {(source + f' -> {file}:{lineno}').ljust(60)} {m}"
+                # Base.window_log_queue.put(lm)
+                # Base.console_log_queue.put(cm)
+                print(cm, file=Base.stdout_orig)
+                Base.logfile_log_queue.put(lfm)
+                # Base.log_file.write(lfm + "\n")
+                # print(lfm, file=Base.fast_log_file)2
+                # Base.log_file.flush()
+                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
+                Base.short_log_info.append(short_info)
+                Base.short_log_info = Base.short_log_info[-Base.short_log_keep_length:]
+                Base.logged_count += 1
 
 
     @staticmethod
@@ -1063,20 +954,14 @@ class Base(Object):
         "停止所有日志记录器"
         Base.logger_running = False
 
-    console_log_thread = Thread(target=lambda: Base.log_thread_console(), daemon=True, name="ConsoleLogger")
+    console_log_thread = Thread(target=lambda: Base.log_thread_console(), # pylint: disable=unnecessary-lambda
+                                daemon=True, name="ConsoleLogger")
     "把日志写在终端的线程的线程对象"
-    logfile_log_thread = Thread(target=lambda: Base.log_thread_logfile(), daemon=True, name="FileLogger")
+    logfile_log_thread = Thread(target=lambda: Base.log_thread_logfile(), # pylint: disable=unnecessary-lambda
+                                daemon=True, name="FileLogger")
     "把日志写进日志文件的线程的线程对象"
 
 
-
-
-    @staticmethod
-    def stop_loggers():
-        "停止所有日志记录器"
-        Base.logger_running = False
-
-    from abc import abstractmethod
     abstract = abstractmethod
     "抽象方法"
 
@@ -1085,7 +970,8 @@ class Base(Object):
         "清理日志文件"
         if not os.path.exists("log/"):
             return
-        log_files = sorted([f for f in os.listdir(os.path.dirname(LOG_FILE_PATH)) if f.startswith("ClassManager_") and f.endswith(".log")], reverse=True)
+        log_files = sorted([f for f in os.listdir(os.path.dirname(LOG_FILE_PATH)) 
+                            if f.startswith("ClassManager_") and f.endswith(".log")], reverse=True)
         for f in log_files[keep_amount:]:
             os.remove(os.path.join(os.path.dirname(LOG_FILE_PATH), f))
     
@@ -1113,10 +999,19 @@ class Base(Object):
         Base.log(level, "\n".join(format_exc_like_java(exc)), sender)
 
     @staticmethod
-    def log_exc_short(info:str="未知错误：", 
-                        sender="MainThread -> Unknown", 
-                        level:Literal["I", "W", "E", "F", "D", "C"]="W", 
+    def log_exc_short(info:str="未知错误：",
+                        sender="MainThread -> Unknown",
+                        level:Literal["I", "W", "E", "F", "D", "C"]="W",
                         exc:Exception=None):
+        """
+        向控制台和日志报错，但是相对精简，格式为[ERROR_TYPE] INFO
+        
+        :param info: 信息
+        :param sender: 发送者
+        :param level: 级别
+        :param exc: 指定的Exception，可以不传（就默认是最近发生的一次）
+        :return: None
+        """
         if exc is None:
             exc = sys.exc_info()[1]
             if exc is None:
@@ -1278,7 +1173,7 @@ class OrderedKeyList(list, Iterable[_Template]):
             for k, v in objects.items():
                 if getattr(v, self.keyattr) != k:
                     Base.log("W", F"模板在dict中的key（{k!r}）与模板本身的（{getattr(v, self.keyattr)!r}）不一致，"
-                                    "已自动修正为dict中的key", "OrderedTemplateGroup.__init__")
+                                    "已自动修正为dict中的key", "OrderedKeyList.__init__")
                     setattr(v, self.keyattr, k)
                 self.append(v)
         elif isinstance(objects, OrderedKeyList):
@@ -1289,7 +1184,7 @@ class OrderedKeyList(list, Iterable[_Template]):
                 if getattr(v, self.keyattr) in keys:
                     if not self.allow_dumplicate:
                         raise ValueError(F"模板的key（{getattr(v, self.keyattr)!r}）重复")
-                    Base.log("W", F"模板的key（{getattr(v, self.keyattr)!r}）重复，补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}", "OrderedTemplateGroup.__init__")
+                    Base.log("W", F"模板的key（{getattr(v, self.keyattr)!r}）重复，补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}", "OrderedKeyList.__init__")
                     setattr(v, self.keyattr, getattr(v, self.keyattr) + self.dumplicate_suffix)
                 keys.append(getattr(v, self.keyattr))
                 self.append(v)
@@ -1376,7 +1271,7 @@ class OrderedKeyList(list, Iterable[_Template]):
         if getattr(obj, self.keyattr) in self.keys():
             if not self.allow_dumplicate:  # 如果不允许重复直接抛出异常
                 raise ValueError(F"模板的key（{getattr(obj, self.keyattr)!r}）重复")
-            Base.log("W", F"模板的key（{getattr(obj, self.keyattr)!r}）重复，补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}", "OrderedTemplateGroup.append")
+            Base.log("W", F"模板的key（{getattr(obj, self.keyattr)!r}）重复，补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}", "OrderedKeyList.append")
             setattr(obj, self.keyattr, getattr(obj, self.keyattr) + self.dumplicate_suffix)
         super().append(obj)
         return self
@@ -1418,7 +1313,7 @@ class OrderedKeyList(list, Iterable[_Template]):
 
     def __repr__(self) -> str:
         "返回列表的表达式"
-        return F"OrderedTemplateGroup({super().__repr__()})"
+        return F"OrderedKeyList({super().__repr__()})"
 
 try:
     Base.clear_oldfile()

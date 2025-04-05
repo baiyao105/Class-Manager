@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QPushButton, QGraphicsOpacityEffect, QWidget, QMes
 from PySide6.QtWidgets import QListWidget, QMainWindow, QVBoxLayout, QListWidgetItem
 from PySide6.QtWidgets import QMainWindow, QLabel
 from typing            import Union, Tuple, Optional, Callable, List
-from utils.classdtypes import Base, Thread
+from utils.classdtypes import Base
 from utils.classdtypes import Student, Group
 from utils.settings    import SettingsInfo
 from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar

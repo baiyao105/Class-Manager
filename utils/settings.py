@@ -73,10 +73,14 @@ class SettingsInfo:
             Base.log("I", f"保存设置到{file_path}", "SettingsInfo.save_to")
             if not os.path.isdir(os.path.dirname(file_path)):
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            os.remove(file_path) if os.path.exists(file_path) else None
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except (FileNotFoundError, PermissionError) as e:
+                    Base.log_exc("删除旧设置文件失败", "SettingsInfo.save_to", exc=e)
             try:
                 pickle.dump(self, open(file_path, "wb"))
-            except Exception as e:
+            except (OSError, pickle.PickleError, EOFError) as e:
                 Base.log_exc("保存设置失败", "SettingsInfo.save_to", exc=e)
             return self
 

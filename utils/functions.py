@@ -1,13 +1,37 @@
+"""
+函数功能模块
+"""
+
+import sys
+import functools
+from threading import Thread
+from typing import Literal, Union, List
+
 import cv2
 import pygame
-import sys
-import time
-import functools
 from PySide6.QtGui import QPixmap, QImage
-from PySide6.QtWidgets import QMessageBox
-from typing import Callable, Literal
-from threading import Thread
+
 from utils.basetypes import Base
+
+def steprange(start: Union[int, float], stop: Union[int, float], step:int) -> List[float]:
+    """生成step步长的从start到stop的列表
+    
+    :param start: 起始值
+    :param stop: 结束值
+    :param step: 步长
+    :return: 从start到stop的列表
+
+    举个例子
+
+    >>> steprange(0, 10, 5)
+    [0, 2.5, 5.0, 7.5, 10]
+    """
+    if (stop - start) % step != 0:
+        return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [stop]
+    else:
+        return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
+
+
 def addrof(obj) -> str:
     """获取对象的内存地址
     
@@ -54,7 +78,7 @@ def repeat(count):
     return executor
 
 
-nl = "\n"
+NL = "\n"
 """换行符常量，用于在格式化字符串中插入换行"""
 
 
@@ -69,7 +93,8 @@ def play_sound(filename, volume=1):
     :param filename: 声音文件路径
     :param volume: 音量大小，范围0.0-1.0
     """
-    Thread(target=_play_sound, args=(filename, volume), daemon=True, name="SoundPlayerThread").start()
+    Thread(target=_play_sound, args=(filename, volume),
+            daemon=True, name="SoundPlayerThread").start()
 
 def _play_sound(filename, volume=1, loop:int=0, fade_ms:int=0):
     """内部函数：实际播放声音的实现
@@ -83,7 +108,7 @@ def _play_sound(filename, volume=1, loop:int=0, fade_ms:int=0):
         sound = pygame.mixer.Sound(filename)
         sound.set_volume(volume)
         sound.play(loops=loop, fade_ms=fade_ms)
-    except BaseException as unused:
+    except (OSError, pygame.error) as unused:    # pylint: disable=unused-variable
         Base.log_exc("播放声音失败")
 
 
@@ -100,7 +125,7 @@ def play_music(filename:str, volume:float=0.5, loop:int=0, fade_ms:int=0):
         pygame.mixer.music.load(filename)
         pygame.mixer.music.set_volume(volume)
         pygame.mixer.music.play(loops=loop, fade_ms=fade_ms)
-    except BaseException as unused:
+    except (OSError, pygame.error) as unused:    # pylint: disable=unused-variable
         Base.log_exc("播放音乐失败")
 
 def stop_music():
@@ -120,7 +145,7 @@ def canbe(value, _class:type):
     try:
         _class(value)
         return True
-    except BaseException as unused:
+    except Exception as unused: # pylint: disable=unused-argument, broad-exception-caught
         return False
 
 
@@ -156,12 +181,13 @@ def pass_exceptions(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught, broad-exception-caught
             Base.log_exc(f"执行函数{repr(func.__name__)}时捕获到异常", f"pass_exceptions -> {func.__name__}")
 
     return wrapper
 
 def exc_info_short(desc:str="出现了错误：", level:Literal["I", "W", "E"]="E"):
     "简单报一句错"
-    Base.log(level, f"{desc}  [{sys.exc_info()[1].__class__.__name__}] {sys.exc_info()[1].args[0] if sys.exc_info()[1].args else ''}")
-
+    Base.log(level, f"{desc}  "
+                    f"[{sys.exc_info()[1].__class__.__name__}] "
+                    f"{sys.exc_info()[1].args[0] if sys.exc_info()[1].args else ''}")
