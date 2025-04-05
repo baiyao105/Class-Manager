@@ -1,6 +1,29 @@
-from utils.basetypes import * # 导入所有基础类型(lazy)
+"""
+班级数据类型
+"""
+
 
 import base64
+import random
+import copy
+import time
+import json
+import traceback
+from typing import (
+    Union, TypeVar, Generic, Optional, Dict, Any,
+    Callable, Type, Literal, Tuple, List, overload,
+    Iterable)
+
+
+import pickle           # pylint: disable=unused-import
+import dill as pickle   # pylint: disable=shadowed-import
+
+
+from utils.basetypes import (
+    Base, SupportsKeyOrdering, Object,
+    OrderedKeyList, Stack, Queue,
+    debug, inf, utc
+)
 
 def get_random_template(templates: "OrderedKeyList[ClassObj.ScoreModificationTemplate]"):
 
@@ -24,13 +47,17 @@ def get_random_template(templates: "OrderedKeyList[ClassObj.ScoreModificationTem
 
         所以``OrderedKeyList``的类型标注和Iterable是一个道理，
 
-        ``OrderedKeyList[ScoreModificationTemplate]``的意思就是这个``OrderedKeyList``里面包含的全部都是``ScoreModificationTemplate``
+        ``OrderedKeyList[ScoreModificationTemplate]``的意思
+        
+        就是这个``OrderedKeyList``里面包含的全部都是``ScoreModificationTemplate``
 
         迭代出来的自然也就全都是``ScoreModificationTemplate``了
 
         还有，直接用python自带的类型（比如``list[ScoreModificationTemplate]``这种）去写方括号的类型标注是不行的，会报错
 
-        但是可以``from typing import List``，然后写``List[ScoreModificationTemplate]``，这样就可以表示一个``ScoreModififaction``的列表了
+        但是可以``from typing import List``，然后写``List[ScoreModificationTemplate]``
+        
+        这样就可以表示一个``ScoreModififaction``的列表了
 
 
 
@@ -49,10 +76,10 @@ def get_random_template(templates: "OrderedKeyList[ClassObj.ScoreModificationTem
     return random.choice(templates)
 
 
-ClassDataType = Union["Student", "Class", "Group", 
-                     "AttendanceInfo", 
+ClassDataType = Union["Student", "Class", "Group",
+                     "AttendanceInfo",
                       "ScoreModification", "ScoreModificationTemplate",
-                      "Achievement", "AchievementTemplate", 
+                      "Achievement", "AchievementTemplate",
                       "DayRecord"]
 
 
@@ -61,9 +88,9 @@ _UT = TypeVar("_UT")
 
 class UUIDKind(Generic[_UT], str):
     "uuid类型, UUIDKind[Student]代表这个uuid可以加载出一个学牲"
-    def __init__(self, uuid: str, type: ClassDataType):
+    def __init__(self, uuid: str, data_type: ClassDataType):
         self.uuid = uuid
-        self.type_name = type.chunk_type_name
+        self.type_name = data_type.chunk_type_name
     def __hash__(self):
         return hash(self.uuid)
     def __eq__(self, other):
@@ -74,10 +101,7 @@ class UUIDKind(Generic[_UT], str):
         return self.uuid
 
 
-
-    
-
-class ClassObj(Base):     
+class ClassObj(Base):
     "班级数据对象"
 
     archive_uuid: Optional[str] = None
@@ -85,7 +109,8 @@ class ClassObj(Base):
 
     class OpreationError(Exception):"修改出现错误。"
 
-    LoadUUID: Callable[[UUIDKind[ClassDataType], Type[ClassDataType], Optional[UUIDKind["History"]]], ClassDataType]
+    LoadUUID: Callable[[UUIDKind[ClassDataType], Type[ClassDataType],
+                    Optional[UUIDKind["History"]]], ClassDataType]
     "加载uuid的函数，传入一个uuid和数据类型，返回一个ClassDataType，在utils.dataloader里面实现"
 
 
@@ -115,23 +140,24 @@ class ClassObj(Base):
             "返回一个空学生"
             return Student("dummy", 0, 0.0, "dummy")
 
-        def __init__(self, 
-                    name:                     str, 
-                    num:                      int, 
-                    score:                    float, 
-                    belongs_to:               str, 
-                    history:                  Dict[Any, "ClassObj.ScoreModification"] = None, 
+        def __init__(self,
+                    name:                     str,
+                    num:                      int,
+                    score:                    float,
+                    belongs_to:               str,
+                    history:                  Dict[Any, "ClassObj.ScoreModification"] = None,
                     last_reset:               Optional[float]                = None,
-                    highest_score:            float                          = 0.0, 
+                    highest_score:            float                          = 0.0,
                     lowest_score:             float                          = 0.0,
-                    achievements:             Dict[int, "ClassObj.Achievement"]       = None, 
+                    achievements:             Dict[int, "ClassObj.Achievement"]       = None,
                     total_score:              float                          = None,
-                    highest_score_cause_time: float                          = 0.0, 
+                    highest_score_cause_time: float                          = 0.0,
                     lowest_score_cause_time:  float                          = 0.0,
                     belongs_to_group:         Optional[str]                  = None,
-                    last_reset_info:          Optional["ClassObj.Student"]            = None):
-            
-            """一个学生。
+                    last_reset_info:          Optional["ClassObj.Student"]   = None):
+
+            """
+            一个学生。
 
             :param name: 姓名
             :param num: 学号
@@ -156,18 +182,18 @@ class ClassObj(Base):
             self._belongs_to:str = belongs_to
             self._highest_score:float = highest_score
             self._lowest_score:float = lowest_score
-            self._total_score:float = total_score if total_score is not None else score
+            self._total_score:float = total_score or score
             self.last_reset = last_reset
             "分数上次重置的时间"
             self._highest_score_cause_time = highest_score_cause_time
             self._lowest_score_cause_time = lowest_score_cause_time
-            self.history:      Dict[int, "ClassObj.ScoreModification"] = history if history is not None else {}
+            self.history: Dict[int, "ClassObj.ScoreModification"] = history or {}
             "历史记录， key为时间戳（utc*1000）"
-            self.achievements: Dict[int, "ClassObj.Achievement"] = achievements if achievements is not None else {}
+            self.achievements: Dict[int, "ClassObj.Achievement"] = achievements or {}
             "所获得的所有成就， key为时间戳（utc*1000）"
             self.belongs_to_group = belongs_to_group
             "所属小组"
-            self._last_reset_info = None if last_reset_info is None else last_reset_info
+            self._last_reset_info = last_reset_info
             "上次重置的信息"
             self.archive_uuid = ClassObj.archive_uuid
             "归档uuid"
@@ -176,57 +202,54 @@ class ClassObj(Base):
         @property
         def last_reset_info(self):
             "上次重置的信息"
-            return self._last_reset_info if self._last_reset_info is not None else DummyStudent()
-        
+            return self._last_reset_info if self._last_reset_info is not None else dummy_student()
+
         @last_reset_info.setter
         def last_reset_info(self, value):
             self._last_reset_info = value
 
 
-        
+
         @property
         def highest_score(self):
             "最高分"
             return float(self._highest_score)
-        
+
         @highest_score.setter
         def highest_score(self, value):
             # Base.log("D", f"{self.name} 更改最高分：{self._highest_score} -> {value}")
             self._highest_score = self.score_dtype(value)
-        
+
         @property
         def lowest_score(self):
             "最低分"
             return float(self._lowest_score)
-        
+
         @lowest_score.setter
         def lowest_score(self, value):
-            # Base.log("D", f"{self.name} 更改最低分：{self._lowest_score} -> {value}")
             self._lowest_score = self.score_dtype(value)
-        
+
 
         @property
         def highest_score_cause_time(self):
             "最高分对应时间"
             return self._highest_score_cause_time
-        
+
         @highest_score_cause_time.setter
         def highest_score_cause_time(self, value):
-            # Base.log("D", f"{self.name} 更改最高分对应时间：{self._highest_score_cause_time} -> {value}")
             self._highest_score_cause_time = value
 
         @property
         def lowest_score_cause_time(self):
             "最低分对应时间"
             return self._lowest_score_cause_time
-        
+
         @lowest_score_cause_time.setter
         def lowest_score_cause_time(self, value):
-            # Base.log("D", f"{self.name} 更改最低分对应时间：{self._lowest_score_cause_time} -> {value}")
             self._lowest_score_cause_time = value
 
 
-        
+
         def __repr__(self):
             return (
     F"Student(name={self._name.__repr__()}, " +
@@ -247,21 +270,19 @@ class ClassObj(Base):
         def name(self):
             "学生的名字。"
             return self._name
-        
+
         @name.setter
         def name(self, val):
-            # Base.log("W", f"正在尝试更改学号为{self._num}的学生的姓名：由\"{self._name}\"更改为\"{val}\"", "Student.name.setter")
             if len(val) >= 50:
                 Base.log("E", f"更改名字失败：不是谁名字有{len(val)}个字啊？？？？", "Student.name.setter")
                 raise ClassObj.OpreationError(f"请求更改的名字\"{val}\"过长")
             self._name = val
-            # Base.log("I","更改完成！","Student.name.setter")
 
         @name.deleter
         def name(self):
             Base.log("E","错误：用户尝试删除学生名","Student.num.deleter")
             raise ClassObj.OpreationError("不允许删除学生的名字")
-        
+
 
         @property
         def num(self):
@@ -281,7 +302,7 @@ class ClassObj(Base):
         def num(self):
             Base.log("E","错误：用户尝试删除学号（？？？？）","Student.name.deleter")
             raise ClassObj.OpreationError("不允许删除学生的学号")
-        
+
         @property
         def score(self):
             "学生的分数，操作时仅保留1位小数。"
@@ -289,24 +310,18 @@ class ClassObj(Base):
 
         @score.setter
         def score(self, val:float):
-            # logstr = f"""正在尝试更改学号为{self.name}的学生的分数：由{self.score}更改为{val}（{f"上升{val-self.score:.1f}分" if val >= self.score else f"下降{(val-self.score)*-1:.1f}分"}）"""
             self.total_score += val - self.score
-            # if abs(val-self.score) >= 1145:
-                # logstr += "; 涉及到大分数操作，请注意此处"
             self._score = self.score_dtype(round(val, 1))
             if self.score > self.highest_score:
                 self.highest_score = self.score
-                # logstr += "; 刷新新高分！"
             if self.score < self.lowest_score:
                 self.lowest_score = self.score
-                # logstr += "; 刷新新低分！（不应该是件好事？）"
-            # Base.log("D", logstr, "Student.score.setter")
 
         @score.deleter
         def score(self):
             Base.log("E","错误：用户尝试删除分数（？？？？）","Student.score.deleter")
             raise ClassObj.OpreationError("不允许直接删除学生的分数")
-        
+
         @property
         def belongs_to(self):
             "学生归属班级。"
@@ -322,34 +337,36 @@ class ClassObj(Base):
             Base.log("E","错误：用户尝试删除班级（？？？？？？？）","Student.belongs_to.deleter")
             raise ClassObj.OpreationError("不允许直接删除学生的班级")
 
-
         @property
         def total_score(self):
-            return round(self._total_score, 1) if isinstance(self._total_score, float) else round(float(self._total_score), 1)
-        
+            "学生总分数。"
+            return round(self._total_score, 1) if isinstance(self._total_score, float) \
+                else round(float(self._total_score), 1)
+
         @total_score.setter
         def total_score(self, value):
             self._total_score = self.score_dtype(value)
 
-
-        def reset_score(self) -> Tuple[float, float, float, Dict[int, "ClassObj.ScoreModification"]]:
+        def reset_score(self) -> Tuple[float, float, float,
+                                    Dict[int, "ClassObj.ScoreModification"]]:
             """重置学生分数。
-            
-            :return: Tuple[当前分数, 历史最高分, 历史最低分, Dict[分数变动时间utc*1000, 分数变动记录], Dict[成就达成时间utc*1000, 成就]"""
+
+            :return: Tuple[当前分数, 历史最高分, 历史最低分, 
+            Dict[分数变动时间utc*1000, 分数变动记录], Dict[成就达成时间utc*1000, 成就]"""
             Base.log("W", f"  -> 重置{self.name} ({self.num})的分数")
 
             returnval = (float(self.score), float(self.highest_score),
                         float(self.lowest_score), dict(self.history))
             self.score = 0.0
             self.highest_score = 0.0
-            self.lowest_score = 0.0 
-            self.highest_score_cause_time = 0.0 
-            self.lowest_score_cause_time = 0.0 
+            self.lowest_score = 0.0
+            self.highest_score_cause_time = 0.0
+            self.lowest_score_cause_time = 0.0
             self.last_reset = time.time()
             self.history:Dict[int, ClassObj.ScoreModification] = dict()
             self.achievements = dict()
             return returnval
-        
+
 
         def reset_achievements(self) -> Dict[int, "ClassObj.Achievement"]:
             """重置学生成就。
@@ -360,13 +377,15 @@ class ClassObj(Base):
             self.achievements = dict()
             return returnval
 
-        def reset(self, reset_achievments:bool=True) -> Tuple[float, float, float, 
-                                                Dict[int, "ClassObj.ScoreModification"], Optional[Dict[int, "ClassObj.Achievement"]]]:
+        def reset(self, reset_achievments:bool=True) -> Tuple[float, float, float,
+                                        Dict[int, "ClassObj.ScoreModification"],
+                                        Optional[Dict[int, "ClassObj.Achievement"]]]:
             """重置学生分数和成就。
                 这个操作会更新学生的last_reset_info属性，以记录重置前的分数和成就。
             
             :param reset_achievments: 是否重置成就
-            :return: Tuple[当前分数, 历史最高分, 历史最低分, Dict[分数变动时间utc*1000, 分数变动记录], Dict[成就达成时间utc*1000, 成就]"""
+            :return: Tuple[当前分数, 历史最高分, 历史最低分, 
+            Dict[分数变动时间utc*1000, 分数变动记录], Dict[成就达成时间utc*1000, 成就]"""
             self.last_reset_info = copy.deepcopy(self)
             score, highest, lowest, history = self.reset_score()
             achievements = None
@@ -381,37 +400,42 @@ class ClassObj(Base):
             :param class_obs: 班级侦测器
             :return: Group对象"""
             return class_obs.classes[self._belongs_to].groups[self.belongs_to_group]
-        
+
         def get_dumplicated_ranking(self, class_obs: "ClassStatusObserver") -> int:
             """获取学生在班级中计算重复名次的排名。
 
             :param class_obs: 班级侦测器
             :return: 排名"""
             if self._belongs_to != class_obs.class_id:
-                raise ValueError(f"但是从理论层面来讲你不应该把{repr(class_obs.class_id)}的侦测器给一个{repr(self._belongs_to)}的学生")
-            
+                raise ValueError("但是从理论层面来讲"
+                                f"你不应该把{repr(class_obs.class_id)}的侦测器"
+                                f"给一个{repr(self._belongs_to)}的学生")
+
             else:
                 ranking_data:List[Tuple[int, "ClassObj.Student"]] = class_obs.rank_non_dumplicate
                 for index, student in ranking_data:
                     if student.num == self.num:
                         return index
-            raise ValueError("但是你确定这个学生在这个班？")
-        
+            raise ValueError(f"你确定这个学生({self.belongs_to})在这个班({class_obs.class_id})？")
+
         def get_non_dumplicated_ranking(self, class_obs: "ClassStatusObserver") -> int:
             """获取学生在班级中计算非重复名次的排名。
 
             :param class_obs: 班级侦测器
             :return: 排名"""
             if self._belongs_to != class_obs.class_id:
-                raise ValueError(f"但是从理论层面来讲你不应该把{repr(class_obs.class_id)}的侦测器给一个{repr(self._belongs_to)}的学生")
+                raise ValueError("但是从理论层面来讲"
+                                f"你不应该把{repr(class_obs.class_id)}的侦测器"
+                                f"给一个{repr(self._belongs_to)}的学生")
 
             else:
                 ranking_data:List[Tuple[int, "ClassObj.Student"]] = class_obs.rank_non_dumplicate
                 for index, student in ranking_data:
                     if student.num == self.num:
                         return index
-            raise ValueError("但是你确定这个学生在这个班？")
-                    
+            raise ValueError(f"你确定这个学生({self.belongs_to})在这个班({class_obs.class_id})？")
+
+
         def __add__(self, value: Union["ClassObj.Student", float]) -> "ClassObj.Student":
             "这种东西做出来是致敬班级小管家的（bushi"
             if isinstance(value, ClassObj.Student):
@@ -421,7 +445,9 @@ class ClassObj(Base):
                 achievements.update(value.achievements)
                 Base.log("W", f"  -> 合并学生：({self.name}, {value.name})", "Student.__add__")
                 Base.log("W", "孩子，这不好笑", "Student.__add__")
-                return ClassObj.Student(f"合并学生：({self.name.replace('合并学生：(', '').replace(')', '')}, {value.name.replace('合并学生：(', '').replace(')', '')})",
+                return ClassObj.Student("合并学生："
+                                        f"({self.name.replace('合并学生：(', '').replace(')', '')}, "
+                                        f"{value.name.replace('合并学生：(', '').replace(')', '')})",
                             num=self.num + value.num,
                             score=self.score + value.score,
                             belongs_to=self.belongs_to,
@@ -430,16 +456,17 @@ class ClassObj(Base):
                             achievements=achievements,
                             highest_score=self.highest_score + value.highest_score,
                             lowest_score=self.lowest_score + value.lowest_score,
-                            highest_score_cause_time=self.highest_score_cause_time + value.highest_score_cause_time,
+                            highest_score_cause_time=\
+                                self.highest_score_cause_time + value.highest_score_cause_time,
                             lowest_score_cause_time=self.lowest_score_cause_time,
                             belongs_to_group=self.belongs_to_group,
                             total_score=self.total_score + value.total_score
                             ).copy()
-        
+
             else:
                 self.score += value
                 return self
-            
+
         def __iadd__(self, value: Union["ClassObj.Student", float]) -> "ClassObj.Student":
             if isinstance(value, ClassObj.Student):
                 self.achievements.update(value.achievements)
@@ -451,8 +478,7 @@ class ClassObj(Base):
                 self.score += value
                 self.total_score += value
                 return self
-            
-        
+
         def to_string(self) -> str:
             "将学生对象转换为JSON格式"
             return json.dumps({
@@ -461,20 +487,24 @@ class ClassObj(Base):
                 "num":                      self.num,
                 "score":                    float(self.score),
                 "belongs_to":               self.belongs_to,
-                "history":                  [(h.execute_time_key, h.uuid) for h in self.history.values() if h.executed],
+                "history":                  [(h.execute_time_key, h.uuid) \
+                                            for h in self.history.values() if h.executed],
                 "last_reset":               self.last_reset,
-                "achievements":             [(a.time_key, a.uuid) for a in self.achievements.values()],
+                "achievements":             [(a.time_key, a.uuid) \
+                                            for a in self.achievements.values()],
                 "highest_score":            self.highest_score,
                 "lowest_score":             self.lowest_score,
                 "highest_score_cause_time": self.highest_score_cause_time,
                 "lowest_score_cause_time":  self.lowest_score_cause_time,
                 "belongs_to_group":         self.belongs_to_group,
                 "total_score":              self.total_score,
-                "last_reset_info":          self.last_reset_info.uuid if self.last_reset_info else None,
+                "last_reset_info":          self.last_reset_info.uuid \
+                                                if self.last_reset_info else None,
                 "uuid":                     self.uuid,
                 "archive_uuid":             self.archive_uuid
             })
-        
+
+
         @staticmethod
         def from_string(string: str) -> "ClassObj.Student":
             "将字符串转换为学生对象。"
@@ -486,11 +516,13 @@ class ClassObj(Base):
                 num=data["num"],
                 score=Student.score_dtype(data["score"]),
                 belongs_to=data["belongs_to"],
-                history={k: ClassObj.LoadUUID(v, ScoreModification) for k, v in data["history"]},
+                history={k: ClassObj.LoadUUID(v, ScoreModification) \
+                        for k, v in data["history"]},
                 last_reset=data["last_reset"],
                 highest_score=data["highest_score"],
                 lowest_score=data["lowest_score"],
-                achievements={k: ClassObj.LoadUUID(v, Achievement) for k, v in data["achievements"]},
+                achievements={k: ClassObj.LoadUUID(v, Achievement) \
+                            for k, v in data["achievements"]},
                 total_score=data["total_score"],
                 highest_score_cause_time=data["highest_score_cause_time"],
                 lowest_score_cause_time=data["lowest_score_cause_time"],
@@ -501,24 +533,29 @@ class ClassObj(Base):
             obj.uuid = data["uuid"]
             obj.archive_uuid = data["archive_uuid"]
             return obj
-        
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
             self.__dict__.update(obj.__dict__)
             return self
-        
 
     class SimpleStudent(Student):
-        @overload
-        def __init__(self, stu: "ClassObj.Student"):...
+        "一个简单的学生对象，用于存储学生信息"
 
         @overload
-        def __init__(self, name:str, num:int, score:float, belongs_to:str, history:dict):...
-        
-        def __init__(self, stu_or_name, num=None, score=None, belongs_to=None, history=None, **kwargs):
+        def __init__(self, stu: "ClassObj.Student"):
+            ...
+
+        @overload
+        def __init__(self, name:str, num:int, score:float, belongs_to:str, history:dict):
+            ...
+
+        def __init__(self, stu_or_name, num=None,
+                    score=None, belongs_to=None, history=None, **kwargs):
             if isinstance(stu_or_name, ClassObj.Student):
-                super().__init__(stu_or_name._name, stu_or_name._num, stu_or_name._score, stu_or_name._belongs_to, {}, **(kwargs))
+                super().__init__(stu_or_name._name, stu_or_name._num,
+                                stu_or_name._score, stu_or_name._belongs_to, {}, **(kwargs))
             else:
                 super().__init__(stu_or_name, num, score, belongs_to, {})
             del self.history            # 单独处理历史记录(防炸)
@@ -531,7 +568,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "Group" = None
         "空小组"
 
@@ -539,22 +576,25 @@ class ClassObj(Base):
         def new_dummy():
             "创建一个空的小组"
             return Group("dummy", "dummy", Student.new_dummy(), [], "dummy")
-        
-        def __init__(self, 
-                    key:          str, 
-                    name:         str, 
-                    leader:       "ClassObj.Student", 
-                    members:      List["ClassObj.Student"], 
+
+        def __init__(self,
+                    key:          str,
+                    name:         str,
+                    leader:       "ClassObj.Student",
+                    members:      List["ClassObj.Student"],
                     belongs_to:   str,
                     further_desc: str            = "这个小组的组长还没有为这个小组提供详细描述") -> None:
-            """小组的构造函数。
+            """
+            小组的构造函数。
             
             :param key: 在dict中对应的key
             :param name: 名称
             :param leader: 组长
             :param members: 组员（包括组长）
             :param belongs_to: 所属班级
-            :param further_desc: 详细描述"""
+            :param further_desc: 详细描述
+            """
+
             self.key = key
             "在dict中对应的key"
             self.name = name
@@ -569,27 +609,30 @@ class ClassObj(Base):
             "所属班级"
             self.archive_uuid = ClassObj.archive_uuid
             "归档uuid"
-        
+
         @property
         def total_score(self):
             "查看小组的总分。"
             return round(sum([s.score for s in self.members]), 1)
-        
+
         @property
         def average_score(self):
             "查看小组的平均分。"
             return round(sum([s.score for s in self.members]) / len(self.members), 2)
-        
+
         @property
         def average_score_without_lowest(self):
             "查看小组去掉最低分后的平均分。"
-            return (round((sum([s.score for s in self.members]) - min(*[s.score for s in self.members])) / (len(self.members) - 1), 2)) if len(self.members) > 1 else 0.0 # 如果只有一人则返回0
+            return (round(
+                (sum([s.score for s in self.members]) - min(*[s.score for s in self.members])) \
+                    / (len(self.members) - 1), 2)) if len(self.members) > 1 else 0.0
+        # 如果只有一人则返回0
 
 
         def has_member(self, student: "ClassObj.Student"):
             "查看一个学生是否在这个小组。"
             return any([s.num == student.num for s in self.members])
-        
+
         def to_string(self):
             "将小组对象转化为字符串。"
             return json.dumps(
@@ -605,7 +648,7 @@ class ClassObj(Base):
                     "archive_uuid": self.archive_uuid
                 }
             )
-        
+
         @staticmethod
         def from_string(string: str):
             "将字符串转化为小组对象。"
@@ -624,7 +667,7 @@ class ClassObj(Base):
             obj.archive_uuid = string["archive_uuid"]
 
             return obj
-        
+
         def inst_from_string(self, string: str):
             "将字符串转化为小组对象。"
             obj = ClassObj.Group.from_string(string)
@@ -632,16 +675,22 @@ class ClassObj(Base):
             return self
 
 
-        
+
         def __repr__(self):
-            return f"Group(key={repr(self.key)}, name={repr(self.name)}, leader={repr(self.leader)}, members={repr(self.members)}, belongs_to={repr(self.belongs_to)}, further_desc={repr(self.further_desc)}"
-        
+            return (f"Group(key={repr(self.key)}, "
+                    f"name={repr(self.name)}, "
+                    f"leader={repr(self.leader)}, "
+                    f"members={repr(self.members)}, "
+                    f"belongs_to={repr(self.belongs_to)}, "
+                    f"further_desc={repr(self.further_desc)}")
+
 
 
     @staticmethod
-    def DummyStudent():
-        return Student("工具人", 0, 0, "DummyStudent")
-    
+    def dummy_student():
+        "返回一个空的学生。"
+        return Student("工具人", 0, 0, "dummy_student")
+
     class ScoreModificationTemplate(Object, SupportsKeyOrdering):
         "分数加减操作的模板。"
 
@@ -650,7 +699,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = True
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "ScoreModificationTemplate" = None
         "空的分数加减操作模板"
 
@@ -658,13 +707,13 @@ class ClassObj(Base):
         def new_dummy():
             "返回一个空的分数加减操作模板"
             return ScoreModificationTemplate("dummy", 0, "dummy")
-        
-        def __init__(self, 
-                    key:             str, 
-                    modification:    float, 
-                    title:           str, 
-                    description:     str      = "该加减分模板没有详细信息。", 
-                    cant_replace:    bool     = False, 
+
+        def __init__(self,
+                    key:             str,
+                    modification:    float,
+                    title:           str,
+                    description:     str      = "该加减分模板没有详细信息。",
+                    cant_replace:    bool     = False,
                     is_visible:      bool     = True):
             """
             分数操作模板的构造函数。
@@ -692,8 +741,9 @@ class ClassObj(Base):
                 f"description={self.desc.__repr__()}, "
                 f"cant_replace={self.cant_replace.__repr__()}, "
                 f"is_visible={self.is_visible.__repr__()})")
-        
+
         def to_string(self):
+            "将分数修改记录对象转为字符串。"
             return json.dumps(
                 {
                     "type": self.chunk_type_name,
@@ -707,15 +757,16 @@ class ClassObj(Base):
                     "archive_uuid": self.archive_uuid
                 }
             )
-        
 
-        
+
+
         @staticmethod
         def from_string(string: str):
             "将字符串转化为分数加减模板对象。"
             string = json.loads(string)
             if string["type"] != ScoreModificationTemplate.chunk_type_name:
-                raise TypeError(f"类型不匹配：{string['type']} != {ScoreModificationTemplate.chunk_type_name}")
+                raise TypeError(f"类型不匹配：{string['type']} != "
+                                f"{ScoreModificationTemplate.chunk_type_name}")
             obj = ScoreModificationTemplate(
                 key=string["key"],
                 modification=string["modification"],
@@ -728,14 +779,14 @@ class ClassObj(Base):
             obj.archive_uuid = string["archive_uuid"]
 
             return obj
-        
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
             self.__dict__.update(obj.__dict__)
             return self
 
-            
+
 
 
 
@@ -749,7 +800,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "ScoreModification" = None
         "空的分数加减操作记录"
 
@@ -757,7 +808,7 @@ class ClassObj(Base):
         def new_dummy():
             "返回一个空的分数加减操作"
             return ScoreModification(ScoreModificationTemplate.new_dummy(), Student.new_dummy())
-        
+
 
         def __init__(self,  template:     "ClassObj.ScoreModificationTemplate",
                             target:       "ClassObj.Student",
@@ -804,44 +855,49 @@ class ClassObj(Base):
             self.executed = executed
             self.archive_uuid = ClassObj.archive_uuid
             self.execute_time_key = 0
-            
-        
+
+
 
         def __repr__(self):
-            return f"ScoreModification(template={self.temp.__repr__()}, target={self.target.__repr__()}, title={self.title.__repr__()}, desc={self.desc.__repr__()}, mod={self.mod.__repr__()}, execute_time={self.execute_time.__repr__()}, create_time={self.create_time.__repr__()}, executed={self.executed.__repr__()})"
+            return (f"ScoreModification(template={repr(self.temp)}, "
+        f"target={repr(self.target)}, title={repr(self.title)}, "
+        f"desc={repr(self.desc)}, mod={repr(self.mod)}, "
+        f"execute_time={repr(self.execute_time)}, create_time={repr(self.create_time)}, "
+        f"executed={repr(self.executed)})")
 
 
         def execute(self) -> bool:
             "执行当前的操作"
             if self.executed:
-                Base.log("W", "执行已经完成，无需再次执行，如需重新执行请创建新的ScoreModification对象", "ScoreModification.execute")
+                Base.log("W",
+                        "执行已经完成，无需再次执行，如需重新执行请创建新的ScoreModification对象", 
+                        "ScoreModification.execute")
                 return False
-            # logstr = ""
-            # logstr += "开始执行当前加减分, "
-            # logstr += "信息：" + "".join(str(self).splitlines(True)).strip().replace("\n", ",") + ";"
-            # Base.log("I", logstr, "ScoreModification.execute")
+
             try:
-                self.execute_time = Base.gettime()    
-                "执行时间的字符串"
+                self.execute_time = Base.gettime()
                 self.execute_time_key = int(time.time() * 1000)
-                "执行时间utc*1000"
                 if self.target.highest_score < self.target.score + self.mod:
                     self.target.highest_score = self.target.score + self.mod
                     self.target.highest_score_cause_time = self.execute_time_key
 
                 if self.target.lowest_score > self.target.score + self.mod:
                     self.target.lowest_score = self.target.score + self.mod
-                    self.target.lowest_score_cause_time = self.execute_time_key 
+                    self.target.lowest_score_cause_time = self.execute_time_key
 
                 self.target.score += self.mod
-                self.executed = True                
+                self.executed = True
                 self.target.history[self.execute_time_key] = self
                 return True
 
-            except BaseException as exception:
+            except (KeyError, MemoryError, TypeError, ValueError,
+                    OverflowError, ZeroDivisionError) as exception:
                 if debug:
                     raise ClassObj.OpreationError("执行加减分操作时发生错误") from exception
-                Base.log("E","执行时出现错误：\n\t\t"+("\t"*2).join(str(traceback.format_exc()).splitlines(True)).strip(),"ScoreModification.execute")
+                Base.log("E",
+                    "执行时出现错误：\n\t\t"+("\t"*2).join(str(traceback.format_exc()) \
+                                                .splitlines(True)).strip(),
+                    "ScoreModification.execute")
                 return False
 
         def retract(self) -> Tuple[bool, str]:
@@ -862,10 +918,12 @@ class ClassObj(Base):
                         for i in self.target.history:
                             tmp: ClassObj.ScoreModification = self.target.history[i]
 
-                            if tmp.execute_time_key != self.execute_time_key and tmp.executed: # 排除自身
+                            if tmp.execute_time_key != self.execute_time_key \
+                                and tmp.executed: # 排除自身
                                 findscore += tmp.mod
 
-                            if lowestscore > findscore and tmp.execute_time_key != self.execute_time_key: 
+                            if lowestscore > findscore and \
+                                tmp.execute_time_key != self.execute_time_key:
                                 lowesttimekey = tmp.execute_time_key
                                 lowestscore = findscore
 
@@ -877,8 +935,8 @@ class ClassObj(Base):
 
                         if self.target.lowest_score != lowestscore:
                             self.target.lowest_score = lowestscore
-                        
-                        
+
+
                     else:
                         findscore = 0.0
                         highestscore = 0.0
@@ -888,13 +946,14 @@ class ClassObj(Base):
                             if tmp.execute_time_key != self.execute_time_key and tmp.executed:
                                 findscore += tmp.mod
 
-                            if highestscore < findscore and tmp.execute_time_key != self.execute_time_key:
+                            if highestscore < findscore and \
+                                tmp.execute_time_key != self.execute_time_key:
                                 highesttimekey = tmp.execute_time_key
                                 highestscore = findscore
                         if self.execute_time_key == highesttimekey:
                             highestscore = 0
                         if self.target.highest_score_cause_time != highesttimekey:
-                            self.target.highest_score_cause_time = highesttimekey 
+                            self.target.highest_score_cause_time = highesttimekey
 
                         if self.target.highest_score != highestscore:
                             self.target.highest_score = highestscore
@@ -905,17 +964,23 @@ class ClassObj(Base):
                     self.execute_time = None
                     del self
                     return True, "操作成功完成"
-                except BaseException as unused:
-                    if debug:raise
-                    Base.log("E","执行时出现错误：\n\t\t"+("\t"*2).join(str(traceback.format_exc()).splitlines(True)).strip(),"ScoreModification.retract")
+                except (KeyError, MemoryError, TypeError, AttributeError,
+                        ValueError, OverflowError, ZeroDivisionError) as exception:
+                    if debug:
+                        raise exception
+                    Base.log("E",
+                            "执行时出现错误：\n\t\t" +
+                            ("\t"*2).join(str(traceback.format_exc()).splitlines(True)).strip(),
+                            "ScoreModification.retract")
                     return False, "执行时出现不可预测的错误"
             else:
                 Base.log("W","操作并未执行，无需撤回","ScoreModification.retract")
                 return False, "操作并未执行, 无需撤回"
-            
-        
+
+
 
         def to_string(self):
+            "将分数修改记录对象转为字符串。"
             return json.dumps(
                 {
                     "type":              self.chunk_type_name,
@@ -932,13 +997,14 @@ class ClassObj(Base):
                     "archive_uuid":      self.archive_uuid
                 }
             )
-        
+
         @staticmethod
         def from_string(string: str):
             "将字符串转换为分数修改对象。"
             d = json.loads(string)
             if d["type"] != ClassObj.ScoreModification.chunk_type_name:
-                raise ValueError(f"类型不匹配：{d['type']} != {ClassObj.ScoreModification.chunk_type_name}")
+                raise ValueError(f"类型不匹配：{d['type']} != "
+                                f"{ClassObj.ScoreModification.chunk_type_name}")
             obj = ClassObj.ScoreModification(
                 template=ClassObj.LoadUUID(d["template"], ScoreModificationTemplate),
                 target=ClassObj.LoadUUID(d["target"], Student),
@@ -953,13 +1019,13 @@ class ClassObj(Base):
             obj.archive_uuid = d["archive_uuid"]
             obj.execute_time_key = d["execute_time_key"]
             return obj
-            
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
             self.__dict__.update(obj.__dict__)
             return self
-            
+
 
 
 
@@ -972,7 +1038,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "HomeworkRule" = None
         "空作业规则"
 
@@ -980,11 +1046,11 @@ class ClassObj(Base):
         def new_dummy():
             "返回一个空作业规则"
             return HomeworkRule("dummy", "dummy", "dummy", {})
-        
-        def __init__(self, 
-                    key:           str, 
-                    subject_name:  str, 
-                    ruler:         str, 
+
+        def __init__(self,
+                    key:           str,
+                    subject_name:  str,
+                    ruler:         str,
                     rule_mapping:  Dict[str, "ClassObj.ScoreModificationTemplate"]):
             """
             作业规则构造函数。
@@ -1002,6 +1068,7 @@ class ClassObj(Base):
 
 
         def to_string(self):
+            "将作业规则对象转为字符串。"
             return json.dumps(
                 {
                     "type":             self.chunk_type_name,
@@ -1013,22 +1080,25 @@ class ClassObj(Base):
                     "archive_uuid":      self.archive_uuid
                 }
             )
-        
+
         @staticmethod
         def from_string(s: str):
+            "从字符串加载作业规则对象。"
             d = json.loads(s)
             if d["type"] != ClassObj.HomeworkRule.chunk_type_name:
-                raise ValueError(f"类型不匹配：{d['type']} != {ClassObj.HomeworkRule.chunk_type_name}")
+                raise ValueError(f"类型不匹配：{d['type']} != "
+                                f"{ClassObj.HomeworkRule.chunk_type_name}")
             obj = ClassObj.HomeworkRule(
                 key=d["key"],
                 subject_name=d["subject_name"],
                 ruler=d["ruler"],
-                rule_mapping={n: ClassObj.LoadUUID(t, ScoreModificationTemplate) for n, t in d["rule_mapping"].items()}
+                rule_mapping={n: ClassObj.LoadUUID(t, ScoreModificationTemplate) \
+                            for n, t in d["rule_mapping"].items()}
             )
             obj.uuid = d["uuid"]
             obj.archive_uuid = d["archive_uuid"]
             return obj
-        
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
@@ -1046,7 +1116,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "Class" = None
         "空班级"
 
@@ -1055,15 +1125,19 @@ class ClassObj(Base):
             "返回一个空班级"
             return Class("工具人班寄", "dummy", {}, "dummy", {}, {}, {})
 
-        def __init__(self, 
-                    name:            str, 
-                    owner:           str, 
-                    students:        Union[Dict[int, "ClassObj.Student"], OrderedKeyList["ClassObj.Student"]], 
-                    key:             str,  
-                    groups:          Union[Dict[int, "ClassObj.Group"], OrderedKeyList["ClassObj.Group"]],
-                    cleaning_mapping: Optional[Dict[int, Dict[Literal["member", "leader"], List["ClassObj.Student"]]]] = None,
-                    # 某种历史遗留:cleaning拼写错误, 但是改不了了
-                    homework_rules:  Optional[Union[Dict[str, "ClassObj.HomeworkRule"], OrderedKeyList["ClassObj.HomeworkRule"]]] = None):
+        def __init__(self,
+                    name:            str,
+                    owner:           str,
+                    students:        Union[Dict[int, "ClassObj.Student"],
+                                        OrderedKeyList["ClassObj.Student"]],
+                    key:             str,
+                    groups:          Union[Dict[str, "ClassObj.Group"],
+                                        OrderedKeyList["ClassObj.Group"]],
+                    cleaning_mapping: Optional[Dict[int,
+                                        Dict[Literal["member", "leader"],
+                                                List["ClassObj.Student"]]]] = None,
+                    homework_rules:  Optional[Union[Dict[str, "ClassObj.HomeworkRule"],
+                                            OrderedKeyList["ClassObj.HomeworkRule"]]] = None):
             """
             班级构造函数。
 
@@ -1076,32 +1150,36 @@ class ClassObj(Base):
             """
             self.name     = name
             self.owner    = owner
-            self.groups   = groups
-            self.students = students
+            self.groups   = groups if isinstance(groups, dict) else \
+                groups.to_dict()
+            self.students = students if isinstance(students, dict) else \
+                students.to_dict()
             self.key      = key
-            self.cleaning_mapping = cleaning_mapping if cleaning_mapping is not None else {}
-            self.homework_rules = OrderedKeyList(homework_rules) if homework_rules is not None else OrderedKeyList([])
+            self.cleaning_mapping = cleaning_mapping or {}
+            self.homework_rules = OrderedKeyList(homework_rules or [])
             self.archive_uuid = ClassObj.archive_uuid
 
         def __repr__(self):
-            return f"Class(name={self.name.__repr__()}, owner={self.owner.__repr__()}, students={self.students.__repr__()}, key={self.key.__repr__()}, cleaning_mapping={self.cleaning_mapping.__repr__()})"
+            return (f"Class(name={self.name!r}, "
+        f"owner={self.owner!r}, students={self.students!r}, "
+        f"key={self.key!r}, cleaning_mapping={self.cleaning_mapping!r})")
 
 
-        @property 
+        @property
         def total_score(self):
             "班级总分"
             return sum([s.score for s in self.students.values()])
-        
+
         @property
         def student_count(self):
             "班级人数"
             return len(self.students)
-        
+
         @property
         def student_total_score(self):
             "学生总分（好像写过了）"
             return sum([s.score for s in self.students.values()])
-        
+
         @property
         def student_avg_score(self):
             "学生平均分"
@@ -1130,7 +1208,7 @@ class ClassObj(Base):
             ]"""
             stu_list = self.students.values()
             stu_list = sorted(stu_list, key=lambda s:s.score, reverse=True)
-            stu_list2:List[Tuple[int, "ClassObj.Student"]] = [] 
+            stu_list2:List[Tuple[int, "ClassObj.Student"]] = []
             last = inf
             last_ord = 0
             cur_ord = 0
@@ -1163,7 +1241,7 @@ class ClassObj(Base):
             ]"""
             stu_list = self.students.values()
             stu_list = sorted(stu_list, key=lambda s:s.score, reverse=True)
-            stu_list2:List[Tuple[int, "ClassObj.Student"]] = [] 
+            stu_list2:List[Tuple[int, "ClassObj.Student"]] = []
             last = inf
             last_ord = 0
             cur_ord = 0
@@ -1177,7 +1255,7 @@ class ClassObj(Base):
                     _ord = cur_ord
                     last_ord = cur_ord
                 stu_list2.append((_ord, stu))
-                last = stu.score               
+                last = stu.score
             return stu_list2
 
 
@@ -1192,8 +1270,11 @@ class ClassObj(Base):
 
 
         def to_string(self) -> str:
-            if hasattr(self, "cleaing_mapping") and not hasattr(self, "cleaning_mapping"):  # 也是因为之前的拼写错误
-                self.cleaning_mapping: Optional[Dict[int, Dict[Literal["member", "leader"], List["ClassObj.Student"]]]] = getattr(self, "cleaing_mapping")
+            "将班级对象转换为字符串。"
+            if hasattr(self, "cleaing_mapping") and not hasattr(self, "cleaning_mapping"):
+                # 也是因为之前的拼写错误
+                self.cleaning_mapping: Optional[Dict[int, Dict[Literal["member", "leader"],
+                        List["ClassObj.Student"]]]] = getattr(self, "cleaing_mapping")
             return json.dumps(
                 {
                     "type":      self.chunk_type_name,
@@ -1202,13 +1283,14 @@ class ClassObj(Base):
                     "owner":       self.owner,
                     "students":  [(s.num, s.uuid) for s in self.students.values()],
                     "groups":    [(g.key, g.uuid) for g in self.groups.values()],
-                    "cleaning_mapping": [(k, [(t, [_s.uuid for _s in s]) for t, s in v.items()]) for k, v in self.cleaning_mapping.items()],
+                    "cleaning_mapping": [(k, [(t, [_s.uuid for _s in s]) for t, s in v.items()]) \
+                                        for k, v in self.cleaning_mapping.items()],
                     "homework_rules": [(n, h.to_string()) for n, h in self.homework_rules.items()],
                     "uuid":      self.uuid,
                     "archive_uuid": self.archive_uuid,
                 }
             )
-        
+
         @staticmethod
         def from_string(string: str) -> "ClassObj.Class":
             "从字符串加载班级对象。"
@@ -1221,13 +1303,15 @@ class ClassObj(Base):
                 students={n: ClassObj.LoadUUID(s, ClassObj.Student) for n, s in d["students"]},
                 key=d["key"],
                 groups={k: ClassObj.LoadUUID(g, ClassObj.Group) for k, g in d["groups"]},
-                cleaning_mapping={k: {t: [ClassObj.LoadUUID(s, ClassObj.Student) for s in s] for t, s in v} for k, v in d["cleaning_mapping"]},
-                homework_rules={n: ClassObj.HomeworkRule.from_string(h) for n, h in d["homework_rules"]}
+                cleaning_mapping={k: {t: [ClassObj.LoadUUID(s, ClassObj.Student) for s in s] \
+                                    for t, s in v} for k, v in d["cleaning_mapping"]},
+                homework_rules={n: ClassObj.HomeworkRule.from_string(h) \
+                                for n, h in d["homework_rules"]}
             )
             obj.uuid = d["uuid"]
             obj.archive_uuid = d["archive_uuid"]
             return obj
-        
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
@@ -1238,10 +1322,10 @@ class ClassObj(Base):
     class ClassData(Object):
         "班级数据，用于判断成就"
 
-        def __init__(self, 
+        def __init__(self,
                     student:         "ClassObj.Student",
-                    classes:          Dict[str, "ClassObj.Class"]   = None, 
-                    class_obs:       "ClassStatusObserver"       = None, 
+                    classes:          Dict[str, "ClassObj.Class"]   = None,
+                    class_obs:       "ClassStatusObserver"       = None,
                     achievement_obs: "AchievementStatusObserver" = None):
             """班级数据构造函数。
 
@@ -1264,7 +1348,7 @@ class ClassObj(Base):
             "学生所在的组"
             self.groups = self.student_class.groups
             "班级中的所有组"
-        
+
 
 
     class ObserverError(Exception):"侦测器出错"
@@ -1277,7 +1361,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = True
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "AchievementTemplate" = None
         "空的成就模板"
 
@@ -1287,33 +1371,38 @@ class ClassObj(Base):
             t = AchievementTemplate("dummy", "这个成就永远不会被达成", "就是不可能达成", )
             t.active = False
             return t
-        
-        def __init__(self,     
-                    key:str,
-                    name:str,
-                    desc:str,                           
+
+        def __init__(self,
+                    key: str,
+                    name: str,
+                    desc: str,
                     # 满足以下所有条件才会给成就
-                    when_triggered:Union[Literal["any", "on_reset"], 
+                    when_triggered:Union[Literal["any", "on_reset"],
                                         Iterable[Literal["any", "on_reset"]]]="any", # 触发时机
                     name_equals:Optional[Union[str, Iterable[str]]]=None,   # 名称等于/在列表中
                     num_equals:Optional[Union[int, Iterable[int]]]=None,    # 学号等于/在列表中
                     name_not_equals:Optional[Union[str, Iterable[str]]]=None,  # 名称不等于/在列表中
                     num_not_equals:Optional[Union[int, Iterable[int]]]=None,# 学号不等于/在列表中
-                    score_range:Optional[Union[Tuple[float, float], List[Tuple[float, float]]]]=None,         # 分数范围
-                    score_rank_range:Optional[Tuple[int, int]]=None,       # 名次范围（不计算并列的，名词按1-2-2-3-3之类计算）
+                    score_range:Optional[Union[Tuple[float, float],
+                                            List[Tuple[float, float]]]]=None,         # 分数范围
+                    score_rank_range:Optional[Tuple[int, int]]=None, # 名次范围（不计算并列）
                     highest_score_range:Optional[Tuple[float, float]]=None, # 最高分数范围
                     lowest_score_range:Optional[Tuple[float, float]]=None,  # 最低分数范围
-                    highest_score_cause_range:Optional[Tuple[int, int]]=None, # 最高分产生时间的范围（utc，*1000）
+                    highest_score_cause_range:Optional[
+                        Tuple[int, int]]=None, # 最高分产生时间的范围（utc，*1000）
                     lowest_score_cause_range:Optional[Tuple[int, int]]=None,  # 最低分产生时间的范围
-                    modify_key_range:Optional[Union[Tuple[str, int, int], Iterable[Tuple[str, int, int]]]]=None,          # 指定点评次数的范围（必须全部符合）
-                    others:Optional[Union[Callable[["ClassObj.ClassData"],  bool], Iterable[Callable[["ClassObj.ClassData"], bool]]]]=None,                                # 其他条件
+                    modify_key_range:Optional[
+                        Union[Tuple[str, int, int], Iterable[Tuple[str, int, int]]]]=None,
+                        # 指定点评次数的范围（必须全部符合）
+                    others:Optional[Union[Callable[["ClassObj.ClassData"],  bool],
+                                        Iterable[Callable[["ClassObj.ClassData"], bool]]]]=None,
+                                        # 其他条件
                     sound:Optional[str]=None,
                     icon:Optional[str]=None,
                     condition_info:str="具体就是这样，我也不清楚，没写",
                     further_info:str="貌似是那几个开发者懒得进行文学创作了，所以没有进一步描述"):
-            
+
             """
-            
             成就模板构造函数。
 
             :param key: 成就key
@@ -1339,25 +1428,29 @@ class ClassObj(Base):
             self.desc = desc
 
             self.active = True
-            
+
 
             if name_equals is not None:
-                self.name_eq = name_equals if isinstance(name_equals, list) else [name_equals]
+                self.name_eq = list(name_equals) \
+                    if isinstance(name_equals, Iterable) else [name_equals]
 
             if name_not_equals is not None:
-                self.name_ne = name_not_equals if isinstance(name_not_equals, list) else [name_not_equals]
+                self.name_ne = list(name_not_equals) \
+                    if isinstance(name_not_equals, Iterable) else [name_not_equals]
 
             if num_equals is not None:
-                self.num_eq = num_equals if isinstance(num_equals, list) else [num_equals] 
+                self.num_eq = list(num_equals) \
+                    if isinstance(num_equals, Iterable) else [num_equals]
 
             if num_not_equals is not None:
-                self.num_ne = num_not_equals if isinstance(num_not_equals, list) else [num_not_equals]
+                self.num_ne = list(num_not_equals) \
+                    if isinstance(num_not_equals, Iterable) else [num_not_equals]
 
 
             if score_range is not None:
-                if not isinstance(score_range, list):
+                if not isinstance(score_range, Iterable):
                     score_range = [score_range]
-                self.score_range = score_range
+                self.score_range = list(score_range)
 
             if score_rank_range is not None:
                 self.score_rank_down_limit = score_rank_range[0]
@@ -1374,14 +1467,16 @@ class ClassObj(Base):
             if  highest_score_cause_range is not None:
                 self.highest_score_cause_range_down_limit = highest_score_cause_range[0]
                 self.highest_score_cause_range_up_limit =   highest_score_cause_range[1]
-            
+
             if  lowest_score_cause_range is not None:
                 self.lowest_score_cause_range_down_limit = lowest_score_cause_range[0]
                 self.lowest_score_cause_range_up_limit =   lowest_score_cause_range[1]
 
             if modify_key_range is not None:
-                self.modify_ranges_orig = modify_key_range if isinstance(modify_key_range, list) else [modify_key_range]
-                self.modify_ranges = [{"key":item[0], "lowest":item[1], "highest":item[2]} for item in self.modify_ranges_orig]
+                self.modify_ranges_orig = list(modify_key_range) \
+                    if isinstance(modify_key_range, list) else [modify_key_range]
+                self.modify_ranges = [{"key": item[0], "lowest": item[1], "highest": item[2]} \
+                                    for item in self.modify_ranges_orig]
 
             if others is not None:
                 if not isinstance(others, Iterable):
@@ -1390,7 +1485,8 @@ class ClassObj(Base):
                     self.other = others
 
 
-            self.when_triggered = when_triggered if isinstance(when_triggered, list) else [when_triggered]
+            self.when_triggered = when_triggered \
+                if isinstance(when_triggered, Iterable) else [when_triggered]
             self.sound = sound
             self.icon = icon
             self.further_info = further_info
@@ -1399,6 +1495,7 @@ class ClassObj(Base):
 
         @property
         def kwargs(self):
+            "等同于构造函数关键字参数的字典"
             kwargs = {
                 "key": self.key,
                 "name": self.name,
@@ -1415,15 +1512,24 @@ class ClassObj(Base):
             if hasattr(self, "score_range"):
                 kwargs["score_range"] = self.score_range
             if hasattr(self, "score_rank_down_limit"):
-                kwargs["score_rank_range"] = [self.score_rank_down_limit, self.score_rank_up_limit]
+                kwargs["score_rank_range"] = \
+                    [self.score_rank_down_limit, self.score_rank_up_limit]
             if hasattr(self, "highest_score_down_limit"):
-                kwargs["highest_score_range"] = [self.highest_score_down_limit, self.highest_score_up_limit]
+                kwargs["highest_score_range"] = \
+                    [self.highest_score_down_limit,
+                    self.highest_score_up_limit]
             if hasattr(self, "lowest_score_down_limit"):
-                kwargs["lowest_score_range"] = [self.lowest_score_down_limit, self.lowest_score_up_limit]
+                kwargs["lowest_score_range"] = \
+                    [self.lowest_score_down_limit,
+                    self.lowest_score_up_limit]
             if hasattr(self, "highest_score_cause_range_down_limit"):
-                kwargs["highest_score_cause_range"] = [self.highest_score_cause_range_down_limit, self.highest_score_cause_range_up_limit]
+                kwargs["highest_score_cause_range"] = \
+                    [self.highest_score_cause_range_down_limit,
+                    self.highest_score_cause_range_up_limit]
             if hasattr(self, "lowest_score_cause_range_down_limit"):
-                kwargs["lowest_score_cause_range"] = [self.lowest_score_cause_range_down_limit, self.lowest_score_cause_range_up_limit]
+                kwargs["lowest_score_cause_range"] = \
+                    [self.lowest_score_cause_range_down_limit,
+                    self.lowest_score_cause_range_up_limit]
             if hasattr(self, "modify_ranges_orig"):
                 kwargs["modify_key_range"] = self.modify_ranges_orig
             if hasattr(self, "other"):
@@ -1439,11 +1545,11 @@ class ClassObj(Base):
             if hasattr(self, "condition_info"):
                 kwargs["condition_info"] = self.condition_info
             return kwargs
-        
 
         def achieved_by(self, student: "Student", class_obs: "ClassStatusObserver") -> bool:
             """
             判断一个成就是否达成
+
             :param student: 学生
             :param class_obs: 班级状态侦测器
             :raise ObserverError: lambda或者function爆炸了
@@ -1451,74 +1557,109 @@ class ClassObj(Base):
 
             # 反人类写法又出现了
 
-            
             if not self.active:
                 return False
             if ("on_reset" in self.when_triggered and "any" not in self.when_triggered
-                ) and  (
-                not (student.highest_score == student.lowest_score == student.score == 0)):
+                ) and (
+                not student.highest_score == student.lowest_score == student.score == 0):
                 return False
-            
+
             if hasattr(self, "name_ne") and student.name in self.name_ne:
                 return False
-            
+
             if hasattr(self, "num_ne") and student.num in self.num_ne:
                 return False
 
             if hasattr(self, "name_eq") and student.name not in self.name_eq:
                 return False
-            
+
             if hasattr(self, "num_eq") and student.num not in self.num_eq:
                 return False
-            
-            if hasattr(self, "score_range") and not any([i[0] <= student.score <= i[1] for i in self.score_range]):
+
+            if hasattr(self, "score_range") and \
+                not any([i[0] <= student.score <= i[1] for i in self.score_range]):
                 return False
             try:
                 if hasattr(self,"score_rank_down_limit"):
                     lowest_rank = max(*([i[0] for i in class_obs.rank_dumplicate]))
-                    l = lowest_rank + self.score_rank_down_limit + 1 if self.score_rank_down_limit < 0 else self.score_rank_down_limit
-                    r = lowest_rank + self.score_rank_up_limit + 1 if self.score_rank_up_limit < 0 else self.score_rank_up_limit
-                    if not (l <= [i[0] for i in class_obs.rank_dumplicate if i[1].num == student.num][0] <= r):
+                    l = (lowest_rank + self.score_rank_down_limit + 1) \
+                        if self.score_rank_down_limit < 0 else self.score_rank_down_limit
+                    r = (lowest_rank + self.score_rank_up_limit + 1) \
+                        if self.score_rank_up_limit < 0 else self.score_rank_up_limit
+                    if not (l <=
+                            [i[0] for i in class_obs.rank_dumplicate if i[1].num == student.num][0]
+                            <= r):
                         return False
-            except:
+            except (KeyError, IndexError, TypeError, AttributeError) as unused:     # pylint: disable=unused-variable
                 return False
-            if hasattr(self, "highest_score_down_limit") and not self.highest_score_down_limit <= student.highest_score <= self.highest_score_up_limit:return False
-            if hasattr(self, "highest_score_cause_range_down_limit") and not self.highest_score_cause_range_down_limit <= student.highest_score_cause_time <= self.highest_score_cause_range_up_limit:return False
-            if hasattr(self, "lowest_score_down_limit") and not self.lowest_score_down_limit <= student.lowest_score <= self.lowest_score_up_limit:return False
-            if hasattr(self, "lowest_score_cause_range_down_limit") and not self.lowest_score_cause_range_down_limit <= student.lowest_score_cause_time <= self.lowest_score_cause_range_up_limit:return False
+
+            if hasattr(self, "highest_score_down_limit") and (
+                not self.highest_score_down_limit
+                    <= student.highest_score
+                        <= self.highest_score_up_limit):
+                return False
+
+            if hasattr(self, "highest_score_cause_range_down_limit") and (
+                not self.highest_score_cause_range_down_limit
+                    <= student.highest_score_cause_time
+                    <= self.highest_score_cause_range_up_limit):
+                return False
+
+            if hasattr(self, "lowest_score_down_limit") and (
+                not self.lowest_score_down_limit
+                    <= student.lowest_score
+                    <= self.lowest_score_up_limit):
+                return False
+
+            if hasattr(self, "lowest_score_cause_range_down_limit") and (
+            not self.lowest_score_cause_range_down_limit
+                <= student.lowest_score_cause_time
+                <= self.lowest_score_cause_range_up_limit):
+                return False
             try:
-                if hasattr(self, "modify_ranges") and not all([item["lowest"] <= [history.temp.key for history in student.history.values() if history.executed].count(item["key"]) <= item["highest"] for item in self.modify_ranges]):return False
-            except:
+                if hasattr(self, "modify_ranges") and \
+                    not all([item["lowest"] <=
+
+                            [history.temp.key
+                            for history in student.history.values() if history.executed]
+                                .count(item["key"])
+
+                            <= item["highest"]
+                                for item in self.modify_ranges]):return False
+            except (KeyError, IndexError, TypeError, AttributeError) as unused: # pylint: disable=unused-variable
                 return False
 
             if hasattr(self, "other"):
                 try:
-                    if hasattr(self, "other") and not all([func(ClassObj.ClassData(student=student, 
-                                                                        classes=class_obs.classes,
-                                                                        class_obs=class_obs,
-                                                                        achievement_obs=class_obs.base.achievement_obs
-                                                                        )) for func in self.other]):
-                        return False
-                    
-                except BaseException as unused:
-                    Base.log_exc(f"位于成就{self.name}({self.key})的lambda函数出错：", "AchievementTemplate.achieved")
-                    if self.key in class_obs.base.DEFAULT_ACHIEVEMENTS:
+                    d = ClassObj.ClassData(student=student,
+                                        classes=class_obs.classes,
+                                        class_obs=class_obs,
+                                        achievement_obs=class_obs.base.achievement_obs)
+                    for item in self.other:
+                        if not item(d):
+                            return False
+
+                except TypeError as unused:     # pylint: disable=unused-variable
+                    Base.log_exc(f"位于成就{self.name}({self.key})的lambda函数出错：",
+                                "AchievementTemplate.achieved")
+                    if self.key in class_obs.base.default_achievements:
                         if isinstance(self.other, list):
                             if not isinstance(self.other[0], Callable):
                                 # 还没加载，先跳过
                                 return False
                             # 还没加载，先跳过
                         elif isinstance(self.other, str):
-                            return False                        
-                        self.other = class_obs.base.DEFAULT_ACHIEVEMENTS[self.key].other
+                            return False
+                        self.other = class_obs.base.default_achievements[self.key].other
                         Base.log("I", "已经重置为默认值", "AchievementTemplate.achieved")
                     else:
                         raise ClassObj.ObserverError(F"位于成就{self.name}({self.key})的lambda函数出错")
                     return False
             return True
-        
+
         achieved = achieved_by
-        
+        got = achieved_by
+
         def condition_desc(self, class_obs:"ClassStatusObserver"):
             """
             条件描述。
@@ -1555,16 +1696,20 @@ class ClassObj(Base):
                         return_str += f"达成时分数高于{down:.1f}\n"
                     elif down < -2 ** 63:
                         return_str += f"达成时分数低于{up:.1f}\n"
-                    
+
                     else:
                         return_str += "分数为0\n"
-                
+
             if hasattr(self, "score_rank_down_limit"):
                 if self.score_rank_down_limit == self.score_rank_up_limit:
-                    return_str += F"位于班上{('倒数' if self.score_rank_down_limit < 0 else '') + str(abs(self.score_rank_down_limit))}名\n"
+                    return_str += F"位于班上{('倒数' if self.score_rank_down_limit < 0 else '') \
+                                        + str(abs(self.score_rank_down_limit))}名\n"
                 else:
-                    return_str += f"排名介于{('倒数' if self.score_rank_down_limit < 0 else '') + str(abs(self.score_rank_down_limit))}和{('倒数' if self.score_rank_up_limit < 0 else '') + str(abs(self.score_rank_up_limit))}之间\n"
-                
+                    return_str += f"排名介于{('倒数' if self.score_rank_down_limit < 0 else '') \
+                                        + str(abs(self.score_rank_down_limit))}和" + \
+                                        f"{('倒数' if self.score_rank_up_limit < 0 else '') \
+                                        + str(abs(self.score_rank_up_limit))}之间\n"
+
             if hasattr(self, "highest_score_down_limit"):
                 down = self.highest_score_down_limit
                 up = self.highest_score_up_limit
@@ -1595,13 +1740,24 @@ class ClassObj(Base):
 
             if hasattr(self, "modify_ranges"):
                 for item in self.modify_ranges:
-                    return_str += (f"达成{item['lowest']}到{item['highest']}次\"{class_obs.templates[item['key']].title}\"\n" if item["lowest"] != item["highest"] != inf else 
-                        f"达成{item['lowest']}次\"{class_obs.templates[item['key']].title}\"\n" if item["lowest"] == item["highest"] != inf else (
-                        f"达成大于等于{item['lowest']}次\"{class_obs.templates[item['key']].title}\"\n" if item["highest"] == inf else (
-                            "这写的什么抽象表达式，我看不懂\n"
-                        )
-                    ))
-                    
+                    lowest = item["lowest"]
+                    highest = item["highest"]
+                    key = item["key"]
+                    return_str += \
+                    (
+                    f'达成{lowest}到{highest}次"{class_obs.templates[key].title}"\n'
+                    if lowest != highest and lowest != inf and highest != inf else (
+
+                    f'达成{lowest}次"{class_obs.templates[key].title}"\n'
+                    if lowest == highest != inf else (
+
+                    f'达成大于等于{lowest}次"{class_obs.templates[key].title}"\n'
+                    if highest == inf else (
+
+                    "这写的什么抽象表达式，我看不懂\n"
+
+                    ))))
+
             if hasattr(self, "other"):
                 return_str += "有一些其他条件，如果没写就自己摸索吧\n"
 
@@ -1609,9 +1765,10 @@ class ClassObj(Base):
                 return_str = "(无条件)"
             return_str += "\n" * 2  + self.condition_info
             return return_str
-        
+
 
         def to_string(self):
+            "从字符串加载成就模板对象。"
             obj = {"type": self.chunk_type_name}
             obj.update(self.kwargs)
             if "others" in obj:
@@ -1619,7 +1776,7 @@ class ClassObj(Base):
             obj["uuid"] = self.uuid
             obj["archive_uuid"] = self.archive_uuid
             return json.dumps(obj)
-        
+
 
         @staticmethod
         def from_string(string: str):
@@ -1637,7 +1794,7 @@ class ClassObj(Base):
             obj.archive_uuid = archive_uuid
             obj.active = True
             return obj
-        
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
@@ -1654,50 +1811,53 @@ class ClassObj(Base):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "Achievement" = None
         "空的成就实例"
 
         @staticmethod
         def new_dummy():
             "创建一个空的成就实例"
-            return Achievement(AchievementTemplate.new_dummy(), Student.new_dummy(), "1970-01-01 00:00:00.000", 0)
+            return Achievement(AchievementTemplate.new_dummy(),
+                            Student.new_dummy(), "1970-01-01 00:00:00.000", 0)
 
-        def __init__(self, 
-                     template:      "ClassObj.AchievementTemplate", 
-                     target:        "ClassObj.Student", 
-                     reach_time:     str=None,
-                     reach_time_key: int=None):
-                """一个成就的实例。
+        def __init__(self,
+                    template:      "ClassObj.AchievementTemplate",
+                    target:        "ClassObj.Student",
+                    reach_time:     str=None,
+                    reach_time_key: int=None):
+            """一个成就的实例。
 
-                :param template: 成就模板
-                :param target: 成就的获得者
-                :param reach_time: 达成时间
-                :param reach_time_key: 达成时间键值
-                """
-                if reach_time is None:
-                    reach_time = Base.gettime()
-                if reach_time_key is None:
-                    reach_time_key = utc()
-                # Base.log("D", f"新成就创建：target={repr(target)}, time={repr(reach_time)}, key={reach_time_key}", "Achievement.__init__")
-                self.time = reach_time
-                self.time_key = reach_time_key
-                self.temp = template
-                self.target = target
-                self.sound = self.temp.sound
-                self.archive_uuid = ClassObj.archive_uuid
+            :param template: 成就模板
+            :param target: 成就的获得者
+            :param reach_time: 达成时间
+            :param reach_time_key: 达成时间键值
+            """
+            if reach_time is None:
+                reach_time = Base.gettime()
+            if reach_time_key is None:
+                reach_time_key = utc()
+            self.time = reach_time
+            self.time_key = reach_time_key
+            self.temp = template
+            self.target = target
+            self.sound = self.temp.sound
+            self.archive_uuid = ClassObj.archive_uuid
 
         def give(self):
-                "发放成就"
-                Base.log("I", f"发放成就：target={repr(self.target)}, time={repr(self.time)}, key={self.time_key}")
-                self.target.achievements[self.time_key] = self
+            "发放成就"
+            Base.log("I", f"发放成就：target={repr(self.target)}, "
+                    f"time={repr(self.time)}, key={self.time_key}")
+            self.target.achievements[self.time_key] = self
 
         def delete(self):
-                "删除成就"
-                Base.log("I", f"删除成就：target={repr(self.target)}, time={repr(self.time)}, key={self.time_key}")
-                del self
+            "删除成就"
+            Base.log("I", f"删除成就：target={repr(self.target)}, "
+                        f"time={repr(self.time)}, key={self.time_key}")
+            del self
 
         def to_string(self):
+            "将成就对象转换为字符串。"
             return json.dumps(
                 {
                     "type": self.chunk_type_name,
@@ -1710,10 +1870,10 @@ class ClassObj(Base):
                     "archive_uuid": self.archive_uuid
                 }
             )
-        
+
         @staticmethod
         def from_string(string: str):
-            "从"
+            "从字符串加载成就对象。"
             d: Dict[str, Any] = json.loads(string)
             if d["type"] != Achievement.chunk_type_name:
                 raise ValueError(f"类型不匹配：{d['type']} != {Achievement.chunk_type_name}")
@@ -1727,7 +1887,7 @@ class ClassObj(Base):
             obj.uuid = d["uuid"]
             obj.archive_uuid = d["archive_uuid"]
             return obj
-        
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
@@ -1742,7 +1902,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "AttendanceInfo" = None
         "空的考勤信息实例"
 
@@ -1750,17 +1910,17 @@ class ClassObj(Base):
         def new_dummy():
             "返回一个空考勤信息"
             return AttendanceInfo()
-        
-        def __init__(self, 
+
+        def __init__(self,
                     target_class:    str                   = "CLASS_TEST",
-                    is_early:        List["ClassObj.Student"] = None, 
-                    is_late:         List["ClassObj.Student"] = None, 
+                    is_early:        List["ClassObj.Student"] = None,
+                    is_late:         List["ClassObj.Student"] = None,
                     is_late_more:    List["ClassObj.Student"] = None,
-                    is_absent:       List["ClassObj.Student"] = None, 
-                    is_leave:        List["ClassObj.Student"] = None, 
-                    is_leave_early:  List["ClassObj.Student"] = None, 
+                    is_absent:       List["ClassObj.Student"] = None,
+                    is_leave:        List["ClassObj.Student"] = None,
+                    is_leave_early:  List["ClassObj.Student"] = None,
                     is_leave_late:   List["ClassObj.Student"] = None):
-            
+
             """考勤信息
 
             :param target_class: 目标班级
@@ -1807,6 +1967,7 @@ class ClassObj(Base):
             "存档UUID"
 
         def to_string(self) -> str:
+            "将考勤记录对象转为字符串。"
             return json.dumps({
                 "type":           self.chunk_type_name,
                 "target_class":   self.target_class,
@@ -1820,7 +1981,7 @@ class ClassObj(Base):
                 "uuid":           self.uuid,
                 "archive_uuid":   self.archive_uuid
             })
-        
+
         @staticmethod
         def from_string(string: str) -> "ClassObj.AttendanceInfo":
             "从字符串加载出勤信息对象。"
@@ -1857,13 +2018,12 @@ class ClassObj(Base):
         def all_attended(self) -> bool:
             "今天咱班全部都出勤了（不过基本不可能）"
             return len(self.is_absent) == 0
-        
+
         def inst_from_string(self, string: str):
             "将字符串加载与本身。"
             obj = self.from_string(string)
             self.__dict__.update(obj.__dict__)
             return self
-        
 
     class DayRecord(Object):
         "一天的记录"
@@ -1873,7 +2033,7 @@ class ClassObj(Base):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
+
         dummy: "DayRecord" = None
         "空的每日记录对象"
 
@@ -1882,26 +2042,27 @@ class ClassObj(Base):
             "返回一个空的每日记录对象"
             return DayRecord(Class.new_dummy(), 0, 0, AttendanceInfo.new_dummy())
 
-        def __init__(self, 
+        def __init__(self,
                      target_class:   "ClassObj.Class",
-                     weekday:         int, 
-                     utc:             float, 
+                     weekday:         int,
+                     create_utc:      float,
                      attendance_info: "ClassObj.AttendanceInfo"):
             """构造函数。
 
             :param target_class: 目标班级
             :param weekday: 星期几（1-7）
-            :param utc: 时间戳
+            :param create_utc: 时间戳
             :param attendance_info: 考勤信息
             """
             self.weekday = weekday
-            self.utc = utc
+            self.utc = create_utc
             self.attendance_info = attendance_info
             self.target_class = target_class
             self.archive_uuid = ClassObj.archive_uuid
 
 
         def to_string(self):
+            "将每日记录对象转为字符串。"
             if isinstance(self.target_class, dict):
                 self.target_class = self.target_class[self.target_class.keys()[0]]
             return json.dumps(
@@ -1915,7 +2076,7 @@ class ClassObj(Base):
                     "archive_uuid":     self.archive_uuid
                 }
             )
-        
+
         @staticmethod
         def from_string(string: str) -> "ClassObj.DayRecord":
             "从字符串加载每日记录对象。"
@@ -1925,7 +2086,7 @@ class ClassObj(Base):
             obj = DayRecord(
                 target_class=ClassObj.LoadUUID(d["target_class"], Class),
                 weekday=d["weekday"],
-                utc=d["utc"],
+                create_utc=d["utc"],
                 attendance_info=ClassObj.LoadUUID(d["attendance_info"], AttendanceInfo),
             )
             obj.uuid = d["uuid"]
@@ -1942,28 +2103,30 @@ class ClassObj(Base):
 
     class History(Object):
         "每次重置保留的历史记录"
-        
+
         chunk_type_name: Literal["History"] = "History"
         "类型名"
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-        
-        def __init__(self, 
-                    classes:Dict[str, "ClassObj.Class"], 
-                    weekdays:Union[List["ClassObj.DayRecord"], Dict[float, "ClassObj.DayRecord"]],
+
+        def __init__(self,
+                    classes:Dict[str, "ClassObj.Class"],
+                    weekdays:Union[List["ClassObj.DayRecord"],
+                                Dict[float, "ClassObj.DayRecord"]],
                     save_time: Optional[float] = None):
             self.classes = dict(classes)
             self.time = save_time or time.time()
             self.weekdays: Dict[float, DayRecord] = {d.utc: d for d in weekdays} \
                 if isinstance(weekdays, list) else weekdays
-            self.uuid = self.archive_uuid = ClassObj.archive_uuid   # IMPORTANT: 这里的对象uuid和归档uuid是一样的
+            self.uuid = self.archive_uuid = ClassObj.archive_uuid
+            # IMPORTANT: 这里的对象uuid和归档uuid是一样的
 
         def __repr__(self):
             return  f"<History object at time {self.time:.3f}>"
-        
-        def to_string(self):
 
+        def to_string(self):
+            "将历史记录转换为字符串。"
             if isinstance(self.weekdays, list):
                 self.weekdays = {d.utc: d for d in self.weekdays}
 
@@ -1976,9 +2139,10 @@ class ClassObj(Base):
                     "archive_uuid":     self.archive_uuid
                 }
             )
-        
+
         @staticmethod
         def from_string(s: str) -> "ClassObj.History":
+            "从字符串加载历史记录。"
             d = json.loads(s)
             if d["type"] != History.chunk_type_name:
                 raise ValueError(f"类型不匹配：{d['type']} != {History.chunk_type_name}")
@@ -1989,8 +2153,9 @@ class ClassObj(Base):
             )
             obj.uuid = d["uuid"]
             obj.archive_uuid = d["archive_uuid"]
-            assert obj.uuid == obj.archive_uuid, ("对于一个历史记录, 它的对象uuid和归档uuid必须保持一致"
-            f"（当前一个是{obj.uuid}, 另一个是{obj.archive_uuid}）")
+            assert obj.uuid == obj.archive_uuid, (
+                "对于一个历史记录, 它的对象uuid和归档uuid必须保持一致"
+                f"（当前一个是{obj.uuid}, 另一个是{obj.archive_uuid}）")
             return obj
 
 
@@ -2003,6 +2168,7 @@ class ClassObj(Base):
 
 class ClassStatusObserver(Object):
     "班级状态侦测器"
+
     on_active:                 bool
     "是否激活"
     student_count:             int
@@ -2029,7 +2195,7 @@ class ClassStatusObserver(Object):
     "上次更新时间"
     tps:                       int
     "最大每秒更新次数"
-    rank_non_dumplicate:       List[Tuple[int, ClassObj.Student]]  
+    rank_non_dumplicate:       List[Tuple[int, ClassObj.Student]]
     "去重排名"              
     rank_dumplicate:           List[Tuple[int, ClassObj.Student]]
     "不去重排名"
@@ -2037,6 +2203,8 @@ class ClassStatusObserver(Object):
 
 
 class AchievementStatusObserver(Object):
+    "成就状态侦测器"
+
     on_active:                  bool
     "是否激活"
     class_id:                   str
@@ -2065,9 +2233,8 @@ class AchievementStatusObserver(Object):
 
 Student = ClassObj.Student
 
-
-DummyStudent = ClassObj.DummyStudent
-StrippedStudent = ClassObj.DummyStudent
+dummy_student = ClassObj.dummy_student
+StrippedStudent = ClassObj.SimpleStudent
 
 Class = ClassObj.Class
 Group = ClassObj.Group
@@ -2098,4 +2265,3 @@ ScoreModification.dummy = default_score_modification = ScoreModification.new_dum
 ScoreModificationTemplate.dummy = default_score_template = ScoreModificationTemplate.new_dummy()
 Achievement.dummy = default_achievement = Achievement.new_dummy()
 AchievementTemplate.dummy = default_achievement_template = AchievementTemplate.new_dummy()
-

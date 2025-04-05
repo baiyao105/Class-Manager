@@ -5,7 +5,7 @@
 from utils.classdtypes import (Class, Student, Achievement, AchievementTemplate, 
                       ScoreModification, ScoreModificationTemplate, OrderedKeyList,
                       AttendanceInfo, Day, ClassStatusObserver, AchievementStatusObserver,
-                      Group,  HomeworkRule, DummyStudent, History)
+                      Group,  HomeworkRule, dummy_student, History)
 
 from utils.basetypes import (steprange, SOUND_BRUH, inf, nan)
 

@@ -1,68 +1,74 @@
 # -*- coding: utf-8 -*-
-
-import time
-import traceback
+# 奇怪的癖好：把import语句的顺序按长短排列（？
 import os
-import threading
-import random
+import sys
+import time
 import copy
 import math
+import random
 import psutil
-import sys
+import pickle
 import signal
 import platform
-import pickle
 import warnings
-import customtkinter
+import customtkinter                # pylint: disable=unused-import
+import traceback
+import threading
 import functools
-import dill               as pickle
-import pyqtgraph          as pg
+import dill               as pickle # pylint: disable=shadowed-import
 import numpy              as np
-import multiprocessing    as mp
+import pyqtgraph          as pg
 from   queue              import Queue
 from   typing             import Optional, Union, List, Tuple, Dict, Any, Callable, Literal, Type
-from   collections        import OrderedDict
 from   shutil             import copytree, rmtree, copy as shutil_copy
 from   concurrent.futures import ThreadPoolExecutor
-from   utils.basetypes         import format_exc_like_java, get_function_namespace
-from   types              import TracebackType, FrameType
-from   PySide6.QtCore     import *
-from   PySide6.QtGui      import *
-from   PySide6.QtWidgets  import *
-from   qfluentwidgets.common     import *
-from   qfluentwidgets.components import *
-from   qfluentwidgets.multimedia import *
-from   qfluentwidgets.window     import *
-from   src.base           import HighPrecision, HighPrecisionOperation
-from   utils.update_check import VERSION_INFO
-from   ui.py              import (MainClassWindow, WTF, StudentWindow, MultiSelectWindow,
-                                NewTemplateWindow, EditTemplateWindow, ModifyHistoryWindow, 
-                                SelectTemplateWindow, SettingWindow, AchievementWindow,
-                                GroupWindow, NoticeViewer, CleaingScoreSumUp, AttendanceInfoEdit, NoiseDetector,
-                                RandomSelector, AttendanceInfoView, HomeworkScoreSumUp, About, DebugWindow)
-from   utils.classobjects import (sys as base_sys, Class, Student, Achievement, AchievementTemplate, 
-                                ScoreModification, ScoreModificationTemplate, StrippedStudent, Day,
-                                AttendanceInfo, DayRecord, ClassStatusObserver, AchievementStatusObserver,
-                                Group, HomeworkRule, DummyStudent, History, Stack, Base, ClassObj,
-                                DEFAULT_CLASSES, DEFAULT_ACHIEVEMENTS, DEFAULT_SCORE_TEMPLATES, DEFAULT_USER)
-from   utils.classobjects  import (steprange, play_sound, play_music, stop_music, Thread, default_class_key)
-from   utils.classobjects  import (CORE_VERSION, CORE_VERSION_CODE, VERSION_INFO, CLIENT_UPDATE_LOG)
-from   utils.classobjects  import (Chunk, DataObject, UserDataBase)
+from   types              import TracebackType
+from   PySide6.QtCore     import *          # pylint: disable=wildcard-import, unused-wildcard-import
+from   PySide6.QtGui      import *          # pylint: disable=wildcard-import, unused-wildcard-import
+from   PySide6.QtWidgets  import *          # pylint: disable=wildcard-import, unused-wildcard-import
+from   qfluentwidgets.common     import *   # pylint: disable=wildcard-import, unused-wildcard-import
+from   qfluentwidgets.components import *   # pylint: disable=wildcard-import, unused-wildcard-import
+from   qfluentwidgets.window     import *   # pylint: disable=wildcard-import, unused-wildcard-import
+from   qfluentwidgets.multimedia import *   # pylint: disable=wildcard-import, unused-wildcard-import
+
+from   utils.basetypes    import format_exc_like_java
+from   ui.py              import (MainClassWindow, WTF, StudentWindow,
+                                MultiSelectWindow, NewTemplateWindow,
+                                EditTemplateWindow, ModifyHistoryWindow,
+                                SelectTemplateWindow, SettingWindow,
+                                AchievementWindow, GroupWindow, NoticeViewer,
+                                CleaingScoreSumUp, AttendanceInfoEdit,
+                                NoiseDetector, RandomSelector, AttendanceInfoView,
+                                HomeworkScoreSumUp, About, DebugWindow)
+
+from   utils.classobjects import (sys as base_sys, Class, Student,  # pylint: disable=unused-import
+                                Achievement, AchievementTemplate,
+                                ScoreModification, ScoreModificationTemplate,
+                                StrippedStudent, AttendanceInfo, DayRecord,
+                                ClassStatusObserver, AchievementStatusObserver,
+                                Group, HomeworkRule, dummy_student,
+                                History, Stack, Base, ClassObj,
+                                DEFAULT_CLASSES, DEFAULT_ACHIEVEMENTS,
+                                DEFAULT_SCORE_TEMPLATES, DEFAULT_USER)
+
+from   utils.classobjects  import (steprange, play_sound, play_music,
+                                stop_music, Thread, default_class_key)
+from   utils.classobjects  import (CORE_VERSION, CORE_VERSION_CODE,
+                                VERSION_INFO, CLIENT_UPDATE_LOG)
+from   utils.classobjects  import Chunk, UserDataBase
 from   utils.consts        import app_style, app_stylesheet, nl
-from   utils.functions     import exc_info_short, pass_exceptions
 from   utils.widgets       import ObjectButton, ProgressAnimatedListWidgetItem, SideNotice
 from   utils.prompts       import question_yes_no as question_yes_no_orig
 from   utils.settings      import SettingsInfo
-from   utils.system        import system, SystemLogger, output_list, stderr_queue, stdout_queue
-from   utils.high_precision_operation import HighPrecision as Decimal
+from   utils.system        import output_list
 
 try:
     from utils.login     import login
-except:
+except ImportError:
     from utils.bak.login import login
     warnings.warn("没有自定义登录模块，将使用默认，"
                     "如果需要自定义登录模块请创建/修改utils/login.py")
-    
+
 
 
 
@@ -95,40 +101,35 @@ enable_memory_tracing = False
 "是否启用内存追踪"
 
 if not enable_memory_tracing:
-    def profile(precision=4):   # NOSONAR; NOQA: disable=unused-argument
+    def profile(precision=4):   # NOSONAR; pylint: disable=unused-argument
         def decorator(func):
             return func
         return decorator
-        
-    def memory_usage(*args, **kwargs): # NOSONAR; NOQA: disable=unused-argument
-        return [0]
+
 else:
     try:
-        from memory_profiler import profile, memory_usage
+        from memory_profiler import profile
     except ImportError:
         warnings.warn("memory_profiler模块未安装, 相关性能分析功能将被禁用", RuntimeWarning)
-        def profile(precision=4):   # NOSONAR; NOQA: disable=unused-argument
+        def profile(precision=4):   #  NOSONAR; pylint: disable=unused-argument
             def decorator(func):
                 return func
             return decorator
-        
-        def memory_usage(*args, **kwargs): # NOSONAR; NOQA: disable=unused-argument
-            return [0]
-        
+
         Base.log("W", "memory_profiler模块未安装,相关性能分析功能将被禁用")
 
 
 
 
 
-def exception_handler(exc_type: Optional[Type[BaseException]] = None, 
-                        exc_val: Optional[BaseException] = None, 
+def exception_handler(exc_type: Optional[Type[BaseException]] = None,
+                        exc_val: Optional[BaseException] = None,
                         exc_tb: Optional[TracebackType] = None):
     """捕获未处理的异常并显示错误对话框
     
     用作sys.excepthook的处理函数
     """
-    from utils.base import logger
+    from utils.basetypes import logger
     file_basename = os.path.basename(__file__)
     file_path = __file__.replace(os.getcwd(), "").lstrip("\\/")
     # 绑定上下文信息
@@ -159,17 +160,21 @@ def exception_handler(exc_type: Optional[Type[BaseException]] = None,
             currenttext = exc_info[i * pagesize: (i + 1) * pagesize]
             for j in range(math.ceil(len(currenttext) / pagemaxchars)):
                 index += 1
-                QMessageBox.critical("错误", "".join(currenttext[j * pagemaxchars: (j + 1) * (pagemaxchars + 1)]) 
-                                + f"\n\t\t\t(页码{index}/{total})")
-    
+                box = QMessageBox()
+                box.setWindowTitle("错误")
+                box.setText("".join(currenttext[j * pagemaxchars: (j + 1) * (pagemaxchars + 1)]))
+                box.setInformativeText(f"(页码{index}/{total})")
+                box.setIcon(QMessageBox.Icon.Critical)
+                box.exec()
+                
 
 sys.excepthook       = exception_handler
 base_sys.excepthook  = exception_handler
 threading.excepthook = exception_handler
 
 
-if sys.version_info < (3, 8):
-    warnings.warn(f"建议使用Python3.8及以上的版本运行（当前为{sys.version_info.major}.{sys.version_info.minor}）")
+if sys.version_info < (3, 12):
+    warnings.warn(f"建议使用Python3.12及以上的版本运行（当前为{sys.version_info.major}.{sys.version_info.minor}）")
 
 if sys.platform != "win32":
     warnings.warn("本程序目前主要支持Windows操作系统，其他操作系统可能无法正常运行")
@@ -193,14 +198,15 @@ except ImportError:
     pass
 
 
-def question_yes_no(master:Optional[QWidget], 
-                    title:str, text:str, 
-                    default:bool=True, 
-                    type:Literal["question", "information", "warning", "critical"]="question", 
+def question_yes_no(master:Optional[QWidget],
+                    title:str, text:str,
+                    default:bool=True,
+                    msg_type:Literal["question", "information", "warning", "critical"]="question",
                     pixmap: Optional[QPixmap] = None) -> bool:
     "显示是/否对话框并返回用户选择"
-    Base.log("I", f"询问框：{repr(title)} - {repr(text)}，default={repr(default)}，type={repr(type)}，pixmap={repr(pixmap)}")
-    return question_yes_no_orig(master, title, text, default, type, pixmap)
+    Base.log("I", f"询问框：{repr(title)} - {repr(text)}，"
+                    f"default={repr(default)}，type={repr(msg_type)}，pixmap={repr(pixmap)}")
+    return question_yes_no_orig(master, title, text, default, msg_type, pixmap)
 
 def handle_fatal_qt_error(msg: str):
     """处理Qt致命错误并安全退出程序"""
@@ -213,7 +219,7 @@ def handle_fatal_qt_error(msg: str):
     Base.log("F", "程序退出", "MainThread")
     sys.exit(0)
 
-def qt_messagehandler(mode: QtMsgType, context: QMessageLogContext, msg: str):
+def qt_messagehandler(mode: QtMsgType, context: QMessageLogContext, msg: str):  # pylint: disable=unused-argument
     """自定义Qt消息处理函数，使用字典映射优化日志记录"""
     # 使用字典映射消息类型到日志级别
     msg_type_map = {
@@ -240,15 +246,7 @@ QLoggingCategory.setFilterRules("*.*=true\n*.debug=false\n*.info=false")
 
 
 
-class QCoreApplication(QCoreApplication):
-    "自定义QCoreApplication类，用于捕获异常"
-    def exec(self) -> int:
-        "启动！"
-        try:
-            return super().exec()
-        except Exception as e:
-            exc_info_short()
-            raise e
+
 
 
 
@@ -331,13 +329,15 @@ class MyWidget(QWidget):
         self.centralwidget = master
         self.setParent(master)
         Base.log("I", "子窗口创建", "MyWidget")
-        self.setWindowFlags((Qt.WindowType.WindowCloseButtonHint |      
-                            Qt.WindowType.MSWindowsFixedSizeDialogHint |    
-                            Qt.WindowType.WindowTitleHint |                 
+        self.setWindowFlags((Qt.WindowType.WindowCloseButtonHint |
+                            Qt.WindowType.MSWindowsFixedSizeDialogHint |
+                            Qt.WindowType.WindowTitleHint |
                             Qt.WindowType.WindowSystemMenuHint |
-                            Qt.WindowType.Window) 
+                            Qt.WindowType.Window)
                         )
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.startanimation: QPropertyAnimation = None
+        self.endanimation:   QPropertyAnimation = None
 
     if platform.system() != "Windows":
         warnings.warn("非Windows系统可能无法正常使用动画效果")
@@ -351,8 +351,8 @@ class MyWidget(QWidget):
                         duration: int, 
                         start_value: Any,
                         end_value: Any, 
-                        easing_curve: Union[QEasingCurve, QEasingCurve.Type] = QEasingCurve.Type.OutCubic):
-        # 难绷啊，type[Type]是什么鬼，类型标注如写
+                        easing_curve: \
+                        Union[QEasingCurve, QEasingCurve.Type] = QEasingCurve.Type.OutCubic):
         """创建通用动画
         
         Args:
@@ -371,16 +371,16 @@ class MyWidget(QWidget):
         animation.setStartValue(start_value)
         animation.setEndValue(end_value)
         return animation
-        
+
     def showStartAnimation(self):
         "执行窗口显示动画"
         self.is_running = True
         if widget.animation_speed <= 114514:
             # 计算动画终点位置
             endpoint = (
-                self.master.geometry().topLeft() 
+                self.master.geometry().topLeft()
                 + QPoint(
-                    self.master.geometry().width() / 2, 
+                    self.master.geometry().width() / 2,
                     self.master.geometry().height() / 2
                 )
                 - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
@@ -389,8 +389,8 @@ class MyWidget(QWidget):
             
             # 计算动画起点位置
             startpoint = QPoint(
-                endpoint.x(), 
-                QGuiApplication.primaryScreen().availableGeometry().height() 
+                endpoint.x(),
+                QGuiApplication.primaryScreen().availableGeometry().height()
                 + QGuiApplication.primaryScreen().availableGeometry().top()
             )
             
@@ -466,11 +466,12 @@ class MyWidget(QWidget):
         self.is_running = False
         self.closeEvent(QCloseEvent())
 
-    def closeEvent(self, event:QCloseEvent):
+    def closeEvent(self, event: QCloseEvent):
         self.is_running = False
         if widget.animation_speed <= 114514:
             self.showCloseAnimation()
         self.hide()
+        event.accept()
     
     def hide(self):
         self.is_running = False
@@ -508,7 +509,11 @@ WidgetType = Union[QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, My
 
 class Command:
     """快捷命令"""
-    def __init__(self, key: str, name: str, callable: str, for_which: Optional[Union[str, object]]="MainWindow"):
+    def __init__(self, 
+                key: str,
+                name: str,
+                callable: str,
+                for_which: Optional[Union[str, object]] = "MainWindow"):
         self.name = name
         self.callable = callable
         self.key = key
@@ -517,7 +522,8 @@ class Command:
         self.for_which = for_which
 
     def __repr__(self):
-        return f"Command(key={repr(self.key)}, name={repr(self.name)}, callable={repr(self.callable)})"
+        return (f"Command(key={repr(self.key)}, "
+                f"name={repr(self.name)}, callable={repr(self.callable)})")
     
             
 command_list: List[Command] = []
@@ -526,12 +532,12 @@ lately_used_commands: List[Command] = []
 "最近使用命令列表"
 
 
-def as_command(key: str, name: str, for_which: Optional[Union[str, object]]="MainWindow"):
-    """快捷命令装饰器。
+def as_command(key: str, name: str, for_which: Optional[Union[str, object]] = "MainWindow"):
+    """
+    快捷命令装饰器。
     
     :param key: 键值
     :param name: 命令名称
-
     """
     global lately_used_commands
     def decorator(func):
@@ -886,7 +892,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     try:
                         current: SideNotice = self._parent.sidenotice_waiting_order.get(timeout=1)
                         break
-                    except BaseException as unused:
+                    except BaseException as unused:    # pylint: disable=broad-exception-caught
                         pass
                 
                 while len(self._parent.sidenotice_avilable_slots) == 0:
@@ -1348,7 +1354,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.scrollAreaWidgetContents_2.setGeometry(0, 0, 901, max((51 + 4) * len(self.target_class.students), 410))
         for num, stu in self.target_class.students.items():
             self.stu_buttons[num] = ObjectButton(f"{stu.num}号 {stu.name}\n{stu.score}分", self, object=stu)
-            self.stu_buttons[num].setObjectName(u"StudentButton"+str(stu.num))
+            self.stu_buttons[num].setObjectName("StudentButton"+str(stu.num))
             self.stu_buttons[num].setGeometry(QRect(10 + col * (81 + 6), 8 + row * (51 + 4), 81, 51))
             self.stu_buttons[num].setParent(self.scrollAreaWidgetContents_2)
             self.stu_buttons[num].clicked.connect(lambda *, stu=stu:self.student_info(stu))
@@ -1369,7 +1375,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         for num, grp in self.target_class.groups.items():
             if grp.belongs_to == self.target_class.key:
                 self.grp_buttons[num] = ObjectButton(f"{grp.name}\n{stu.score}分", self, object=stu)
-                self.grp_buttons[num].setObjectName(u"GroupButton"+str(stu.num))
+                self.grp_buttons[num].setObjectName("GroupButton"+str(stu.num))
                 self.grp_buttons[num].setGeometry(QRect(10 + col * (162 + 6), 8 + row * (102 + 4), 162, 102))
                 self.grp_buttons[num].setParent(self.tab_4)
                 self.grp_buttons[num].clicked.connect(lambda *,
@@ -1482,7 +1488,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 Base.log("E", f"插入操作线程异常：[{sys.exc_info()[1].__class__.__name__}] {repr(e)}", "MainWindow.insert_action_thread")
 
 
-    def _insert_action_history_info(self, text: str, click_callback: Callable, insert_fade=(127, 225, 195, 255, 255, 255), fade_step=12):
+    def insert_action_history_info(self, text: str, click_callback: Callable, insert_fade=(127, 225, 195, 255, 255, 255), fade_step=12):
         """
         插入操作历史项目
         
@@ -1510,7 +1516,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Base.log("I", "mainloop启动中...", "MainWindow.mainloop")
         self.updator_thread.start()
         self.is_running = True
-        self._insert_action_history_info("双击这种列表项目可查看信息", lambda: QMessageBox.information(self, "。", "孩子真棒"))
+        self.insert_action_history_info("双击这种列表项目可查看信息", lambda: QMessageBox.information(self, "。", "孩子真棒"))
         Base.log("I", "线程启动完成，exec()", "MainWindow.mainloop")
         self.log("I", "主窗口启动（尝试用self.log）", "MainWindow")
         Base.log("D", "这是调试信息", "MainWindow.mainloop")
@@ -1638,7 +1644,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                                         "（如果这是你第一次使用本程序，那么请忽略此提示）")
 
         Base.log("I", "准备每日结算", "MainWindow.day_end")
-        yesterday = Day(
+        yesterday = DayRecord(
             self.target_class,  
             weekday,
             utc,
@@ -1649,7 +1655,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         try:
             if hasattr(self, "attendance_window"):
                 self.attendance_window.close()
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             Base.log_exc("关闭考勤窗口失败", "MainWindow.day_end")
         if show_msgbox:
             self.information("提示", f"{time.strftime('%Y年%m月%d日（%A）', time.localtime(utc))} 结束了！\n"
@@ -1930,13 +1936,20 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """
         Base.log("I", F"打开学生信息窗口，学生名：{student.name}", "MainWindow.student_info")
         if not (hasattr(self, "student_info_window") and self.student_info_window is not None):
-            self.student_info_window = StudentWidget(mainwindow=self, student=student, master_widget=self if master_widget is None else master_widget, readonly=readonly)
+            self.student_info_window = \
+            StudentWidget(mainwindow=self,
+                student=student,
+                master_widget=master_widget or self, 
+                readonly=readonly)
         self.student_info_window.set_student(student)
         self.student_info_window.pushButton_3.setDisabled(readonly)
         self.student_info_window.show(readonly)
 
 
-    def group_info(self, group: Group, master_widget: Optional[WidgetType] = None, readonly: bool = False):
+    def group_info(self, 
+                    group: Group, 
+                    master_widget: Optional[WidgetType] = None, 
+                    readonly: bool = False):
         """
         展示小组信息
 
@@ -2016,9 +2029,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     "接下来的操作将会彻底删除这个时间段的记录，此操作不可逆！\n\n"
                     "你确定要删除吗？",
                     lambda: (
-                        Chunk(self.saving_path, None).del_history(list(self.history_data.values())[0].uuid),
+                        Chunk(self.save_path, None).del_history(list(self.history_data.values())[0].uuid),
                         self.history_data.pop(list(self.history_data)[0]),
-                        self._insert_action_history_info("删除"
+                        self.insert_action_history_info("删除"
                                             f"{time.localtime(list(self.history_data)[0]).tm_year}/"
                                             f"{time.localtime(list(self.history_data)[0]).tm_mon}/"
                                             f"{time.localtime(list(self.history_data)[0]).tm_mday} " 
@@ -2045,7 +2058,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     f"当前共有{len(self.history_data)}条历史记录, "
                     "你确定要删除吗？",
                     lambda: (
-                        self._insert_action_history_info(f"删除所有的历史记录（{len(self.history_data)}）",
+                        self.insert_action_history_info(f"删除所有的历史记录（{len(self.history_data)}）",
                                             self.show_all_history,
                                             (142, 30, 114, 246, 139, 219),
                                             40),
@@ -2145,7 +2158,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         if question_yes_no(self, "提示", "是否加载还原点？\n恢复后，需要手动重启程序。\n还原点将会覆盖当前存档且无法恢复。", False, "warning"):
             try:
                 point.load_onlydata_and_set(self.current_user)
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 Base.log("E", "加载还原点失败", "MainWindow.load_recovery_point")
                 QMessageBox.critical(self, "错误", "加载还原点失败:\n\n" + traceback.format_exc() + "\n\n请尝试重新创建还原点")
             else:
@@ -2159,7 +2172,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         if question_yes_no(self, "提示", "是否在当前时间创建数据还原点？", True, "question"):
             self.script_backup("only_data")
             self.show_tip("提示", "还原点创建成功", self, duration=5000, icon=InfoBarIcon.SUCCESS)
-            self._insert_action_history_info("创建还原点", self.show_recover_points, (162, 216, 162, 232, 255, 255), 30)
+            self.insert_action_history_info("创建还原点", self.show_recover_points, (162, 216, 162, 232, 255, 255), 30)
 
 
 
@@ -2241,7 +2254,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             Base.log_exc("备份信息文件损坏", "MainWindow.script_backup")
             QMessageBox.critical(self, "错误", "备份信息文件损坏，已经重置备份信息文件")
             infof = {}
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             Base.log_exc("备份信息文件损坏", "MainWindow.script_backup")
             QMessageBox.critical(self, "错误", "加载备份信息文件出错：\n"+traceback.format_exc()+"\n可以尝试过一会再试试？")
             return
@@ -2269,7 +2282,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 infof[t] = RecoveryPoint(p, mode, "active")
                 Base.log("I", "备份成功！", "MainWindow.script_backup")
 
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 Base.log_exc("保存失败！", "MainWindow.script_backup")
 
         if mode == "all":
@@ -2290,7 +2303,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 infof[t] = RecoveryPoint(p, mode, "active")
                 Base.log("I", "备份成功！", "MainWindow.script_backup")
 
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 Base.log_exc("保存失败！", "MainWindow.script_backup")
         
         pickle.dump(infof, open(self.backup_path + "backup_info.dat", "wb"))
@@ -2604,7 +2617,7 @@ class UpdateThread(QThread):
                     self.first_loop = False
                 time.sleep(0.5)
 
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 Base.log_exc("更新窗口事件时发生错误", "UpdateThread.run")
 
 class TipViewerWindow(NoticeViewer.Ui_widget, MyWidget):
@@ -2722,6 +2735,9 @@ class StudentWidget(StudentWindow.Ui_Form, MyWidget):
         self.pushButton_3.clicked.connect(self.select_and_send)
         self.pushButton.clicked.connect(self.load_history)
         self.pushButton_2.clicked.connect(self.load_achievement)
+        self.history_data: List[Tuple[str, Callable]] = []
+        self.achievement_data: List[Tuple[str, Callable]] = []
+
         if readonly:
             self.pushButton_3.setEnabled(False)
 
@@ -2757,26 +2773,30 @@ class StudentWidget(StudentWindow.Ui_Form, MyWidget):
     @Slot()
     def load_history(self):
         "加载这个学生的历史记录"
-        self.history_data:List[Tuple[str, Callable]] = []
         Base.log("I", f"加载历史记录，只读模式：{self.readonly}", "StudentWidget.load_history")
         index = 0
         for key in reversed(self.student.history):
             history = self.student.history[key]
             if history.executed:
                 try:
-                    
-                        text = f"{history.title} {history.execute_time.rsplit('.', 1)[0]} {history.mod:+.1f}"
-                except BaseException as unused:
+                    text = f"{history.title} {history.execute_time.rsplit('.', 1)[0]} {history.mod:+.1f}"
+                except (AttributeError, TypeError) as unused:    # pylint: disable=unused-variable
                     try:
                         text = f"{history.title} {history.create_time.rsplit('.', 1)[0]} {history.mod:+.1f}"
-                    except BaseException as unused:
+                    except (AttributeError, TypeError) as unused_2: # NOSONAR 
                         text = f"{history.title} <时间信息丢失>   {history.mod:+.1f}"
-                        
-                _callable = lambda history=history,index=index, readonly=self.readonly: self.history_detail(history, index, readonly)
+
+                _callable = lambda history=history, index=index, readonly=self.readonly:\
+                    self.history_detail(history, index, readonly)
 
                 flash_args = (
-                    (QColor(202, 255, 222) if history.mod > 0 else QColor(255, 202, 202) if history.mod < 0 else QColor(201, 232, 255)), 
-                    (QColor(232, 255, 232) if history.mod > 0 else QColor(255, 232, 232) if history.mod < 0 else QColor(233, 244, 255)),
+                    (QColor(202, 255, 222) if history.mod > 0 else \
+                    QColor(255, 202, 202) if history.mod < 0 else \
+                    QColor(201, 232, 255)), 
+
+                    (QColor(232, 255, 232) if history.mod > 0 \
+                    else QColor(255, 232, 232) if history.mod < 0 \
+                    else QColor(233, 244, 255)),
                 )
 
                 self.history_data.append((text, _callable, flash_args))
@@ -2842,7 +2862,6 @@ class StudentWidget(StudentWindow.Ui_Form, MyWidget):
     @Slot()
     def load_achievement(self):
         "加载这个学生的成就"
-        self.achievement_data:List[Tuple[str, Callable]] = []
         index = 0
         Base.log("I", "加载成就", "StudentWidget.load_achievement")
         for key in reversed(self.student.achievements):
@@ -2975,11 +2994,10 @@ class GroupWidget(GroupWindow.Ui_Form, MyWidget):
         student = self.listWidget_order[index.row()]
         Base.log("I", f"点击列表项:{index.row()}, {repr(student)}", "MainWindow.click_opreation")
         if hasattr(self, "student_window"):
-            self.student_window.destroy()
-        self.student_window = StudentWidget(self.mainwindow, self, student)    
+            self.student_window.destroy()      # pylint: disable=access-member-before-definition
+        self.student_window = StudentWidget(self.mainwindow, self, student) # pylint: disable=attribute-defined-outside-init
         self.student_window.show(self.readonly)
 
-        
     def update_label(self):
         self.label_6.setText(QCoreApplication.translate("Form", str(self.group.name), None))
         self.label_9.setText(QCoreApplication.translate("Form", str(len(self.group.members)), None))
@@ -3002,7 +3020,7 @@ class GroupWidget(GroupWindow.Ui_Form, MyWidget):
             self.listWidget.setItemWidget(item, widget_item)
             try:
                 start = self.last_value.pop(0)
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 start = min(abs(self.last_score[member] / (max(self.last_score["total"], max([abs(s.score) for s in self.group.members])) if (self.last_score["total"] != 0 and max([abs(s.score) for s in self.group.members]) != 0) else max(max([abs(s.score) for s in self.group.members]), 0.1))), 1)
             end = min(abs(member.score / (max(self.group.total_score, max([abs(s.score) for s in self.group.members])) if (self.group.total_score != 0 and max([abs(s.score) for s in self.group.members]) != 0) else max(max([abs(s.score) for s in self.group.members]), 0.1))), 1)
             color = QColor(222, 252, 222) if member.score >= 0 else QColor(252, 222, 222)
@@ -3133,7 +3151,7 @@ class SelectTemplateWidget(MyWidget, SelectTemplateWindow.Ui_Form):
             QCoreApplication.processEvents()
         return self.result
 
-class ListView(MyWidget):
+class ListView(MyWidget):   # pylint: disable=function-redefined
     "列表视图，全程序用的最多的窗口"
 
     item_update = Signal(QListWidgetItem, QColor)
@@ -3143,31 +3161,31 @@ class ListView(MyWidget):
     def setupui(self, form: MyWidget):
         "设置UI"
         if not form.objectName():
-            form.setObjectName(u"Form")
+            form.setObjectName("Form")
         form.resize(437, 551)
         self.listWidget = QListWidget(form)
-        self.listWidget.setObjectName(u"listWidget")
+        self.listWidget.setObjectName("listWidget")
         self.listWidget.setGeometry(QRect(0, 0, 341, 551))
         self.verticalLayoutWidget = QWidget(form)
-        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
+        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.verticalLayoutWidget.setGeometry(QRect(340, -1, 101, 551))
         self.verticalLayout = QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setObjectName("verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.pushButton_2 = QPushButton(self.verticalLayoutWidget)
-        self.pushButton_2.setObjectName(u"pushButton_2")
+        self.pushButton_2.setObjectName("pushButton_2")
         self.verticalLayout.addWidget(self.pushButton_2)
         self.pushButton_3 = QPushButton(self.verticalLayoutWidget)
-        self.pushButton_3.setObjectName(u"pushButton_3")
+        self.pushButton_3.setObjectName("pushButton_3")
         self.verticalLayout.addWidget(self.pushButton_3)
         self.retranslateUi(form)
         QMetaObject.connectSlotsByName(form)
 
     def retranslateUi(self, form: MyWidget):
         "设置UI文本"
-        form.setWindowTitle(QCoreApplication.translate("Form", u"\u5217\u8868", None))
-        self.pushButton_2.setText(QCoreApplication.translate("Form", u"\u56de\u5230\u9876\u90e8", None))
-        self.pushButton_3.setText(QCoreApplication.translate("Form", u"\u6eda\u52a8\u5230\u5e95\u90e8", None))
+        form.setWindowTitle(QCoreApplication.translate("Form", "\u5217\u8868", None))
+        self.pushButton_2.setText(QCoreApplication.translate("Form", "\u56de\u5230\u9876\u90e8", None))
+        self.pushButton_3.setText(QCoreApplication.translate("Form", "\u6eda\u52a8\u5230\u5e95\u90e8", None))
 
     def __init__(self,  mainwindow:            ClassWindow                                                           = None, 
                         master_widget:         Optional[WidgetType]                                                  = None, 
@@ -3260,7 +3278,7 @@ class ListView(MyWidget):
                 return
             item.setBackground(QBrush(color))
       
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             pass
 
     def show(self):
@@ -3274,7 +3292,7 @@ class ListView(MyWidget):
                     if (self.startanimation_1.state() != QAbstractAnimation.State.Running):
                         break
 
-                except BaseException as unused:
+                except BaseException as unused:    # pylint: disable=broad-exception-caught
                     pass
                 self.update()
                 QCoreApplication.processEvents()
@@ -3307,7 +3325,7 @@ class ListView(MyWidget):
                     elif len(item[2]) == 3:
                         self.data[index] = (item[0], item[1], (item[2][0], item[2][1], item[2][2], default_interval))
                 index += 1
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             Base.log_exc("初始化项目时发生错误", "ListView.init_items")
         index = 0
         items = self.widget_items
@@ -3325,7 +3343,7 @@ class ListView(MyWidget):
                     time.sleep(0.01 / self.mainwindow.animation_speed)
                 else:
                     widget_item.setBackground(QBrush(flash_args[1]))
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             Base.log_exc("初始化项目时发生错误", "ListView.init_items")
 
         Base.log("D", "等待动画结束", "ListView.init_items")
@@ -3337,7 +3355,7 @@ class ListView(MyWidget):
     def _set_anim_finished(self, index:int):
         try:
             self.anim_result[index] = True
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             pass
 
     def insert_flash(self, item:QListWidgetItem, from_color:QColor, to_color:QColor, step:int=45, interval:int=1):
@@ -3352,7 +3370,7 @@ class ListView(MyWidget):
                 if not self.isVisible():
                     return
 
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 pass
 
     def create_animation(self, property_name, duration, start_value, end_value, easing_curve=QEasingCurve.Type.OutCubic):
@@ -4247,11 +4265,13 @@ class CleaningScoreSumUpWidget(CleaingScoreSumUp.Ui_Form, MyWidget):
         "从列表中移除"
         if self.listWidget.currentRow() == 0 and self.leader != []:
             s = self.leader.pop(0)
-            Base.log("I",  f"从组长列表移除{s.num}，当前列表：{[s.num for s in self.leader]}", "CleaningScoreSumUpWidget")
+            Base.log("I",  f"从组长列表移除{s.num}，"
+                            f"当前列表：{[s.num for s in self.leader]}", "CleaningScoreSumUpWidget")
             self.update_students(refresh_stu=False)
         else:
             s = self.member.pop(self.listWidget.currentRow() - (1 if self.leader != [] else 0))
-            Base.log("I",  f"从成员列表移除{s.num}，当前列表：{[s.num for s in self.member]}", "CleaningScoreSumUpWidget")
+            Base.log("I",  f"从成员列表移除{s.num}，"
+                            f"当前列表：{[s.num for s in self.member]}", "CleaningScoreSumUpWidget")
             self.update_students(refresh_stu=False)
 
 
@@ -4408,33 +4428,39 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
 
         if self.stu_states[num] == "early" and state != "early":
             for h in reversed(stu.history.values()): # 从最近的开始遍历
-                if h.temp.key == "go_to_school_early" and time.time() - h.execute_time_key / 1000 <= 86400 and h.executed: 
+                if h.temp.key == "go_to_school_early" \
+                    and time.time() - h.execute_time_key / 1000 <= 86400 and h.executed: 
                     # 防止今天把昨天的撤掉了
                     self.mainwindow.retract_modify(h, info="<考勤撤回早到>")
                     break # 因为只要撤回一个就行了
 
         if self.stu_states[num] != "early" and state == "early":
-            self.mainwindow.send_modify("go_to_school_early", self.mainwindow.target_class.students[num], info="<考勤早到>")
+            self.mainwindow.send_modify("go_to_school_early",
+                                self.mainwindow.target_class.students[num], info="<考勤早到>")
 
 
         if self.stu_states[num] == "late" and state != "late":
             for h in reversed(stu.history.values()):
-                if h.temp.key == "go_to_school_late" and time.time() - h.execute_time_key / 1000 <= 86400 and h.executed:
+                if h.temp.key == "go_to_school_late" \
+                    and time.time() - h.execute_time_key / 1000 <= 86400 and h.executed:
                     self.mainwindow.retract_modify(h, info="<考勤撤回迟到>")
                     break
 
         if self.stu_states[num] != "late" and state == "late":
-                self.mainwindow.send_modify("go_to_school_late", self.mainwindow.target_class.students[num], info="<考勤迟到>")
+                self.mainwindow.send_modify("go_to_school_late",
+                                self.mainwindow.target_class.students[num], info="<考勤迟到>")
 
 
         if self.stu_states[num] == "late_more" and state != "late_more":
             for h in reversed(stu.history.values()):
-                if h.temp.key == "go_to_school_late_more" and time.time() - h.execute_time_key / 1000 <= 86400 and h.executed:
+                if h.temp.key == "go_to_school_late_more" \
+                    and time.time() - h.execute_time_key / 1000 <= 86400 and h.executed:
                     self.mainwindow.retract_modify(h, info="<考勤撤回迟到过久>")
                     break
 
         if self.stu_states[num] != "late_more" and state == "late_more":
-            self.mainwindow.send_modify("go_to_school_late_more", self.mainwindow.target_class.students[num], info="<考勤迟到过久>")
+            self.mainwindow.send_modify("go_to_school_late_more",
+                    self.mainwindow.target_class.students[num], info="<考勤迟到过久>")
                     
             
         self.stu_states[num] = state # 把原来的撤回了再更新状态（你猜猜是我已经知道了还是踩过坑）
@@ -4532,7 +4558,7 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
         for num, stu in self.target_class.students.items():
             self.stu_buttons[num] = ObjectButton(f"{stu.num} {stu.name}\n{f'{self.attending_state_to_string(self.stu_states[stu.num])}'}", self, object=stu)
             self.stu_buttons[num].opacity = 255
-            self.stu_buttons[num].setObjectName(u"AttendingStudentButton"+str(stu.num))
+            self.stu_buttons[num].setObjectName("AttendingStudentButton"+str(stu.num))
             self.stu_buttons[num].setGeometry(QRect(10 + col * (81 + 6), 8 + row * (51 + 4), 81, 51))
             self.stu_buttons[num].setParent(self.widget)
             self.stu_buttons[num].clicked.connect(lambda *,   
@@ -4631,7 +4657,7 @@ class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
                         rate=RATE,
                         input=True,
                         frames_per_buffer=CHUNKSIZE)
-    except BaseException as unused:
+    except BaseException as unused:    # pylint: disable=broad-exception-caught
         p = None
         stream = None
 
@@ -4644,7 +4670,7 @@ class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
                 return -np.inf
             else:
                 return 20 * np.log10(peak_amplitude / 32768.0)
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             return -np.inf
 
     @staticmethod
@@ -4679,7 +4705,7 @@ class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
         while True:
             try:
                 self.data = self.stream.read(self.CHUNKSIZE)
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 if self.stream is not None:
                     self.data = b"wdnmd"  # 抽象的音频信号
                 else:
@@ -4696,7 +4722,7 @@ class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
         abs_d = self.caculate_abs(data)
         try:
             label_len = 350 * abs_d
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             label_len = 350
 
         if label_len >= 350:
@@ -5206,7 +5232,7 @@ print("时间:", time.time() - t)
         ret = None
         try:
             ret = self.mainwindow.exec_command(cmd)
-        except BaseException as unused:
+        except BaseException as unused:    # pylint: disable=broad-exception-caught
             sys.stderr.write(traceback.format_exc() + "\n")
             sys.stderr.write("-----------------------------------------" + "\n")
             sys.stderr.write("\n".join(format_exc_like_java(sys.exc_info()[1])) + "\n")
@@ -5238,7 +5264,7 @@ print("时间:", time.time() - t)
             nonlocal ret, finished
             try:
                 ret = self.mainwindow.exec_command(cmd)
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 sys.stderr.write(traceback.format_exc() + "\n")
                 sys.stderr.write("-----------------------------------------" + "\n")
                 sys.stderr.write("\n".join(format_exc_like_java(sys.exc_info()[1])) + "\n")
@@ -5269,7 +5295,7 @@ def main():
 
     try:
         stat = widget.mainloop()
-    except BaseException as unused:
+    except BaseException as unused:    # pylint: disable=broad-exception-caught
         stat = 1
         Base.log("E", "程序异常退出", "MainThread")
         Base.log("E", traceback.format_exc(), "MainThread")

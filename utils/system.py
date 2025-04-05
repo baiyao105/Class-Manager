@@ -169,7 +169,7 @@ def system(args:            Union[str, list],
         while True:
             try:
                 c = _popen.stdout.read(sync_update_bit)
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 c = "?"
             if c == "" and _popen.poll() is not None:
                 return
@@ -181,7 +181,7 @@ def system(args:            Union[str, list],
         while True:
             try:
                 c = _popen.stderr.read(sync_update_bit)
-            except BaseException as unused:
+            except BaseException as unused:    # pylint: disable=broad-exception-caught
                 c = "?"
             if c == "" and _popen.poll() is not None:
                 return
