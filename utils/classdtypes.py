@@ -1384,7 +1384,7 @@ class ClassObj(Base):
                 self.modify_ranges = [{"key":item[0], "lowest":item[1], "highest":item[2]} for item in self.modify_ranges_orig]
 
             if others is not None:
-                if not isinstance(others, list):
+                if not isinstance(others, Iterable):
                     self.other = [others]
                 else:
                     self.other = others
@@ -1923,7 +1923,7 @@ class ClassObj(Base):
             if d["type"] != DayRecord.chunk_type_name:
                 raise ValueError(f"类型不匹配：{d['type']} != {DayRecord.chunk_type_name}")
             obj = DayRecord(
-                target_class=d["target_class"],
+                target_class=ClassObj.LoadUUID(d["target_class"], Class),
                 weekday=d["weekday"],
                 utc=d["utc"],
                 attendance_info=ClassObj.LoadUUID(d["attendance_info"], AttendanceInfo),

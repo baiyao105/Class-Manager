@@ -158,8 +158,8 @@ class DataObject:
     saved_objects = 0
     "保存了的对象数量"
 
-    conn_list: Dict[str, sqlite3.Connection] = {}
-    "连接列表，conn_list[数据类型名称]=连接对象"
+    cur_list: Dict[str, sqlite3.Cursor] = {}
+    "连接列表，conn_list[数据类型名称]=光标"
 
     loaded_object_list: Dict[Tuple[UUIDKind[History], str, UUIDKind[ClassDataType]], ClassDataType] = {}
     "加载目标列表"
@@ -178,14 +178,19 @@ class DataObject:
         DataObject.loaded_object_list.clear()
 
     @staticmethod
-    def relase_connections():
+    def relase_connections(clear_chunk_connections: bool = True):
         "释放所有连接"
-        for conn in DataObject.conn_list.values():
+        for cur in DataObject.cur_list.values():
             try:
-                conn.close()
+                cur.close()
+                cur.connection.commit()
+                cur.connection.close()
             except:
                 pass
-        DataObject.conn_list.clear()
+        DataObject.cur_list.clear()
+        if clear_chunk_connections:
+            Chunk.relase_connections(False)
+    
 
 
 
@@ -194,61 +199,74 @@ class DataObject:
         self.chunk = chunk
         self.object_load_state: Literal["none", "detached", "normal"] = state
 
+    
+    
 
-    def save(self, path: Optional[str] = None):
+
+    def save(self, path: Optional[str] = None, max_retry: int = 3):
         "在数据分组中保存这个对象。"
         uuid = self.object.uuid
         string = self.object.to_string()
         type_name = self.object.chunk_type_name
         path = path or self.chunk.path
-        if type_name not in self.conn_list:
-            conn = sqlite3.connect(os.path.join(path, f"{type_name}.db"), check_same_thread=False)
-            self.conn_list[type_name] = conn
-            cur = conn.cursor()
-            for i in range(16):
-                prefix = f"{i:01x}"
-                cur.execute(f"""CREATE TABLE IF NOT EXISTS datas_{prefix} (
-                                            uuid   text       primary key,    -- 数据UUID
-                                            class  text,                      -- 数据类型
-                                            data   text                       -- 数据
-                                    )""")
-        conn = self.conn_list[type_name]
-        for i in range(3):
-            try:
-                cursor = conn.cursor()
-                cursor.execute(f"SELECT class FROM datas_{uuid[:1]} WHERE uuid = ?", (uuid,))
-                existing_class = cursor.fetchone()
-                
-                if existing_class:
-                    if existing_class[0] == type_name:
-                        cursor.execute(f"""
-                            UPDATE datas_{uuid[:1]} 
-                            SET class = ?, data = ?
-                            WHERE uuid = ?
-                        """, (type_name, string, uuid ))
+        while max_retry:
+            max_retry -= 1
+            if type_name not in self.cur_list:
+                conn = sqlite3.connect(os.path.join(path, f"{type_name}.db"), check_same_thread=False)
+                cur = conn.cursor()
+                for i in range(16):
+                    prefix = f"{i:01x}"
+                    cur.execute(f"""CREATE TABLE IF NOT EXISTS datas_{prefix} (
+                                                uuid   text       primary key,    -- 数据UUID
+                                                class  text,                      -- 数据类型
+                                                data   text                       -- 数据
+                                        )""")
+                conn.commit()
+                conn.close()
+                conn = sqlite3.connect(os.path.join(path, f"{type_name}.db"), check_same_thread=False)  # 重新连接
+                self.cur_list[type_name] = conn.cursor()
+
+            cursor = self.cur_list[type_name]
+
+            for i in range(3):
+                try:
+
+                    cursor.execute(f"SELECT class FROM datas_{uuid[:1]} WHERE uuid = ?", (uuid,))
+                    existing_class = cursor.fetchone()
+                    
+                    if existing_class:
+                        if existing_class[0] == type_name:
+                            cursor.execute(f"""
+                                UPDATE datas_{uuid[:1]} 
+                                SET class = ?, data = ?
+                                WHERE uuid = ?
+                            """, (type_name, string, uuid))
+                        else:
+                            raise ValueError(f"对于{uuid!r}的对象，数据库中已经存在一个不同类型的对象！"
+                                            f"（当前为{type_name!r}，数据库中为{existing_class[0]!r}）\n"
+                                            "如果你看见了这个错误，你可能碰见了1/340282366920938463463374607431768211456的概率"
+                                            "（不知道该恭喜你还是感到遗憾）")
                     else:
-                        raise ValueError(f"对于{uuid!r}的对象，数据库中已经存在一个不同类型的对象！"
-                                        f"（当前为{type_name!r}，数据库中为{existing_class[0]!r}）\n"
-                                        "如果你看见了这个错误，你可能碰见了1/340282366920938463463374607431768211456的概率"
-                                        "（不知道该恭喜你还是感到遗憾）")
-                else:
-                    cursor.execute(f"""
-                        INSERT INTO datas_{uuid[:1]} (uuid, class, data)
-                        VALUES (?, ?, ?)
-                    """, (uuid, type_name, string))
-                    conn.commit()
+                        cursor.execute(f"""
+                            INSERT INTO datas_{uuid[:1]} (uuid, class, data)
+                            VALUES (?, ?, ?)
+                        """, (uuid, type_name, string))
 
-                DataObject.saved_objects += 1
-                return
-
-            except Exception as e:
-
-                Base.log_exc(f"处理数据时出现错误，对象：{self.object!r}，0.1秒后重试", "DataObject.save", "W", exc=e)
-                conn.rollback()
-                time.sleep(0.1)
-                continue
-
-        Base.log_exc(f"处理数据时出现错误，对象：{self.object!r}，重试3次后仍然失败", "DataObject.save", "E")
+                    DataObject.saved_objects += 1
+                    return
+                except Exception as e:
+                    Base.log_exc_short(f"处理数据出现错误，"
+                                        f"对象：{self.object.__class__.__name__}({self.object.uuid})，"
+                                        "0.1秒后重试", "DataObject.save", "W", exc=e)
+                    try:
+                        conn.rollback()
+                    except:
+                        self.relase_connections()
+                        Base.log("W", "操作回滚失败，已重置所有连接，将会重试", "DataObject.save")
+                    time.sleep(0.1)
+                    continue
+            Base.log_exc(f"处理数据时出现错误，对象：{self.object!r}，重试3次后仍然失败；已重置所有连接，将会重试", "DataObject.save", "E")
+            self.relase_connections()
 
 
     
@@ -395,12 +413,14 @@ class Chunk:
     def __init__(self, path: str, bound_database: Optional[UserDataBase] = None):
         self.path = path
         self.bound_db = bound_database or UserDataBase(path)
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        self.is_saving = False
+        os.makedirs(self.path if not path.endswith(".datas") else os.path.dirname(self.path), exist_ok=True)
         
         
     def get_object_rdata(self, history_uuid:Union[UUIDKind[History], Literal["Current"]], 
                                 uuid: UUIDKind[_DT], data_type: str) -> StringObjectDataKind[_DT]:
-        """获取对象数据。
+        """
+        获取对象数据。
         
         :param history_uuid: 历史记录uuid，Current为此周（还未重置的存档
         :param uuid: 对象uuid
@@ -420,7 +440,8 @@ class Chunk:
 
 
     def load_history(self, history_uuid: Union[UUIDKind[History], Literal["Current"]] = "Current") -> History:
-        """加载历史记录。
+        """
+        加载历史记录。
 
         :param history_uuid: 历史记录uuid
         :return: 历史记录
@@ -486,19 +507,30 @@ class Chunk:
             self.bound_db.weekday_record.append(weekday)
 
         history = History(classes, self.bound_db.weekday_record, 
-                        json.load(open(os.path.join(path, "info.json"), "r", encoding="utf-8"))["save_time"])
-        
+                        json.load(open(os.path.join(path, "info.json"), "r", encoding="utf-8"))["create_time"])
+        history.uuid = history_uuid
+        history.archive_uuid = history_uuid
+        Base.log("I", f"历史记录{history_uuid}加载完成，警告数量：{len(failures)}")
         return history
     
+    def del_history(self, history_uuid: str) -> bool:
+        """
+        删除历史记录
+        """
+        try:
+            shutil.rmtree(os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:]))
+            return True
+        except:
+            return False
 
     def load_data(self, load_all: bool = False) -> UserDataBase:
-        """加载数据。
+        """
+        加载数据。
 
         :return: 对象数据
         :param load_all: 是否加载所有数据
         """
         current_record = self.load_history("Current")
-        histories = {}
 
         templates = []
         achievements = []
@@ -506,6 +538,7 @@ class Chunk:
 
         # 有个细节，这里的LoadUUID是纲刚刚加载完这周的，所以不用填默认参数
         template_uuids = json.load(open(os.path.join(self.path, "Current", "templates.json"), "r", encoding="utf-8"))
+
         for key, template_uuid in template_uuids:
             templates.append(ClassObj.LoadUUID(template_uuid, ScoreModificationTemplate))
 
@@ -520,10 +553,18 @@ class Chunk:
         self.bound_db.version_code = info["version_code"]
         self.bound_db.last_reset = info["last_reset"]
         self.bound_db.last_start_time = info["last_start_time"]
+        histories = {}
         if load_all:
             for uuid in info["histories"]:
-                h = self.load_history(uuid)
-                histories[h.time] = h
+                try:
+                    h = self.load_history(uuid)
+                    while h.time in histories.keys():
+                        h.time += 0.001
+                    histories[h.time] = h
+                except FileNotFoundError as e:
+                    Base.log_exc(F"历史记录{uuid}加载失败，将跳过", "Chunk.load_data", "E", e)
+            h2 = sorted(histories.items(), key=lambda i: i[0])
+            histories = dict(h2)
         return UserDataBase(
             info["user"],
             info["save_time"],
@@ -540,11 +581,15 @@ class Chunk:
         )
 
 
-    def relase_connections(self) -> None:
+    @staticmethod
+    def relase_connections(clear_dataobj_connections: bool = True) -> None:
         """释放所有连接"""
-        for v in self.database_connections.values():
+        for v in Chunk.database_connections.values():
+            v.commit()
             v.close()
-        self.database_connections.clear()
+        Chunk.database_connections.clear()
+        if clear_dataobj_connections:
+            DataObject.relase_connections(False)
 
     def save(self, 
             save_history: bool = True, 
@@ -559,196 +604,216 @@ class Chunk:
         :param clear_current: 是否清理当前数据
         :param clear_histories: 是否清理历史数据
         """
-        # TODO: 修复有的时候保存数据时间长得逆天的问题
-        # 问题主要体现在大数据(167580个记录)在第一次加载时时间可能格外长，甚至能到200多秒，但是再加载一次就只要5秒
-        # 试一试在建完表之后给连接断开一下，然后重新连接，速度应该会快很多
-        Base.log("I", "开始保存数据", "Chunk.save")
-        if clear_histories:
-            shutil.rmtree(self.path, ignore_errors=True)
-        os.makedirs(self.path, exist_ok=True)
-        os.makedirs(os.path.join(self.path, "Histories"), exist_ok=True)
-        history = History(self.bound_db.classes, self.bound_db.weekday_record)
-        save_tasks: List[Tuple[str, History, bool]] = [("Current", history, clear_current)]
-        if save_history:
-            for k, v in self.bound_db.history_data.items():
-                if save_only_if_not_exist:
-                    if not os.path.isfile(os.path.join(self.path, "Histories", v.uuid[:2], v.uuid[2:], "info.json")):
+        try:
+            if self.is_saving:
+                Base.log("W", "当前分块正在处理数据", "Chunk.save")
+            self.is_saving = True
+            Base.log("I", "开始保存数据", "Chunk.save")
+            if clear_histories:
+                shutil.rmtree(self.path, ignore_errors=True)
+            os.makedirs(self.path, exist_ok=True)
+            os.makedirs(os.path.join(self.path, "Histories"), exist_ok=True)
+            history = History(self.bound_db.classes, self.bound_db.weekday_record)
+            save_tasks: List[Tuple[str, History, bool]] = [("Current", history, clear_current)]
+            if save_history:
+                for k, v in self.bound_db.history_data.items():
+                    if save_only_if_not_exist:
+                        if not os.path.isfile(os.path.join(self.path, "Histories", v.uuid[:2], v.uuid[2:], "info.json")):
+                            os.makedirs(os.path.join(self.path, "Histories", v.uuid[:2], v.uuid[2:]), exist_ok=True)
+                            save_tasks.append((v.uuid, v, clear_histories))
+                    else:
                         os.makedirs(os.path.join(self.path, "Histories", v.uuid[:2], v.uuid[2:]), exist_ok=True)
                         save_tasks.append((v.uuid, v, clear_histories))
+            i = 0
+            total = save_tasks.__len__()
+            def save_part(uuid: str, current_history: History, clear: bool, index: int) -> None:
+                if uuid != "Current":
+                    path = os.path.join(self.path, "Histories", uuid[:2], uuid[2:])
                 else:
-                    os.makedirs(os.path.join(self.path, "Histories", v.uuid[:2], v.uuid[2:]), exist_ok=True)
-                    save_tasks.append((v.uuid, v, clear_histories))
-        i = 0
-        total = save_tasks.__len__()
-        def save_part(uuid: str, current_history: History, clear: bool, index: int) -> None:
-            if uuid != "Current":
-                path = os.path.join(self.path, "Histories", uuid[:2], uuid[2:])
-            else:
-                path = os.path.join(self.path, "Current")
-            if clear:
-                shutil.rmtree(path, ignore_errors=True)
-            os.makedirs(path, exist_ok=True)
-            total_objects = 0
-            t = time.time()
-            modify_templates: List[ScoreModificationTemplate] = list(self.bound_db.templates.values())
-            achivement_templates: List[AchievementTemplate] = list(self.bound_db.achievements.values())
-            day_records: List[DayRecord] = list(self.bound_db.weekday_record)
-            day_records.append(self.bound_db.current_day_attendance)
-            students: List[Student] = []
-            modifies: List[ScoreModification] = []
-            achievements: List[Achievement] = []
-            groups: List[Group] = []
-            classes: List[Class] = []
-    
-            for _class in current_history.classes.values():
-                for homework_rule in _class.homework_rules:
-                    for template in homework_rule.rule_mapping.values():
-                        modify_templates.append(template)
-                classes.append(_class)
-                for student in _class.students.values():
-                    students.append(student)
-                    s = student
-                    for _ in range(Student.last_reset_info_keep_turns): # 保留最近几次的重置信息
-                        # TODO: 把这个废性能的方法改一下，last_reset_info改成动态查询
-                        if s.last_reset_info:
+                    path = os.path.join(self.path, "Current")
+                if clear:
+                    shutil.rmtree(path, ignore_errors=True)
+                os.makedirs(path, exist_ok=True)
+                total_objects = 0
+                t = time.time()
+                modify_templates: List[ScoreModificationTemplate] = list(self.bound_db.templates.values())
+                achivement_templates: List[AchievementTemplate] = list(self.bound_db.achievements.values())
+                day_records: List[DayRecord] = list(self.bound_db.weekday_record)
+                day_records.append(self.bound_db.current_day_attendance)
+                students: List[Student] = []
+                modifies: List[ScoreModification] = []
+                achievements: List[Achievement] = []
+                groups: List[Group] = []
+                classes: List[Class] = []
+        
+                for _class in current_history.classes.values():
+                    for homework_rule in _class.homework_rules:
+                        for template in homework_rule.rule_mapping.values():
+                            modify_templates.append(template)
+                    classes.append(_class)
+                    for student in _class.students.values():
+                        students.append(student)
+                        s = student
+                        for _ in range(Student.last_reset_info_keep_turns): # 保留最近几次的重置信息
+                            # TODO: 把这个废性能的方法改一下，last_reset_info改成动态查询
+                            if s.last_reset_info:
+                                students.append(student.last_reset_info)
+                                modifies.extend(student.last_reset_info.history.values())
+                                achievements.extend(student.last_reset_info.achievements.values())
+                                s = s.last_reset_info
+                        modifies.extend(student.history.values())
+                        achievements.extend(student.achievements.values())
+                        i = 0
+                        while student.last_reset_info:
                             students.append(student.last_reset_info)
                             modifies.extend(student.last_reset_info.history.values())
                             achievements.extend(student.last_reset_info.achievements.values())
-                            s = s.last_reset_info
-                    modifies.extend(student.history.values())
-                    achievements.extend(student.achievements.values())
-                    i = 0
-                    while student.last_reset_info:
-                        students.append(student.last_reset_info)
-                        modifies.extend(student.last_reset_info.history.values())
-                        achievements.extend(student.last_reset_info.achievements.values())
-                        i += 1
-                        student.last_reset_info = None
-                        if i > Student.last_reset_info_keep_turns:
-                            break
+                            i += 1
+                            student.last_reset_info = None
+                            if i > Student.last_reset_info_keep_turns:
+                                break
 
-                groups.extend(_class.groups.values())
-            Base.log("D", F"历史记录中的{uuid}的数据汇总完成，耗时{time.time() - t}秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for _class in classes:
-                DataObject(_class, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的班级保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for student in students:
-                DataObject(student, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的学生保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for group in groups:
-                DataObject(group, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的小组保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for modify in modifies:
-                DataObject(modify, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的分数修改记录保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for achievement in achievements:
-                DataObject(achievement, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的成就记录保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for template in modify_templates:
-                DataObject(template, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的分数修改模板保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for template in achivement_templates:
-                DataObject(template, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的成就模板保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            c = 0
-            for record in day_records:
-                DataObject(record, self).save(path)
-                c += 1
-                total_objects += 1
-            c = max(1, c)
-            Base.log("D", F"历史记录中的{uuid}的每日记录保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
-            t = time.time()
-            Base.log("D", F"历史记录中的{uuid}的当前出勤保存完成，时间耗时{time.time() - t}秒", "Chunk.save")
+                    groups.extend(_class.groups.values())
+                Base.log("D", F"历史记录中的{uuid}的数据汇总完成，耗时{time.time() - t}秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                for _class in classes:
+                    DataObject(_class, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的班级保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                for student in students:
+                    DataObject(student, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的学生保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                for group in groups:
+                    DataObject(group, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的小组保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                self.relase_connections()
+                for modify in modifies:
+                    DataObject(modify, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的分数修改记录保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                for achievement in achievements:
+                    DataObject(achievement, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的成就记录保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                for template in modify_templates:
+                    DataObject(template, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的分数修改模板保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                for template in achivement_templates:
+                    DataObject(template, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的成就模板保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                c = 0
+                for record in day_records:
+                    DataObject(record, self).save(path)
+                    c += 1
+                    total_objects += 1
+                c = max(1, c)
+                Base.log("D", F"历史记录中的{uuid}的每日记录保存完成，耗时{time.time() - t}秒，共{c}个，速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒", "Chunk.save")
+                t = time.time()
+                Base.log("D", F"历史记录中的{uuid}的当前出勤保存完成，时间耗时{time.time() - t}秒", "Chunk.save")
 
-            DataObject.relase_connections()
-            DataObject.conn_list = {}
-            Base.log("D", "当前数据库连接已关闭", "Chunk.save")
-            Base.log("D", "保存基本信息", "Chunk.save")
+                DataObject.relase_connections()
+                DataObject.cur_list = {}
+                Base.log("D", "当前数据库连接已关闭", "Chunk.save")
+                Base.log("D", "保存基本信息", "Chunk.save")
+                json.dump(
+                    {
+                        "uuid": uuid if uuid != "Current" else None,
+                        "create_time": current_history.time,
+                        "save_time": self.bound_db.save_time,
+                        "version": self.bound_db.version,
+                        "version_code": self.bound_db.version_code,
+                        "last_start_time": self.bound_db.last_start_time,
+                        "last_reset": self.bound_db.last_reset,
+                        "user": self.bound_db.user,
+                        "total_objects": total_objects          # 这个可以在后面用来做加载进度条
+                    },                                          # 防止进度条因为分配不合理看起来像卡死了
+                    open(os.path.join(path, "info.json"), "w", encoding="utf-8"),
+                    indent=4
+                )
+                json.dump([(c.key, c.uuid) for c in current_history.classes.values()], 
+                        open(os.path.join(path, "classes.json"), "w", encoding="utf-8"), indent=4)
+                json.dump([(d.utc, d.uuid) for d in current_history.weekdays.values()],
+                        open(os.path.join(path, "weekdays.json"), "w", encoding="utf-8"), indent=4)
+                json.dump([(t.key, t.uuid) for t in self.bound_db.templates.values()],
+                        open(os.path.join(path, "templates.json"), "w", encoding="utf-8"), indent=4)
+                json.dump([(a.key, a.uuid) for a in self.bound_db.achievements.values()],
+                        open(os.path.join(path, "achievements.json"), "w", encoding="utf-8"), indent=4)
+
+
+                Base.log("I", f"{uuid}的存档信息保存完成({index}/{total})", "Chunk.save")
+            i = 1
+            for uuid, current_history, clear in save_tasks:
+                save_part(uuid, current_history, clear, i)
+                i += 1
+
+            
+            Base.log("D", "所有数据保存完成", "Chunk.save")
+
+            history_uuids = []
+            for dir_1 in os.listdir(os.path.join(self.path, "Histories")):
+                for dir_2 in os.listdir(os.path.join(self.path, "Histories", dir_1)):
+                    history_uuids.append(dir_1 + dir_2)
+
             json.dump(
                 {
                     "uuid": uuid if uuid != "Current" else None,
+                    "user": self.bound_db.user,
+                    "create_time": time.time(),
                     "save_time": self.bound_db.save_time,
                     "version": self.bound_db.version,
                     "version_code": self.bound_db.version_code,
                     "last_start_time": self.bound_db.last_start_time,
                     "last_reset": self.bound_db.last_reset,
-                    "user": self.bound_db.user,
-                    "total_objects": total_objects          # 这个可以在后面用来做加载进度条
-                },                                          # 防止进度条因为分配不合理看起来像卡死了
-                open(os.path.join(path, "info.json"), "w", encoding="utf-8"),
+                    "histories": history_uuids
+
+                },
+                open(os.path.join(self.path, "info.json"), "w", encoding="utf-8"),
                 indent=4
             )
-            json.dump([(c.key, c.uuid) for c in current_history.classes.values()], 
-                    open(os.path.join(path, "classes.json"), "w", encoding="utf-8"), indent=4)
-            json.dump([(d.utc, d.uuid) for d in current_history.weekdays.values()],
-                    open(os.path.join(path, "weekdays.json"), "w", encoding="utf-8"), indent=4)
-            json.dump([(t.key, t.uuid) for t in self.bound_db.templates.values()],
-                    open(os.path.join(path, "templates.json"), "w", encoding="utf-8"), indent=4)
-            json.dump([(a.key, a.uuid) for a in self.bound_db.achievements.values()],
-                    open(os.path.join(path, "achievements.json"), "w", encoding="utf-8"), indent=4)
-
-
-            Base.log("I", f"{uuid}的存档信息保存完成({index}/{total})", "Chunk.save")
-        i = 1
-        for uuid, current_history, clear in save_tasks:
-            save_part(uuid, current_history, clear, i)
-            i += 1
-
+        except Exception as e:
+            self.relase_connections()
+            self.is_saving = False
+            raise e
         
-        Base.log("D", "所有数据保存完成", "Chunk.save")
+        else:
+            self.relase_connections()
+            self.is_saving = False
 
-        # # 保存整个存档数据用的，没必要存json了（多几个文件也让存档文件看起来充实点?）
-        json.dump(
-            {
-                "uuid": uuid if uuid != "Current" else None,
-                "user": self.bound_db.user,
-                "save_time": self.bound_db.save_time,
-                "version": self.bound_db.version,
-                "version_code": self.bound_db.version_code,
-                "last_start_time": self.bound_db.last_start_time,
-                "last_reset": self.bound_db.last_reset,
-                "histories": [c.uuid for c in self.bound_db.history_data.values()]
-
-            },
-            open(os.path.join(self.path, "info.json"), "w", encoding="utf-8",),
-            indent=4
-        )
+        finally:
+            self.relase_connections()
+            self.is_saving = False
 
 
 

@@ -1,23 +1,23 @@
-from typing import Literal, Union, Dict
+from typing import Literal, Union, Dict, Tuple
 import requests
 import json
 import os
 import signal
 import zipfile
 import shutil
-from utils.basetypes import stderr_orig, stdout_orig
+from utils.basetypes import Base
 import sys
+import enum
 
-
-sys.stdout = stdout_orig
-sys.stderr = stderr_orig
+sys.stdout = Base.captured_stdout
+sys.stderr = Base.captured_stderr
 
 
 TOKEN = "9bde0e6b1c0fca0ff36408665fb75306"
 
 AUTHOR = "JustNothing_1021"
 
-REPO_NAME = "ClassManager"
+REPO_NAME = "Class-Manager"
 
 MASTER = "master"
 
@@ -306,6 +306,17 @@ CLIENT_UPDATE_LOG = {
 
 
 CORE_UPDATE_LOG:Dict[int, str] = {
+    10106: """
+
+1.1.6（2025/3/29）更新日志：
+
+新内容：
+ - 保存方式改变：pickle -> sqlite3
+ - 优化了部分代码逻辑
+
+bug修复：
+ - 修复了11个（应该数少了）个bug
+""",
     10105:"""
 
 1.1.5（2024/11/26） 更新日志：
@@ -358,9 +369,17 @@ except Exception as e:
     CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
 
 
-url = "https://gitee.com/JustNothing_1021/class_manager/raw/master/version"
+url = f"https://gitee.com/{AUTHOR}/{REPO_NAME}/raw/{MASTER}/version"
 
-def update_check(current_core_version:int, current_gui_version:int) -> Union[Literal[True], Exception, dict]:
+class UpdateInfo(enum.IntEnum):
+    NO_UPDATE = 0
+    UPDATE_AVAILABLE = 1
+    VERSION_IS_AHEAD = 2
+    ERROR = 3
+
+
+
+def update_check(current_core_version:int, current_gui_version:int) -> Tuple[int, Union[str, BaseException, dict]]:
 
     """获取更新信息。
     
@@ -379,14 +398,14 @@ def update_check(current_core_version:int, current_gui_version:int) -> Union[Lit
         core_version = data["core_version_code"]
         gui_version = data["client_version_code"]
         if core_version > current_core_version or gui_version > current_gui_version:
-            return data
+            return UpdateInfo.UPDATE_AVAILABLE, data
         elif core_version == current_core_version and gui_version == current_gui_version:
-            return True
+            return UpdateInfo.NO_UPDATE, data
         else:
-            return False
+            return UpdateInfo.VERSION_IS_AHEAD, data
             
     except Exception as e:
-        return e
+        return UpdateInfo.ERROR, e
     
 
 
@@ -418,6 +437,7 @@ def update(dir:str="update"):
     """执行更新操作"""
     try:
         shutil.copytree(os.path.join(dir, f"{REPO_NAME}-{MASTER}"), os.getcwd(), dirs_exist_ok=True)
+        
     except Exception as e:
         print("更新失败，请手动更新")
         print(f"错误：[{e.__class__.__name__}] {e}")

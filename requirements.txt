@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 
-typing_extensions  >= 4.12.2
+typing_extensions  == 4.12.2
 # 提供类型标注支持
 
-requests           >= 2.25.1
+requests           == 2.25.1
 # 用于更新检查
 
 PySide6                    == 6.6.3.1
@@ -18,34 +18,34 @@ PySideSix-Frameless-Window == 0.4.5
 pyqtgraph          == 0.13.3
 # 用于绘制分数折线图
 
-pygame             >= 2.6.0
+pygame             == 2.6.0
 # 用于音频处理(用处不大)
 
-psutil             >= 6.1.0
+psutil             == 6.1.0
 # 用于获取系统信息
 
-PyAudio            >= 0.2.14
+PyAudio            == 0.2.14
 # 用于音频播放和录制
 
-numpy              >= 1.24.4
+numpy              == 1.24.4
 # 用于数据处理和计算
 
-lunardate          >= 0.2.2
+lunardate          == 0.2.2
 # 用于农历日期处理
 
-dill               >= 0.3.9
+dill               == 0.3.9
 # 用于对象序列化和数据持久化，计划后续优化
 
-opencv-python      >= 4.10.0.84
+opencv-python      == 4.10.0.84
 # 用于视频处理和摄像头支持
 
-colorama           >= 0.4.6
+colorama           == 0.4.6
 # 用于控制台文本着色
 
 customtkinter      == 5.2.2
 # 用于自定义登录界面(可选组件)
 
-memory_profiler    >= 0.61.0
+memory_profiler    == 0.61.0
 # 用于内存使用分析(可选组件)
 
 loguru             == 0.7.3
