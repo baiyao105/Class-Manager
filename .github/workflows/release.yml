@@ -79,6 +79,11 @@ jobs:
                   - 'build'
                   - 'ci'
                   - 'test'
+              - title: '🔒 版本更新'
+                labels:
+                  - 'release'
+                  - 'publish'
+                  - 'update'
 
       - name: Release
         uses: softprops/action-gh-release@v1
