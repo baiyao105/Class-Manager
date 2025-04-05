@@ -3,13 +3,13 @@
 ## 提交 Issue
 ### 反馈 Bug
 - Bug反馈需要：
-  - 在[最新提交](https://github.com/baiyao105/Class-Manager/commits/master)中还未修复
+  - 在[最新提交](https://gitee.com/JustNothing_1021/Class-Manager/commits/master)中还未修复
   - 没有和反馈相同以及相似的Issue
 
 ### 提交新功能请求
 
 - 新功能请求需要：
-  - 在[最新提交](https://github.com/baiyao105/Class-Manager/commits/master)中未实现
+  - 在[最新提交](https://gitee.com/JustNothing_1021/Class-Manager/commits/master)中未实现
   - 没有和反馈相同以及相似的Issue
 
 ## 贡献代码

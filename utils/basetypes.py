@@ -28,6 +28,8 @@ import json
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from types import TracebackType, FrameType
+import multiprocessing as mp
+
 try:
     from utils.consts import log_style
 except ImportError:
@@ -462,28 +464,28 @@ stderr_orig = sys.stderr
 NoneType = type(None)
 
 
+DT = TypeVar("DT")
 
-
-class Stack:
+class Stack(Generic[DT]):
     "非常朴素的栈"
 
-    def __init__(self):
+    def __init__(self, items: Iterable[DT] = None):
         "初始化栈"
-        self.items = []
+        self.items = list(items) if items is not None else []
 
     def is_empty(self):
         "判断栈是否为空"
-        return self.items == []
+        return len(self.items) == 0
 
     def push(self, item):
         "添加元素到栈顶"
         self.items.append(item)
 
-    def pop(self):
+    def pop(self) -> DT:
         "移除栈顶元素并返回该元素"
         return self.items.pop()
 
-    def peek(self):
+    def peek(self) -> DT:
         "返回栈顶元素"
         return self.items[len(self.items) - 1]
 
@@ -513,6 +515,7 @@ def steprange(start:Union[int, float], stop:Union[int, float], step:int) -> List
         return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [stop]
     else:
         return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
+
 
 class Thread(threading.Thread):
     "自己做的一个可以返回数据的Thread"
@@ -1417,7 +1420,11 @@ class OrderedKeyList(list, Iterable[_Template]):
         "返回列表的表达式"
         return F"OrderedTemplateGroup({super().__repr__()})"
 
-Base.clear_oldfile()
+try:
+    Base.clear_oldfile()
+except BaseException as e:
+    Base.log_exc_short("清理日志文件失败：", exc=e)
+
 
 if __name__ == "__main__":
     print("你闲的没事跑这玩意干啥")

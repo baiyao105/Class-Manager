@@ -26,7 +26,7 @@ class ObjectButton(QPushButton):
     QPushButton {
         font: 8pt;
         background-color: rgba(%d, %d, %d, %d);
-        border-radius: 2px;
+        border-radius: 4px;
         border: 1px solid rgb(0, 0, 0);
     }
 """ % (col.red(), col.green(), col.blue(), self.opacity))
@@ -69,7 +69,7 @@ class ObjectButton(QPushButton):
     QPushButton {
         font: 8pt;
         background-color: rgba(255, 255, 255, %d);
-        border-radius: 2px;
+        border-radius: 4px;
         border: 1px solid rgb(0, 0, 0);
     }
 """ % self._opacity))
@@ -287,7 +287,8 @@ class SideNotice:
                  sound:         Optional[str]                            = None, 
                  duration:      int                                      = 5000, 
                  closeable:     bool                                     = True, 
-                 click_command: Optional[Callable]                       = None):
+                 click_command: Optional[Callable]                       = None,
+                 further_info:  str                                      = "该提示没有详细信息。"):
         """初始化侧边栏通知
         
         :param text: 通知显示的文本内容
@@ -312,7 +313,9 @@ class SideNotice:
         self.master = master
         self.finished = False
         self.destroy_command = lambda: None
+        self.further_info = further_info
         self.waiting += 1
+        self.create_time = time.time()
 
 
     def show(self):
@@ -321,7 +324,7 @@ class SideNotice:
         def _decrease():
             self.showing -= 1
         QTimer.singleShot(self.duration + 200, _decrease)
-        self.infobar = InfoBar.new( 
+        infobar = InfoBar.new( 
                     self.icon or InfoBarIcon.INFORMATION, 
                     self.title, 
                     self.content, 
@@ -337,7 +340,7 @@ class SideNotice:
 
         if self.sound:
             play_sound(self.sound)
-        self.infobar.closeButton.clicked.connect(self.closebutton_clicked)
+        infobar.closeButton.clicked.connect(self.closebutton_clicked)
 
 
 

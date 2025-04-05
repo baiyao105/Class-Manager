@@ -7,6 +7,7 @@ import os
 import signal
 import warnings
 import base64
+import types
 import pickle as pickle_orig
 import pickle as pickle
 import dill as pickle
@@ -26,6 +27,8 @@ from utils.classdtypes import (Student, DummyStudent, StrippedStudent,
         ClassData, History, ClassObj)
 from utils.dataloader import Chunk, DataObject, UserDataBase 
 from utils.base import gen_uuid
+import multiprocessing
+from multiprocessing import Process
 
 debug = True
 
@@ -97,7 +100,8 @@ class ClassObj(ClassObj):
 
     @staticmethod
     def load_data(path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/", 
-                silent:bool=False, strict=True, 
+                silent:bool=False, 
+                strict=True, 
                 method: Literal["pickle", "sqlite", "auto"] = "sqlite",
                 load_full_histories: bool = False) -> UserDataBase:
         """从文件加载存档。（只是返回数据！！）
@@ -140,17 +144,17 @@ class ClassObj(ClassObj):
 
                 
             elif method == "sqlite":
-                path = os.path.dirname(path)
+                path = os.path.dirname(path) if path.endswith(".datas") else path
                 data_chunk = Chunk(path)
-                data = data_chunk.load_data()
+                data = data_chunk.load_data(load_full_histories)
                 if not silent:
                     Base.log("I", F"耗时：{time.time()-start:.2f}", "MainThread.load_data")
                 return data
 
             
-        except FileNotFoundError:
+        except FileNotFoundError as exception:
             if strict:
-                raise
+                raise exception
             Base.log("W","存档"+path+"不存在，重置所有数据","MainThread.load_data")
             ClassObj.reset_data(path)
             Base.log("I",F"耗时：{time.time()-start:.2f}","MainThread.load_data")
@@ -161,7 +165,7 @@ class ClassObj(ClassObj):
 
         except Exception as e:
             if strict:
-                raise
+                raise e
             Base.log_exc("读取存档" + path + "失败：", "Mainhread.load_data")
             Base.log("I", F"耗时：{time.time()-start:.2f}", "MainThread.load_data")
             import errno
@@ -281,105 +285,125 @@ class ClassObj(ClassObj):
         self.history_data = {}
 
 
-    def config_data(self, path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/classes.datas",
+    def config_data(self, path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/",
                           silent:bool=False,
                           strict=False, 
-                          reset_missing=False) -> None:
+                          reset_missing=False,
+                          mode: Literal["sqlite", "pickle", "auto"] = "sqlite",
+                          load_full_histories=False,
+                          reset_current=True) -> UserDataBase:
         """从文件加载存档并设置数据。
         
         :param path: 文件路径
         :param silent: 是否静默加载
         :param strict: 是否抛出错误
         :param reset_existing: 是否把默认数据（比如当前不存在的模板和成就）加入到现有数据中
+        :param load_full_histories:加载全部历史记录
+        :param reset_current: 加载数据时覆盖本周的数据
         """
-        data = ClassObj.load_data(path, silent, strict)
+        data = ClassObj.load_data(path, silent, strict, mode, load_full_histories)
         self.save_version = data.version
         self.save_version_code = data.version_code
         self.currrent_core_version = CORE_VERSION
         self.current_core_version_code = CORE_VERSION_CODE
 
         if self.save_version_code > self.current_core_version_code:
-            Base.log("I", "尝试加载新版本的存档，多余数据可能部分丢失", "ClassObjects.load_data_and_set")
+            Base.log("I", "尝试加载新版本的存档，多余数据可能部分丢失", "ClassObjects.config_data")
 
         elif self.save_version_code < self.current_core_version_code:
-            Base.log("I", "尝试加载旧版本的存档，缺失的数据已经用默认代替", "ClassObjects.load_data_and_set")
+            Base.log("I", "尝试加载旧版本的存档，缺失的数据已经用默认代替", "ClassObjects.config_data")
 
-        self.classes:Dict[str, "ClassObj.Class"] = data.classes
-        if isinstance(self.classes, OrderedKeyList):
-            self.classes = self.classes.to_dict() # 转换为字典解决类型问题
+        if reset_current:
 
-        if hasattr(self, "target_class") and self.target_class is not None:
-            self.target_class = self.classes[self.target_class.key]
-        else:
-            self.target_class = None
+            self.classes: Dict[str, "ClassObj.Class"] = data.classes
+            if isinstance(self.classes, OrderedKeyList):
+                self.classes = self.classes.to_dict() # 转换为字典解决类型问题
 
-        self.achievement_templates: "Union[OrderedKeyList[ClassObj.AchievementTemplate], Dict[str, ClassObj.AchievementTemplate]]" \
-            = OrderedKeyList(data.achievements).to_dict()  # 转换为字典
-        self.modify_templates: "Union[OrderedKeyList[ClassObj.ScoreModificationTemplate], Dict[str, ClassObj.ScoreModificationTemplate]]" \
-            =  OrderedKeyList(data.templates).to_dict()
+            if hasattr(self, "target_class") and self.target_class is not None:
+                self.target_class = self.classes[self.target_class.key]
+            else:
+                self.target_class = None
+
+            self.achievement_templates: "Union[OrderedKeyList[ClassObj.AchievementTemplate], Dict[str, ClassObj.AchievementTemplate]]" \
+                = OrderedKeyList(data.achievements).to_dict()  # 转换为字典
+            self.modify_templates: "Union[OrderedKeyList[ClassObj.ScoreModificationTemplate], Dict[str, ClassObj.ScoreModificationTemplate]]" \
+                =  OrderedKeyList(data.templates).to_dict()
 
 
             
-        achievements = copy.deepcopy(self.achievement_templates)
-        for key, achievement in achievements.items():
-            for attr, default in [("icon", None), 
-                                  ("when_triggered", "any"),
-                                  ("further_info", "因为这是老版本迁移过来的存档，所以这条信息是空缺的"), 
-                                  ("condition_info", "因为这是老版本迁移过来的存档，所以暂时没有详细条件信息")]: 
-                                    # 补齐老版本缺失的属性
-                if not hasattr(achievement, attr):
-                    try:
-                        setattr(self.achievement_templates[key], attr, getattr(DEFAULT_ACHIEVEMENTS[key], attr))
-                    except (AttributeError, KeyError):
-                        setattr(self.achievement_templates[key], attr, default)
-
-        if not isinstance(self.modify_templates, OrderedKeyList):
-            self.modify_templates = OrderedKeyList(self.modify_templates) # 因为老版本用的是dict，所以需要转换一下
-
-        templates = copy.deepcopy(self.modify_templates)
-
-        for key, template in templates.items():
-            for attr, default in [
-                ("is_visible", True),
-            ]:
-                if not hasattr(template, attr):
-                    try:
-                        setattr(self.modify_templates[key], attr, getattr(DEFAULT_SCORE_TEMPLATES[key], attr))
-                    except (AttributeError, KeyError):
-                        setattr(self.modify_templates[key], attr, default)
-
-
-        for key_class, _class in self.classes.items():
-            for attr, default in [
-                ("homework_rules", (DEFAULT_CLASSES[key_class].homework_rules) if key_class in DEFAULT_CLASSES else {}),
-                ("cleaning_mapping", (getattr(_class, "cleaing_mapping", getattr(_class, "cleaning_mapping", {}))))  
-                # 因为以前的版本是写错了的，所以这里需要特殊处理
-            ]:
-                if not hasattr(_class, attr):
-                    try:
-                        setattr(self.classes[key_class], attr, getattr(DEFAULT_CLASSES[key_class], attr))
-                    except (AttributeError, KeyError):
-                        setattr(self.classes[key_class], attr, default)
-
-            for key, student in _class.students.items():  # 性能优化点：当前为O(n^3)复杂度(?)
-                for attr, default in [
-                    ("last_reset_info", ClassObj.DummyStudent())
-                ]:
-                    if not hasattr(student, attr):
+            achievements = copy.deepcopy(self.achievement_templates)
+            for key, achievement in achievements.items():
+                for attr, default in [("icon", None), 
+                                    ("when_triggered", "any"),
+                                    ("further_info", "因为这是老版本迁移过来的存档，所以这条信息是空缺的"), 
+                                    ("condition_info", "因为这是老版本迁移过来的存档，所以暂时没有详细条件信息")]: 
+                                        # 补齐老版本缺失的属性
+                    if not hasattr(achievement, attr):
                         try:
-                            setattr(student, attr, default)
+                            setattr(self.achievement_templates[key], attr, getattr(DEFAULT_ACHIEVEMENTS[key], attr))
                         except (AttributeError, KeyError):
-                            setattr(student, attr, default)
-            if not hasattr(_class, "groups"):
-                if _class.key in DEFAULT_CLASSES:
-                    _class.groups = copy.deepcopy(DEFAULT_CLASSES[_class.key].groups)
-                else:
-                    _class.groups = {}
-            for key, group in _class.groups.items():
-                index = 0
-                for member in group.members:
-                    group.members[index] = self.classes[member.belongs_to].students[member.num]
-                    index += 1
+                            setattr(self.achievement_templates[key], attr, default)
+
+            if not isinstance(self.modify_templates, OrderedKeyList):
+                self.modify_templates = OrderedKeyList(self.modify_templates) # 因为老版本用的是dict，所以需要转换一下
+
+            templates = copy.deepcopy(self.modify_templates)
+
+            for key, template in templates.items():
+                for attr, default in [
+                    ("is_visible", True),
+                ]:
+                    if not hasattr(template, attr):
+                        try:
+                            setattr(self.modify_templates[key], attr, getattr(DEFAULT_SCORE_TEMPLATES[key], attr))
+                        except (AttributeError, KeyError):
+                            setattr(self.modify_templates[key], attr, default)
+
+
+            for key_class, _class in self.classes.items():
+                for attr, default in [
+                    ("homework_rules", (DEFAULT_CLASSES[key_class].homework_rules) if key_class in DEFAULT_CLASSES else {}),
+                    ("cleaning_mapping", (getattr(_class, "cleaing_mapping", getattr(_class, "cleaning_mapping", {}))))  
+                    # 因为以前的版本是写错了的，所以这里需要特殊处理
+                ]:
+                    if not hasattr(_class, attr):
+                        try:
+                            setattr(self.classes[key_class], attr, getattr(DEFAULT_CLASSES[key_class], attr))
+                        except (AttributeError, KeyError):
+                            setattr(self.classes[key_class], attr, default)
+
+                for key, student in _class.students.items():  # 性能优化点：当前为O(n^3)复杂度(?)
+                    for attr, default in [
+                        ("last_reset_info", ClassObj.DummyStudent())
+                    ]:
+                        if not hasattr(student, attr):
+                            try:
+                                setattr(student, attr, default)
+                            except (AttributeError, KeyError):
+                                setattr(student, attr, default)
+                if not hasattr(_class, "groups"):
+                    if _class.key in DEFAULT_CLASSES:
+                        _class.groups = copy.deepcopy(DEFAULT_CLASSES[_class.key].groups)
+                    else:
+                        _class.groups = {}
+                for key, group in _class.groups.items():
+                    index = 0
+                    for member in group.members:
+                        group.members[index] = self.classes[member.belongs_to].students[member.num]
+                        index += 1
+
+            if "current_day_attendance" in data:
+                self.current_day_attendance = data.current_day_attendance
+            else:
+                self.current_day_attendance = ClassObj.AttendanceInfo(
+                    self.target_class.key, [], [], [], [], [], [], []
+                ) if self.target_class is not None else None
+
+            if "weekday_record" in data:
+                self.weekday_record: List[ClassObj.DayRecord] = [day for day in data.weekday_record if day.utc > 1000000000]
+            else:
+                self.weekday_record = []
+            
 
                         
         if reset_missing: # 如果需要重置，则重置
@@ -395,28 +419,15 @@ class ClassObj(ClassObj):
         else:
             self.history_data = {}                    
 
-
         if "last_start_time" in data:
             self.last_start_time = data.last_start_time
         else:
             self.last_start_time = time.time()
 
-        if "weekday_record" in data:
-            self.weekday_record: List[ClassObj.DayRecord] = [day for day in data.weekday_record if day.utc > 1000000000]
-        else:
-            self.weekday_record = []
-
-        if "current_day_attendance" in data:
-            self.current_day_attendance = data.current_day_attendance
-        else:
-            self.current_day_attendance = ClassObj.AttendanceInfo(
-                self.target_class.key, [], [], [], [], [], [], []
-            ) if self.target_class is not None else None
-        
-
-
-        Base.log("I", f"数据加载完成：{len(self.classes)}个班级，{len(self.achievement_templates)}个成就模板，{len(self.modify_templates)}个修改模板", "ClassObjects.load_data_and_set")
+        Base.log("I", f"数据加载完成：{len(self.classes)}个班级，{len(self.achievement_templates)}个成就模板，{len(self.modify_templates)}个修改模板", "ClassObjects.config_data")
         self.load_succeed = True
+
+        return data
 
 
 
@@ -485,7 +496,7 @@ class ClassObj(ClassObj):
                          weekday_record:List[DayRecord],
                          current_day_attendance:AttendanceInfo,
                          *,
-                         path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/classes.datas",
+                         path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/",
                          mode: Literal["pickle", "sqlite"] = "sqlite"):
         """强制以指定数据保存存档。
         
@@ -527,12 +538,13 @@ class ClassObj(ClassObj):
                                     current_day_attendance
                                     )
             if mode == "sqlite":
-                path = os.path.dirname(path)
+                path = os.path.dirname(path) if path.endswith(".datas") else path
                 chunk = Chunk(path, database)
                 t = time.time()
                 chunk.save()
                 Base.log("I", F"写入文件完成 ({time.time()-t:.3f}s)", "MainThread.save_data_strict")
                 Base.log("I","保存数据到"+path+f"完成，总时间：{time.time()-st:.3f}","MainThread.save_data_strict")
+                return database
 
 
             elif mode == "pickle":
@@ -551,20 +563,23 @@ class ClassObj(ClassObj):
                 Base.log("I", F"写入文件完成 ({time.time()-t:.3f}s)", "MainThread.save_data_strict")
 
                 Base.log("I","保存数据到"+path+f"完成，总时间：{time.time()-st:.3f}","MainThread.save_data_strict")
+                return database
 
         except BaseException as unused:
             Base.log_exc("保存存档"+path+"失败：", "Mainhread.save_data_strict")
             raise
 
     
-    def save_data(self, path:str=None, mode: Literal["pickle", "sqlite"] = "sqlite"):
+    def save_data(self, 
+                    path:str=None, 
+                    mode: Literal["pickle", "sqlite"] = "sqlite"):
         """保存当前存档。
         
         :param path: 文件路径
         """
         if path is None:
             path = self.save_path
-        self.save_data_strict(
+        return self.save_data_strict(
             DEFAULT_USER,
             time.time(),
             CORE_VERSION,
@@ -604,7 +619,9 @@ class ClassObj(ClassObj):
         
         :param path: 存档路径"""
         Base.log("E","重置数据到"+path+"...","MainThread.reset_data")
-        
+        import shutil
+        shutil.rmtree(os.path.join(path, "Histories"), ignore_errors=True)
+
         ClassObj.save_data_strict(
             DEFAULT_USER,
             time.time(),
@@ -925,7 +942,7 @@ class ClassObj(ClassObj):
                         (QColor(232, 255, 232) if s.mod > 0 else QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255)),
                     )))
             index += 1
-        self.insert_action("发送了点评" + " " +
+        self._insert_action_history_info("发送了点评" + " " +
                            (f"成功{len(succeed)}" + f" [{succeed[0].target.num}号{'等' if len(succeed) > 1 else ''}] " if len(succeed) != 0 else "") + 
                            (f"失败{len(send_to)-len(succeed)}" + f" [{send_to[0].num}号{'等' if len(send_to) > 1 else ''}] " if len(send_to) != len(succeed) else "") + 
                            f"<{a.title} {a.mod:.1f}分>" + 
@@ -972,7 +989,7 @@ class ClassObj(ClassObj):
                         (QColor(232, 255, 232) if s.mod > 0 else QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255)),
                     )))
             index += 1
-        self.insert_action("发送了点评" + " " +
+        self._insert_action_history_info("发送了点评" + " " +
                            ((f"成功{len(succeed)}" + f" [{repr(succeed[0].target.num)}号{'等' if len(succeed) > 1 else ''}] ") if len(succeed) != 0 else "") + 
                            ((f"失败{len(modify)-len(succeed)}" + f" [{repr(modify[0].target.num)}号{'等' if len(succeed) > 1 else ''}] ")if len(modify) != len(succeed) else "") + 
                            ("<多项类型可能不一>" if len(modify) > 1 else f"<{m.title} {m.mod:.1f}分>")  + 
@@ -1046,21 +1063,25 @@ class ClassObj(ClassObj):
                 index += 1
                 index_2 += 1
         
-        self.insert_action("撤回了点评 " + (f"成功{len(succeed)} [{repr(succeed[0].target.num)}号{'等' if len(succeed) > 1 else ''}] " if len(succeed) else "") 
+        self._insert_action_history_info("撤回了点评 " + (f"成功{len(succeed)} [{repr(succeed[0].target.num)}号{'等' if len(succeed) > 1 else ''}] " if len(succeed) else "") 
                             + (f"失败{len(modify)-len(succeed)} [{repr(failure[0].target.num)}号{'等' if len(failure) > 1 else ''}] " if len(modify) != len(succeed) else '') 
                            + (" " + info if info is not None else ""), lambda:self.list_view(
             info_list,
             "撤回记录" + (" " + info if info is not None else "")
             
         ), (0xec, 0xc9, 0x7c, 0xf3, 0xf1, 0xa7) if len(failure) else (127, 192, 245, 224, 234, 255))
-        return len(failure) == 0, return_result if len(failure) <= 1 else "多个操作执行失败" 
+        return len(failure) == 0, ("操作成功完成" if len(succeed) == 1 else "操作全部成功完成") if len(failure) == 0 else (("对于其中一个：" if len(modify) > 1 else "") + return_result if len(failure) <= 1 else f"共{len(failure)}个操作执行失败，请看左上信息栏")
         
         
         
 
 
     def retract_lastest(self) -> Tuple[bool, str]:
-        """撤销上一步操作"""
+        """
+        撤销上一步操作
+        
+        :return Tuple[bool, str]: 是否成功，执行信息
+        """
         if self.class_obs.opreation_record.is_empty():
             Base.log("W","没有可撤回的点评","MainThread.retract_last")
             return True, "没有需要的点评"
@@ -1079,14 +1100,14 @@ class ClassObj(ClassObj):
 
     def reset_scores(self) -> Dict[str, Class]:
         "结算所有数据"
-        history = ClassObj.History(copy.deepcopy(self.classes),  self.weekday_record)
+        history = ClassObj.History(copy.deepcopy(self.classes),  self.weekday_record, time.time())
         Base.log("W", "正在重置所有班级...", "ClassObjects.reset")
 
         for key, _class in self.classes.items():
             _class.reset()
 
         Base.log("I", "重置完成", "ClassObjects.reset")
-        self.insert_action(
+        self._insert_action_history_info(
             "分数结算",
             lambda: self.show_all_history(),
             (216, 112, 112, 255, 202, 202),
@@ -1141,7 +1162,7 @@ class ClassObj(ClassObj):
         ...
 
     @abstractmethod
-    def insert_action(self, text:str, func:Callable, color:Tuple[int, int, int, int], stepcount:int):
+    def _insert_action_history_info(self, text:str, func:Callable, color:Tuple[int, int, int, int], stepcount:int):
         """插入一个操作记录
         
         :param name: 文本
@@ -1167,6 +1188,9 @@ class ClassObj(ClassObj):
                   master=None,
                   commands:List[Tuple[str, Callable]]=None):
         ...
+
+    def on_auto_save_failure(self, exc_info: Tuple[Type[BaseException], BaseException, TracebackType]):
+        Base.log_exc("自动保存失败", "class_window.auto_save", "W", exc=exc_info)
 
 
     def auto_save(self, timeout:int=60):
@@ -1196,7 +1220,9 @@ class ClassObj(ClassObj):
                     Base.log("I", "自动保存完成", "class_window.auto_save")
 
                 except BaseException as unused:
-                    Base.log_exc("自动保存失败", "class_window.auto_save", "W")
+                    exc_info = sys.exc_info()
+                    self.on_auto_save_failure(exc_info)
+                    
                 self.auto_saving = False
                 
         except BaseException as unused:
@@ -1326,7 +1352,7 @@ class ClassStatusObserver(Object):
             "目标班级"
             self.templates = base.modify_templates
             "所有的分数修改模板"
-            self.opreation_record = Stack()
+            self.opreation_record: Stack[Iterable[ScoreModification]] = Stack()
             "操作记录"
             self.base = base
             "算法基层"
@@ -1349,6 +1375,7 @@ class ClassStatusObserver(Object):
             self.on_active = True
             last_frame_time = time.time()
             while self.on_active:
+                last_opreate_time = time.time()
                 if self.limited_tps:
                     time.sleep(max((1 / self.limited_tps) - (time.time() - last_frame_time), 0))
                 last_frame_time = time.time()
@@ -1361,7 +1388,7 @@ class ClassStatusObserver(Object):
                         Base.log("I", f"学生 {s.name} 的学号已从 {orig} 变为 {s.num}（二者不同步）", "ClassStatusObserver._start")
                 self.stu_score_ord = dict(enumerate(sorted(list(self.classes[self.class_id].students.values()), key=lambda a:a.score), start=1))
                 self.mspt = (time.time() - last_frame_time) * 1000
-                self.tps = min(self.limited_tps, 1 / (max(0.001, self.mspt) / 1000))
+                self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
 
         else:
             Base.log("I", "已经有存在的侦测线程了，无需再次启动")
@@ -1413,8 +1440,7 @@ class ClassStatusObserver(Object):
 
     def start(self):
         "启动侦测器"
-        a = Thread(target=self._start, name="ClassStatusObserverThread")
-        a.setDaemon(True)
+        a = Thread(target=self._start, name="ClassStatusObserverThread", daemon=True)
         a.start()
 
     def stop(self):
@@ -1466,22 +1492,41 @@ class AchievementStatusObserver(Object):
         self.mspt = 0
         "侦测器每帧耗时"
         self.overload_ratio = 0.15
-        "侦测器过载比例, 当一帧实际耗时大于 (1s/帧率)*过载比例 就视为过载，会减小侦测器tps"
+        """侦测器过载比例
+
+        当一帧实际耗时大于 (1s/帧率)*过载比例 就视为过载，会减小侦测器tps
+        
+        设置这个的目的是防止在处理过大数据的时候系统把时间花在计算成就上导致界面卡顿"""
         self.overloaded = False
         "侦测器是否过载"
         self.tps: float = 0
         "侦测器帧率"
+        self.total_frame_count = 0
+        "运行总帧数"
+        self.overload_warning_frame_limit = 2
+        "超载警告帧数阈值，连续超载的帧数大于这个数就会有提示"
         
-    
+    def on_observer_overloaded(self, last_fr_time: float, last_op_time: float, cur_mspt: float) -> None:
+        "侦测器过载时调用"
+        Base.log("W", "侦测器过载，当前帧耗时："
+                                        f"{round(cur_mspt, 3)}"
+                                        "ms, 将会适当减小tps", "AchievementStatusObserver._start")
+
+
     def _start(self):
         "内部启动用函数"
         if not self.on_active:
+            self.total_frame_count = 0
             self.on_active = True
-            t = Thread(target=self._display_thread, name="DisplayAchievementThread")
-            t.setDaemon(True)
+            t = Thread(target=self._display_thread, name="DisplayAchievement", daemon=True)
             t.start()
+            start_time = time.time()
             last_frame_time = time.time()
+            overload_count = 0
             while self.on_active:
+                self.total_frame_count += 1
+                last_opreate_time = time.time()
+
                 if time.time() - self.last_update > 1:
                     self.last_update = time.time()
                 if self.limited_tps:
@@ -1501,19 +1546,23 @@ class AchievementStatusObserver(Object):
                                 a2 = ClassObj.Achievement(self.achievement_templates[a], s)
                                 a2.give()
                                 self.display_achievement_queue.put({"achievement": a, "student": s})
-                self.mspt = (time.time() - last_frame_time) * 1000
-                self.tps = min(self.limited_tps, 1 / (max(0.001, self.mspt) / 1000))
+
+                cur_time = time.time()
+                self.mspt = (cur_time - last_frame_time) * 1000
+                overload_before = self.overloaded
                 if not opreated:        # 只在空扫描的时候才检测是否过载
-                    overloaded_before = self.overloaded
-                    if self.mspt * (1 / self.overload_ratio) < 1000 / self.limited_tps:
+                    if self.mspt > 1000 / self.limited_tps * self.overload_ratio:
                         self.overloaded = True
+                        overload_count += 1
                     else:
                         self.overloaded = False
-                    if self.overloaded and not overloaded_before:
-                        Base.log("W", "侦测器过载，当前帧耗时："
-                                        f"{round(self.mspt, 3)}"
-                                        "ms, 将会适当减小tps", "AchievementStatusObserver._start")
+                        overload_count = 0
+                    if self.overloaded and overload_count > self.overload_warning_frame_limit \
+                        and (cur_time - start_time) > 1 and not overload_before:  
+                        # 刚才才开始过载并且已经开了有一段时间了
+                        self.on_observer_overloaded(last_frame_time, last_opreate_time, self.mspt)
                     time.sleep((self.mspt * (1 / self.overload_ratio)) / 1000)
+                self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
 
         else:
             Base.log("I", "已经有存在的侦测线程了，无需再次启动")
@@ -1526,7 +1575,7 @@ class AchievementStatusObserver(Object):
                 if not self.display_achievement_queue.empty():
                     item = self.display_achievement_queue.get()
                     self.achievement_displayer(item["achievement"], item["student"])
-                time.sleep(0.1)
+                time.sleep(0.1)         # 每一行代码都有它存在的意义，不信删了试试
             except Exception as e:
                 Base.log("E", F"成就显示线程出错: [{sys.exc_info()[1].__class__.__name__}]{e}")
                 break
@@ -1535,8 +1584,7 @@ class AchievementStatusObserver(Object):
             
     def start(self):
         "启动侦测器"
-        a = Thread(target=self._start, name="AchievementObserverThread")
-        a.setDaemon(True)
+        a = Thread(target=self._start, name="AchievementObserverThread", daemon=True)
         a.start()
         
 

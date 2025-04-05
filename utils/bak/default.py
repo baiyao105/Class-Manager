@@ -589,14 +589,14 @@ DEFAULT_ACHIEVEMENTS:Dict[str, AchievementTemplate] = {
         ),
 
         "finally_returns": AchievementTemplate("finally_returns", "回归原点", "所以这周我干了啥？",
-                                               condition_info="努力了一周分数还是0",
-                                               further_info="忙活了一周，终于把自己忙活死了\n"
+                                                condition_info="努力了一周分数还是0",
+                                                further_info="忙活了一周，终于把自己忙活死了\n"
                                                             "（说实话这是我最有自信能拿到的成就）",
-                                               others=[
-                                                   lambda data: data.student.last_reset_info.score == 0,
-                                                   lambda data: data.student.last_reset_info.highest_score != 0 or data.student.last_reset_info.lowest_score != 0
-                                               ]
-                                               ),
+                                                others=[
+                                                    lambda data: data.student.last_reset_info.score == 0,
+                                                    lambda data: data.student.last_reset_info.highest_score != 0 or data.student.last_reset_info.lowest_score != 0
+                                                ]
+                                                ),
 
         "just_a_little": AchievementTemplate("just_a_little", "我没事，我很好", "这个成就怎么这么费脑子啊",
                                                 condition_info="分数>=20, 在距离常规分第一仅有2分时就被扣分",
