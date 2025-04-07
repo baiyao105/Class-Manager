@@ -13,11 +13,18 @@ from queue import Queue
 from abc import ABC, abstractmethod
 from types import TracebackType
 from collections import OrderedDict
-from threading import Thread as OrigThread
+from threading import Thread as OrigThread, Lock
 from typing import (List, Tuple, Optional, Union, Dict, Any, Generic,
                     Literal, final, TypeVar, Callable, Iterable, Iterator,
-                    Type)
+                    TextIO)
+from io import TextIOWrapper
 from typing_extensions import Mapping
+
+
+import colorama
+from loguru import logger
+
+
 
 try:
     from utils.consts import log_style
@@ -34,13 +41,9 @@ except ImportError:
     from system import SystemLogger
     # from high_precision_operation import HighPrecision
 
-from types import TracebackType
-
-from abc import ABC, abstractmethod
-import random
 
 
-from loguru import logger
+
 
 LOG_FILE_PATH = f'log/ClassManager_log_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log'
 "日志文件路径"
@@ -116,14 +119,14 @@ def get_function_namespace(func) -> str:
         except BaseException as unused:    # pylint: disable=broad-exception-caught
             try:
                 return func.__name__
-            except BaseException as unused:    # pylint: disable=broad-exception-caught
+            except BaseException as unused:    # pylint: disable=broad-exception-caught, redefined-outer-name
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
                 elif isinstance(func, classmethod):
                     return str(func.__func__.__qualname__)
                 try:
                     return func.__class__.__qualname__
-                except BaseException as unused:    # pylint: disable=broad-exception-caught
+                except BaseException as unused:    # pylint: disable=broad-exception-caught, redefined-outer-name
                     return func.__class__.__name__            
     if module is None:
         module_name = func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
@@ -533,6 +536,7 @@ class Thread(OrigThread):
         super().__init__(group=group, target=target, name=name, args=args, kwargs=kwargs, daemon=daemon)
         self._return = None
         self._finished = False
+        self.thread_id: Optional[int] = None
         
     @property
     def return_value(self):
@@ -545,7 +549,8 @@ class Thread(OrigThread):
 
     def run(self):
         "运行线程"
-        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long) (lambda: ctypes.pythonapi.PyThread_get_thread_ident()) ()
+        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long) \
+            (lambda: ctypes.pythonapi.PyThread_get_thread_ident()) ()
         if self._target is not None:
             self._return = self._target(*self._args, **self._kwargs)
         self._finished = True
@@ -575,76 +580,27 @@ nan = float("nan")
 class ModifyingError(Exception):"修改出现错误。"
 
 
-
-import colorama
-
-colorama.init(autoreset=True)
-
-class Color:
-    """颜色类（给终端文字上色的）
-    
-    :example:
-    
-    >>> print(Color.RED + "Hello, " + Color.End + "World!")
-    Hello, World!       (红色Hello，默认颜色的World)
-    
-    """
-    RED     =   colorama.Fore.RED
-    "红色"
-    GREEN   =   colorama.Fore.GREEN
-    "绿色"
-    YELLOW  =   colorama.Fore.YELLOW
-    "黄色"
-    BLUE    =   colorama.Fore.BLUE
-    "蓝色"
-    MAGENTA =   colorama.Fore.MAGENTA
-    "品红色"
-    CYAN    =   colorama.Fore.CYAN
-    "青色"
-    WHITE   =   colorama.Fore.WHITE
-    "白色"
-    BLACK   =   colorama.Fore.BLACK
-    "黑色"
-    END     =   colorama.Fore.RESET
-    "着色结束"
-    BOLD    =   colorama.Style.BRIGHT
-    "加粗"
-    UNDERLINE = colorama.Style.DIM
-    "下划线"
-    NORMAL = colorama.Style.NORMAL
-    "正常"
-    
-    @staticmethod
-    @final
-    def from_rgb(r:int, g:int, b:int) -> str:
-        "从RGB数值中生成颜色"
-        return f"\033[38;2;{r};{g};{b}m"
-
-
 class Mutex:
-    "一个简单的互斥锁"
+    "互斥锁"
     def __init__(self):
-        self.locked = False
+        self._lock = threading.Lock()
 
-    def lock(self):
-        "锁定"
-        if self.locked:
-            raise RuntimeError("互斥锁已经被锁定")
-        self.locked = True
+    def acquire(self):
+        "获取锁"
+        self._lock.acquire()
 
-    def unlock(self):
-        "解锁"
-        if not self.locked:
-            raise RuntimeError("互斥锁没有被锁定")
-        self.locked = False
+    def release(self):
+        "释放锁"
+        self._lock.release()
 
     def __enter__(self):
-        self.lock()
-    
-    def __exit__(self, exc_type: Type[BaseException], exc_val: Exception, exc_tb: TracebackType):
-        if exc_type is not None:
-            Base.log_exc("互斥锁异常退出", "Mutex.__exit__", exc=exc_val)
-        self.unlock()
+        "进入上下文管理器"
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        "退出上下文管理器"
+        self.release()
 
 
 
@@ -686,8 +642,8 @@ class FrameCounter:
         self.running = False
 
 
-def gen_uuid(len: int = 32) -> str:
-    return "".join([str(random.choice("0123456789abcdef")) for _ in range(len)])
+def gen_uuid(length: int = 32) -> str:
+    return "".join([str(random.choice("0123456789abcdef")) for _ in range(length)])
 
 
 def sep_uuid(uuid, sep: str = "/", length: int = 8) -> str:
@@ -727,65 +683,177 @@ class Object(object):
 
     def __repr__(self):
         "返回这个对象的表达式"
-        return f"{self.__class__.__name__}({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})"
+        return (f"{self.__class__.__name__}"
+        f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() 
+        if not k.startswith('_')])})")
         # 我个人认为不要把下划线开头的变量输出出来（不过只以一个下划线开头的还得考虑考虑）
 
+
+
+
+class LoggerSettings:
+    "日志配置"
+    def __init__(self,
+                log_file_path: Optional[str] = LOG_FILE_PATH,
+                fast_log_file_path: Optional[str] = None,
+                console_wrapper: Optional[TextIO] = stdout_orig,
+                log_mode: Literal["write_instantly", "write_buffered"] = \
+                    "write_instantly",
+                log_level: Literal["I", "W", "E", "F", "D", "C"] = "D",
+                draw_color: bool = True,
+                use_mutex: bool = True,
+                encoding: Optional[str] = "utf-8"
+                ):
+        """
+        初始化日志配置
+        
+        :param log_file_path: 日志文件路径
+        :param fast_log_file_path: 快速日志文件路径
+        :param console_wrapper: 控制台的输出
+        :param log_mode: 日志模式
+        :param log_level: 日志等级
+        :param draw_color: 是否绘制颜色
+        :param use_mutex: 是否使用互斥锁
+        """
+        self.log_file_path = log_file_path
+        "日志文件路径"
+        self.fast_log_file_path = fast_log_file_path
+        "快速日志文件路径"
+        self.console_wrapper = console_wrapper
+        "控制台的输出"
+        self.log_mode: Literal["write_instantly", "write_buffered"] = log_mode
+        "日志模式"
+        self.log_level = log_level
+        "日志等级"
+        self.draw_color = draw_color
+        "是否着色"
+        self.use_mutex = use_mutex
+        "是否使用互斥锁"
+        self.encoding = encoding
+        "编码"
+
+log_settings = LoggerSettings()
+
+
+LIGHT_CYAN = "<light-cyan>" if log_settings.draw_color else ""
+LIGHT_GREEN = "<light-green>"  if log_settings.draw_color else ""
+BLUE = "<blue>" if log_settings.draw_color else ""
+LEVEL = "<level>" if log_settings.draw_color else ""
+
+LIGHT_CYAN_CLOSE = "</light-cyan>" if log_settings.draw_color else ""
+LIGHT_GREEN_CLOSE = "</light-green>" if log_settings.draw_color else ""
+BLUE_CLOSE = "</blue>" if log_settings.draw_color else ""
+LEVEL_CLOSE = "</level>" if log_settings.draw_color else ""
 
 # 初始化日志配置
 logger.remove()
 logger.add(
     stdout_orig,            # 这样就不会重复读写了
     format=\
-        "<light-cyan>{time:YYYY-MM-DD HH:mm:ss.SSS}</light-cyan> | <level>{level: <8}</level> | "
-        "<blue>{extra[file]: <15}</blue> | "
-        "<light-green>{extra[source]}:{extra[lineno]}</light-green> - <level>{message}</level>",
+        f"{LIGHT_CYAN}{{time:YYYY-MM-DD HH:mm:ss.SSS}}"
+        f"{LIGHT_CYAN_CLOSE} | {LEVEL}{{level: <8}}{LEVEL_CLOSE} | "
+        f"{BLUE}{{extra[file]: <15}}{BLUE_CLOSE} | "
+        f"{LIGHT_GREEN}{{extra[source]}}:{{extra[lineno]}}"
+        f"{LIGHT_GREEN_CLOSE} - {LEVEL}{{message}}{LEVEL_CLOSE}",
     backtrace=True,
     diagnose=True
 )
+
+
 logger.add(
     LOG_FILE_PATH,
     rotation=None,
     retention='7 days',
     encoding='utf-8',
-    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {extra[full_file]: <23} | {extra[source_with_lineno]: <35} | {message}",
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | "
+        "{level: <8} | {extra[full_file]: <23} | "
+        "{extra[source_with_lineno]: <35} | {message}",
     backtrace=True,
     diagnose=True
 )
 
 
 
+colorama.init(autoreset=True)
 
-log_file = open(LOG_FILE_PATH, "a", buffering=1, encoding="utf-8")
-
+class Color:
+    """颜色类（给终端文字上色的）
+    
+    :example:
+    
+    >>> print(Color.RED + "Hello, " + Color.End + "World!")
+    Hello, World!       (红色Hello，默认颜色的World)
+    
+    """
+    RED     =   colorama.Fore.RED if log_settings.draw_color else ""
+    "红色"
+    GREEN   =   colorama.Fore.GREEN if log_settings.draw_color else ""
+    "绿色"
+    YELLOW  =   colorama.Fore.YELLOW if log_settings.draw_color else ""
+    "黄色"
+    BLUE    =   colorama.Fore.BLUE if log_settings.draw_color else ""
+    "蓝色"
+    MAGENTA =   colorama.Fore.MAGENTA if log_settings.draw_color else ""
+    "品红色"
+    CYAN    =   colorama.Fore.CYAN if log_settings.draw_color else ""
+    "青色"
+    WHITE   =   colorama.Fore.WHITE if log_settings.draw_color else ""
+    "白色"
+    BLACK   =   colorama.Fore.BLACK if log_settings.draw_color else ""
+    "黑色"
+    END     =   colorama.Fore.RESET if log_settings.draw_color else ""
+    "着色结束"
+    BOLD    =   colorama.Style.BRIGHT if log_settings.draw_color else ""
+    "加粗"
+    UNDERLINE = colorama.Style.DIM if log_settings.draw_color else ""
+    "下划线"
+    NORMAL = colorama.Style.NORMAL if log_settings.draw_color else ""
+    "正常"
+    
+    @staticmethod
+    @final
+    def from_rgb(r:int, g:int, b:int) -> str:
+        "从RGB数值中生成颜色"
+        return f"\033[38;2;{r};{g};{b}m" if log_settings.draw_color else ""
 
 
 # 启用loguru的异常捕获
 logger.catch(onerror=lambda exc: Base.log_exc("logger捕获到异常", exc=exc))
+
+
 class Base(Object):
     "工具基层"
-    log_file = log_file
+    log_file: Optional[TextIO] = \
+        open(log_settings.log_file_path, "a",
+            encoding=log_settings.encoding, errors="ignore",
+            buffering=1) if log_settings.log_file_path else None
     "日志文件"
-    # fast_log_file = open("log_buffered.txt", "w", buffering=1, encoding="utf-8")
-    # "临时日志文件"
+    fast_log_file: Optional[TextIO] = \
+        open(log_settings.fast_log_file_path, "a",
+            encoding=log_settings.encoding, errors="ignore",
+            buffering=1) if log_settings.fast_log_file_path else None
+    "快速日志文件"
+    log_mutex = Mutex()
+    "日志互斥锁"
     stdout_orig = stdout_orig
     "标准输出"
     stderr_orig = stderr_orig
     "标准错误"
-    captured_stdout = SystemLogger(sys.stdout, logger_name="sys.stdout", function=lambda m: Base.log("I", m, "sys.stdout"))
+    captured_stdout = SystemLogger(sys.stdout, logger_name="sys.stdout",
+                                function=lambda m: Base.log("I", m, "sys.stdout"))
     "经过处理的输出"
-    captured_stderr = SystemLogger(sys.stderr, logger_name="sys.stderr", function=lambda m: Base.log("E", m, "sys.stderr"))
+    captured_stderr = SystemLogger(sys.stderr, logger_name="sys.stderr",
+                                function=lambda m: Base.log("E", m, "sys.stderr"))
     "经过处理的错误输出"
-    # window_log_queue = Queue()
-    # "主窗口显示日志的队列（每一个项目是一行的字符串）"
     console_log_queue = Queue()
     "控制台日志队列"
     logfile_log_queue = Queue()
     "日志文件日志队列"
-    log_mutex = Mutex()
-    "记录日志的互斥锁（现在没用了）"
-    # log_file_keepcount = 20
-    # "日志文件保留数量"
-    thread_id = ctypes.CFUNCTYPE(ctypes.c_long) (lambda: ctypes.pythonapi.PyThread_get_thread_ident()) ()
+    log_file_keepcount = 20
+    "日志文件保留数量"
+    thread_id = int(ctypes.CFUNCTYPE(ctypes.c_long) \
+        (ctypes.pythonapi.PyThread_get_thread_ident) ())
+    # 一种很神奇的获取pid方法
     "当前进程的pid"
     thread_name = threading.current_thread().name
     "当前进程的名称"
@@ -793,14 +861,15 @@ class Base(Object):
     "当前进程的线程对象"
     logger_running = True
     "日志记录器是否在运行（我自己都不知道有没有用，忘了）"
-    log_level:Literal["I", "W", "E", "F", "D", "C"] = "D"
-    "日志记录器等级"
     short_log_info: List[str] = []
     "给主界面用的简短日志信息列表"
     short_log_keep_length: int = 150
     "日志信息保留的条数"
     logged_count: int = 0
     "自启动以来记录过的日志条数"
+    log_settings = LoggerSettings()
+    "日志配置"
+
 
 
     @staticmethod
@@ -824,17 +893,23 @@ class Base(Object):
         def log(msg_type:Literal["I", "W", "E", "F", "D", "C"], msg:str, source:str="MainThread"):
             """
             向控制台和日志输出信息
-            :param level: 日志级别 (I=INFO, W=WARNING, E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
+
+            :param level: 日志级别 (I=INFO, W=WARNING, 
+            E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
             :param msg: 日志消息
             :param source: 日志来源
             """
             # 如果日志等级太低就不记录
-            if (msg_type == "D" and Base.log_level not in ("D"))                \
-                    or (msg_type == "I" and Base.log_level not in ("D", "I"))            \
-                    or (msg_type == "W" and Base.log_level not in ("D", "I", "W"))        \
-                    or (msg_type == "E" and Base.log_level not in ("D", "I", "W", "E"))    \
+            if (msg_type == "D" 
+                and Base.log_settings.log_level not in ("D"))                \
+                    or (msg_type == "I" 
+                        and Base.log_settings.log_level not in ("D", "I"))            \
+                    or (msg_type == "W" 
+                        and Base.log_settings.log_level not in ("D", "I", "W"))        \
+                    or (msg_type == "E" 
+                        and Base.log_settings.log_level not in ("D", "I", "W", "E"))    \
                     or (msg_type == "F" or msg_type == "C" and 
-                        Base.log_level not in ("D", "I", "W", "E", "F", "C")):
+                        Base.log_settings.log_level not in ("D", "I", "W", "E", "F", "C")):
                 return
 
             if not isinstance(msg, str):
@@ -891,6 +966,10 @@ class Base(Object):
             :param send: 发送者
             :return: None
             """
+            if Base.log_settings.use_mutex:
+                Base.log_mutex.acquire()
+            
+
             if not isinstance(msg, str):
                 msg = repr(msg)
             for m in msg.splitlines():
@@ -916,20 +995,30 @@ class Base(Object):
                     lineno = 0
                 if file.startswith(("/", "\\")):
                     file = file[1:]
-                cm = f"{Color.BLUE}{Base.gettime()}{Color.END} {color}{msg_type}{Color.END} {Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}"
-                # lm = f"{Base.gettime()} {msg_type} {(source).ljust(35)} {m}" 
+                cm = (f"{Color.BLUE}{Base.gettime()}{Color.END} {color}{msg_type}{Color.END} "
+                f"{Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}")
                 lfm = f"{Base.gettime()} {msg_type} {(source + f' -> {file}:{lineno}').ljust(60)} {m}"
-                # Base.window_log_queue.put(lm)
-                # Base.console_log_queue.put(cm)
-                print(cm, file=Base.stdout_orig)
-                Base.logfile_log_queue.put(lfm)
-                # Base.log_file.write(lfm + "\n")
-                # print(lfm, file=Base.fast_log_file)2
-                # Base.log_file.flush()
+
+                if Base.fast_log_file:
+                    Base.fast_log_file.write(lfm + "\n")
+                    Base.fast_log_file.flush()
+
+                if log_settings.log_mode == "write_instantly":
+                    print(cm, file=Base.stdout_orig)
+                    if Base.log_file:
+                        Base.log_file.write(lfm + "\n")
+                        Base.log_file.flush()
+
+                elif log_settings.log_mode == "write_buffered":
+                    Base.console_log_queue.put(cm)
+                    Base.logfile_log_queue.put(lfm)
+
                 short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
                 Base.short_log_info.append(short_info)
                 Base.short_log_info = Base.short_log_info[-Base.short_log_keep_length:]
                 Base.logged_count += 1
+            if Base.log_settings.use_mutex:
+                Base.log_mutex.release()
 
 
     @staticmethod
@@ -1018,7 +1107,7 @@ class Base(Object):
                 return
         Base.log(level, f"{info} [{exc.__class__.__qualname__}] {exc}", sender)
 
-if log_style == "old":
+if log_style == "old" and log_settings.log_mode == "write_buffered":
     # 性能能省一点是一点
     Base.console_log_thread.start()
     Base.logfile_log_thread.start()

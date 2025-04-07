@@ -337,7 +337,7 @@ class MyWidget(QWidget):
                         )
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.startanimation: QPropertyAnimation = None
-        self.endanimation:   QPropertyAnimation = None
+        self.closeanimation:   QPropertyAnimation = None
 
     if platform.system() != "Windows":
         warnings.warn("非Windows系统可能无法正常使用动画效果")
@@ -512,10 +512,10 @@ class Command:
     def __init__(self, 
                 key: str,
                 name: str,
-                callable: str,
+                _callable: str,
                 for_which: Optional[Union[str, object]] = "MainWindow"):
         self.name = name
-        self.callable = callable
+        self.callable = _callable
         self.key = key
         self.usage = 0
         self.orig_func = lambda: None
@@ -566,7 +566,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     ##### 信号 #####
 
     log_update = Signal(str)
-    """日志更新信号，用于更新日志窗口
+    """
+    日志更新信号，用于更新日志窗口
     
     使用信号-槽机制解决跨线程UI更新问题，避免直接在线程中操作UI元素导致的错误：
     
@@ -626,24 +627,21 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.sidenotice_avilable_slots = list(range(5))
         self.opacity = 0.88
         self.current_user = current_user
-
         Base.log("I", "程序创建", "MainWindow.__init__")
         self.app = QApplication(list(args))
         self.app.setStyle(QStyleFactory.create(app_style))
         self.app.setStyleSheet(app_stylesheet)
         self.save_path = f"chunks/{current_user}/" # 可能在加载过之后变更
         "存档路径"
-        self.load_settings()
         self.backup_path = "backups/"
-        if self.auto_save_path == "user":
-            self.save_path = os.environ.get("USERPROFILE").replace("\\", "/") + f"/AppData/Roaming/ClassManager/chunks/{current_user}"
-            self.backup_path = os.environ.get("USERPROFILE").replace("\\", "/") + "/AppData/Roaming/ClassManager/"
+        "备份路径"
         super().__init__(user=current_user)
         self.init_display_data()
         self.init_class_data(class_name=class_name, 
                              class_id=class_key, 
                              current_user=current_user, 
                              class_obs_tps=10, achievement_obs_tps=10)
+        self.load_settings()
         self.config_data(os.getcwd() + os.sep + f"chunks/{self.current_user}/")
         # 给成就侦测器过载的时候增加一个提示
         orig_func = self.achievement_obs.on_observer_overloaded
@@ -736,7 +734,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "要插入到主窗口日志的队列"
         self.log_update.connect(self.logwindow_add_newline)
         self.log_update.emit("这里是日志")
-        self.load_settings()
         self.show_info.connect(lambda args: self._information(*args))
         self.show_warning.connect(lambda args: self._warning(*args))
         self.show_error.connect(lambda args: self._critical(*args))
@@ -776,7 +773,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.show_tip("", "双击项目查看消息记录", duration=0, further_info="孩子真聪明（bushi")
         self.ListWidget.itemDoubleClicked.connect(self.view_tip_hisory)
         self.ListWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        
+
+        self.student_info_window: Optional[StudentWidget] = None
+
     def __repr__(self):     # 其实是因为直接继承ClassObjects的repr会导致无限递归
         return super(MyMainWindow, self).__repr__()
 
@@ -1114,9 +1113,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.PushButton_12.clicked.disconnect(None)
         except RuntimeError:
             pass
-        self.PushButton_10.setText(QCoreApplication.translate("Form", lately_used_commands[-1].name if lately_used_commands else "暂无", None))
-        self.PushButton_11.setText(QCoreApplication.translate("Form", lately_used_commands[-2].name if len(lately_used_commands) >= 2 else "暂无", None))
-        self.PushButton_12.setText(QCoreApplication.translate("Form", lately_used_commands[-3].name if len(lately_used_commands) >= 3 else "暂无", None))
+        self.PushButton_10.setText(lately_used_commands[-1].name if lately_used_commands else "暂无")
+        self.PushButton_11.setText(lately_used_commands[-2].name if len(lately_used_commands) >= 2 else "暂无")
+        self.PushButton_12.setText(lately_used_commands[-3].name if len(lately_used_commands) >= 3 else "暂无")
         self.PushButton_10.clicked.connect((lambda: lately_used_commands[-1].callable(self) if lately_used_commands[-1].for_which == "MainWindow" else (lambda: lately_used_commands[-1].callable(lately_used_commands[-1].for_which) if lately_used_commands[-1].for_which else lately_used_commands[-1].callable())) if lately_used_commands else lambda: None)
         self.PushButton_11.clicked.connect((lambda: lately_used_commands[-2].callable(self) if lately_used_commands[-2].for_which == "MainWindow" else (lambda: lately_used_commands[-2].callable(lately_used_commands[-2].for_which) if lately_used_commands[-2].for_which else lately_used_commands[-2].callable())) if len(lately_used_commands) >= 2 else lambda: None)
         self.PushButton_12.clicked.connect((lambda: lately_used_commands[-3].callable(self) if lately_used_commands[-3].for_which == "MainWindow" else (lambda: lately_used_commands[-3].callable(lately_used_commands[-3].for_which) if lately_used_commands[-3].for_which else lately_used_commands[-3].callable())) if len(lately_used_commands) >= 3 else lambda: None)
@@ -1164,7 +1163,11 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Base.log("I", "设置设置信息", "MainWindow.set_settings")
         for key, value in kwargs.items():
             if settings.get(key) != kwargs[key]:
-                Base.log("I", f"{key} 变更： {settings.get(key)} -> {repr(getattr(self, key, None))} (self) / {repr(kwargs[key])} (kwargs)", "MainWindow.set_settings")
+                Base.log("I", f"{key} 变更： "
+                        f"{settings.get(key)} "
+                        f"-> {repr(getattr(self, key, None))} (self) "
+                        f"/ {repr(kwargs[key])} (kwargs)", 
+                        "MainWindow.set_settings")
             setattr(self, key, value)
             setattr(settings, key, value)
         self.save_settings()
@@ -1273,7 +1276,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
             pixmap = QPixmap("./img/main/background.jpg")
 
-        painter.drawPixmap(-padding, -padding, self.width() + padding * 2, self.height() + padding * 2, pixmap)
+        painter.drawPixmap(-padding, -padding, 
+                        self.width() + padding * 2, self.height() + padding * 2, pixmap)
         painter.end()
         event.accept()
 
@@ -1393,16 +1397,23 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def update(self):
         "更新界面"
-        self.label_2.setText(QCoreApplication.translate("Form", F"{self.target_class.name}"))
-        self.label_3.setText(QCoreApplication.translate("Form", F"{len(self.target_class.students)}", None))
-        self.label_4.setText(QCoreApplication.translate("Form", F"{self.target_class.owner}", None))
-        self.label_5.setText(QCoreApplication.translate("Form", F"{self.target_class.student_avg_score:.2f}", None))
-        self.label_6.setText(QCoreApplication.translate("Form", F"{max(*[float(self.target_class.students[num].score) for num in self.target_class.students])}/{min(*[float(self.target_class.students[num].score) for num in self.target_class.students])}", None))
-        self.label_7.setText(QCoreApplication.translate("Form", f"{self.framerate}fps; {self.video_framerate}fps", None))
-        self.label_8.setText(QCoreApplication.translate("Form", f"{time.time() - self.create_time:.1f} s", None))
-        self.label_9.setText(QCoreApplication.translate("Form", f"{threading.active_count()}", None))
-        self.label_10.setText(QCoreApplication.translate("Form",f"{psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024:.1f} MB", None))
-        self.label_11.setText(QCoreApplication.translate("Form",f"{self.class_obs.tps:.2f}/{self.class_obs.limited_tps}tps; {str(round(self.achievement_obs.tps, 2)).rjust(5)}/{self.achievement_obs.limited_tps}tps", None))
+        self.label_2.setText(F"{self.target_class.name}")
+        self.label_3.setText(F"{len(self.target_class.students)}")
+        self.label_4.setText(F"{self.target_class.owner}")
+        self.label_5.setText(F"{self.target_class.student_avg_score:.2f}")
+        self.label_6.setText(F"{max(*[float(self.target_class.students[num].score) 
+                        for num in self.target_class.students])}/"
+                        f"{min(*[float(self.target_class.students[num].score) 
+                        for num in self.target_class.students])}")
+        self.label_7.setText(f"{self.framerate}fps; {self.video_framerate}fps")
+        self.label_8.setText(f"{time.time() - self.create_time:.1f} s")
+        self.label_9.setText(f"{threading.active_count()}")
+        self.label_10.setText(f"{psutil.Process(os.getpid()).memory_info().rss \
+                                / 1024 / 1024:.1f} MB")
+        self.label_11.setText(f"{self.class_obs.tps:.2f}/"
+                            f"{self.class_obs.limited_tps}tps;"
+                            f" {str(round(self.achievement_obs.tps, 2)).rjust(5)}/"
+                            f"{self.achievement_obs.limited_tps}tps")
         self.BodyLabel_2.setText(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         self.BodyLabel.setText("%s好，欢迎回来" % (
             "早上" if 5 <= time.localtime().tm_hour < 10 else
@@ -1514,21 +1525,16 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def mainloop(self) -> int:
         """主循环，跟tk的差不多"""
         Base.log("I", "mainloop启动中...", "MainWindow.mainloop")
-        self.updator_thread.start()
         self.is_running = True
-        self.insert_action_history_info("双击这种列表项目可查看信息", lambda: QMessageBox.information(self, "。", "孩子真棒"))
-        Base.log("I", "线程启动完成，exec()", "MainWindow.mainloop")
-        self.log("I", "主窗口启动（尝试用self.log）", "MainWindow")
-        Base.log("D", "这是调试信息", "MainWindow.mainloop")
-        Base.log("I", "这是信息信息", "MainWindow.mainloop")
-        Base.log("W", "这是警告信息", "MainWindow.mainloop")
-        Base.log("E", "这是错误信息", "MainWindow.mainloop")
-        Base.log("C", "这是致命错误信息", "MainWindow.mainloop")
+        self.insert_action_history_info("双击这种列表项目可查看信息",
+                                        lambda: QMessageBox.information(self, "。", "孩子真棒"))
         self.icon = QIcon()
         self.icon.addPixmap(QPixmap("img/favicon.ico"), QIcon.Mode.Normal, QIcon.State.Off)
         self.setWindowIcon(self.icon)
         self.on_start_up_finished()
         self.show()
+        self.updator_thread.start()
+        Base.log("I", "线程启动完成，exec()", "MainWindow.mainloop")
         status = self.app.exec()
         Base.log("I", "主窗口关闭", "MainWindow")
         self.app.quit()
@@ -1935,9 +1941,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         :param student: 学生
         """
         Base.log("I", F"打开学生信息窗口，学生名：{student.name}", "MainWindow.student_info")
-        if not (hasattr(self, "student_info_window") and self.student_info_window is not None):
-            self.student_info_window = \
-            StudentWidget(mainwindow=self,
+        self.student_info_window = \
+        StudentWidget(mainwindow=self,
                 student=student,
                 master_widget=master_widget or self, 
                 readonly=readonly)
@@ -2425,7 +2430,7 @@ class UpdateThread(QThread):
             self.mainwindow.grid_buttons()
             Base.log("I", "学生列表更新完成", "UpdateThread.run")
         for num, stu in self.mainwindow.target_class.students.items():
-            self.mainwindow.stu_buttons[num].setText(QCoreApplication.translate("Form", f"{stu.num}号 {stu.name}\n{stu.score}分", None))
+            self.mainwindow.stu_buttons[num].setText(f"{stu.num}号 {stu.name}\n{stu.score}分")
             if stu.score > self.lastest_score[stu.num]:
                 begin = self.mainwindow.score_up_color_mixin_begin
                 end = self.mainwindow.score_up_color_mixin_end
@@ -2433,9 +2438,12 @@ class UpdateThread(QThread):
                 mixin_start = self.mainwindow.score_up_color_mixin_start
                 value = abs(int(stu.score) - int(self.lastest_score[stu.num]))
                 self.mainwindow.button_update.emit(self.mainwindow.stu_buttons[num], ((
-                    int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) * ((begin[0] - end[0]) / step)))), 
-                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) * ((begin[1] - end[1]) / step)))),
-                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) * ((begin[2] - end[2]) / step))))),
+                    int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) 
+                                * ((begin[0] - end[0]) / step)))), 
+                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) 
+                                * ((begin[1] - end[1]) / step)))),
+                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) 
+                                * ((begin[2] - end[2]) / step))))),
                     (255, 255, 255), 
                     min(self.mainwindow.score_up_flash_framelength_max, 
                     int(value * self.mainwindow.score_up_flash_framelength_step 
@@ -2448,16 +2456,21 @@ class UpdateThread(QThread):
                 mixin_start = self.mainwindow.score_down_color_mixin_start
                 value = abs(stu.score - self.lastest_score[stu.num])
                 self.mainwindow.button_update.emit(self.mainwindow.stu_buttons[num], ((
-                    int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) * ((begin[0] - end[0]) / step)))), 
-                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) * ((begin[1] - end[1]) / step)))),
-                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) * ((begin[2] - end[2]) / step))))), 
+                    int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) 
+                                * ((begin[0] - end[0]) / step)))), 
+                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) 
+                                * ((begin[1] - end[1]) / step)))),
+                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) 
+                                * ((begin[2] - end[2]) / step))))), 
                     (255, 255, 255), 
                     min(self.mainwindow.score_up_flash_framelength_max, 
                     int(value * self.mainwindow.score_down_flash_framelength_step
                     + self.mainwindow.score_down_flash_framelength_base))))
                 if self.lastest_score[stu.num] - stu.score >= 1145 and not self.first_loop:
                     play_sound("audio/sounds/boom.mp3", volume=0.2)
-                    Base.log("I", f"不是哥们，真有人能扣{self.lastest_score[stu.num] - stu.score:.1f}分？犯天条了？", "UpdateThread.run")
+                    Base.log("I", f"不是哥们，真有人能扣"
+                        f"{self.lastest_score[stu.num] - stu.score:.1f}分？犯天条了？",
+                        "UpdateThread.run")
 
                 self.lastest_score[stu.num] = stu.score
             time.sleep(0.002)
@@ -2471,9 +2484,12 @@ class UpdateThread(QThread):
             self.mainwindow.grid_buttons()
             Base.log("I", "小组列表更新完成", "UpdateThread.run")
 
-        for key, grp in self.mainwindow.groups.items():
+        for key, grp in self.mainwindow.target_class.groups.items():
             grp: Group
-            self.mainwindow.grp_buttons[key].setText(QCoreApplication.translate("Form", f"{grp.name}\n\n总分 {grp.total_score:.1f}分\n平均 {grp.average_score:.2f}分\n去最低平均 {grp.average_score_without_lowest:.2f}分", None))
+            self.mainwindow.grp_buttons[key].setText(
+                f"{grp.name}\n\n总分 {grp.total_score:.1f}分\n"
+                f"平均 {grp.average_score:.2f}分\n"
+                f"去最低平均 {grp.average_score_without_lowest:.2f}分")
             if grp.total_score > self.lastest_grp_score[key]:
                 begin = self.mainwindow.score_up_color_mixin_begin
                 end = self.mainwindow.score_up_color_mixin_end
@@ -2481,9 +2497,12 @@ class UpdateThread(QThread):
                 mixin_start = self.mainwindow.score_up_color_mixin_start
                 value = abs(int(grp.total_score) - int(self.lastest_grp_score[key]))
                 self.mainwindow.button_update.emit(self.mainwindow.grp_buttons[key], 
-                    ((int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) * ((begin[0] - end[0]) / step)))), 
-                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) * ((begin[1] - end[1]) / step)))),
-                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) * ((begin[2] - end[2]) / step))))), 
+                    ((int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) 
+                                * ((begin[0] - end[0]) / step)))), 
+                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) 
+                                * ((begin[1] - end[1]) / step)))),
+                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) 
+                                * ((begin[2] - end[2]) / step))))), 
                     (255, 255, 255), 
                     min(self.mainwindow.score_up_flash_framelength_max, 
                     int(value * self.mainwindow.score_up_flash_framelength_step
@@ -2496,9 +2515,12 @@ class UpdateThread(QThread):
                 mixin_start = self.mainwindow.score_down_color_mixin_start
                 value = abs(grp.total_score - self.lastest_grp_score[key])
                 self.mainwindow.button_update.emit(self.mainwindow.grp_buttons[key], ((
-                    int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) * ((begin[0] - end[0]) / step)))), 
-                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) * ((begin[1] - end[1]) / step)))),
-                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) * ((begin[2] - end[2]) / step))))), 
+                    int(min(begin[0], max(end[0], begin[0] - max(value - mixin_start, 0) 
+                                * ((begin[0] - end[0]) / step)))), 
+                    int(min(begin[1], max(end[1], begin[1] - max(value - mixin_start, 0) 
+                                * ((begin[1] - end[1]) / step)))),
+                    int(min(begin[2], max(end[2], begin[2] - max(value - mixin_start, 0) 
+                                * ((begin[2] - end[2]) / step))))), 
                     (255, 255, 255), 
                 min(self.mainwindow.score_up_flash_framelength_max, 
                     int(value * self.mainwindow.score_down_flash_framelength_step
@@ -2524,8 +2546,12 @@ class UpdateThread(QThread):
         Base.log("I", f"返回结果：{res}", "UpdateThread.detect_new_version")
         if res == UpdateInfo.ERROR:
             Base.log_exc("检测更新出现错误", "UpdateThread.detect_new_version", exc=info)
-            self.mainwindow.show_tip("错误", "检测更新出现错误，请检查网络连接", duration=5000, icon=InfoBarIcon.ERROR, 
-                                    further_info=f"详细信息：\n\n{''.join(traceback.format_exception(type(info), info, info.__traceback__))}")
+            self.mainwindow.show_tip("错误", 
+                    "检测更新出现错误，请检查网络连接", 
+                    duration=5000, icon=InfoBarIcon.ERROR, 
+                    further_info=f"详细信息：\n\n{''.join(
+                        traceback.format_exception(type(info), info, info.__traceback__)
+                    )}")
 
         elif res == UpdateInfo.UPDATE_AVAILABLE:
             self.mainwindow.show_tip("提示", "发现新版本！", duration=5000)
@@ -2536,7 +2562,8 @@ class UpdateThread(QThread):
                     try:
                         get_update_zip()
                         unzip_to_dir()
-                        self.mainwindow.information("更新下载完成", "10秒之后将会重启程序以完成更新。（按任意键关闭后开始计时）")
+                        self.mainwindow.information("更新下载完成",
+                            "10秒之后将会重启程序以完成更新。（按任意键关闭后开始计时）")
                         time.sleep(10)
                         self.mainwindow.save_data()
                         self.mainwindow.save_current_settings()
@@ -2546,8 +2573,11 @@ class UpdateThread(QThread):
 
                     except Exception as e:
                         Base.log_exc("更新出现错误", "UpdateThread.update_self")
-                        self.mainwindow.show_tip("错误", "更新出现错误", duration=5000, icon=InfoBarIcon.ERROR,
-                                        further_info=f"详细信息：\n\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
+                        self.mainwindow.show_tip("错误", "更新出现错误",
+                            duration=5000, icon=InfoBarIcon.ERROR,
+                            further_info=f"详细信息：\n\n{''.join(
+                                traceback.format_exception(type(e), e, e.__traceback__)
+                            )}")
 
                 Thread(target=lambda:_update(self)).start()
 
@@ -2556,8 +2586,10 @@ class UpdateThread(QThread):
                     self.mainwindow.question_if_exec(
                         "发现新版本！",
                         "有新版本了！\n\n"
-                        f"界面版本：{CLIENT_VERSION}({CLIENT_VERSION_CODE}) -> {info['client_version']}({info['client_version_code']})\n"
-                        f"核心版本：{CORE_VERSION}({CORE_VERSION_CODE}) -> {info['core_version']}({info['core_version_code']})\n\n"
+                        f"界面版本：{CLIENT_VERSION}({CLIENT_VERSION_CODE})"
+                        f" -> {info['client_version']}({info['client_version_code']})\n"
+                        f"核心版本：{CORE_VERSION}({CORE_VERSION_CODE})"
+                        f" -> {info['core_version']}({info['core_version_code']})\n\n"
                         "是否要打开外部网站？\n"
                         f"（https://gitee.com/{AUTHOR}/{REPO_NAME}）\n",
                         lambda: os.startfile(f"https://gitee.com/{AUTHOR}/{REPO_NAME}")
@@ -2565,43 +2597,64 @@ class UpdateThread(QThread):
             else:
                 self.mainwindow.question_if_exec("发现新版本!",
                 "有新版本了！\n\n"
-                f"界面版本：{CLIENT_VERSION}({CLIENT_VERSION_CODE}) -> {info['client_version']}({info['client_version_code']})\n"
-                f"核心版本：{CORE_VERSION}({CORE_VERSION_CODE}) -> {info['core_version']}({info['core_version_code']})\n\n"
+                f"界面版本：{CLIENT_VERSION}({CLIENT_VERSION_CODE})"
+                f" -> {info['client_version']}({info['client_version_code']})\n"
+                f"核心版本：{CORE_VERSION}({CORE_VERSION_CODE})"
+                f" -> {info['core_version']}({info['core_version_code']})\n\n"
                 "是否更新？",
                 lambda: update_self(self),
                 QPixmap("./img/logo/favicon-update.png"))
 
         elif res == UpdateInfo.NO_UPDATE:
-            self.mainwindow.show_tip("提示", "当前已是最新版本。", duration=5000)
+            self.mainwindow.show_tip("提示", "当前已是最新版本。", 
+                                    duration=5000)
 
         elif res == UpdateInfo.VERSION_IS_AHEAD:    # 版本号比服务器高，不过一般应该不会吧
-            self.mainwindow.show_tip("?", "你对版本号文件做什么了。。。", duration=5000, icon=InfoBarIcon.ERROR)
+            self.mainwindow.show_tip("?", "你对版本号文件做什么了。。。",
+                                    duration=5000, icon=InfoBarIcon.ERROR)
 
     def detect_newday(self):
         "检测是否是新的一天"
-        if time.localtime(self.mainwindow.last_start_time).tm_wday != time.localtime().tm_wday or ( # 不是一周的同一天
-            time.time() - self.mainwindow.last_start_time >= 86400                                  # 是一周的同一天旦超过一天
-            and time.localtime(self.mainwindow.last_start_time).tm_wday == time.localtime().tm_wday
+        if time.localtime(self.mainwindow.last_start_time).tm_wday \
+            != time.localtime().tm_wday or ( # 不是一周的同一天
+                
+
+            time.time() - self.mainwindow.last_start_time >= 86400 # 是一周的同一天旦超过一天
+
+            and time.localtime(self.mainwindow.last_start_time).tm_wday \
+                == time.localtime().tm_wday
         ):
             
             # 没好的一天又开始力
-            self.mainwindow.show_tip("日期刷新", f"{time.strftime('%Y年%m月%d日过去了，', time.localtime(self.mainwindow.last_start_time))}新的一天开始了！", self.mainwindow, duration=6000, sound="audio/sounds/orb.ogg", icon=InfoBarIcon.INFORMATION)
+            self.mainwindow.show_tip("日期刷新", 
+                    f"{time.strftime('%Y年%m月%d日过去了，', 
+                        time.localtime(self.mainwindow.last_start_time))}"
+                        "新的一天开始了！", 
+                    self.mainwindow, duration=6000, 
+                    sound="audio/sounds/orb.ogg", icon=InfoBarIcon.INFORMATION)
+
             self.mainwindow.day_end(
                 time.localtime(self.mainwindow.last_start_time).tm_wday,
                 self.mainwindow.last_start_time,
                 time.time() - self.mainwindow.last_start_time <= 86400
 
             )
-            self.mainwindow.last_start_time += min(time.time() - self.mainwindow.last_start_time, 86400)
+            self.mainwindow.last_start_time += \
+                min(time.time() - self.mainwindow.last_start_time, 86400)
 
         else:
-            self.mainwindow.last_start_time += min(time.time() - self.mainwindow.last_start_time, 86400)
+            self.mainwindow.last_start_time += \
+                min(time.time() - self.mainwindow.last_start_time, 86400)
 
     def run(self):
         "线程运行"
         Base.log("I", "更新线程开始运行", "UpdateThread.run")
-        self.lastest_score = [0] * (max(*[s.num for s in self.mainwindow.target_class.students.values()]) + 1)
-        self.lastest_grp_score: Dict[str, float] = dict([(grp.key, 0.0) for grp in self.mainwindow.groups.values()])
+        self.lastest_score: Dict[int, float] = \
+            dict([(stu.num, 0.0) for stu in self.mainwindow.target_class.students.values()])
+
+        self.lastest_grp_score: Dict[str, float] = \
+            dict([(grp.key, 0.0) for grp in self.mainwindow.target_class.groups.values()])
+
         while self.mainwindow.is_running:
             try:
                 self.detect_newday()
@@ -2609,7 +2662,8 @@ class UpdateThread(QThread):
                     self.update_stu_btns()
                     self.update_grp_btns()
                 except IndexError as e:
-                    Base.log_exc_short("疑似添加/减少学生，正在重新加载: ",  "UpdateThread.run", "W", e)
+                    Base.log_exc_short("疑似添加/减少学生，正在重新加载: ",
+                                "UpdateThread.run", "W", e)
                     self.mainwindow.grid_buttons()
                 if self.first_loop:
                     Thread(target=self.detect_new_version).start()
@@ -2621,6 +2675,8 @@ class UpdateThread(QThread):
                 Base.log_exc("更新窗口事件时发生错误", "UpdateThread.run")
 
 class TipViewerWindow(NoticeViewer.Ui_widget, MyWidget):
+    "提示详细信息窗口"
+
     def __init__(self, 
                     obj: Optional[SideNotice] = None, parent: Optional[QWidget] = None):
         super(NoticeViewer.Ui_widget, self).__init__(parent)
@@ -2633,6 +2689,7 @@ class TipViewerWindow(NoticeViewer.Ui_widget, MyWidget):
         self.textBrowser.setText(obj.further_info)
     
     def set_obj(self, obj: SideNotice):
+        "设置当前的展示对象"
         self.label_4.setText(time.strftime("%H:%M:%S", time.localtime(obj.create_time)))
         self.label_6.setText(f"{obj.duration}ms")
         self.label_8.setText("是" if obj.closeable else "否")
@@ -2643,26 +2700,41 @@ class TipViewerWindow(NoticeViewer.Ui_widget, MyWidget):
         
 
 class RecoveryPoint:
-        
     """还原点"""
 
     def __init__(self, path:str, mode:Literal["all", "only_data"], 
-                 stat:Literal["active", "unknown", "damaged", "missed"]):
+                stat:Literal["active", "unknown", "damaged", "missed"]):
+        """
+        初始化
+        
+        :param path: 路径
+        :param mode: 模式
+        :param stat: 状态
+        """
         self.path = path
         self.mode = mode
         self.time = time.time()
         self.stat = stat
 
-    def get_data_path(self, current_user:str, mode: Literal["all", "only_data"]="only_data"):   # NOSONAR; pylint: disable=unused-argument
-        """获取数据路径"""
+    def get_data_path(self, 
+                    current_user:str):
+        """
+        获取数据路径
+        
+        :param current_user: 当前用户
+        """
         return os.path.join(self.path, "chunks",  current_user)
 
     def exists(self):
-        """检查是否存在"""
+        """检查换还原点是否存在"""
         return os.path.exists(self.path)
     
     def load_onlydata_and_set(self, current_user="测试用户1"):
-        """加载数据并设置"""
+        """
+        加载数据并设置
+
+        :param current_user: 当前用户
+        """
         Base.log("I", "正在从还原点恢复数据", "RecoveryPoint.load_onlydata")
         Base.log("I", "还原点路径：" + self.path, "RecoveryPoint.load_onlydata")
         Base.log("I", "还原点模式：" + self.mode, "RecoveryPoint.load_onlydata")
@@ -2677,11 +2749,15 @@ class RecoveryPoint:
             for root, dirs, files in os.walk(self.get_data_path(widget.current_user)):
                 for file in files:
                     os.makedirs(os.path.join(widget.save_path, 
-                        os.path.relpath(root, self.get_data_path(widget.current_user))), exist_ok=True)
+                        os.path.relpath(root, self.get_data_path(widget.current_user))), 
+                        exist_ok=True)
                     shutil_copy(os.path.join(root, file), 
-                        os.path.join(widget.save_path, os.path.relpath(root, self.get_data_path(widget.current_user)), file))
+                        os.path.join(widget.save_path, 
+                        os.path.relpath(root, self.get_data_path(widget.current_user)), file
+                        ))
         _copy()
-        Base.log("I", f"将文件从{self.get_data_path(widget.current_user)}复制到{widget.save_path}...", "RecoveryPoint.load_onlydata_and_set")
+        Base.log("I", f"将文件从{self.get_data_path(widget.current_user)}"
+                f"复制到{widget.save_path}...", "RecoveryPoint.load_onlydata_and_set")
         QMessageBox.information(widget, "恢复成功", "恢复成功，请重新启动程序")
 
         while widget.auto_saving:
@@ -2743,22 +2819,24 @@ class StudentWidget(StudentWindow.Ui_Form, MyWidget):
 
     def show(self, readonly=False):
         self.readonly = readonly
-        Base.log("I", f"学生信息窗口打开，目标学生：{repr(self.student)}，只读模式：{self.readonly}", "StudentWidget")
+        Base.log("I", f"学生信息窗口打开，目标学生：{repr(self.student)}，"
+                    f"只读模式：{self.readonly}", "StudentWidget")
         self.setWindowTitle("学生信息 - "+str(self.student.name))
         super().show()
         self.pushButton_3.setDisabled(readonly)
             
 
     def update(self):
-        self.label_11.setText(QCoreApplication.translate("Form", str(self.student.name), None))
-        self.label_6.setText(QCoreApplication.translate("Form", str(self.student.num), None))
-        self.label_12.setText(QCoreApplication.translate("Form", str(self.student.score), None))
-        self.label_13.setText(QCoreApplication.translate("Form", str(self.mainwindow.classes[self.student.belongs_to].name), None))
-        self.label_8.setText(QCoreApplication.translate("Form", str(round(self.student.highest_score, 1)) + "/" + str(round(self.student.lowest_score, 1)), None))
-        self.label_7.setText(QCoreApplication.translate("Form", str(self.student.total_score), None))
+        self.label_11.setText(str(self.student.name))
+        self.label_6.setText(str(self.student.num))
+        self.label_12.setText(str(self.student.score))
+        self.label_13.setText(str(self.mainwindow.classes[self.student.belongs_to].name))
+        self.label_8.setText(str(round(self.student.highest_score, 1)) 
+                            + "/" + str(round(self.student.lowest_score, 1)))
+        self.label_7.setText(str(self.student.total_score))
         for i, s in self.mainwindow.class_obs.rank_non_dumplicate:
             if s.num == self.student.num and s.belongs_to == self.student.belongs_to:
-                self.label_16.setText(QCoreApplication.translate("Form", str(i)))
+                self.label_16.setText(str(i))
                 break
 
     def send(self, result:Tuple[str, str, str, float]):
@@ -2965,7 +3043,7 @@ class GroupWidget(GroupWindow.Ui_Form, MyWidget):
             self.listWidget_order.append(member)
         self.listWidget.clicked.connect(self.student_clicked)
         self.textBrowser.setText(
-            QCoreApplication.translate("Form", str(self.group.further_desc), None)) # 不能在别的线程设置，我也不知道为什么
+            str(self.group.further_desc)) # 不能在别的线程设置，我也不知道为什么
         self.update_stu_list()
         self.pushButton.clicked.connect(lambda: self.mainwindow.scoring_select(
             students=self.group.members))
@@ -2999,11 +3077,11 @@ class GroupWidget(GroupWindow.Ui_Form, MyWidget):
         self.student_window.show(self.readonly)
 
     def update_label(self):
-        self.label_6.setText(QCoreApplication.translate("Form", str(self.group.name), None))
-        self.label_9.setText(QCoreApplication.translate("Form", str(len(self.group.members)), None))
-        self.label_8.setText(QCoreApplication.translate("Form", str(self.group.total_score) + f"（均分{self.group.average_score}，去最低分{self.group.average_score_without_lowest}）", None))
-        self.label_7.setText(QCoreApplication.translate("Form", str(self.mainwindow.classes[self.group.belongs_to].name), None))
-        self.label_11.setText(QCoreApplication.translate("Form", str(self.group.leader.name), None))
+        self.label_6.setText(str(self.group.name))
+        self.label_9.setText(str(len(self.group.members)))
+        self.label_8.setText(str(self.group.total_score) + f"（均分{self.group.average_score}，去最低分{self.group.average_score_without_lowest}）")
+        self.label_7.setText(str(self.mainwindow.classes[self.group.belongs_to].name))
+        self.label_11.setText(str(self.group.leader.name))
 
     def update_stu_list(self):
         if self.last_score == {}:
@@ -3183,9 +3261,9 @@ class ListView(MyWidget):   # pylint: disable=function-redefined
 
     def retranslateUi(self, form: MyWidget):
         "设置UI文本"
-        form.setWindowTitle(QCoreApplication.translate("Form", "\u5217\u8868", None))
-        self.pushButton_2.setText(QCoreApplication.translate("Form", "\u56de\u5230\u9876\u90e8", None))
-        self.pushButton_3.setText(QCoreApplication.translate("Form", "\u6eda\u52a8\u5230\u5e95\u90e8", None))
+        form.setWindowTitle("\u5217\u8868")
+        self.pushButton_2.setText("\u56de\u5230\u9876\u90e8")
+        self.pushButton_3.setText("\u6eda\u52a8\u5230\u5e95\u90e8")
 
     def __init__(self,  mainwindow:            ClassWindow                                                           = None, 
                         master_widget:         Optional[WidgetType]                                                  = None, 
@@ -3317,7 +3395,7 @@ class ListView(MyWidget):   # pylint: disable=function-redefined
         default_interval = 10
         try:
             for item in self.data:
-                if len(item) == 2 or (len(item) == 3 and item[2] == None):
+                if len(item) == 2 or (len(item) == 3 and item[2] is None):
                     self.data[index] = (item[0], item[1], (default_color_start, default_color_end, default_step, default_interval))
                 elif len(item) == 3:
                     if len(item[2]) == 2:
@@ -3544,28 +3622,28 @@ class HistoryWidget(MyWidget, ModifyHistoryWindow.Ui_Form):
         self.listview_widget = listview_widget
         self.readonly = readonly or (not history.executed)
         self.setWindowTitle(f"历史记录 - {self.history.target.name} {self.history.title}")
-        self.label_11.setText(QCoreApplication.translate("Form", str(self.history.title), None))
-        self.label_6.setText(QCoreApplication.translate("Form", str(self.history.desc), None))
-        self.label_12.setText(QCoreApplication.translate("Form", str(self.history.mod), None))
-        self.label_13.setText(QCoreApplication.translate("Form", str(self.history.target.name + f" ({self.history.target.num})"), None))
-        self.label_8.setText(QCoreApplication.translate("Form", str(self.history.create_time), None))
-        self.label_7.setText(QCoreApplication.translate("Form", (("已执行（" + str(self.history.execute_time) + "）") if self.history.executed else "未执行"), None))
+        self.label_11.setText(str(self.history.title))
+        self.label_6.setText(str(self.history.desc))
+        self.label_12.setText(str(self.history.mod))
+        self.label_13.setText(str(self.history.target.name + f" ({self.history.target.num})"))
+        self.label_8.setText(str(self.history.create_time))
+        self.label_7.setText((("已执行（" + str(self.history.execute_time) + "）") if self.history.executed else "未执行"))
         self.pushButton_3.clicked.connect(self.retract)
         self.update_status()
 
     def update_status(self):
         if not self.history.executed:
             self.pushButton_3.setEnabled(False)
-            self.label_15.setText(QCoreApplication.translate("Form", "无法撤回（未执行）", None))
+            self.label_15.setText("无法撤回（未执行）")
         elif self.readonly:
             self.pushButton_3.setEnabled(False)
-            self.label_15.setText(QCoreApplication.translate("Form", "无法撤回（只读）", None))
+            self.label_15.setText("无法撤回（只读）")
         elif self.history not in self.mainwindow.classes[self.history.target.belongs_to].students[self.history.target.num].history.values():
             self.pushButton_3.setEnabled(False)
-            self.label_15.setText(QCoreApplication.translate("Form", "无法撤回（不在历史记录中）", None))
+            self.label_15.setText("无法撤回（不在历史记录中）")
         else:
             self.pushButton_3.setEnabled(True)
-            self.label_15.setText(QCoreApplication.translate("Form", "", None))
+            self.label_15.setText("")
 
 
 
@@ -3620,7 +3698,7 @@ class MultiSelectWidget(MultiSelectWindow.Ui_Form, MyWidget):
             target_students = []
         self.setupUi(self)
         self.setWindowTitle("学生选择器")
-        self.label.setText(QCoreApplication.translate("Form", title, None))
+        self.label.setText(title)
         self.mainLayout = QVBoxLayout()
         self.setLayout(self.mainLayout)
         self.mainwindow = mainwindow
@@ -4142,21 +4220,21 @@ class AchievementWidget(AchievementWindow.Ui_Form, MyWidget):
         self.show()
         self.setWindowTitle("成就详情")
         if isinstance(self.achievement, Achievement):
-            self.label_11.setText(QCoreApplication.translate("Form", self.achievement.target.name))
-            self.label_13.setText(QCoreApplication.translate("Form", str(self.achievement.target.score)))
-            self.label_15.setText(QCoreApplication.translate("Form", "不到啊，可能是侦测器爆了"))
-            self.label_7.setText(QCoreApplication.translate("Form", str(self.achievement.time)))
+            self.label_11.setText(self.achievement.target.name)
+            self.label_13.setText(str(self.achievement.target.score))
+            self.label_15.setText("不到啊，可能是侦测器爆了")
+            self.label_7.setText(str(self.achievement.time))
 
             for i, s in self.mainwindow.class_obs.rank_non_dumplicate:
                 if s.num == self.achievement.target.num and s.belongs_to == self.achievement.target.belongs_to:
-                    self.label_15.setText(QCoreApplication.translate("Form", str(i)))
+                    self.label_15.setText(str(i))
                     break
             self.achievement = self.achievement.temp
         
-        self.label_5.setText(QCoreApplication.translate("Form", self.achievement.name))
-        self.label_6.setText(QCoreApplication.translate("Form", self.achievement.desc))
-        self.textBrowser.setPlainText(QCoreApplication.translate("Form", self.achievement.condition_desc(self.mainwindow.class_obs)))
-        self.textBrowser_2.setPlainText(QCoreApplication.translate("Form", self.achievement.further_info))
+        self.label_5.setText(self.achievement.name)
+        self.label_6.setText(self.achievement.desc)
+        self.textBrowser.setPlainText(self.achievement.condition_desc(self.mainwindow.class_obs))
+        self.textBrowser_2.setPlainText(self.achievement.further_info)
 
 
 class CleaningScoreSumUpWidget(CleaingScoreSumUp.Ui_Form, MyWidget):
@@ -4226,11 +4304,14 @@ class CleaningScoreSumUpWidget(CleaingScoreSumUp.Ui_Form, MyWidget):
 
     def update_students(self, refresh_stu=True):
         "更新学生"
-        self.label_5.setText(QCoreApplication.translate("Form", self.mainwindow.modify_templates[self.mod_member[self.comboBox_2.currentIndex()]].desc))
+        self.label_5.setText(self.mainwindow.modify_templates\
+                            [self.mod_member[self.comboBox_2.currentIndex()]].desc)
         selected = self.comboBox.currentIndex() + 1
         if refresh_stu:
-            self.leader =  copy.deepcopy(self.mainwindow.target_class.cleaning_mapping[selected]["leader"])
-            self.member =  copy.deepcopy(self.mainwindow.target_class.cleaning_mapping[selected]["member"])
+            self.leader =  copy.deepcopy(self.mainwindow.target_class.cleaning_mapping \
+                                            [selected]["leader"])
+            self.member =  copy.deepcopy(self.mainwindow.target_class.cleaning_mapping \
+                                            [selected]["member"])
 
         self.listWidget.clear()
         for s in self.leader:

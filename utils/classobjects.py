@@ -143,8 +143,6 @@ class ClassObj(OrigClassObj):
         "成就模板"
         self.current_day_attendance: ClassObj.AttendanceInfo
         "当前日考勤信息"
-        self.groups: Dict[str, ClassObj.Group]
-        "班级分组"
         self.classes: Dict[str, ClassObj.Class]
         "班级"
         self.weekday_record: List[ClassObj.DayRecord]
@@ -177,7 +175,6 @@ class ClassObj(OrigClassObj):
         self.achievement_obs = AchievementStatusObserver(self, class_id, tps=achievement_obs_tps)
         self.class_obs.start()
         self.achievement_obs.start()
-        self.groups = self.target_class.groups
         if self.current_day_attendance is None:
             self.current_day_attendance = ClassObj.AttendanceInfo(self.target_class.key)
         Base.log("I", f"初始化完成：用户[{current_user}], "
@@ -677,6 +674,7 @@ class ClassObj(OrigClassObj):
 
     @property
     def database(self) -> UserDataBase:
+        "返回一个新的数据库对象"
         return UserDataBase(
             self.current_user,
             time.time(),
@@ -1100,7 +1098,7 @@ class ClassObj(OrigClassObj):
         if isinstance(send_to, Student):
             send_to = [send_to]
 
-        if send_to == None:
+        if send_to is None:
             Base.log("W","传参为None，疑似初始化，return","MainThread.send_modify")
             return
         

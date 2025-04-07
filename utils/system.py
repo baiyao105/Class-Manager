@@ -151,7 +151,7 @@ def system(args:            Union[str, list],
         nonlocal _stderr_sb, _stdout_sb
         nonlocal _outprt_pointer, _errprt_pointer
         while not(len(_stdout_sb)<=_outprt_pointer and
-                 len(_stderr_sb)<=_errprt_pointer) or _popen.poll() == None:
+                 len(_stderr_sb)<=_errprt_pointer) or _popen.poll() is None:
                 if len(_stdout_sb)>_outprt_pointer:
                     _written = len(_stdout_sb)
                     if show_output:
@@ -191,7 +191,7 @@ def system(args:            Union[str, list],
     err_reader = Thread(target=_read_stderr)
     out_reader.start()
     err_reader.start()
-    while (_popen.poll() == None) or (out_reader.is_alive() and err_reader.is_alive()):
+    while (_popen.poll() is None) or (out_reader.is_alive() and err_reader.is_alive()):
         "就这等着吧"
     pid = _popen.pid
     returncode = _popen.returncode
@@ -262,7 +262,7 @@ def system_lined(args:            Union[str, list],
     err_reader = Thread(target=_read_stderr)
     out_reader.start()
     err_reader.start()
-    while (_popen.poll() == None) or (out_reader.is_alive() and err_reader.is_alive()):
+    while (_popen.poll() is None) or (out_reader.is_alive() and err_reader.is_alive()):
         "就这等着吧"
     pid = _popen.pid
     returncode = _popen.returncode

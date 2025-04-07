@@ -549,9 +549,17 @@ class Chunk:
 
                     self.database_connections[(history_uuid, data_type.chunk_type_name)] = conn
 
-
-                result = conn.execute(f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?",
+                try:
+                    result = conn.execute(f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?",
                                     (uuid,)).fetchone()
+                except sqlite3.OperationalError:
+
+                    Base.log("W", f"数据不存在，将会返回默认\n数据：{data_type.__qualname__}({uuid})",
+                            "Chunk.load_history")
+                    DataObject.load_tasks.remove(_id)
+                    failures.append(_id)
+                    return data_type.new_dummy()
+
                 if result is None:
                     Base.log("W", f"数据不存在，将会返回默认\n数据：{data_type.__qualname__}({uuid})",
                             "Chunk.load_history")
@@ -761,7 +769,7 @@ class Chunk:
                                 break
 
                     groups.extend(_class.groups.values())
-                Base.log("D", F"历史记录中的{uuid}的数据汇总完成，耗时{time.time() - t}秒", "Chunk.save")
+                Base.log("D", F"历史记录中的{uuid}的数据汇总完成，耗时{time.time() - t: .5f}秒", "Chunk.save")
                 t = time.time()
                 c = 0
                 for _class in classes:
@@ -770,7 +778,7 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", F"历史记录中的{uuid}的班级保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
@@ -781,7 +789,7 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", f"历史记录中的{uuid}的学生保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
@@ -792,7 +800,7 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", F"历史记录中的{uuid}的小组保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
@@ -804,7 +812,7 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", F"历史记录中的{uuid}的分数修改记录保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         F"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
@@ -815,7 +823,7 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", F"历史记录中的{uuid}的成就记录保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
@@ -826,7 +834,7 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", F"历史记录中的{uuid}的分数修改模板保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
@@ -837,7 +845,7 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", F"历史记录中的{uuid}的成就模板保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
@@ -848,12 +856,12 @@ class Chunk:
                     total_objects += 1
                 c = max(1, c)
                 Base.log("D", F"历史记录中的{uuid}的每日记录保存完成，"
-                        f"耗时{time.time() - t}秒，共{c}个，"
+                        f"耗时{time.time() - t: .5f}秒，共{c}个，"
                         f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
                         "Chunk.save")
                 t = time.time()
-                Base.log("D", F"历史记录中的{uuid}的当前出勤保存完成，",
-                        f"时间耗时{time.time() - t}秒"
+                Base.log("D", F"历史记录中的{uuid}的当前出勤保存完成，"
+                        f"时间耗时{time.time() - t}秒",
                         "Chunk.save")
 
                 DataObject.relase_connections()

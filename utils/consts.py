@@ -6,11 +6,17 @@ app_style: Literal['windowsvista', 'Windows', 'Fusion', 'windows11'] = 'windowsv
 
 
 app_stylesheet: str = """
+QMainWindow {
     color: black; 
     font-family: 'Microsoft YaHei UI'; 
     font-size: 9pt;
-    font-weight: bold
+}
 
+QWidget {
+    color: black; 
+    font-family: 'Microsoft YaHei UI'; 
+    font-size: 9pt;
+}
 """
 "软件的样式表"
 
