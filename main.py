@@ -1401,15 +1401,15 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.label_3.setText(F"{len(self.target_class.students)}")
         self.label_4.setText(F"{self.target_class.owner}")
         self.label_5.setText(F"{self.target_class.student_avg_score:.2f}")
-        self.label_6.setText(F"{max(*[float(self.target_class.students[num].score) 
-                        for num in self.target_class.students])}/"
-                        f"{min(*[float(self.target_class.students[num].score) 
-                        for num in self.target_class.students])}")
+        self.label_6.setText(str(max(*[float(self.target_class.students[num].score) 
+                        for num in self.target_class.students])) + "/" +                  
+                        str(min(*[float(self.target_class.students[num].score)      
+                        for num in self.target_class.students])))
         self.label_7.setText(f"{self.framerate}fps; {self.video_framerate}fps")
         self.label_8.setText(f"{time.time() - self.create_time:.1f} s")
         self.label_9.setText(f"{threading.active_count()}")
-        self.label_10.setText(f"{psutil.Process(os.getpid()).memory_info().rss \
-                                / 1024 / 1024:.1f} MB")
+        self.label_10.setText(str(round(psutil.Process(os.getpid()).memory_info().rss \
+                                / 1024 / 1024, 1)) + " MB")
         self.label_11.setText(f"{self.class_obs.tps:.2f}/"
                             f"{self.class_obs.limited_tps}tps;"
                             f" {str(round(self.achievement_obs.tps, 2)).rjust(5)}/"
@@ -2549,9 +2549,9 @@ class UpdateThread(QThread):
             self.mainwindow.show_tip("错误", 
                     "检测更新出现错误，请检查网络连接", 
                     duration=5000, icon=InfoBarIcon.ERROR, 
-                    further_info=f"详细信息：\n\n{''.join(
+                    further_info="详细信息：\n\n" + ''.join(
                         traceback.format_exception(type(info), info, info.__traceback__)
-                    )}")
+                    ))
 
         elif res == UpdateInfo.UPDATE_AVAILABLE:
             self.mainwindow.show_tip("提示", "发现新版本！", duration=5000)
@@ -2575,9 +2575,9 @@ class UpdateThread(QThread):
                         Base.log_exc("更新出现错误", "UpdateThread.update_self")
                         self.mainwindow.show_tip("错误", "更新出现错误",
                             duration=5000, icon=InfoBarIcon.ERROR,
-                            further_info=f"详细信息：\n\n{''.join(
+                            further_info="详细信息：\n\n" + ''.join(
                                 traceback.format_exception(type(e), e, e.__traceback__)
-                            )}")
+                            ))
 
                 Thread(target=lambda:_update(self)).start()
 
@@ -2627,8 +2627,8 @@ class UpdateThread(QThread):
             
             # 没好的一天又开始力
             self.mainwindow.show_tip("日期刷新", 
-                    f"{time.strftime('%Y年%m月%d日过去了，', 
-                        time.localtime(self.mainwindow.last_start_time))}"
+                    time.strftime('%Y年%m月%d日过去了，', 
+                        time.localtime(self.mainwindow.last_start_time)) +
                         "新的一天开始了！", 
                     self.mainwindow, duration=6000, 
                     sound="audio/sounds/orb.ogg", icon=InfoBarIcon.INFORMATION)
