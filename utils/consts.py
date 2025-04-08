@@ -25,3 +25,5 @@ nl = "\n"
 
 log_style: Literal["new", "old"] = "new"
 "日志的样式，new为新版，old为老版"
+
+sound_file_path = "audio/sounds"

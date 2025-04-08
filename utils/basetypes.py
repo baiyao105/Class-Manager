@@ -64,8 +64,6 @@ function = type(lambda: None)
 """函数类型对象，用于类型检查"""
 
 
-SOUND_BRUH = os.getcwd() + "/res/sounds/bruh.mp3"
-"""提示音效文件路径"""
 
 
 def utc(prec: int = 3):
@@ -437,8 +435,6 @@ debug = True
 
 
 
-SOUND_BRUH = os.getcwd() + "/res/sounds/bruh.mp3"
-"""提示音效文件路径"""
 
 class NULLPTR:
     "虽然没用"
@@ -684,8 +680,7 @@ class Object(object):
     def __repr__(self):
         "返回这个对象的表达式"
         return (f"{self.__class__.__name__}"
-        f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() 
-        if not k.startswith('_')])})")
+        f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})")
         # 我个人认为不要把下划线开头的变量输出出来（不过只以一个下划线开头的还得考虑考虑）
 
 

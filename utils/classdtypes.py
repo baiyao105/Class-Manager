@@ -1447,10 +1447,15 @@ class ClassObj(Base):
                     if isinstance(num_not_equals, Iterable) else [num_not_equals]
 
 
-            if score_range is not None:
-                if not isinstance(score_range, Iterable):
-                    score_range = [score_range]
-                self.score_range = list(score_range)
+            if score_range is not None and isinstance(score_range, Iterable):
+                if not len(score_range):
+                    Base.log("W", "score_range为一个空列表，将会忽略此属性", 
+                            "AchievementTemplate.__init__")
+                else:
+                        
+                    if not isinstance(score_range[0], Iterable):
+                        score_range = [score_range]
+                    self.score_range = list(score_range)
 
             if score_rank_range is not None:
                 self.score_rank_down_limit = score_rank_range[0]
@@ -1473,10 +1478,19 @@ class ClassObj(Base):
                 self.lowest_score_cause_range_up_limit =   lowest_score_cause_range[1]
 
             if modify_key_range is not None:
-                self.modify_ranges_orig = list(modify_key_range) \
-                    if isinstance(modify_key_range, list) else [modify_key_range]
-                self.modify_ranges = [{"key": item[0], "lowest": item[1], "highest": item[2]} \
-                                    for item in self.modify_ranges_orig]
+                if isinstance(modify_key_range, Iterable):
+                    if not len(modify_key_range):
+                        Base.log("W", "score_range为一个空列表，将会忽略此属性", 
+                                "AchievementTemplate.__init__")
+                    else:
+                        if not isinstance(modify_key_range[0], Iterable) \
+                            or isinstance(modify_key_range[0], str):
+                            # tip: str也是Iterable（
+                            modify_key_range = [modify_key_range]
+                        self.modify_ranges_orig = modify_key_range
+                        self.modify_ranges = \
+                            [{"key": item[0], "lowest": item[1], "highest": item[2]} \
+                                for item in self.modify_ranges_orig]
 
             if others is not None:
                 if not isinstance(others, Iterable):

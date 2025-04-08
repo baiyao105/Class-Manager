@@ -1,19 +1,19 @@
 """
 默认数据。
 """
+import os
+import copy
+import random
+from typing import Dict
+
 
 from utils.classdtypes import (Class, Student, Achievement, AchievementTemplate, 
                       ScoreModification, ScoreModificationTemplate, OrderedKeyList,
                       AttendanceInfo, Day, ClassStatusObserver, AchievementStatusObserver,
                       Group,  HomeworkRule, dummy_student, History)
+from utils.basetypes import (steprange, inf, nan)
+from utils.consts import sound_file_path
 
-from utils.basetypes import (steprange, SOUND_BRUH, inf, nan)
-
-from typing import Dict
-
-import copy
-
-import random
 
 
 default_class_key = "CLASS_TEST"
@@ -465,7 +465,7 @@ DEFAULT_ACHIEVEMENTS:Dict[str, AchievementTemplate] = {
         "beyond_life_and_death": AchievementTemplate("beyond_life_and_death", "超越生死", "经历了人生的大波折，我已看淡生死了",
                                                     lowest_score_range=(-inf, -20),
                                                     score_range=(1, inf),
-                                                    sound=SOUND_BRUH,
+                                                    sound=os.path.join(sound_file_path, "bruh.ogg"),
                                                     icon="img/tips/beyond_life_and_death.jpg",
                                                     condition_info="一周分数达到-20后回正",
                                                     further_info="""其实我们做出来就好奇会不会真的有人会达成这个成就"""),
@@ -567,7 +567,7 @@ DEFAULT_ACHIEVEMENTS:Dict[str, AchievementTemplate] = {
                                                 condition_info="成为这个工具的开发者",
                                                 further_info="问ChatGPT怎么写代码，ChatGPT：佛跳墙，佛跳墙（由AI生成）\n"
                                                 
-                                                             "（真的是AI自己写的吗？）"),
+                                                            "（真的是AI自己写的吗？）"),
 
         "mascot_normaltype": AchievementTemplate("mascot_normaltype", "吉祥物 - 真正的吉祥物", "这是真的吉祥物了",
                                                 num_equals=[3],
