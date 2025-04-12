@@ -43,7 +43,7 @@ except ImportError:
 
 
 
-flags: Dict[Any, Any] = {}
+runtime_flags: Dict[Any, Any] = {}
 "全局变量字典"
 
 

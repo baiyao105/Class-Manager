@@ -23,7 +23,7 @@ QWidget {
 nl = "\n"
 "换行符，3.8.10中的f-string有奇效"
 
-log_style: Literal["new", "old"] = "new"
+log_style: Literal["new", "old"] = "old"
 "日志的样式，new为新版，old为老版"
 
 sound_file_path = "audio/sounds"

@@ -592,9 +592,9 @@ class Chunk:
             data_python_ver = info["python_version"]
             current_ver = [sys.version_info.major, sys.version_info.minor, sys.version_info.micro]
             if data_python_ver != current_ver:
-                if "noticed_version_changed" not in flags:
-                    flags["noticed_version_changed"] = set()
-                if request_uuid is not None and request_uuid not in flags["noticed_version_changed"]:
+                if "noticed_version_changed" not in runtime_flags:
+                    runtime_flags["noticed_version_changed"] = set()
+                if request_uuid is not None and request_uuid not in runtime_flags["noticed_version_changed"]:
 
                     Base.log("W", f"历史记录的Python版本为{data_python_ver}，当前版本为{current_ver}，可能存在兼容性问题")
                     if not question_yes_no(None, "警告", F"检测到存档的Python版本({data_python_ver[0]}.{data_python_ver[1]}.{data_python_ver[2]})"
@@ -602,7 +602,7 @@ class Chunk:
                                     "如果继续加载，可能导致加载存档失败甚至闪退。\n"
                                     "是否继续加载数据？"):
                         raise RuntimeError("用户取消加载")
-                    flags["noticed_version_changed"].add(request_uuid)
+                    runtime_flags["noticed_version_changed"].add(request_uuid)
 
         else:
             Base.log("W", "历史记录的Python版本信息缺失，可能存在兼容性问题", "Chunk.load_history")

@@ -9,6 +9,7 @@ import random
 import psutil
 import pickle
 import signal
+import requests
 import platform
 import warnings
 import customtkinter                # pylint: disable=unused-import
@@ -31,7 +32,7 @@ from   qfluentwidgets.components import *   # pylint: disable=wildcard-import, u
 from   qfluentwidgets.window     import *   # pylint: disable=wildcard-import, unused-wildcard-import
 from   qfluentwidgets.multimedia import *   # pylint: disable=wildcard-import, unused-wildcard-import
 
-from   utils.basetypes    import format_exc_like_java
+from   utils.basetypes    import format_exc_like_java, runtime_flags
 from   ui.py              import (MainClassWindow, WTF, StudentWindow,
                                 MultiSelectWindow, NewTemplateWindow,
                                 EditTemplateWindow, ModifyHistoryWindow,
@@ -58,12 +59,13 @@ from   utils.classobjects  import (CORE_VERSION, CORE_VERSION_CODE,
 from   utils.classobjects  import Chunk, UserDataBase
 from   utils.consts        import app_style, app_stylesheet, nl
 from   utils.widgets       import ObjectButton, ProgressAnimatedListWidgetItem, SideNotice
-from   utils.prompts       import question_yes_no as question_yes_no_orig
+from   utils.prompts       import question_yes_no as question_yes_no_orig, question_chooose
 from   utils.settings      import SettingsInfo
 from   utils.system        import output_list
-
+from   utils.basetypes import logger
 import utils.classdtypes   as ClassDataTypes
 import utils.prompts       as PromptUtils
+
 
 
 try:
@@ -101,10 +103,10 @@ widget:              "ClassWindow"
 ctrlc_times = 0
 "中断信号计数器"
 
-enable_memory_tracing = False
+ENABLE_MEMORY_TRACING = False
 "是否启用内存追踪"
 
-if not enable_memory_tracing:
+if not ENABLE_MEMORY_TRACING:
     def profile(precision=4):   # NOSONAR; pylint: disable=unused-argument
         def decorator(func):
             return func
@@ -133,7 +135,6 @@ def exception_handler(exc_type: Optional[Type[BaseException]] = None,
     
     用作sys.excepthook的处理函数
     """
-    from utils.basetypes import logger
     file_basename = os.path.basename(__file__)
     file_path = __file__.replace(os.getcwd(), "").lstrip("\\/")
     # 绑定上下文信息
@@ -177,27 +178,27 @@ base_sys.excepthook  = exception_handler
 threading.excepthook = exception_handler
 
 
-if sys.version_info < (3, 12):
-    warnings.warn(f"建议使用Python3.12及以上的版本运行（当前为{sys.version_info.major}.{sys.version_info.minor}）")
+if sys.version_info < (3, 8):
+    warnings.warn(f"建议使用Python3.8及以上的版本运行（当前为{sys.version_info.major}.{sys.version_info.minor}）")
 
 if sys.platform != "win32":
     warnings.warn("本程序目前主要支持Windows操作系统，其他操作系统可能无法正常运行")
 
 
-has_pyaudio: bool = False
+HAS_PYAUDIO: bool = False
 "PyAudio库可用性标志"
-has_cv2:     bool = False
+HAS_CV2:     bool = False
 "OpenCV库可用性标志"
 
 try:
     import pyaudio
-    has_pyaudio = True
+    HAS_PYAUDIO = True
 except ImportError:
     pass
 
 try:
     import cv2
-    has_cv2 = True
+    HAS_CV2 = True
 except ImportError:
     pass
 
@@ -506,7 +507,8 @@ class MyWidget(QWidget):
         self.show()
 
 
-WidgetType = Union[QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget]
+WidgetType = Union[QMainWindow, QWidget, QFrame, 
+                    QStackedWidget, QScrollArea, MyMainWindow, MyWidget]
 
 
 
@@ -608,7 +610,11 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     going_to_exit = Signal()
     "准备退出信号"
 
+    dont_click_button_clicked = Signal(int)
+    "千万别点被点击了"
 
+    refresh_hint_widget_signal = Signal(int)
+    "刷新提示(屏幕右上角的)文本信号"
 
     ###########################################################################
     #                                初始化                                    #
@@ -743,6 +749,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.show_error.connect(lambda args: self._critical(*args))
         self.show_question.connect(lambda args: self._question_if_exec(*args))
         self.going_to_exit.connect(self.on_exit)
+        self.dont_click_button_clicked.connect(self._dont_click)
+        self.refresh_hint_widget_signal.connect(self._refresh_hint_widget)
         self.framecount = 0
         "自上一秒以来的更新帧数"
         self.framerate = 0
@@ -758,7 +766,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         if self.auto_save_enabled:
             Thread(target=lambda: self.auto_save(timeout=int(self.auto_save_interval)), name="AutoSave", daemon=True).start()
         Thread(target=self.insert_action_history_info_while_alive, name="InsertOpreationHandler", daemon=True).start()
-        Thread(target=self.show_hints, daemon=True, name="HintsDisplayer").start()
         Thread(target=self.read_video_while_alive, daemon=True, name="VideoReader").start()
         Thread(target=self.refresh_logwindow_while_alive, daemon=True, name="RefreshLogWindow").start()
         self.tip_handler = self.TipHandler(self)
@@ -779,7 +786,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.ListWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.student_info_window: Optional[StudentWidget] = None
-
+        self.CardWidget_2.clicked.connect(lambda: Thread(target=self.refresh_hint_widget).start())
         PromptUtils.send_notice = lambda title, content, msg_type: (
             self.show_tip(title, content,
                         InfoBarIcon.INFORMATION if msg_type == "info" else
@@ -787,6 +794,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                         InfoBarIcon.ERROR if msg_type == "error" else
                         InfoBarIcon.SUCCESS)
             )
+        self.refresh_hint_widget()
         
 
     def __repr__(self):     # 其实是因为直接继承ClassObjects的repr会导致无限递归
@@ -1297,7 +1305,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @profile()
     def read_video_while_alive(self):
         """读取并处理背景视频文件，用于动态背景效果"""
-        if not has_cv2:
+        if not HAS_CV2:
             return
         if not os.path.isfile("background.mp4"):
             Base.log("W", "没有找到视频文件，将使用默认动态背景", "MainWindow.read_video")
@@ -1916,19 +1924,42 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             )).start()
 
 
+    def refresh_hint_widget(self, mode: int = 0):
+        """
+        刷新提示
+        
+        :param mode: 模式，按照范围划分
+        """
+        self.refresh_hint_widget_signal.emit(mode)
 
-    def show_hints(self):
-        """显示小提示"""
-        with open("utils/data/hints.txt", encoding="utf-8") as f:
-            hints = [l.replace("^#", "#") for l in f.read().splitlines() if ((not l.startswith("#")) and l.strip())]
-        while self.is_running:
-            time.sleep(random.randint(30, 60))
-            Base.log("I", "显示提示", "MainWindow.show_hints")
-            self.show_tip("小提示", 
-                random.choice(hints),
-                self,
-                duration=7500,
-                further_info="也就是一个提示而已")
+    def _refresh_hint_widget(self, mode: int = 0):
+        "刷新提示的接口"
+        Base.log("I", f"刷新提示，当前模式：{mode}", "MainWindow.refresh_hints")
+        mode = mode or random.randint(0, 100)
+        tip_refresh = "hint_widget_tip_refresh" not in runtime_flags
+        if tip_refresh:
+            runtime_flags["hint_widget_tip_refresh"] = True
+        if mode < 20:
+            with open("utils/data/hints.txt", encoding="utf-8") as f:
+                hints = [l.replace("^#", "#") for l in f.read().splitlines() if ((not l.startswith("#")) and l.strip())]
+            self.label_23.setText("小提示")
+            self.label_22.setText(random.choice(hints) + ("\n（点击刷新）" if tip_refresh else ""))
+
+        else:
+            try:
+                self.label_23.setText("语录")
+                req = json.loads(requests.get("https://v1.hitokoto.cn", timeout=0.5).text)
+                text = req["hitokoto"] + "\n\t- " + req["from"]
+                self.label_22.setText(text + ("\n（点击刷新）" if tip_refresh else ""))
+            except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+                Base.log("W", f"获取每日一句失败，错误类型：{e.__class__.__name__}", "MainWindow.refresh_hints")
+                with open("utils/data/hints.txt", encoding="utf-8") as f:
+                    hints = [l.replace("^#", "#") for l in f.read().splitlines() if ((not l.startswith("#")) and l.strip())]
+                self.label_23.setText("小提示")
+                self.label_22.setText(random.choice(hints) + ("\n（点击刷新）" if tip_refresh else ""))
+
+            
+            
 
     @Slot()
     @as_command("open_setting_window", "设置窗口")
@@ -2225,22 +2256,31 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Thread(target=self.updator_thread.detect_new_version).start()
 
     @Slot()
-    def dont_click(self):
+    def dont_click(self, style: Optional[int] = 0):
         "处理特殊按钮点击事件，触发随机彩蛋效果"
-        self.log("I", "按钮被点击", "MainWindow.dont_click")
-        style = random.randint(1, 4)
+        if "tip_dont_click" not in runtime_flags:
+
+            question_chooose(self, "警告", "该功能为危险功能，作者不会为它所造成的后果承担责任。\n"
+                                            "无论如何都要继续吗？",
+                                            ["确定", "确定", "确定"], msg_type="warning")
+            runtime_flags["tip_dont_click"] = True
+        self.dont_click_button_clicked.emit(style)
+
+    @Slot()
+    def _dont_click(self, style: int):
+        "千万别点被点击时的接口"
+        style = random.randint(1, 10) if style == 0 else style
+        self.log("I", f"按钮被点击，本次执行类型：{style}", "MainWindow.dont_click")
+
         if style == 1:
-            "诈骗"
             os.startfile("https://www.bilibili.com/video/BV1kW411m7VP/")
         
         elif style == 2:
-            "鬼畜一下"
             for _ in range(1145):
                 self.move(random.randint(0, 1920), random.randint(0, 1080))
             self.move(200, 100)
 
         elif style == 3:
-            "飞到天上然后退出"
             for i in range(114):
                 x, y = self.geometry().topLeft().x(), self.geometry().topLeft().y()
                 move = int(1.2 ** (i // 5))
@@ -2249,10 +2289,43 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.move(200, 100)
 
         elif style == 4:
-            "展示绝美UI"
             for _ in range(8):
                 w = WTFWidget(self)
                 w.show()
+
+        elif style == 5:
+            pass
+
+        elif style == 6:
+            orig_x, orig_y = self.geometry().topLeft().x(), self.geometry().topLeft().y()
+            for i in range(1, 360 * 10, 3):
+                x = int(math.sin(math.radians(i)) * 30 * i / 360 * 4)
+                y = int(math.cos(math.radians(i)) * 30 * i / 360 * 4)
+                self.move(orig_x + int(x), orig_y + int(y))
+                time.sleep(0.03)
+                QCoreApplication.processEvents()
+            self.move(200, 100)
+            
+
+        elif style == 7:
+            orig_pos: Dict[QPoint, QWidget] = {}
+            for obj in self.findChildren(QWidget):
+                orig_pos[obj] = obj.geometry().topLeft()
+
+            for i in range(100):
+                for obj in self.findChildren(QWidget):
+                    obj.move(random.randint(0, self.width() // 2), random.randint(0, self.height() // 2))
+                QCoreApplication.processEvents()
+                time.sleep(0.05)
+            
+            for obj in self.findChildren(QWidget):
+                try:
+                    obj.move(orig_pos[obj].x(), orig_pos[obj].y())
+                except KeyError as unused:
+                    pass
+
+
+
 
     def script_backup(self, mode:Literal["none", "all", "only_data"]="only_data"):
         """执行应用程序备份
@@ -2402,7 +2475,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @Slot()
     @as_command("show_noise_detector", "噪声检测器")
     def show_noise_detector(self):
-        if has_pyaudio:
+        if HAS_PYAUDIO:
             Base.log("I", "启动噪声检测器", "MainWindow.show_noise_detector")
             self.noise_detector = NoiseDetectorWidget(self, self)
             self.noise_detector.show()
@@ -3183,9 +3256,8 @@ class SelectTemplateWidget(MyWidget, SelectTemplateWindow.Ui_Form):
             self.lineEdit_3.setText(template.desc)
             self.doubleSpinBox.setValue(template.mod)
 
-        except Exception as e:
-            Base.log("D", f"获取项目对应模板失败：[{sys.exc_info()[1].__class__.__name__}] {e} , index = {index}, index_map = {repr(self.index_map)}", "SelectTemplateWidget.update_edit")
-            Base.log("D", "笑，懒得修这个bug，留着当行为艺术品吧", "SelectTemplateWidget.update_edit")
+        except KeyError as unused:
+            pass
 
     def select(self):
         index = 0
@@ -4399,6 +4471,11 @@ class CleaningScoreSumUpWidget(CleaingScoreSumUp.Ui_Form, MyWidget):
 
 
 class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
+    "考勤信息窗口"
+
+    grid_button_signal = Signal()
+    "排列按钮的信号"
+
     def __init__(self, master: Optional[WidgetType] = None, 
                        mainwindow: ClassWindow = None,
                        attendanceinfo: AttendanceInfo = None):
@@ -4442,7 +4519,7 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
             self.stu_states[s.num] = "leave_late"
         for s in self.attendanceinfo.is_late_more:
             self.stu_states[s.num] = "late_more"
-        
+        self.grid_button_signal.connect(self._grid_buttons)
         self.grid_buttons()
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_text)
@@ -4462,6 +4539,7 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
         "leave_early", # 未知早退
         "leave_late"   # 晚退
     ]):
+        "考勤状态转字符串"
         if state == "normal":
             return "到校正常"
         elif state == "early":
@@ -4484,6 +4562,7 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
 
 
     def show(self):
+        "显示窗口"
         super().show()
         self.update_text()
         self.grid_buttons()
@@ -4644,6 +4723,10 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
 
     def grid_buttons(self):
         """显示按钮（虽然不算真正意义上的grid）"""
+        self.grid_button_signal.emit()
+    
+    def _grid_buttons(self):
+        "显示按钮的接口"
         for b in self.stu_buttons.values():
             b.destroy()
             QCoreApplication.processEvents()
@@ -4676,9 +4759,14 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
 
     @Slot()
     def update_text(self):
+        "更新文本"
         for num, stu in self.target_class.students.items():
-            assert num == stu.num, "。。又对我代码干啥了" 
-            self.stu_buttons[num].setText(f"{stu.num} {stu.name}\n{f'{self.attending_state_to_string(self.stu_states[stu.num])}'}")
+            try:
+                assert num == stu.num, "。。又对我代码干啥了" 
+                self.stu_buttons[num].setText(f"{stu.num} {stu.name}\n{f'{self.attending_state_to_string(self.stu_states[stu.num])}'}")
+            except KeyError as unused:
+                Base.log("W", "疑似添加/减少学生，正在重新加载", "AttendanceInfoWidget.update_text")
+
         self.label_2.setText(f"{self.target_class.name} {time.strftime('%Y-%m-%d %H:%M:%S（%A）', time.localtime())}")
         self.label_3.setText(f"应到：{len(self.target_class.students)}")
         self.label_5.setText(f"实到：{len(self.attendanceinfo.is_normal(self.target_class))}")
@@ -4794,7 +4882,7 @@ class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
         self.read_data_thread.start()
 
     def read_data(self):
-        if not has_pyaudio:
+        if not HAS_PYAUDIO:
             return
         while True:
             try:
@@ -5247,7 +5335,16 @@ c = Chunk("chunks/test_chunk/example", self.database)
 t = time.time()
 c.load_history()
 print("时间:", time.time() - t)
-""", "测试数据保存")
+""", "测试数据保存"),
+
+("""
+for i in range(100):
+    self.add_student(
+    f"{max(*self.target_class.students) + 1}号学生",
+    default_class_key,
+    max(*self.target_class.students) + 1
+)
+""", "添加学生")
         ]   
         self.comboBox.clear()
         self.comboBox.addItem("快捷命令")

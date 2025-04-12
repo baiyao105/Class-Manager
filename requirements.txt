@@ -7,9 +7,9 @@ typing_extensions  >= 4.12.2
 requests           >= 2.25.1
 # 用于更新检查
 
-PySide6                    == 6.8.0.1
-PySide6_Addons             == 6.8.0.1
-PySide6_Essentials         == 6.8.0.1
+PySide6                    >= 6.6.3.1
+PySide6_Addons             >= 6.6.3.1
+PySide6_Essentials         >= 6.6.3.1
 PySide6-Fluent-Widgets     == 1.7.6
 PySideSix-Frameless-Window == 0.5.1
 # 注意: 所有PySide6组件需保持版本一致,避免兼容性问题

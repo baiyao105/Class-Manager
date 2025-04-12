@@ -22,7 +22,7 @@ import dill as pickle   # pylint: disable=shadowed-import
 from utils.basetypes import (
     Base, SupportsKeyOrdering, Object,
     OrderedKeyList, Stack, Queue,
-    debug, inf, utc, flags
+    debug, inf, utc, runtime_flags
 )
 
 from utils.prompts import send_notice as _send_notice
@@ -1354,7 +1354,8 @@ class ClassObj(Base):
             "学生"
             self.student_class = self.classes[self.student.belongs_to]
             "学生所在的班级"
-            self.student_group = self.student_class.groups[self.student.belongs_to_group]
+            self.student_group = self.student_class.groups[self.student.belongs_to_group] \
+                if self.student.belongs_to_group else None
             "学生所在的组"
             self.groups = self.student_class.groups
             "班级中的所有组"
@@ -1458,7 +1459,7 @@ class ClassObj(Base):
 
 
             if score_range is not None and isinstance(score_range, Iterable):
-                if not len(score_range):
+                if not score_range:
                     Base.log("W", "score_range为一个空列表，将会忽略此属性", 
                             "AchievementTemplate.__init__")
                 else:
@@ -1669,9 +1670,9 @@ class ClassObj(Base):
                             Base.log("W", "为加载完成，未定义student", "AchievementTemplate.achieved")
                         elif e.args[0] == "unknown opcode":
                             Base.log("W", "存档的成就来自不同的版本", "AchievementTemplate.achieved")
-                    if "noticed_pyversion_changed" not in flags:
+                    if "noticed_pyversion_changed" not in runtime_flags:
                         send_notice("提示", "当前正在跨Python版本运行，请尽量不要切换py版本", "warn")
-                        flags["noticed_pyversion_changed"] = True
+                        runtime_flags["noticed_pyversion_changed"] = True
 
                     Base.log_exc(f"位于成就{self.name}({self.key})的lambda函数出错：",
                                 "AchievementTemplate.achieved")
@@ -1739,8 +1740,8 @@ class ClassObj(Base):
                                         + "第" + str(abs(self.score_rank_down_limit)) + "名\n")
                 else:
                     return_str += (f"排名介于{('倒数' if self.score_rank_down_limit < 0 else '')}" +
-                                        + "第" + f"{abs(self.score_rank_down_limit)}" + "和" +
-                                            str('倒数' if self.score_rank_up_limit < 0 else '') +
+                                        + "第" + f"{abs(self.score_rank_down_limit)}" + "和"
+                                            + ('倒数' if self.score_rank_up_limit < 0 else '') +
                                         + "第" + f"{abs(self.score_rank_up_limit)}" + "之间\n")
 
             if hasattr(self, "highest_score_down_limit"):
