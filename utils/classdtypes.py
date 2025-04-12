@@ -22,8 +22,18 @@ import dill as pickle   # pylint: disable=shadowed-import
 from utils.basetypes import (
     Base, SupportsKeyOrdering, Object,
     OrderedKeyList, Stack, Queue,
-    debug, inf, utc
+    debug, inf, utc, flags
 )
+
+from utils.prompts import send_notice as _send_notice
+
+def send_notice(title: str, content: str, msg_type: Literal["info", "warn", "error"] = "info"):
+    "发送通知"
+    Base.log("I", f"发送通知, title={title!r}, content={content!r}")
+    _send_notice(title, content, msg_type)
+
+
+
 
 def get_random_template(templates: "OrderedKeyList[ClassObj.ScoreModificationTemplate]"):
 
@@ -1570,7 +1580,7 @@ class ClassObj(Base):
             :return: 是否达成"""
 
             # 反人类写法又出现了
-
+    
             if not self.active:
                 return False
             if ("on_reset" in self.when_triggered and "any" not in self.when_triggered
@@ -1653,7 +1663,16 @@ class ClassObj(Base):
                         if not item(d):
                             return False
 
-                except TypeError as unused:     # pylint: disable=unused-variable
+                except (NameError, TypeError, SystemError) as e:     # pylint: disable=unused-variable
+                    if len(e.args):
+                        if e.args[0] == "name 'student' is not defined":
+                            Base.log("W", "为加载完成，未定义student", "AchievementTemplate.achieved")
+                        elif e.args[0] == "unknown opcode":
+                            Base.log("W", "存档的成就来自不同的版本", "AchievementTemplate.achieved")
+                    if "noticed_pyversion_changed" not in flags:
+                        send_notice("提示", "当前正在跨Python版本运行，请尽量不要切换py版本", "warn")
+                        flags["noticed_pyversion_changed"] = True
+
                     Base.log_exc(f"位于成就{self.name}({self.key})的lambda函数出错：",
                                 "AchievementTemplate.achieved")
                     if self.key in class_obs.base.default_achievements:
@@ -1716,13 +1735,13 @@ class ClassObj(Base):
 
             if hasattr(self, "score_rank_down_limit"):
                 if self.score_rank_down_limit == self.score_rank_up_limit:
-                    return_str += F"位于班上{('倒数' if self.score_rank_down_limit < 0 else '') \
-                                        + str(abs(self.score_rank_down_limit))}名\n"
+                    return_str += (F"位于班上{('倒数' if self.score_rank_down_limit < 0 else '')}"
+                                        + "第" + str(abs(self.score_rank_down_limit)) + "名\n")
                 else:
-                    return_str += f"排名介于{('倒数' if self.score_rank_down_limit < 0 else '') \
-                                        + str(abs(self.score_rank_down_limit))}和" + \
-                                        f"{('倒数' if self.score_rank_up_limit < 0 else '') \
-                                        + str(abs(self.score_rank_up_limit))}之间\n"
+                    return_str += (f"排名介于{('倒数' if self.score_rank_down_limit < 0 else '')}" +
+                                        + "第" + f"{abs(self.score_rank_down_limit)}" + "和" +
+                                            str('倒数' if self.score_rank_up_limit < 0 else '') +
+                                        + "第" + f"{abs(self.score_rank_up_limit)}" + "之间\n")
 
             if hasattr(self, "highest_score_down_limit"):
                 down = self.highest_score_down_limit
@@ -1798,8 +1817,15 @@ class ClassObj(Base):
             d: Dict[str, Any] = json.loads(string)
             if d["type"] != AchievementTemplate.chunk_type_name:
                 raise ValueError(f"类型不匹配：{d['type']} != {AchievementTemplate.chunk_type_name}")
-            if "others" in d:
-                d["others"] = pickle.loads(base64.b64decode(d["others"]))
+            try:
+                if "others" in d:
+                    d["others"] = pickle.loads(base64.b64decode(d["others"]))
+            except SystemError as e:
+                if e.args[0] == "unknown opcode":
+                    Base.log("E", "由于版本变化，无法加载lambda，请手动修改", "AchievementTemplate.from_string")
+                    d.pop("others")
+                else:
+                    raise e
             d.pop("type")
             uuid = d.pop("uuid")
             archive_uuid = d.pop("archive_uuid")

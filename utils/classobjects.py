@@ -309,7 +309,7 @@ class ClassObj(OrigClassObj):
                             "出错了！", 
                             f"从[{path}]加载文件出错：\n{traceback.format_exc()}\n"
                             "是否尝试重新加载？\n\n（你没有忘记建还原点，对吧？）",
-                            type="critical")
+                            msg_type="critical")
             if not result:
                 ClassObj.reset_data(path)
 

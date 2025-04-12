@@ -87,7 +87,7 @@ NL = "\n"
 pygame.mixer.init()
 # 初始化pygame的混音器
 
-def play_sound(filename, volume=1):
+def play_sound(filename: str, volume: float=1):
     """异步播放声音文件
     
     :param filename: 声音文件路径
@@ -96,7 +96,7 @@ def play_sound(filename, volume=1):
     Thread(target=_play_sound, args=(filename, volume),
             daemon=True, name="SoundPlayerThread").start()
 
-def _play_sound(filename, volume=1, loop:int=0, fade_ms:int=0):
+def _play_sound(filename: str, volume: float=1, loop:int=0, fade_ms:int=0):
     """内部函数：实际播放声音的实现
     
     :param filename: 声音文件路径

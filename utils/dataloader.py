@@ -3,12 +3,14 @@
 数据加载模块
 """
 import os
+import sys
 import math
 import shutil
 import sqlite3
 
+from utils.prompts     import question_yes_no
 from utils.classdtypes import * # pylint: disable=unused-wildcard-import, wildcard-import
-
+from utils.classobjects import gen_uuid
 
 # 数据加载器
 
@@ -515,12 +517,15 @@ class Chunk:
         return result[0]
 
 
-    def load_history(self, history_uuid: Union[UUIDKind[History],
-                                            Literal["Current"]] = "Current") -> History:
+    def load_history(self, 
+                    history_uuid: Union[UUIDKind[History],
+                                            Literal["Current"]] = "Current",
+                    request_uuid: Optional[UUIDKind[Type[None]]] = None) -> History:
         """
         加载历史记录。
 
         :param history_uuid: 历史记录uuid
+        :param request_uuid: 请求uuid，只是用来做数据加载的标识的
         :return: 历史记录
         :raise FileNotFoundError: 历史记录不存在
         """
@@ -582,6 +587,25 @@ class Chunk:
             path = os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:])
         if not os.path.isdir(path):
             raise FileNotFoundError("历史记录不存在")
+        info = json.load(open(os.path.join(path, "info.json"), "r", encoding="utf-8"))
+        if "python_version" in info:
+            data_python_ver = info["python_version"]
+            current_ver = [sys.version_info.major, sys.version_info.minor, sys.version_info.micro]
+            if data_python_ver != current_ver:
+                if "noticed_version_changed" not in flags:
+                    flags["noticed_version_changed"] = set()
+                if request_uuid is not None and request_uuid not in flags["noticed_version_changed"]:
+
+                    Base.log("W", f"历史记录的Python版本为{data_python_ver}，当前版本为{current_ver}，可能存在兼容性问题")
+                    if not question_yes_no(None, "警告", F"检测到存档的Python版本({data_python_ver[0]}.{data_python_ver[1]}.{data_python_ver[2]})"
+                                    f"与当前版本({current_ver[0]}.{current_ver[1]}.{current_ver[2]})不一致，\n"
+                                    "如果继续加载，可能导致加载存档失败甚至闪退。\n"
+                                    "是否继续加载数据？"):
+                        raise RuntimeError("用户取消加载")
+                    flags["noticed_version_changed"].add(request_uuid)
+
+        else:
+            Base.log("W", "历史记录的Python版本信息缺失，可能存在兼容性问题", "Chunk.load_history")
         class_uuids = json.load(open(os.path.join(path, "classes.json"), "r", encoding="utf-8"))
         weekday_uuids = json.load(open(os.path.join(path, "weekdays.json"), "r", encoding="utf-8"))
         classes = {}
@@ -618,7 +642,8 @@ class Chunk:
         :return: 对象数据
         :param load_all: 是否加载所有数据
         """
-        current_record = self.load_history("Current")
+        req_uuid = gen_uuid()
+        current_record = self.load_history("Current", req_uuid)
 
         templates = []
         achievements = []
@@ -647,7 +672,7 @@ class Chunk:
         if load_all:
             for uuid in info["histories"]:
                 try:
-                    h = self.load_history(uuid)
+                    h = self.load_history(uuid, req_uuid)
                     while h.time in histories:
                         h.time += 0.001
                     histories[h.time] = h
@@ -878,8 +903,9 @@ class Chunk:
                         "last_start_time": self.bound_db.last_start_time,
                         "last_reset": self.bound_db.last_reset,
                         "user": self.bound_db.user,
-                        "total_objects": total_objects          # 这个可以在后面用来做加载进度条
-                    },                                          # 防止进度条因为分配不合理看起来像卡死了
+                        "total_objects": total_objects,          # 这个可以在后面用来做加载进度条
+                        "python_version": (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
+                        },
                     open(os.path.join(path, "info.json"), "w", encoding="utf-8"),
                     indent=4
                 )
@@ -924,8 +950,8 @@ class Chunk:
                     "version_code": self.bound_db.version_code,
                     "last_start_time": self.bound_db.last_start_time,
                     "last_reset": self.bound_db.last_reset,
-                    "histories": history_uuids
-
+                    "histories": history_uuids,
+                    "python_version": (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
                 },
                 open(os.path.join(self.path, "info.json"), "w", encoding="utf-8"),
                 indent=4
