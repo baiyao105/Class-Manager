@@ -62,6 +62,10 @@ from   utils.prompts       import question_yes_no as question_yes_no_orig
 from   utils.settings      import SettingsInfo
 from   utils.system        import output_list
 
+import utils.classdtypes   as ClassDataTypes
+import utils.prompts       as PromptUtils
+
+
 try:
     from utils.login     import login
 except ImportError:
@@ -775,6 +779,15 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.ListWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.student_info_window: Optional[StudentWidget] = None
+
+        PromptUtils.send_notice = lambda title, content, msg_type: (
+            self.show_tip(title, content,
+                        InfoBarIcon.INFORMATION if msg_type == "info" else
+                        InfoBarIcon.WARNING if msg_type == "warn" else
+                        InfoBarIcon.ERROR if msg_type == "error" else
+                        InfoBarIcon.SUCCESS)
+            )
+        
 
     def __repr__(self):     # 其实是因为直接继承ClassObjects的repr会导致无限递归
         return super(MyMainWindow, self).__repr__()
@@ -2298,7 +2311,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     try:
                         copytree("backup_tmp", self.backup_path + f"full/b_{today_and_time}")
                         rmtree("backup_tmp")
-                    except Exception as e:
+                    except OSError as e:
                         if i > 4: 
                             raise e
                     else:

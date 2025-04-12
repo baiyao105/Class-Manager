@@ -43,6 +43,9 @@ except ImportError:
 
 
 
+flags: Dict[Any, Any] = {}
+"全局变量字典"
+
 
 
 LOG_FILE_PATH = f'log/ClassManager_log_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log'
