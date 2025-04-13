@@ -3,7 +3,7 @@ import time
 import numpy as np
 from typing            import List, Tuple, Dict, Literal, Optional, Iterable
 from threading         import Thread
-from utils.functions   import mat_to_pixmap
+from utils.functions.decorators   import mat_to_pixmap
 from PySide6.QtGui     import QPixmap, QImage
 from PySide6.QtCore    import Qt, QPropertyAnimation, QEasingCurve
 from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsItemGroup

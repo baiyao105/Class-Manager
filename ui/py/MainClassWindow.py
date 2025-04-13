@@ -140,12 +140,19 @@ class Ui_MainWindow(object):
         self.BodyLabel = BodyLabel(self.CardWidget)
         self.BodyLabel.setObjectName(u"BodyLabel")
         self.BodyLabel.setGeometry(QRect(140, 0, 141, 20))
+        font = QFont()
+        font.setFamilies([u"Segoe UI"])
+        font.setPointSize(9)
+        font.setBold(False)
+        self.BodyLabel.setFont(font)
         self.BodyLabel_2 = BodyLabel(self.CardWidget)
         self.BodyLabel_2.setObjectName(u"BodyLabel_2")
         self.BodyLabel_2.setGeometry(QRect(10, 0, 131, 19))
+        self.BodyLabel_2.setFont(font)
         self.BodyLabel_5 = BodyLabel(self.CardWidget)
         self.BodyLabel_5.setObjectName(u"BodyLabel_5")
         self.BodyLabel_5.setGeometry(QRect(80, 20, 141, 16))
+        self.BodyLabel_5.setFont(font)
         self.SimpleCardWidget_2 = SimpleCardWidget(self.centralwidget)
         self.SimpleCardWidget_2.setObjectName(u"SimpleCardWidget_2")
         self.SimpleCardWidget_2.setGeometry(QRect(0, 250, 261, 161))
@@ -156,21 +163,21 @@ class Ui_MainWindow(object):
         self.HyperlinkLabel = HyperlinkLabel(self.SimpleCardWidget_2)
         self.HyperlinkLabel.setObjectName(u"HyperlinkLabel")
         self.HyperlinkLabel.setGeometry(QRect(230, 10, 31, 16))
-        font = QFont()
-        font.setFamilies([u"Microsoft YaHei UI"])
-        font.setPointSize(8)
-        font.setBold(False)
-        font.setUnderline(False)
-        font.setStrikeOut(False)
-        self.HyperlinkLabel.setFont(font)
+        font1 = QFont()
+        font1.setFamilies([u"Microsoft YaHei UI"])
+        font1.setPointSize(8)
+        font1.setBold(False)
+        font1.setUnderline(False)
+        font1.setStrikeOut(False)
+        self.HyperlinkLabel.setFont(font1)
         self.PushButton_1 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_1.setObjectName(u"PushButton_1")
         self.PushButton_1.setGeometry(QRect(10, 40, 71, 31))
-        font1 = QFont()
-        font1.setFamilies([u"Microsoft YaHei UI"])
-        font1.setPointSize(9)
-        font1.setBold(False)
-        self.PushButton_1.setFont(font1)
+        font2 = QFont()
+        font2.setFamilies([u"Microsoft YaHei UI"])
+        font2.setPointSize(9)
+        font2.setBold(False)
+        self.PushButton_1.setFont(font2)
         self.PushButton_1.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -482,7 +489,7 @@ class Ui_MainWindow(object):
         self.PushButton_2 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_2.setObjectName(u"PushButton_2")
         self.PushButton_2.setGeometry(QRect(90, 40, 71, 31))
-        self.PushButton_2.setFont(font1)
+        self.PushButton_2.setFont(font2)
         self.PushButton_2.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -794,7 +801,7 @@ class Ui_MainWindow(object):
         self.PushButton_3 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_3.setObjectName(u"PushButton_3")
         self.PushButton_3.setGeometry(QRect(170, 40, 71, 31))
-        self.PushButton_3.setFont(font1)
+        self.PushButton_3.setFont(font2)
         self.PushButton_3.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -1106,7 +1113,7 @@ class Ui_MainWindow(object):
         self.PushButton_4 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_4.setObjectName(u"PushButton_4")
         self.PushButton_4.setGeometry(QRect(10, 80, 71, 31))
-        self.PushButton_4.setFont(font1)
+        self.PushButton_4.setFont(font2)
         self.PushButton_4.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -1418,7 +1425,7 @@ class Ui_MainWindow(object):
         self.PushButton_5 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_5.setObjectName(u"PushButton_5")
         self.PushButton_5.setGeometry(QRect(90, 80, 71, 31))
-        self.PushButton_5.setFont(font1)
+        self.PushButton_5.setFont(font2)
         self.PushButton_5.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -1730,7 +1737,7 @@ class Ui_MainWindow(object):
         self.PushButton_6 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_6.setObjectName(u"PushButton_6")
         self.PushButton_6.setGeometry(QRect(170, 80, 71, 31))
-        self.PushButton_6.setFont(font1)
+        self.PushButton_6.setFont(font2)
         self.PushButton_6.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -2042,7 +2049,7 @@ class Ui_MainWindow(object):
         self.PushButton_7 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_7.setObjectName(u"PushButton_7")
         self.PushButton_7.setGeometry(QRect(10, 120, 71, 31))
-        self.PushButton_7.setFont(font1)
+        self.PushButton_7.setFont(font2)
         self.PushButton_7.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -2354,7 +2361,7 @@ class Ui_MainWindow(object):
         self.PushButton_8 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_8.setObjectName(u"PushButton_8")
         self.PushButton_8.setGeometry(QRect(90, 120, 71, 31))
-        self.PushButton_8.setFont(font1)
+        self.PushButton_8.setFont(font2)
         self.PushButton_8.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -2666,7 +2673,7 @@ class Ui_MainWindow(object):
         self.PushButton_9 = PushButton(self.SimpleCardWidget_2)
         self.PushButton_9.setObjectName(u"PushButton_9")
         self.PushButton_9.setGeometry(QRect(170, 120, 71, 31))
-        self.PushButton_9.setFont(font1)
+        self.PushButton_9.setFont(font2)
         self.PushButton_9.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -2984,7 +2991,7 @@ class Ui_MainWindow(object):
         self.PushButton_10 = PushButton(self.SimpleCardWidget)
         self.PushButton_10.setObjectName(u"PushButton_10")
         self.PushButton_10.setGeometry(QRect(10, 30, 71, 31))
-        self.PushButton_10.setFont(font1)
+        self.PushButton_10.setFont(font2)
         self.PushButton_10.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -3296,7 +3303,7 @@ class Ui_MainWindow(object):
         self.PushButton_11 = PushButton(self.SimpleCardWidget)
         self.PushButton_11.setObjectName(u"PushButton_11")
         self.PushButton_11.setGeometry(QRect(90, 30, 71, 31))
-        self.PushButton_11.setFont(font1)
+        self.PushButton_11.setFont(font2)
         self.PushButton_11.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -3608,7 +3615,7 @@ class Ui_MainWindow(object):
         self.PushButton_12 = PushButton(self.SimpleCardWidget)
         self.PushButton_12.setObjectName(u"PushButton_12")
         self.PushButton_12.setGeometry(QRect(170, 30, 71, 31))
-        self.PushButton_12.setFont(font1)
+        self.PushButton_12.setFont(font2)
         self.PushButton_12.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -3920,322 +3927,10 @@ class Ui_MainWindow(object):
         self.SimpleCardWidget_3 = SimpleCardWidget(self.centralwidget)
         self.SimpleCardWidget_3.setObjectName(u"SimpleCardWidget_3")
         self.SimpleCardWidget_3.setGeometry(QRect(0, 490, 261, 61))
-        self.pushButton = PushButton(self.SimpleCardWidget_3)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setGeometry(QRect(170, 10, 71, 31))
-        self.pushButton.setFont(font1)
-        self.pushButton.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
-"    color: black;\n"
-"    background: rgba(255, 255, 255, 0.7);\n"
-"    border: 1px solid rgba(0, 0, 0, 0.073);\n"
-"    border-bottom: 1px solid rgba(0, 0, 0, 0.183);\n"
-"    border-radius: 5px;\n"
-"    /* font: 14px 'Segoe UI', 'Microsoft YaHei'; */\n"
-"    padding: 5px 12px 6px 12px;\n"
-"    outline: none;\n"
-"}\n"
-"\n"
-"ToolButton {\n"
-"    padding: 5px 9px 6px 8px;\n"
-"}\n"
-"\n"
-"PushButton[hasIcon=false] {\n"
-"    padding: 5px 5px 6px 5px;\n"
-"}\n"
-"\n"
-"PushButton[hasIcon=true] {\n"
-"    padding: 5px 12px 6px 36px;\n"
-"}\n"
-"\n"
-"DropDownToolButton, PrimaryDropDownToolButton {\n"
-"    padding: 5px 31px 6px 8px;\n"
-"}\n"
-"\n"
-"DropDownPushButton[hasIcon=false],\n"
-"PrimaryDropDownPushButton[hasIcon=false] {\n"
-"    padding: 5px 31px 6px 12px;\n"
-"}\n"
-"\n"
-"DropDownPushButton[hasIcon=true],\n"
-"PrimaryDropDownPushButton[hasIcon=true] {\n"
-"    padding: 5px 31px 6px 36px;\n"
-"}\n"
-"\n"
-"PushButton:hover, ToolButton:hover, ToggleButton:hover, Togg"
-                        "leToolButton:hover {\n"
-"    background: rgba(249, 249, 249, 0.5);\n"
-"}\n"
-"\n"
-"PushButton:pressed, ToolButton:pressed, ToggleButton:pressed, ToggleToolButton:pressed {\n"
-"    color: rgba(0, 0, 0, 0.63);\n"
-"    background: rgba(249, 249, 249, 0.3);\n"
-"    border-bottom: 1px solid rgba(0, 0, 0, 0.073);\n"
-"}\n"
-"\n"
-"PushButton:disabled, ToolButton:disabled, ToggleButton:disabled, ToggleToolButton:disabled {\n"
-"    color: rgba(0, 0, 0, 0.36);\n"
-"    background: rgba(249, 249, 249, 0.3);\n"
-"    border: 1px solid rgba(0, 0, 0, 0.06);\n"
-"    border-bottom: 1px solid rgba(0, 0, 0, 0.06);\n"
-"}\n"
-"\n"
-"\n"
-"PrimaryPushButton,\n"
-"PrimaryToolButton,\n"
-"ToggleButton:checked,\n"
-"ToggleToolButton:checked {\n"
-"    color: white;\n"
-"    background-color: #009faa;\n"
-"    border: 1px solid #00a7b3;\n"
-"    border-bottom: 1px solid #007780;\n"
-"}\n"
-"\n"
-"PrimaryPushButton:hover,\n"
-"PrimaryToolButton:hover,\n"
-"ToggleButton:checked:hover,\n"
-"ToggleToolButton:checked:hover {\n"
-"    background-color: #00a7b3;\n"
-""
-                        "    border: 1px solid #2daab3;\n"
-"    border-bottom: 1px solid #007780;\n"
-"}\n"
-"\n"
-"PrimaryPushButton:pressed,\n"
-"PrimaryToolButton:pressed,\n"
-"ToggleButton:checked:pressed,\n"
-"ToggleToolButton:checked:pressed {\n"
-"    color: rgba(255, 255, 255, 0.63);\n"
-"    background-color: #3eabb3;\n"
-"    border: 1px solid #3eabb3;\n"
-"}\n"
-"\n"
-"PrimaryPushButton:disabled,\n"
-"PrimaryToolButton:disabled,\n"
-"ToggleButton:checked:disabled,\n"
-"ToggleToolButton:checked:disabled {\n"
-"    color: rgba(255, 255, 255, 0.9);\n"
-"    background-color: rgb(205, 205, 205);\n"
-"    border: 1px solid rgb(205, 205, 205);\n"
-"}\n"
-"\n"
-"SplitDropButton,\n"
-"PrimarySplitDropButton {\n"
-"    border-left: none;\n"
-"    border-top-left-radius: 0;\n"
-"    border-bottom-left-radius: 0;\n"
-"}\n"
-"\n"
-"#splitPushButton,\n"
-"#splitToolButton,\n"
-"#primarySplitPushButton,\n"
-"#primarySplitToolButton {\n"
-"    border-top-right-radius: 0;\n"
-"    border-bottom-right-radius: 0;\n"
-"}\n"
-"\n"
-"#splitPushButton:pressed,\n"
-"#splitToolButton"
-                        ":pressed,\n"
-"SplitDropButton:pressed {\n"
-"    border-bottom: 1px solid rgba(0, 0, 0, 0.183);\n"
-"}\n"
-"\n"
-"PrimarySplitDropButton:pressed {\n"
-"    border-bottom: 1px solid #007780;\n"
-"}\n"
-"\n"
-"#primarySplitPushButton, #primarySplitToolButton {\n"
-"    border-right: 1px solid #3eabb3;\n"
-"}\n"
-"\n"
-"#primarySplitPushButton:pressed, #primarySplitToolButton:pressed {\n"
-"    border-bottom: 1px solid #007780;\n"
-"}\n"
-"\n"
-"HyperlinkButton {\n"
-"    /* font: 14px 'Segoe UI', 'Microsoft YaHei'; */\n"
-"    padding: 6px 12px 6px 12px;\n"
-"    color: #009faa;\n"
-"    border: none;\n"
-"    border-radius: 6px;\n"
-"    background-color: transparent;\n"
-"}\n"
-"\n"
-"HyperlinkButton[hasIcon=false] {\n"
-"    padding: 6px 12px 6px 12px;\n"
-"}\n"
-"\n"
-"HyperlinkButton[hasIcon=true] {\n"
-"    padding: 6px 12px 6px 36px;\n"
-"}\n"
-"\n"
-"HyperlinkButton:hover {\n"
-"    color: #009faa;\n"
-"    background-color: rgba(0, 0, 0, 10);\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"HyperlinkButton:pressed {\n"
-"    color: #009faa;\n"
-"    b"
-                        "ackground-color: rgba(0, 0, 0, 6);\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"HyperlinkButton:disabled {\n"
-"    color: rgba(0, 0, 0, 0.43);\n"
-"    background-color: transparent;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"\n"
-"RadioButton {\n"
-"    min-height: 24px;\n"
-"    max-height: 24px;\n"
-"    background-color: transparent;\n"
-"    font: 14px 'Segoe UI', 'Microsoft YaHei', 'PingFang SC';\n"
-"    color: black;\n"
-"}\n"
-"\n"
-"RadioButton::indicator {\n"
-"    width: 18px;\n"
-"    height: 18px;\n"
-"    border-radius: 11px;\n"
-"    border: 2px solid #999999;\n"
-"    background-color: rgba(0, 0, 0, 5);\n"
-"    margin-right: 4px;\n"
-"}\n"
-"\n"
-"RadioButton::indicator:hover {\n"
-"    background-color: rgba(0, 0, 0, 0);\n"
-"}\n"
-"\n"
-"RadioButton::indicator:pressed {\n"
-"    border: 2px solid #bbbbbb;\n"
-"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
-"            stop:0 rgb(255, 255, 255),\n"
-"            stop:0.5 rgb(255, 255, 255),\n"
-"            stop:0.6 rgb(225, 224, 2"
-                        "23),\n"
-"            stop:1 rgb(225, 224, 223));\n"
-"}\n"
-"\n"
-"RadioButton::indicator:checked {\n"
-"    height: 22px;\n"
-"    width: 22px;\n"
-"    border: none;\n"
-"    border-radius: 11px;\n"
-"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
-"            stop:0 rgb(255, 255, 255),\n"
-"            stop:0.5 rgb(255, 255, 255),\n"
-"            stop:0.6 #009faa,\n"
-"            stop:1 #009faa);\n"
-"}\n"
-"\n"
-"RadioButton::indicator:checked:hover {\n"
-"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
-"            stop:0 rgb(255, 255, 255),\n"
-"            stop:0.6 rgb(255, 255, 255),\n"
-"            stop:0.7 #009faa,\n"
-"            stop:1 #009faa);\n"
-"}\n"
-"\n"
-"RadioButton::indicator:checked:pressed {\n"
-"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
-"            stop:0 rgb(255, 255, 255),\n"
-"            stop:0.5 rgb(255, 255, 255),\n"
-"            stop:0.6 #009faa"
-                        ",\n"
-"            stop:1 #009faa);\n"
-"}\n"
-"\n"
-"RadioButton:disabled {\n"
-"    color: rgba(0, 0, 0, 110);\n"
-"}\n"
-"\n"
-"RadioButton::indicator:disabled {\n"
-"    border: 2px solid #bbbbbb;\n"
-"    background-color: transparent;\n"
-"}\n"
-"\n"
-"RadioButton::indicator:disabled:checked {\n"
-"    border: none;\n"
-"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
-"            stop:0 rgb(255, 255, 255),\n"
-"            stop:0.5 rgb(255, 255, 255),\n"
-"            stop:0.6 rgba(0, 0, 0, 0.2169),\n"
-"            stop:1 rgba(0, 0, 0, 0.2169));\n"
-"}\n"
-"\n"
-"TransparentToolButton,\n"
-"TransparentToggleToolButton,\n"
-"TransparentDropDownToolButton,\n"
-"TransparentPushButton,\n"
-"TransparentDropDownPushButton,\n"
-"TransparentTogglePushButton {\n"
-"    background-color: transparent;\n"
-"    border: none;\n"
-"    border-radius: 5px;\n"
-"    margin: 0;\n"
-"}\n"
-"\n"
-"TransparentToolButton:hover,\n"
-"TransparentToggleToolButton:hover,\n"
-"TransparentDropDownToolButton:hover,\n"
-""
-                        "TransparentPushButton:hover,\n"
-"TransparentDropDownPushButton:hover,\n"
-"TransparentTogglePushButton:hover {\n"
-"    background-color: rgba(0, 0, 0, 9);\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"TransparentToolButton:pressed,\n"
-"TransparentToggleToolButton:pressed,\n"
-"TransparentDropDownToolButton:pressed,\n"
-"TransparentPushButton:pressed,\n"
-"TransparentDropDownPushButton:pressed,\n"
-"TransparentTogglePushButton:pressed {\n"
-"    background-color: rgba(0, 0, 0, 6);\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"TransparentToolButton:disabled,\n"
-"TransparentToggleToolButton:disabled,\n"
-"TransparentDropDownToolButton:disabled,\n"
-"TransprentPushButton:disabled,\n"
-"TransparentDropDownPushButton:disabled,\n"
-"TransprentTogglePushButton:disabled {\n"
-"    background-color: transparent;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"\n"
-"PillPushButton,\n"
-"PillPushButton:hover,\n"
-"PillPushButton:pressed,\n"
-"PillPushButton:disabled,\n"
-"PillPushButton:checked,\n"
-"PillPushButton:checked:hover,\n"
-"PillPushButton:checked:pressed,\n"
-""
-                        "PillPushButton:disabled:checked,\n"
-"PillToolButton,\n"
-"PillToolButton:hover,\n"
-"PillToolButton:pressed,\n"
-"PillToolButton:disabled,\n"
-"PillToolButton:checked,\n"
-"PillToolButton:checked:hover,\n"
-"PillToolButton:checked:pressed,\n"
-"PillToolButton:disabled:checked {\n"
-"    background-color: transparent;\n"
-"    border: none;\n"
-"}\n"
-"")
         self.pushButton_3 = PushButton(self.SimpleCardWidget_3)
         self.pushButton_3.setObjectName(u"pushButton_3")
         self.pushButton_3.setGeometry(QRect(10, 10, 71, 31))
-        self.pushButton_3.setFont(font1)
+        self.pushButton_3.setFont(font2)
         self.pushButton_3.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
@@ -4547,8 +4242,320 @@ class Ui_MainWindow(object):
         self.pushButton_4 = PushButton(self.SimpleCardWidget_3)
         self.pushButton_4.setObjectName(u"pushButton_4")
         self.pushButton_4.setGeometry(QRect(90, 10, 71, 31))
-        self.pushButton_4.setFont(font1)
+        self.pushButton_4.setFont(font2)
         self.pushButton_4.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
+"    color: black;\n"
+"    background: rgba(255, 255, 255, 0.7);\n"
+"    border: 1px solid rgba(0, 0, 0, 0.073);\n"
+"    border-bottom: 1px solid rgba(0, 0, 0, 0.183);\n"
+"    border-radius: 5px;\n"
+"    /* font: 14px 'Segoe UI', 'Microsoft YaHei'; */\n"
+"    padding: 5px 12px 6px 12px;\n"
+"    outline: none;\n"
+"}\n"
+"\n"
+"ToolButton {\n"
+"    padding: 5px 9px 6px 8px;\n"
+"}\n"
+"\n"
+"PushButton[hasIcon=false] {\n"
+"    padding: 5px 5px 6px 5px;\n"
+"}\n"
+"\n"
+"PushButton[hasIcon=true] {\n"
+"    padding: 5px 12px 6px 36px;\n"
+"}\n"
+"\n"
+"DropDownToolButton, PrimaryDropDownToolButton {\n"
+"    padding: 5px 31px 6px 8px;\n"
+"}\n"
+"\n"
+"DropDownPushButton[hasIcon=false],\n"
+"PrimaryDropDownPushButton[hasIcon=false] {\n"
+"    padding: 5px 31px 6px 12px;\n"
+"}\n"
+"\n"
+"DropDownPushButton[hasIcon=true],\n"
+"PrimaryDropDownPushButton[hasIcon=true] {\n"
+"    padding: 5px 31px 6px 36px;\n"
+"}\n"
+"\n"
+"PushButton:hover, ToolButton:hover, ToggleButton:hover, Togg"
+                        "leToolButton:hover {\n"
+"    background: rgba(249, 249, 249, 0.5);\n"
+"}\n"
+"\n"
+"PushButton:pressed, ToolButton:pressed, ToggleButton:pressed, ToggleToolButton:pressed {\n"
+"    color: rgba(0, 0, 0, 0.63);\n"
+"    background: rgba(249, 249, 249, 0.3);\n"
+"    border-bottom: 1px solid rgba(0, 0, 0, 0.073);\n"
+"}\n"
+"\n"
+"PushButton:disabled, ToolButton:disabled, ToggleButton:disabled, ToggleToolButton:disabled {\n"
+"    color: rgba(0, 0, 0, 0.36);\n"
+"    background: rgba(249, 249, 249, 0.3);\n"
+"    border: 1px solid rgba(0, 0, 0, 0.06);\n"
+"    border-bottom: 1px solid rgba(0, 0, 0, 0.06);\n"
+"}\n"
+"\n"
+"\n"
+"PrimaryPushButton,\n"
+"PrimaryToolButton,\n"
+"ToggleButton:checked,\n"
+"ToggleToolButton:checked {\n"
+"    color: white;\n"
+"    background-color: #009faa;\n"
+"    border: 1px solid #00a7b3;\n"
+"    border-bottom: 1px solid #007780;\n"
+"}\n"
+"\n"
+"PrimaryPushButton:hover,\n"
+"PrimaryToolButton:hover,\n"
+"ToggleButton:checked:hover,\n"
+"ToggleToolButton:checked:hover {\n"
+"    background-color: #00a7b3;\n"
+""
+                        "    border: 1px solid #2daab3;\n"
+"    border-bottom: 1px solid #007780;\n"
+"}\n"
+"\n"
+"PrimaryPushButton:pressed,\n"
+"PrimaryToolButton:pressed,\n"
+"ToggleButton:checked:pressed,\n"
+"ToggleToolButton:checked:pressed {\n"
+"    color: rgba(255, 255, 255, 0.63);\n"
+"    background-color: #3eabb3;\n"
+"    border: 1px solid #3eabb3;\n"
+"}\n"
+"\n"
+"PrimaryPushButton:disabled,\n"
+"PrimaryToolButton:disabled,\n"
+"ToggleButton:checked:disabled,\n"
+"ToggleToolButton:checked:disabled {\n"
+"    color: rgba(255, 255, 255, 0.9);\n"
+"    background-color: rgb(205, 205, 205);\n"
+"    border: 1px solid rgb(205, 205, 205);\n"
+"}\n"
+"\n"
+"SplitDropButton,\n"
+"PrimarySplitDropButton {\n"
+"    border-left: none;\n"
+"    border-top-left-radius: 0;\n"
+"    border-bottom-left-radius: 0;\n"
+"}\n"
+"\n"
+"#splitPushButton,\n"
+"#splitToolButton,\n"
+"#primarySplitPushButton,\n"
+"#primarySplitToolButton {\n"
+"    border-top-right-radius: 0;\n"
+"    border-bottom-right-radius: 0;\n"
+"}\n"
+"\n"
+"#splitPushButton:pressed,\n"
+"#splitToolButton"
+                        ":pressed,\n"
+"SplitDropButton:pressed {\n"
+"    border-bottom: 1px solid rgba(0, 0, 0, 0.183);\n"
+"}\n"
+"\n"
+"PrimarySplitDropButton:pressed {\n"
+"    border-bottom: 1px solid #007780;\n"
+"}\n"
+"\n"
+"#primarySplitPushButton, #primarySplitToolButton {\n"
+"    border-right: 1px solid #3eabb3;\n"
+"}\n"
+"\n"
+"#primarySplitPushButton:pressed, #primarySplitToolButton:pressed {\n"
+"    border-bottom: 1px solid #007780;\n"
+"}\n"
+"\n"
+"HyperlinkButton {\n"
+"    /* font: 14px 'Segoe UI', 'Microsoft YaHei'; */\n"
+"    padding: 6px 12px 6px 12px;\n"
+"    color: #009faa;\n"
+"    border: none;\n"
+"    border-radius: 6px;\n"
+"    background-color: transparent;\n"
+"}\n"
+"\n"
+"HyperlinkButton[hasIcon=false] {\n"
+"    padding: 6px 12px 6px 12px;\n"
+"}\n"
+"\n"
+"HyperlinkButton[hasIcon=true] {\n"
+"    padding: 6px 12px 6px 36px;\n"
+"}\n"
+"\n"
+"HyperlinkButton:hover {\n"
+"    color: #009faa;\n"
+"    background-color: rgba(0, 0, 0, 10);\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"HyperlinkButton:pressed {\n"
+"    color: #009faa;\n"
+"    b"
+                        "ackground-color: rgba(0, 0, 0, 6);\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"HyperlinkButton:disabled {\n"
+"    color: rgba(0, 0, 0, 0.43);\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"\n"
+"RadioButton {\n"
+"    min-height: 24px;\n"
+"    max-height: 24px;\n"
+"    background-color: transparent;\n"
+"    font: 14px 'Segoe UI', 'Microsoft YaHei', 'PingFang SC';\n"
+"    color: black;\n"
+"}\n"
+"\n"
+"RadioButton::indicator {\n"
+"    width: 18px;\n"
+"    height: 18px;\n"
+"    border-radius: 11px;\n"
+"    border: 2px solid #999999;\n"
+"    background-color: rgba(0, 0, 0, 5);\n"
+"    margin-right: 4px;\n"
+"}\n"
+"\n"
+"RadioButton::indicator:hover {\n"
+"    background-color: rgba(0, 0, 0, 0);\n"
+"}\n"
+"\n"
+"RadioButton::indicator:pressed {\n"
+"    border: 2px solid #bbbbbb;\n"
+"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
+"            stop:0 rgb(255, 255, 255),\n"
+"            stop:0.5 rgb(255, 255, 255),\n"
+"            stop:0.6 rgb(225, 224, 2"
+                        "23),\n"
+"            stop:1 rgb(225, 224, 223));\n"
+"}\n"
+"\n"
+"RadioButton::indicator:checked {\n"
+"    height: 22px;\n"
+"    width: 22px;\n"
+"    border: none;\n"
+"    border-radius: 11px;\n"
+"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
+"            stop:0 rgb(255, 255, 255),\n"
+"            stop:0.5 rgb(255, 255, 255),\n"
+"            stop:0.6 #009faa,\n"
+"            stop:1 #009faa);\n"
+"}\n"
+"\n"
+"RadioButton::indicator:checked:hover {\n"
+"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
+"            stop:0 rgb(255, 255, 255),\n"
+"            stop:0.6 rgb(255, 255, 255),\n"
+"            stop:0.7 #009faa,\n"
+"            stop:1 #009faa);\n"
+"}\n"
+"\n"
+"RadioButton::indicator:checked:pressed {\n"
+"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
+"            stop:0 rgb(255, 255, 255),\n"
+"            stop:0.5 rgb(255, 255, 255),\n"
+"            stop:0.6 #009faa"
+                        ",\n"
+"            stop:1 #009faa);\n"
+"}\n"
+"\n"
+"RadioButton:disabled {\n"
+"    color: rgba(0, 0, 0, 110);\n"
+"}\n"
+"\n"
+"RadioButton::indicator:disabled {\n"
+"    border: 2px solid #bbbbbb;\n"
+"    background-color: transparent;\n"
+"}\n"
+"\n"
+"RadioButton::indicator:disabled:checked {\n"
+"    border: none;\n"
+"    background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,\n"
+"            stop:0 rgb(255, 255, 255),\n"
+"            stop:0.5 rgb(255, 255, 255),\n"
+"            stop:0.6 rgba(0, 0, 0, 0.2169),\n"
+"            stop:1 rgba(0, 0, 0, 0.2169));\n"
+"}\n"
+"\n"
+"TransparentToolButton,\n"
+"TransparentToggleToolButton,\n"
+"TransparentDropDownToolButton,\n"
+"TransparentPushButton,\n"
+"TransparentDropDownPushButton,\n"
+"TransparentTogglePushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    border-radius: 5px;\n"
+"    margin: 0;\n"
+"}\n"
+"\n"
+"TransparentToolButton:hover,\n"
+"TransparentToggleToolButton:hover,\n"
+"TransparentDropDownToolButton:hover,\n"
+""
+                        "TransparentPushButton:hover,\n"
+"TransparentDropDownPushButton:hover,\n"
+"TransparentTogglePushButton:hover {\n"
+"    background-color: rgba(0, 0, 0, 9);\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"TransparentToolButton:pressed,\n"
+"TransparentToggleToolButton:pressed,\n"
+"TransparentDropDownToolButton:pressed,\n"
+"TransparentPushButton:pressed,\n"
+"TransparentDropDownPushButton:pressed,\n"
+"TransparentTogglePushButton:pressed {\n"
+"    background-color: rgba(0, 0, 0, 6);\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"TransparentToolButton:disabled,\n"
+"TransparentToggleToolButton:disabled,\n"
+"TransparentDropDownToolButton:disabled,\n"
+"TransprentPushButton:disabled,\n"
+"TransparentDropDownPushButton:disabled,\n"
+"TransprentTogglePushButton:disabled {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"\n"
+"PillPushButton,\n"
+"PillPushButton:hover,\n"
+"PillPushButton:pressed,\n"
+"PillPushButton:disabled,\n"
+"PillPushButton:checked,\n"
+"PillPushButton:checked:hover,\n"
+"PillPushButton:checked:pressed,\n"
+""
+                        "PillPushButton:disabled:checked,\n"
+"PillToolButton,\n"
+"PillToolButton:hover,\n"
+"PillToolButton:pressed,\n"
+"PillToolButton:disabled,\n"
+"PillToolButton:checked,\n"
+"PillToolButton:checked:hover,\n"
+"PillToolButton:checked:pressed,\n"
+"PillToolButton:disabled:checked {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"}\n"
+"")
+        self.pushButton = PushButton(self.SimpleCardWidget_3)
+        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setGeometry(QRect(170, 10, 71, 31))
+        self.pushButton.setFont(font2)
+        self.pushButton.setStyleSheet(u"PushButton, ToolButton, ToggleButton, ToggleToolButton {\n"
 "    color: black;\n"
 "    background: rgba(255, 255, 255, 0.7);\n"
 "    border: 1px solid rgba(0, 0, 0, 0.073);\n"
@@ -5034,9 +5041,9 @@ class Ui_MainWindow(object):
         self.label_23 = QLabel(self.CardWidget_2)
         self.label_23.setObjectName(u"label_23")
         self.label_23.setGeometry(QRect(10, 0, 81, 21))
-        font2 = QFont()
-        font2.setPointSize(11)
-        self.label_23.setFont(font2)
+        font3 = QFont()
+        font3.setPointSize(11)
+        self.label_23.setFont(font3)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -5219,9 +5226,9 @@ class Ui_MainWindow(object):
         self.PushButton_10.setText(QCoreApplication.translate("MainWindow", u"\u672a\u6307\u5b9a", None))
         self.PushButton_11.setText(QCoreApplication.translate("MainWindow", u"\u672a\u6307\u5b9a", None))
         self.PushButton_12.setText(QCoreApplication.translate("MainWindow", u"\u672a\u6307\u5b9a", None))
-        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u795e\u79d8\u6309\u94ae", None))
         self.pushButton_3.setText(QCoreApplication.translate("MainWindow", u"\u5173\u4e8e", None))
         self.pushButton_4.setText(QCoreApplication.translate("MainWindow", u"\u8bbe\u7f6e", None))
+        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u795e\u79d8\u6309\u94ae", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))

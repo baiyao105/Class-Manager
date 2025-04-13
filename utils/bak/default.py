@@ -67,11 +67,11 @@ DEFAULT_SCORE_TEMPLATES: "OrderedKeyList[ScoreModificationTemplate]" = OrderedKe
         ScoreModificationTemplate("biology_homework_good", 2.0, "生物作业A+", "所以我们得到这两种性状是1:31"),
         ScoreModificationTemplate("biology_homework_bad", -2.0, "生物作业缺交/不合格", "所以我们得到做对题目的概率是1:31"),
         ScoreModificationTemplate("geography_class_good", 2.0, "地理课堂表扬", "死去的回忆又开始攻击我"),
-        ScoreModificationTemplate("geography_class_bad", -2.0, "地理课堂表扬", "\"后面那位，对，就是你，你上来连线\""),
+        ScoreModificationTemplate("geography_class_bad", -2.0, "地理课堂批评", "\"后面那位，对，就是你，你上来连线\""),
         ScoreModificationTemplate("geography_homework_good", 2.0, "地理作业A+", "推导得澳大利亚房车多是因为地广人稀"),
         ScoreModificationTemplate("geography_homework_bad", -2.0, "地理作业缺交/不合格", "地理老师开着房车马上就到你家门口"),
-        ScoreModificationTemplate("chemistry_class_good", 2.0, "生物课堂表扬", "高锰酸钾制氧气"),
-        ScoreModificationTemplate("chemistry_class_bad", -2.0, "生物课堂批评", "高锰酸钾加白糖"),
+        ScoreModificationTemplate("chemistry_class_good", 2.0, "化学课堂表扬", "高锰酸钾制氧气"),
+        ScoreModificationTemplate("chemistry_class_bad", -2.0, "化学课堂批评", "高锰酸钾加白糖"),
         ScoreModificationTemplate("chemistry_homework_good", -2.0, "化学作业100", "错误示范：用火柴点燃酒精灯"),
         ScoreModificationTemplate("chemistry_homework_bad", -4.0, "化学作业缺交/不合格", "正确示范：用酒精灯点燃化学老师"),
         ScoreModificationTemplate("laws_homework_best", 4.0, "道法作业A++", "能抓好老鼠的就是好猫"), 
@@ -623,7 +623,7 @@ DEFAULT_ACHIEVEMENTS:Dict[str, AchievementTemplate] = {
                                             further_info="这是真神，让我猜猜，是不是擦脚布（？",
                                             score_range=(40, inf),
                                             others=[
-                                                lambda d: sorted([g.total_score for g in d.groups.values() if g.belongs_to == d.student.belongs_to], reverse=True)[3] <= d.student.get_group(d.class_obs).total_score,
+                                                lambda d: sorted([g.total_score for g in d.groups.values() if g.belongs_to == d.student.belongs_to], reverse=True)[min(len(d.groups) - 1, 3)] <= d.student.get_group(d.class_obs).total_score,
                                                 lambda d: len([s for s in d.student.get_group(d.class_obs).members if s.score < 0]) >= 2
                                             ]),
 

@@ -10,8 +10,8 @@ from typing            import Union, Tuple, Optional, Callable, List
 from utils.classdtypes import Base
 from utils.classdtypes import Student, Group
 from utils.settings    import SettingsInfo
-from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar
-from utils.functions   import play_sound
+from qfluentwidgets    import InfoBarIcon, InfoBarPosition, InfoBar
+from utils.functions.sounds   import play_sound
 
 class ObjectButton(QPushButton):
         """学生按钮类，用于在界面上显示学生信息的交互按钮"""

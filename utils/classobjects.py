@@ -25,31 +25,32 @@ from PySide6.QtGui import *  # pylint: disable=wildcard-import, unused-wildcard-
 from PySide6.QtWidgets import QMessageBox
 
 
-from utils.functions import addrof
-from utils.basetypes import OrderedKeyList, Object, Base
-from utils.basetypes import sys, Stack, Thread, gen_uuid
+from utils.basetypes import Object, Base
+from utils.basetypes import sys, gen_uuid
 from utils.update_check import VERSION_INFO, CLIENT_UPDATE_LOG            #  pylint: disable=unused-import
 from utils.classdtypes import (Student, StrippedStudent, Group, Class,    #  pylint: disable=unused-import
                                 ScoreModificationTemplate, ScoreModification,
                                 Achievement, AchievementTemplate, AttendanceInfo,
                                 DayRecord, History, ClassObj as OrigClassObj,
                                 HomeworkRule, dummy_student)
-from utils.functions import stop_music, play_sound, play_music, steprange  #  pylint: disable=unused-import
+from utils.algorithm.datatypes import  Stack, Thread
+from utils.algorithm.keyorder  import OrderedKeyList
+from utils.functions.sounds import stop_music, play_sound, play_music  #  pylint: disable=unused-import
+from utils.functions.numbers import addrof, steprange
 from utils.dataloader import Chunk, UserDataBase, DataObject               #  pylint: disable=unused-import
-from utils.prompts import question_yes_no
+from utils.functions.prompts import question_yes_no
+from utils.consts import default_user
 
 
-DEBUG_MODE = True
-"""是否为调试模式"""
 
-DEFAULT_USER = "测试用户1"
-"""默认用户名常量"""
+
 
 CORE_VERSION = VERSION_INFO["core_version"]
 """核心版本号"""
 
 CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
 """核心版本号代码，用于版本比较"""
+
 
 
 try:
@@ -105,7 +106,7 @@ def utc(precision:int=3):
 class ClassObj(OrigClassObj):
     "班级对象类"
 
-    def __init__(self, user: str = DEFAULT_USER, save_path: Optional[str]=None):
+    def __init__(self, user: str = default_user, save_path: Optional[str]=None):
         """
         构造一个新的用户班级对象。
 
@@ -117,7 +118,7 @@ class ClassObj(OrigClassObj):
         self.class_id = None
         self.current_user = user
         if save_path is None:
-            save_path = os.getcwd() + os.sep + f"chunks/{user}/"
+            save_path = os.path.join(os.getcwd(), "chunks", user)
 
         self.config_data(save_path)
 
@@ -188,7 +189,7 @@ class ClassObj(OrigClassObj):
 
     @staticmethod
     def load_data(
-                path:                str  = os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/",
+                path:                str  = os.getcwd() + os.sep + f"chunks/{default_user}/",
                 silent:              bool = False,
                 strict:              bool = True,
                 method:              Literal["pickle", "sqlite", "auto"] = "sqlite",
@@ -393,7 +394,7 @@ class ClassObj(OrigClassObj):
         self.history_data = {}
 
 
-    def config_data(self, path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/",
+    def config_data(self, path:str=os.getcwd() + os.sep + f"chunks/{default_user}/",
                         silent:bool=False,
                         strict=False,
                         reset_missing=False,
@@ -407,7 +408,7 @@ class ClassObj(OrigClassObj):
         :param silent: 是否静默加载
         :param strict: 是否抛出错误
         :param reset_existing: 是否把默认数据（比如当前不存在的模板和成就）加入到现有数据中
-        :param load_full_histories:加载全部历史记录
+        :param load_full_histories: 加载全部历史记录
         :param reset_current: 加载数据时覆盖本周的数据
         """
         data = ClassObj.load_data(path, silent, strict, mode, load_full_histories)
@@ -572,7 +573,7 @@ class ClassObj(OrigClassObj):
                         weekday_record:List[DayRecord],
                         current_day_attendance: AttendanceInfo,
                         *,
-                        path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/",
+                        path:str=os.getcwd() + os.sep + f"chunks/{default_user}/",
                         mode: Literal["pickle", "sqlite"] = "sqlite"):
         """强制以指定数据保存存档。
         
@@ -656,7 +657,7 @@ class ClassObj(OrigClassObj):
         if path is None:
             path = self.save_path
         return self.save_data_strict(
-            DEFAULT_USER,
+            default_user,
             time.time(),
             CORE_VERSION,
             CORE_VERSION_CODE,
@@ -693,7 +694,7 @@ class ClassObj(OrigClassObj):
     @staticmethod
     def reset_data(path: str = \
                     os.getcwd() + os.sep + \
-                        f"chunks/{DEFAULT_USER}/", 
+                        f"chunks/{default_user}/", 
 
                     mode: Literal["pickle", "sqlite"] = "sqlite"):
         """
@@ -706,7 +707,7 @@ class ClassObj(OrigClassObj):
         shutil.rmtree(os.path.join(path, "Histories"), ignore_errors=True)
 
         ClassObj.save_data_strict(
-            DEFAULT_USER,
+            default_user,
             time.time(),
             CORE_VERSION,
             CORE_VERSION_CODE,
@@ -758,7 +759,7 @@ class ClassObj(OrigClassObj):
             "学生不存在。"
         
         class AddTemplate(enum.IntEnum):
-            ReplacingUnreplaceableTemplate = 3
+            TargetUnreplaceable = 3
             "尝试覆盖无法覆盖的模板。"
             SystemError = 4
             "系统内部错误。"
@@ -821,7 +822,7 @@ class ClassObj(OrigClassObj):
             if not strict:
                 return ClassObj.EditErrInfo.FindStudent.ClassNotExists
             raise ClassObj.StudentNotExistError("没有找到指定的学生")
-        raise ClassObj.StudentNotExistError("传参错误")
+        raise TypeError("传参错误")
         
     def student_exists(self, identifier:Union[int, str], 
                         from_class:str=default_class_key):
@@ -870,7 +871,7 @@ class ClassObj(OrigClassObj):
                         (", raise TemplateExistsError" if strict else ""),
                         "MainThread.add_template")
                 if not strict:
-                    return ClassObj.EditErrInfo.AddTemplate.ReplacingUnreplaceableTemplate
+                    return ClassObj.EditErrInfo.AddTemplate.TargetUnreplaceable
                 raise ClassObj.TemplateExistsError(
                 f"模板\"{self.modify_templates[key].title}\"({key})被设置为无法替换!")
             self.modify_templates[key].title = title
@@ -957,7 +958,8 @@ class ClassObj(OrigClassObj):
         :raise ClassExistsError: 班级已存在
         :raise EditingError: 出现其他错误 
         """
-        Base.log("I",f"正在新建班级{name}(所属老师{owner},标识符{key}), 原因：{reason}","MainThread.add_class")
+        Base.log("I", f"正在新建班级{name}(所属老师{owner},标识符{key}), 原因：{reason}",
+                "MainThread.add_class")
         if key in self.classes.keys():
             Base.log("E","指定的班级已存在!","MainThread.add_class")
             if not strict:
@@ -966,7 +968,8 @@ class ClassObj(OrigClassObj):
 
         try:
             self.classes[key] = ClassObj.Class(name, owner, students, key, {})
-            Base.log("I",f"班级{name}新建完毕!","MainThread.add_class")
+            Base.log("I", f"班级{name}新建完毕!",
+                    "MainThread.add_class")
             return self.classes[key]
 
         except Exception as e:    # pylint: disable=broad-exception-caught
@@ -1081,7 +1084,7 @@ class ClassObj(OrigClassObj):
                     extra_title:Optional[str]=None,
                     extra_desc:Optional[str]=None,
                     extra_mod:Optional[Union[float]]=None,
-                    info:str=None):
+                    info:str=None) -> Optional[List[ScoreModification]]:
         
         """发送点评。
 
@@ -1091,7 +1094,7 @@ class ClassObj(OrigClassObj):
         :param extra_desc: 额外描述
         :param extra_mod: 额外分数
         :param info: 信息，会记在主界面的侧边栏的ListWidget里
-        :return: None
+        :return: 发送的所有点评的实例
         :raise SendModifyError: 发送点评出现错误
         """
 
@@ -1118,6 +1121,7 @@ class ClassObj(OrigClassObj):
 
         Base.log("I", f"开始发送点评\n模板： {self.modify_templates[key].__repr__()}\n"
                 f"发送至：\n---------------------", "MainThread.send_modify")
+        result = []
         succeed: List[ClassObj.ScoreModification] = []
         
         for stu in send_to:
@@ -1127,11 +1131,12 @@ class ClassObj(OrigClassObj):
             if not success:
                 for m in succeed:
                     m.retract()
-                Base.log("I", f"---------------------\n发送失败，"
+                Base.log("E", f"---------------------\n发送失败，"
                         f"总数:{len(send_to)}","MainThread.send_modify")
-                QMessageBox.warning("向学生"+stu.name+"发送点评出现错误，本组点评已撤回")
+                raise ClassObj.SendModifyError(f"向学生{stu.name}发送点评出现错误")
             Base.log("I", f"对象 -> {repr(ClassObj.SimpleStudent(stu))}")
             succeed.append(a)
+            result.append(a)
 
         Base.log("I", f"---------------------\n发送完成，总数:{len(send_to)}",
                 "MainThread.send_modify")
@@ -1168,17 +1173,19 @@ class ClassObj(OrigClassObj):
                                 "点评记录" + (" " + info if info is not None else "")),
 
                                 (127, 225, 195, 224, 255, 255))
-
+        return result.copy()
 
     def send_modify_instance(self,
                             modify:Union[List[ScoreModification], ScoreModification],
-                            info:str=None):
+                            info:str=None) -> Optional[List[ScoreModification]]:
         """
         发送点评。
 
         :param modify: 点评实例
         :param info: 信息，会记在主界面的侧边栏的ListWidget里
-        :return: None
+        :return: 发送的点评的实例
+        :raise SendModifyError: 发送点评出现错误
+
         """
         if isinstance(modify, ClassObj.ScoreModification):
             modify = [modify]
@@ -1191,9 +1198,11 @@ class ClassObj(OrigClassObj):
                         "MainThread.send_modify_instance")
                 for m in succeed:
                     m.retract()
-                QMessageBox.warning("向学生"+m.target.name+"发送点评出现错误，本组点评已撤回")
-                Base.log("I", f"---------------------\n发送失败，总数:{len(modify)}",
+                Base.log("E", f"---------------------\n发送失败，总数:{len(modify)}",
                         "MainThread.send_modify_instance")
+                
+                raise ClassObj.SendModifyError(f"向学生{m.target.name}发送点评出现错误")
+
             else:
                 Base.log("I", f"发送了{m.target.name}的点评",
                         "MainThread.send_modify_instance")
@@ -1237,7 +1246,7 @@ class ClassObj(OrigClassObj):
                 info_list,
                 "点评记录" + (" " + info if info is not None else "")),
                 (127, 225, 195, 224, 255, 255))
-        
+        return modify.copy()
 
 
     def retract_modify(self, 

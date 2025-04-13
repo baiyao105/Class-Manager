@@ -9,81 +9,25 @@ import copy
 import time
 import json
 import traceback
-from typing import (
-    Union, TypeVar, Generic, Optional, Dict, Any,
-    Callable, Type, Literal, Tuple, List, overload,
-    Iterable)
+from queue import Queue
+from typing import (Union, TypeVar, Generic, Optional, Dict, Any,
+                    Callable, Type, Literal, Tuple, List, overload,
+                    Iterable)
 
 
 import pickle           # pylint: disable=unused-import
 import dill as pickle   # pylint: disable=shadowed-import
 
 
-from utils.basetypes import (
-    Base, SupportsKeyOrdering, Object,
-    OrderedKeyList, Stack, Queue,
-    debug, inf, utc, runtime_flags
-)
-
-from utils.prompts import send_notice as _send_notice
+from utils.basetypes import Base, Object
+from utils.consts import inf, debug, runtime_flags
+from utils.algorithm import SupportsKeyOrdering, OrderedKeyList, Stack
+from utils.functions import send_notice as _send_notice, utc
 
 def send_notice(title: str, content: str, msg_type: Literal["info", "warn", "error"] = "info"):
     "发送通知"
     Base.log("I", f"发送通知, title={title!r}, content={content!r}")
     _send_notice(title, content, msg_type)
-
-
-
-
-def get_random_template(templates: "OrderedKeyList[ClassObj.ScoreModificationTemplate]"):
-
-    # tip:IDE可以查看上方定义的注释说明
-    """
-    关于某些抽象的类型注释，比如``OrderedKeyList[ScoreModificationTemplate]``
-
-    就比如你在给一个函数写类型注释的时候，你可能会这样写：
-
-    ```python
-    def get_random_template(templates: OrderedKeyList[ScoreModificationTemplate]):
-        return random.choice(templates)
-
-    ```
-
-    **  如果没看懂的话解释一下，因为``OrderedKeyList``继承了``typing``的``Iterable``，
-
-        ``Iterable``的定义就是一个可以迭代（"for i in 某种东西" 这种就是迭代）的对象
-
-        ``Iterable[某种类型]`` 表示的是这个可迭代对象里面包含的全部都是某种类型，for循环出来的``i``自然也就是这种类型了
-
-        所以``OrderedKeyList``的类型标注和Iterable是一个道理，
-
-        ``OrderedKeyList[ScoreModificationTemplate]``的意思
-        
-        就是这个``OrderedKeyList``里面包含的全部都是``ScoreModificationTemplate``
-
-        迭代出来的自然也就全都是``ScoreModificationTemplate``了
-
-        还有，直接用python自带的类型（比如``list[ScoreModificationTemplate]``这种）去写方括号的类型标注是不行的，会报错
-
-        但是可以``from typing import List``，然后写``List[ScoreModificationTemplate]``
-        
-        这样就可以表示一个``ScoreModififaction``的列表了
-
-
-
-    然后你把鼠标放到这个东西上面去的时候
-
-    ```python
-    template = get_random_template(DEFAULT_SCORE_TEMPLATES)
-    ```
-
-    你就会惊喜（也许只有我我会惊喜吧？）的发现VSCode识别出来了template是一个``ScoreModificationTemplate``类型的对象
-
-    然后只要系统知道了template是``ScoreModificationTemplate``类型的对象，那么VSCode就可以把这玩意的所有method都显示出来，方便写代码
-
-
-    """
-    return random.choice(templates)
 
 
 ClassDataType = Union["Student", "Class", "Group",
@@ -135,7 +79,6 @@ class ClassObj(Base):
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
 
-        # score_dtype = HighPrecision
         score_dtype = float
         "记录分数的数据类型（还没做完别乱改）"
 
@@ -1740,9 +1683,9 @@ class ClassObj(Base):
                                         + "第" + str(abs(self.score_rank_down_limit)) + "名\n")
                 else:
                     return_str += (f"排名介于{('倒数' if self.score_rank_down_limit < 0 else '')}" +
-                                        + "第" + f"{abs(self.score_rank_down_limit)}" + "和"
+                                        + "第" + f"{abs(self.score_rank_down_limit)}" + "和"    # pylint: disable=E1130
                                             + ('倒数' if self.score_rank_up_limit < 0 else '') +
-                                        + "第" + f"{abs(self.score_rank_up_limit)}" + "之间\n")
+                                        + "第" + f"{abs(self.score_rank_up_limit)}" + "之间\n") # pylint: disable=E1130
 
             if hasattr(self, "highest_score_down_limit"):
                 down = self.highest_score_down_limit
