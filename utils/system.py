@@ -3,7 +3,7 @@ import time
 import subprocess
 from io import TextIOWrapper
 from typing_extensions import TextIO
-from typing import Literal, Optional, Union, Any, Callable
+from typing import Optional, Union, Any, Callable
 from queue import Queue
 from typing import NamedTuple
 from threading import Thread
@@ -21,7 +21,7 @@ class SystemLogger(TextIOWrapper):
 
     def __init__(self, *args, 
                  logger_name:str="sys.stdout",
-                 function: Callable[[str, str, str], Any]=None,
+                 function: Callable[[str], Any]=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.line = ""
@@ -40,12 +40,8 @@ class SystemLogger(TextIOWrapper):
         if "\n" in self.line:
             try:
                 log_content = self.line.rsplit("\n", 1)[0].strip()
-                # 如果有function函数，则调用它记录日志，但不再将日志放入队列
-                # 这样可以避免重复输出
                 if self.function:
                     self.function(log_content)
-                # 根据日志类型将日志放入对应队列
-                # 不需要根据function判断是否放进队列，这两个不会冲突的
                 if self.logger_name == "sys.stdout":
                     stdout_queue.put(log_content)
                 elif self.logger_name == "sys.stderr":
@@ -62,13 +58,9 @@ class SystemLogger(TextIOWrapper):
             self.line += "\n".join(lines)
             if "\n" in self.line:
                 log_content = self.line.rsplit("\n", 1)[0].strip()
-                # 如果有function函数，则调用它记录日志，但不再将日志放入队列
-                # 这样可以避免重复输出
                 if self.function:
-                    self.function(self.level, log_content, self.logger_name)
-                # 如果没有function函数，则将日志放入队列
+                    self.function(log_content)
                 else:
-                    # 根据日志类型将日志放入队列
                     if self.logger_name == "sys.stdout":
                         stdout_queue.put(log_content)
                         output_list.append(log_content)

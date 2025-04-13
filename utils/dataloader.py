@@ -8,7 +8,7 @@ import math
 import shutil
 import sqlite3
 
-from utils.prompts     import question_yes_no
+from utils.functions.prompts     import question_yes_no
 from utils.classdtypes import * # pylint: disable=unused-wildcard-import, wildcard-import
 from utils.classobjects import gen_uuid
 

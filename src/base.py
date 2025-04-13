@@ -1,3 +1,3 @@
 from utils.classobjects import *
-from utils.high_precision_operation import *
+from utils.algorithm.high_precision import *
 import numpy

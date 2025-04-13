@@ -32,7 +32,6 @@ from   qfluentwidgets.components import *   # pylint: disable=wildcard-import, u
 from   qfluentwidgets.window     import *   # pylint: disable=wildcard-import, unused-wildcard-import
 from   qfluentwidgets.multimedia import *   # pylint: disable=wildcard-import, unused-wildcard-import
 
-from   utils.basetypes    import format_exc_like_java, runtime_flags
 from   ui.py              import (MainClassWindow, WTF, StudentWindow,
                                 MultiSelectWindow, NewTemplateWindow,
                                 EditTemplateWindow, ModifyHistoryWindow,
@@ -50,22 +49,27 @@ from   utils.classobjects import (sys as base_sys, Class, Student,  # pylint: di
                                 Group, HomeworkRule, dummy_student,
                                 History, Stack, Base, ClassObj,
                                 DEFAULT_CLASSES, DEFAULT_ACHIEVEMENTS,
-                                DEFAULT_SCORE_TEMPLATES, DEFAULT_USER)
+                                DEFAULT_SCORE_TEMPLATES, default_user)
 
-from   utils.classobjects  import (steprange, play_sound, play_music,
-                                stop_music, Thread, default_class_key)
+from   utils.functions     import (steprange, play_sound, play_music,
+                                stop_music, Thread)
 from   utils.classobjects  import (CORE_VERSION, CORE_VERSION_CODE,
-                                VERSION_INFO, CLIENT_UPDATE_LOG)
+                                VERSION_INFO, CLIENT_UPDATE_LOG, default_class_key)
 from   utils.classobjects  import Chunk, UserDataBase
-from   utils.consts        import app_style, app_stylesheet, nl
+from   utils.consts        import app_style, app_stylesheet, nl, enable_memory_tracing
 from   utils.widgets       import ObjectButton, ProgressAnimatedListWidgetItem, SideNotice
-from   utils.prompts       import question_yes_no as question_yes_no_orig, question_chooose
+from   utils.functions     import question_yes_no as question_yes_no_orig, question_chooose
+from   utils.functions     import format_exc_like_java
 from   utils.settings      import SettingsInfo
 from   utils.system        import output_list
-from   utils.basetypes import logger
+from   utils.basetypes     import Logger
 import utils.classdtypes   as ClassDataTypes
-import utils.prompts       as PromptUtils
+import utils.functions.prompts       as PromptUtils
 
+sys.stdout                        = Base.captured_stdout
+"重定向的标准输出"
+sys.stderr                        = Base.captured_stderr
+"重定向的错误输出"
 
 
 try:
@@ -76,7 +80,10 @@ except ImportError:
                     "如果需要自定义登录模块请创建/修改utils/login.py")
 
 
-
+base_sys.stdout                   = Base.captured_stdout
+"重定向的核心模块标准输出"
+base_sys.stderr                   = Base.captured_stderr
+"重定向的核心模块错误输出"
 
 ExceptionInfoType = Tuple[Type[BaseException], BaseException, TracebackType]
 """异常信息类型"""
@@ -88,14 +95,6 @@ CLIENT_VERSION_CODE: str          = VERSION_INFO["client_version_code"]
 
 settings:            SettingsInfo = SettingsInfo.current
 "全局设置对象"
-sys.stdout                        = Base.captured_stdout
-"重定向的标准输出"
-sys.stderr                        = Base.captured_stderr
-"重定向的错误输出"
-base_sys.stdout                   = Base.captured_stdout
-"重定向的核心模块标准输出"
-base_sys.stderr                   = Base.captured_stderr
-"重定向的核心模块错误输出"
 
 widget:              "ClassWindow"
 "主窗口实例"
@@ -103,10 +102,7 @@ widget:              "ClassWindow"
 ctrlc_times = 0
 "中断信号计数器"
 
-ENABLE_MEMORY_TRACING = False
-"是否启用内存追踪"
-
-if not ENABLE_MEMORY_TRACING:
+if not enable_memory_tracing:
     def profile(precision=4):   # NOSONAR; pylint: disable=unused-argument
         def decorator(func):
             return func
@@ -620,7 +616,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     #                                初始化                                    #
     ###########################################################################
 
-    def __init__(self, *args, class_name="测试班级", current_user=DEFAULT_USER, class_key="CLASS_TEST"):
+    def __init__(self, *args, class_name="测试班级", current_user=default_user, class_key="CLASS_TEST"):
         """窗口初始化
 
         :param class_name: 班级名称
@@ -647,18 +643,17 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "备份路径"
         super().__init__(user=current_user)
         self.init_display_data()
+        self.load_settings()
         self.init_class_data(class_name=class_name, 
                              class_id=class_key, 
                              current_user=current_user, 
                              class_obs_tps=10, achievement_obs_tps=10)
-        self.load_settings()
-        self.config_data(os.getcwd() + os.sep + f"chunks/{self.current_user}/")
         # 给成就侦测器过载的时候增加一个提示
         orig_func = self.achievement_obs.on_observer_overloaded
         last_tip = 0.0
         def on_achievement_obs_overloaded(fr, op, mspt):
-            nonlocal last_tip
             "当成就侦测器过载时执行的操作"
+            nonlocal last_tip
             if time.time() - last_tip >= 30:
                 self.show_tip("警告", "成就侦测器过载，已降低侦测速度", self, duration=8000, icon=InfoBarIcon.WARNING,
                             further_info=f"详细信息：\n\n帧耗时：{fr}s\n操作耗时：{op}s\n帧耗时：{mspt}ms")
@@ -1288,7 +1283,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         padding = 15 * self.devicePixelRatio()
 
 
-        if hasattr(self, "current_frame") and self.use_animate_background:
+        if hasattr(self, "current_video_frame") and self.use_animate_background:
             pixmap = QPixmap.fromImage(self.current_video_frame)
         else:
             if not os.path.exists("./img/main/background.jpg"):
@@ -1544,7 +1539,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
 
     def mainloop(self) -> int:
-        """主循环，跟tk的差不多"""
+        """
+        主循环，跟tk的差不多
+        """
         Base.log("I", "mainloop启动中...", "MainWindow.mainloop")
         self.is_running = True
         self.insert_action_history_info("双击这种列表项目可查看信息",
@@ -1692,7 +1689,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
 
 
-    def config_data(self, path:str=os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}/",
+    def config_data(self, path:str=os.getcwd() + os.sep + f"chunks/{default_user}/",
                           silent:bool=False,
                           strict=False, 
                           reset_missing=False,
@@ -1947,12 +1944,15 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
         else:
             try:
+                Base.log("I", "获取一言", "MainWindow._refresh_hint_widget")
                 self.label_23.setText("语录")
-                req = json.loads(requests.get("https://v1.hitokoto.cn", timeout=0.5).text)
+                text = requests.get("https://v1.hitokoto.cn", timeout=0.5).text
+                Base.log("I", f"返回：{text}", "MainWindow._refresh_hint_widget")
+                req = json.loads(text)
                 text = req["hitokoto"] + "\n\t- " + req["from"]
                 self.label_22.setText(text + ("\n（点击刷新）" if tip_refresh else ""))
             except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
-                Base.log("W", f"获取每日一句失败，错误类型：{e.__class__.__name__}", "MainWindow.refresh_hints")
+                Base.log("W", f"获取一言失败，错误类型：{e.__class__.__name__}", "MainWindow.refresh_hints")
                 with open("utils/data/hints.txt", encoding="utf-8") as f:
                     hints = [l.replace("^#", "#") for l in f.read().splitlines() if ((not l.startswith("#")) and l.strip())]
                 self.label_23.setText("小提示")
@@ -2269,7 +2269,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @Slot()
     def _dont_click(self, style: int):
         "千万别点被点击时的接口"
-        style = random.randint(1, 10) if style == 0 else style
+        style = random.randint(1, 7) if style == 0 else style
         self.log("I", f"按钮被点击，本次执行类型：{style}", "MainWindow.dont_click")
 
         if style == 1:
@@ -2294,7 +2294,19 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 w.show()
 
         elif style == 5:
-            pass
+            self.send_modify_instance([
+                ScoreModification(
+                    ScoreModificationTemplate(
+                        "fly_in_class",
+                        -114.0,
+                        "在课堂上飞起来",
+                        "装___我让你________"
+                    ),
+                    s
+                )
+                for s in self.target_class.students.values()
+            ])
+            self.show_tip("提示", "可以通过撤销上一步恢复", duration=10000)
 
         elif style == 6:
             orig_x, orig_y = self.geometry().topLeft().x(), self.geometry().topLeft().y()
@@ -2323,8 +2335,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     obj.move(orig_pos[obj].x(), orig_pos[obj].y())
                 except KeyError as unused:
                     pass
-
-
 
 
     def script_backup(self, mode:Literal["none", "all", "only_data"]="only_data"):
@@ -4248,9 +4258,9 @@ class SettingWidget(SettingWindow.Ui_Form, MyWidget):
 
         # 这个弃用了，因为懒得写
         if self.mainwindow.auto_save_path == "user":
-            self.save_path = os.environ.get("USERPROFILE") + f"\\AppData\\Roaming\\ClassManager\\chunks\\{DEFAULT_USER}"
+            self.save_path = os.environ.get("USERPROFILE") + f"\\AppData\\Roaming\\ClassManager\\chunks\\{default_user}"
         else:
-            self.save_path = os.getcwd() + os.sep + f"chunks/{DEFAULT_USER}"
+            self.save_path = os.getcwd() + os.sep + f"chunks/{default_user}"
 
 
         self.mainwindow.subwindow_x_offset = self.spinBox.value()
