@@ -45,6 +45,7 @@ class Node:
     def __repr__(self) -> str:
         return f"Node({self.value}, {self.left}, {self.right})"
 
+
 DT = TypeVar("DT")
 class Stack(Generic[DT]):
     "非常朴素的栈"
@@ -76,9 +77,6 @@ class Stack(Generic[DT]):
     def clear(self):
         "清空栈"
         self.items = []
-
-
-
 
 class Thread(OrigThread):
     "自己做的一个可以返回数据的Thread"
@@ -119,7 +117,7 @@ class Thread(OrigThread):
     def run(self):
         "运行线程"
         self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long) \
-            (lambda: ctypes.pythonapi.PyThread_get_thread_ident()) ()
+            (lambda: ctypes.pythonapi.PyThread_get_thread_ident()) ()   # pylint: disable=W0108
         if self._target is not None:
             self._return = self._target(*self._args, **self._kwargs)
         self._finished = True
@@ -153,9 +151,6 @@ class Mutex:
     def __exit__(self, exc_type, exc_val, exc_tb):
         "退出上下文管理器"
         self.release()
-
-
-
 
 
 class FrameCounter:

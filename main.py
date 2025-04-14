@@ -56,13 +56,13 @@ from   utils.functions     import (steprange, play_sound, play_music,
 from   utils.classobjects  import (CORE_VERSION, CORE_VERSION_CODE,
                                 VERSION_INFO, CLIENT_UPDATE_LOG, default_class_key)
 from   utils.classobjects  import Chunk, UserDataBase
-from   utils.consts        import app_style, app_stylesheet, nl, enable_memory_tracing
+from   utils.consts      import app_style, app_stylesheet, nl, enable_memory_tracing, runtime_flags
 from   utils.widgets       import ObjectButton, ProgressAnimatedListWidgetItem, SideNotice
 from   utils.functions     import question_yes_no as question_yes_no_orig, question_chooose
 from   utils.functions     import format_exc_like_java
 from   utils.settings      import SettingsInfo
 from   utils.system        import output_list
-from   utils.basetypes     import Logger
+from   utils.basetypes     import Logger, logger
 import utils.classdtypes   as ClassDataTypes
 import utils.functions.prompts       as PromptUtils
 
