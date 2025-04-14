@@ -6,6 +6,14 @@ import copy
 from abc import ABC
 from typing import Iterable, List, TypeVar, Union, Dict, Iterator, Tuple
 from collections import OrderedDict
+try:
+    from utils.logger import Logger
+except ImportError as unused:
+    class Logger:
+        "覆写用的日志记录类"
+        def log(l, c, s):
+            "记录日志"
+            print(c)
 
 __all__ = ["SupportsKeyOrdering", "OrderedKeyList"]
 
@@ -158,10 +166,11 @@ class OrderedKeyList(list, Iterable[_Template]):
         if isinstance(objects, (dict, OrderedDict)):
             for k, v in objects.items():
                 if getattr(v, self.keyattr) != k:
-                    print(
-                        "OrderedKeyList.__init__: "
+                    Logger.log("W",
                         F"模板在dict中的key（{k!r}）与模板本身的（{getattr(v, self.keyattr)!r}）不一致，"
-                                    "已自动修正为dict中的key")
+                                    "已自动修正为dict中的key",
+                        "OrderedKeyList.__init__"
+                                    )
                     setattr(v, self.keyattr, k)
                 self.append(v)
         elif isinstance(objects, OrderedKeyList):
@@ -172,10 +181,9 @@ class OrderedKeyList(list, Iterable[_Template]):
                 if getattr(v, self.keyattr) in keys:
                     if not self.allow_dumplicate:
                         raise ValueError(F"模板的key（{getattr(v, self.keyattr)!r}）重复")
-                    print(
-                        "OrderedKeyList.__init__: "
-                    F"模板的key（{getattr(v, self.keyattr)!r}）重复，"
-                    f"补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}")
+                    Logger.log("W", F"模板的key（{getattr(v, self.keyattr)!r}）重复，"
+                    f"补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}",
+                        "OrderedKeyList.__init__")
                     setattr(v, self.keyattr, getattr(v, self.keyattr) + self.dumplicate_suffix)
                 keys.append(getattr(v, self.keyattr))
                 self.append(v)
@@ -263,9 +271,10 @@ class OrderedKeyList(list, Iterable[_Template]):
         if getattr(obj, self.keyattr) in self.keys():
             if not self.allow_dumplicate:  # 如果不允许重复直接抛出异常
                 raise ValueError(F"模板的key（{getattr(obj, self.keyattr)!r}）重复")
-            print("OrderedKeyList.append: "
+            print("W",
                      F"模板的key（{getattr(obj, self.keyattr)!r}）重复，"
-                     f"补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}")
+                     f"补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}",
+                     "OrderedKeyList.append")
             setattr(obj, self.keyattr, getattr(obj, self.keyattr) + self.dumplicate_suffix)
         super().append(obj)
         return self

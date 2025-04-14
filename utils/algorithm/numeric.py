@@ -9,7 +9,7 @@ from ctypes import (c_int, c_int8, c_int16, c_int32, c_int64,
 
 
 
-from utils.consts import inf, ninf, nan
+inf = math.inf
 
 CIntegerType = Union[int, c_int, c_uint,
                 c_int8, c_int16, c_int32, c_int64, 
