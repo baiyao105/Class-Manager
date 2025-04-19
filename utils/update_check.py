@@ -349,7 +349,7 @@ try:
     CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
     CLIENT_VERSION = VERSION_INFO["client_version"]
     CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
-except Exception as e:
+except Exception:
     print("警告：获取本地版本信息失败")
     VERSION_INFO = {
         "core_version": "unknown",

@@ -5,7 +5,7 @@
 import sys
 import functools
 from threading import Thread
-from typing import Literal, Union, List
+from typing import Literal
 
 
 from utils.logger import Logger as Base

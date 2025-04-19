@@ -3,6 +3,7 @@
 """
 
 import os
+import sys
 import enum
 import copy
 import time
@@ -26,7 +27,7 @@ from PySide6.QtWidgets import QMessageBox
 
 
 from utils.basetypes import Object, Base
-from utils.basetypes import sys, gen_uuid
+from utils.basetypes import gen_uuid
 from utils.update_check import (
     VERSION_INFO,
     CLIENT_UPDATE_LOG,
@@ -49,12 +50,13 @@ from utils.classdtypes import (
 )
 from utils.algorithm.datatypes import Stack, Thread
 from utils.algorithm.keyorder import OrderedKeyList
+from utils.algorithm.numeric import inf
 from utils.functions.sounds import (
     stop_music,
     play_sound,
     play_music,
 )  # pylint: disable=unused-import
-from utils.functions.numbers import addrof, steprange
+from utils.functions.numbers import addrof
 from utils.dataloader import (
     Chunk,
     UserDataBase,
@@ -270,7 +272,7 @@ class ClassObj(OrigClassObj):
                 f.close()
                 try:
                     data = pickle.load(open(path + ".tmp", "rb"))
-                except AttributeError as unused:
+                except AttributeError:
                     data = pickle_orig.load(open(path + ".tmp", "rb"))
                 try:
                     os.remove(path + ".tmp")
