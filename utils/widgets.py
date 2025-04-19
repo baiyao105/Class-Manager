@@ -17,7 +17,8 @@ class ObjectButton(QPushButton):
         """学生按钮类，用于在界面上显示学生信息的交互按钮"""
 
         def _set_color(self, col:QColor):
-            """设置按钮的背景颜色
+            """
+            设置按钮的背景颜色
             
             :param col: 要设置的颜色对象
             """
@@ -50,7 +51,8 @@ class ObjectButton(QPushButton):
                      icon:Union[QIcon, QPixmap]=None, 
                      object:Union[Student, Group]=None):
 
-            """初始化学生按钮
+            """
+            初始化学生按钮
             
             :param text: 按钮显示的文字
             :param parent: 父窗口对象
@@ -83,7 +85,8 @@ class ObjectButton(QPushButton):
 
 
         def flash(self, start:Tuple[int, int, int], end:Tuple[int, int, int], duration):
-            """创建按钮颜色闪烁动画效果
+            """
+            创建按钮颜色闪烁动画效果
             
             :param start: 起始颜色RGB元组
             :param end: 结束颜色RGB元组
@@ -124,7 +127,8 @@ class ProgressAnimatedItem(QWidget):
         self.update()  # 进度改变时，通知重绘
 
     def setSelected(self, selected: bool):
-        """设置控件的选中状态
+        """
+        设置控件的选中状态
         
         :param selected: 是否选中
         """
@@ -153,7 +157,8 @@ class ProgressAnimatedItem(QWidget):
 
 
     def enterEvent(self, event: QMouseEvent):
-        """处理鼠标进入控件区域的事件
+        """
+        处理鼠标进入控件区域的事件
         
         :param event: 鼠标事件对象
         """
@@ -161,7 +166,8 @@ class ProgressAnimatedItem(QWidget):
         self.update()
 
     def leaveEvent(self, event: QMouseEvent):
-        """处理鼠标离开控件区域的事件
+        """
+        处理鼠标离开控件区域的事件
         
         :param event: 鼠标事件对象
         """
@@ -169,7 +175,8 @@ class ProgressAnimatedItem(QWidget):
         self.update()
 
     def paintEvent(self, event: QPaintEvent):
-        """绘制控件的外观
+        """
+        绘制控件的外观
         
         :param event: 绘制事件对象
         """
@@ -210,7 +217,8 @@ class ProgressAnimatedListWidgetItem(QListWidgetItem):
                                duration: int = 1500, 
                                curve: QEasingCurve = QEasingCurve.Type.OutCubic, 
                                loopCount: int = 1):
-        """启动进度条动画效果
+        """
+        启动进度条动画效果
         
         :param startprogress: 起始进度值(0.0-1.0)
         :param stopprogress: 结束进度值(0.0-1.0)
@@ -289,7 +297,8 @@ class SideNotice:
                  closeable:     bool                                     = True, 
                  click_command: Optional[Callable]                       = None,
                  further_info:  str                                      = "该提示没有详细信息。"):
-        """初始化侧边栏通知
+        """
+        初始化侧边栏通知
         
         :param text: 通知显示的文本内容
         :param master: 父窗口对象

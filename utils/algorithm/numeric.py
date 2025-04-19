@@ -10,13 +10,15 @@ from ctypes import (c_int, c_int8, c_int16, c_int32, c_int64,
 
 
 inf = math.inf
+nan = math.nan
 
 CIntegerType = Union[int, c_int, c_uint,
                 c_int8, c_int16, c_int32, c_int64, 
                 c_uint8, c_uint16, c_uint32, c_uint64]
 
 def cinttype(dtype: CIntegerType, name: Optional[str] = None):
-    """自定义C整数类型包装器(抽象)
+    """
+    自定义C整数类型包装器(抽象)
     
     :param dtype: 要继承的数据类型
     :param name:  类名
@@ -103,7 +105,7 @@ def cinttype(dtype: CIntegerType, name: Optional[str] = None):
         
         def __ge__(self, other):
             if other == inf:
-                return True
+                return False
             if other == -inf:
                 return True
             if math.isnan(other):
@@ -257,7 +259,7 @@ Short = Int16
 "16bit整数"
 Int32 = cinttype(c_int32,  "Integer")
 "32bit整数"
-integer = Int32
+Integer = Int32
 "32bit整数"
 Int64 = cinttype(c_int64,  "Qword")
 "64bit整数"
@@ -269,7 +271,7 @@ UnsignedByte = UInt8
 "8bit无符号整数"
 UInt16 = cinttype(c_uint16, "UnsignedShort")
 "16bit无符号整数"
-unsigned_short = UInt16
+UnsignedShort = UInt16
 "16bit无符号整数"
 UInt32 = cinttype(c_uint32, "UnsignedInteger")
 "32bit无符号整数"
