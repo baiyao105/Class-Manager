@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 try:
     from utils.logger import Logger
-except ImportError as unused:
+except ImportError:
 
     class Logger:
         "覆写用的日志记录类"

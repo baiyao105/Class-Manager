@@ -6,10 +6,9 @@ import ctypes
 import copy
 
 
-from .functions import gen_uuid, addrof, steprange
-from .algorithm import inf, nan
+from .functions import gen_uuid
 from .logger import Logger, logger
-from utils.consts import stdout_orig, stderr_orig
+
 
 
 os.makedirs(os.getcwd() + "/log", exist_ok=True)
@@ -93,7 +92,8 @@ class Base(Logger, Object):
             + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
             + f".{int((time.time()%1)*1000):03}"
         )
-
+stdout_orig = sys.stdout
+stderr_orig = sys.stderr
 
 if __name__ == "__main__":
     print("你闲的没事跑这玩意干啥")

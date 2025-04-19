@@ -4,6 +4,7 @@
 
 import os
 import copy
+from math import inf
 from typing import Dict
 
 
@@ -16,7 +17,6 @@ from utils.classdtypes import (
     Group,
     HomeworkRule,
 )
-from utils.basetypes import inf
 from utils.consts import sound_file_path
 
 
@@ -1254,9 +1254,9 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         num_equals=[7],
         condition_info="成为这个工具的开发者",
         further_info="哇这代码写得真的是太太太太太太太太太太太太太太太太太太太太太太太太太太太太太太好了\n"
-                    "哇0.1+0.2=0.30000000000000004\n哇pyqt你tm怎么又卡住了\n\n"
-                    "python: ZeroDivisionError: division by zero\n我：animoac\n\n"
-                    "（一个被出错还不提示直接似掉的SB一样的pyside6玩爆的程序员的遗言）",
+        "哇0.1+0.2=0.30000000000000004\n哇pyqt你tm怎么又卡住了\n\n"
+        "python: ZeroDivisionError: division by zero\n我：animoac\n\n"
+        "（一个被出错还不提示直接似掉的SB一样的pyside6玩爆的程序员的遗言）",
     ),
     "developer_login": AchievementTemplate(
         "developer_login",
@@ -1281,8 +1281,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "这是真的吉祥物了",
         num_equals=[3],
         condition_info="成为这个工具的开发者\n（实际这个项目动都没动）",
-        further_info=("但是你真的不干点什么吗？\n" +
-                        "但是你真的参加这个项目吗（?）"),
+        further_info=("但是你真的不干点什么吗？\n" + "但是你真的参加这个项目吗（?）"),
     ),
     "mascot_writer": AchievementTemplate(
         "mascot_writer",

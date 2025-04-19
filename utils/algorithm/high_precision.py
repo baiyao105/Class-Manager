@@ -1,4 +1,4 @@
-import os, sys, random, math
+import sys
 
 """
 NoneColdWind做的一个高精度运算类
@@ -87,9 +87,7 @@ class HighPrecisionOperation:
             return HighPrecisionOperation(result)
 
     def nThRoot(self, n: int = 3):
-        string = ""
-        rest = 0
-        basic = float(self.basic)
+        float(self.basic)
 
     def involution(self, index: int = 1):
         result = self.basic_num**index

@@ -5,7 +5,7 @@
 import json
 from typing import Literal
 
-from utils.basetypes import Base, Object
+from utils.basetypes import Object
 from utils.algorithm import SupportsKeyOrdering
 
 
@@ -26,13 +26,15 @@ class ScoreModificationTemplate(Object, SupportsKeyOrdering):
         "返回一个空的分数加减操作模板"
         return ScoreModificationTemplate("dummy", 0, "dummy")
 
-    def __init__(self,
-                key:             str,
-                modification:    float,
-                title:           str,
-                description:     str      = "该加减分模板没有详细信息。",
-                cant_replace:    bool     = False,
-                is_visible:      bool     = True):
+    def __init__(
+        self,
+        key: str,
+        modification: float,
+        title: str,
+        description: str = "该加减分模板没有详细信息。",
+        cant_replace: bool = False,
+        is_visible: bool = True,
+    ):
         """
         分数操作模板的构造函数。
 
@@ -52,13 +54,15 @@ class ScoreModificationTemplate(Object, SupportsKeyOrdering):
         self.archive_uuid = ClassObj.archive_uuid
 
     def __repr__(self):
-        return (f"ScoreModificationTemplate("
+        return (
+            f"ScoreModificationTemplate("
             f"key={self.key.__repr__()}, "
             f"modification={self.mod.__repr__()}, "
             f"title={self.title.__repr__()}, "
             f"description={self.desc.__repr__()}, "
             f"cant_replace={self.cant_replace.__repr__()}, "
-            f"is_visible={self.is_visible.__repr__()})")
+            f"is_visible={self.is_visible.__repr__()})"
+        )
 
     def to_string(self):
         "将分数修改记录对象转为字符串。"
@@ -72,26 +76,26 @@ class ScoreModificationTemplate(Object, SupportsKeyOrdering):
                 "cant_replace": self.cant_replace,
                 "is_visible": self.is_visible,
                 "uuid": self.uuid,
-                "archive_uuid": self.archive_uuid
+                "archive_uuid": self.archive_uuid,
             }
         )
-
-
 
     @staticmethod
     def from_string(string: str):
         "将字符串转化为分数加减模板对象。"
         string = json.loads(string)
         if string["type"] != ScoreModificationTemplate.chunk_type_name:
-            raise TypeError(f"类型不匹配：{string['type']} != "
-                            f"{ScoreModificationTemplate.chunk_type_name}")
+            raise TypeError(
+                f"类型不匹配：{string['type']} != "
+                f"{ScoreModificationTemplate.chunk_type_name}"
+            )
         obj = ScoreModificationTemplate(
             key=string["key"],
             modification=string["modification"],
             title=string["title"],
             description=string["description"],
             cant_replace=string["cant_replace"],
-            is_visible=string["is_visible"]
+            is_visible=string["is_visible"],
         )
         obj.uuid = string["uuid"]
         obj.archive_uuid = string["archive_uuid"]
