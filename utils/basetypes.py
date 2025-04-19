@@ -1,3 +1,7 @@
+"""
+基本类型
+"""
+
 import os
 import sys
 import time
@@ -5,9 +9,13 @@ import threading
 import ctypes
 import copy
 
+try:
+    from .functions import gen_uuid
+    from .logger import Logger, logger
+except ImportError as unused:
+    from functions import gen_uuid
+    from logger import Logger, logger
 
-from .functions import gen_uuid
-from .logger import Logger, logger
 
 
 
@@ -92,8 +100,15 @@ class Base(Logger, Object):
             + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
             + f".{int((time.time()%1)*1000):03}"
         )
+
 stdout_orig = sys.stdout
 stderr_orig = sys.stderr
 
+sys.stdout = Base.captured_stdout
+sys.stderr = Base.captured_stderr
+
 if __name__ == "__main__":
     print("你闲的没事跑这玩意干啥")
+
+elif __name__ == "utils.basetypes":
+    print("基层已初步加载完成")

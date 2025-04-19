@@ -2,6 +2,7 @@
 播放声音和音乐的工具
 """
 
+from utils.logger import Logger
 from threading import Thread
 import pygame
 
@@ -39,7 +40,7 @@ def _play_sound(filename: str, volume: float = 1, loop: int = 0, fade_ms: int = 
         sound.set_volume(volume)
         sound.play(loops=loop, fade_ms=fade_ms)
     except (OSError, pygame.error) as unused:  # pylint: disable=unused-variable
-        Base.log_exc("播放声音失败")
+        Logger.log_exc("播放声音失败")
 
 
 def play_music(filename: str, volume: float = 0.5, loop: int = 0, fade_ms: int = 0):
@@ -57,7 +58,7 @@ def play_music(filename: str, volume: float = 0.5, loop: int = 0, fade_ms: int =
         pygame.mixer.music.set_volume(volume)
         pygame.mixer.music.play(loops=loop, fade_ms=fade_ms)
     except (OSError, pygame.error) as unused:  # pylint: disable=unused-variable
-        Base.log_exc("播放音乐失败")
+        Logger.log_exc("播放音乐失败")
 
 
 def stop_music():

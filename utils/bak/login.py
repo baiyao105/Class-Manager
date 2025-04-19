@@ -10,8 +10,6 @@ except ImportError as e:
     print(traceback.format_exc())
     from core import stderr_orig, stdout_orig, Base
 
-sys.stdout = stdout_orig
-sys.stderr = stderr_orig
 
 
 USER_INFO = "user_info.ncw"

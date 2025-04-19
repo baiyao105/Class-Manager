@@ -23,6 +23,9 @@ default_user = "测试用户1"
 app_style: Literal["windowsvista", "Windows", "Fusion", "windows11"] = "windowsvista"
 "软件的样式"
 
+qt_version: Literal["PyQt5", "PyQt6", "PySide2", "PySide6"] = "PySide6"
+"使用的Qt版本"
+
 
 app_stylesheet: str = """
 QMainWindow {

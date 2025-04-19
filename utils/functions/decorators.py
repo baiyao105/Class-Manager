@@ -7,8 +7,10 @@ import functools
 from threading import Thread
 from typing import Literal
 
-
-from utils.logger import Logger as Base
+try:    
+    from utils.logger import Logger as Base
+except ImportError as unused:
+    from logger import Logger as Base
 
 
 def repeat(count):

@@ -13,13 +13,20 @@ from typing import Optional, TextIO, Literal, final, List
 
 import colorama
 from loguru import logger
-
-import utils.consts
-from utils.consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
-from utils.algorithm import Mutex
-from utils.system import SystemLogger
-from utils.functions.excinfo import format_exc_like_java
-from utils.functions.numbers import get_time
+try:
+    import utils.consts as consts
+    from utils.consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
+    from utils.algorithm import Mutex
+    from utils.system import SystemLogger
+    from utils.functions.excinfo import format_exc_like_java
+    from utils.functions.numbers import get_time
+except ImportError as unsued:
+    import consts
+    from consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
+    from algorithm import Mutex
+    from system import SystemLogger
+    from functions.excinfo import format_exc_like_java
+    from functions.numbers import get_time
 
 __all__ = ["LoggerSettings", "log_settings", "Logger", "Color"]
 
@@ -504,5 +511,5 @@ if log_style == "new":
     # 启用loguru的异常捕获
     logger.catch(onerror=lambda exc: Logger.log_exc("logger捕获到异常", exc=exc))
 
-utils.consts.stdout = Logger.captured_stdout
-utils.consts.stderr = Logger.captured_stderr
+consts.stdout = Logger.captured_stdout
+consts.stderr = Logger.captured_stderr
