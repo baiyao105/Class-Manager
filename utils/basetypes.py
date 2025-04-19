@@ -11,19 +11,29 @@ import random
 import inspect
 from queue import Queue
 from abc import ABC, abstractmethod
-from types import TracebackType
 from collections import OrderedDict
-from threading import Thread as OrigThread, Lock
-from typing import (List, Tuple, Optional, Union, Dict, Any, Generic,
-                    Literal, final, TypeVar, Callable, Iterable, Iterator,
-                    TextIO)
-from io import TextIOWrapper
+from threading import Thread as OrigThread
+from typing import (
+    List,
+    Tuple,
+    Optional,
+    Union,
+    Dict,
+    Any,
+    Generic,
+    Literal,
+    final,
+    TypeVar,
+    Callable,
+    Iterable,
+    Iterator,
+    TextIO,
+)
 from typing_extensions import Mapping
 
 
 import colorama
 from loguru import logger
-
 
 
 try:
@@ -35,17 +45,17 @@ except ImportError:
 
 try:
     from utils.system import SystemLogger
+
     # from utils.high_precision_operation import HighPrecision
 except ImportError:
     traceback.print_exc()
     from system import SystemLogger
-    # from high_precision_operation import HighPrecision
 
+    # from high_precision_operation import HighPrecision
 
 
 flags: Dict[Any, Any] = {}
 "全局变量字典"
-
 
 
 LOG_FILE_PATH = f'log/ClassManager_log_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log'
@@ -67,15 +77,14 @@ function = type(lambda: None)
 """函数类型对象，用于类型检查"""
 
 
-
-
 def utc(prec: int = 3):
     """获取当前UTC时间戳
-    
+
     :param prec: 精度，表示小数点后的位数
     :return: 指定精度的UTC时间戳
     """
-    return int(time.time() * (10 ** prec))
+    return int(time.time() * (10**prec))
+
 
 if sys.stdout is None:
     if sys.__stdout__ is None:
@@ -88,9 +97,11 @@ if sys.stdout is None:
         sys.stderr = sys.__stderr__
 
 
-def steprange(start:Union[int, float], stop:Union[int, float], step:int) -> List[float]:
+def steprange(
+    start: Union[int, float], stop: Union[int, float], step: int
+) -> List[float]:
     """生成step步长的从start到stop的列表
-    
+
     :param start: 起始值
     :param stop: 结束值
     :param step: 步长
@@ -102,14 +113,16 @@ def steprange(start:Union[int, float], stop:Union[int, float], step:int) -> List
     [0, 2.5, 5.0, 7.5, 10]
     """
     if (stop - start) % step != 0:
-        return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [stop]
+        return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [
+            stop
+        ]
     else:
         return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
 
 
 def get_function_namespace(func) -> str:
     """获取函数的命名空间
-    
+
     :param func: 函数对象
     :return: 函数的命名空间字符串
     """
@@ -117,33 +130,44 @@ def get_function_namespace(func) -> str:
     if not hasattr(func, "__module__"):
         try:
             return func.__qualname__
-        except BaseException as unused:    # pylint: disable=broad-exception-caught
+        except BaseException as unused:  # pylint: disable=broad-exception-caught
             try:
                 return func.__name__
-            except BaseException as unused:    # pylint: disable=broad-exception-caught, redefined-outer-name
+            except (
+                BaseException
+            ) as unused:  # pylint: disable=broad-exception-caught, redefined-outer-name
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
                 elif isinstance(func, classmethod):
                     return str(func.__func__.__qualname__)
                 try:
                     return func.__class__.__qualname__
-                except BaseException as unused:    # pylint: disable=broad-exception-caught, redefined-outer-name
-                    return func.__class__.__name__            
+                except (
+                    BaseException
+                ) as unused:  # pylint: disable=broad-exception-caught, redefined-outer-name
+                    return func.__class__.__name__
     if module is None:
-        module_name = func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        module_name = (
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        )
     else:
         module_name = module.__name__
 
     return f"{module_name}.{func.__qualname__}"
 
+
 def format_exc_like_java(exc: Exception) -> List[str]:
     "不是我做这东西有啥用啊"
-    result = [f"{get_function_namespace(exc.__class__)}: " + (str(exc) if str(exc).strip() else "no further information"), "Stacktrace:"]
+    result = [
+        f"{get_function_namespace(exc.__class__)}: "
+        + (str(exc) if str(exc).strip() else "no further information"),
+        "Stacktrace:",
+    ]
     tb = exc.__traceback__
     while tb is not None:
         frame = tb.tb_frame
         filename = frame.f_code.co_filename
-        filename_strip = (filename)
+        filename_strip = filename
         lineno = tb.tb_lineno
         funcname = frame.f_code.co_name
         _locals = frame.f_locals.copy()
@@ -167,51 +191,76 @@ def format_exc_like_java(exc: Exception) -> List[str]:
         tb = tb.tb_next
     return result
 
-from ctypes import c_int, c_int8, c_int16, c_int32, c_int64, c_uint, c_uint8, c_uint16, c_uint32, c_uint64
 
-_cinttype = Union[int, c_int, c_uint, c_int8, c_int16, c_int32, c_int64, c_uint8, c_uint16, c_uint32, c_uint64]
+from ctypes import (
+    c_int,
+    c_int8,
+    c_int16,
+    c_int32,
+    c_int64,
+    c_uint,
+    c_uint8,
+    c_uint16,
+    c_uint32,
+    c_uint64,
+)
+
+_cinttype = Union[
+    int,
+    c_int,
+    c_uint,
+    c_int8,
+    c_int16,
+    c_int32,
+    c_int64,
+    c_uint8,
+    c_uint16,
+    c_uint32,
+    c_uint64,
+]
+
 
 def cinttype(dtype: _cinttype, name: Optional[str] = None):
     """自定义C整数类型包装器(抽象)
-    
+
     :param dtype: 要继承的数据类型
     :param name:  类名
     :return: 继承了cint类型的类
     """
     if name is None:
         name = dtype.__name__
+
     class _CIntType:
         "继承cint类型的类"
-        
+
         def __init__(self, value: _cinttype):
             try:
                 value = int(value)
-            except BaseException as unused:    # pylint: disable=broad-exception-caught
+            except BaseException as unused:  # pylint: disable=broad-exception-caught
                 value = int(value.value)
 
             self._dtype: _cinttype = dtype
             self._data: _cinttype = self._dtype(value)
             self._tpname: str = name
 
-        
         def __str__(self):
             return str(self._data.value)
-        
+
         def __repr__(self):
             return f"{self._tpname}({repr(self._data.value)})"
-        
+
         def __int__(self):
             return int(self._data.value)
-        
+
         def __float__(self):
             return float(self._data.value)
-        
+
         def __bool__(self):
             return bool(self._data.value)
-        
+
         def __hash__(self):
             return hash(self._data.value)
-        
+
         def __eq__(self, other):
             if other == inf:
                 return False
@@ -220,7 +269,7 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
             if math.isnan(other):
                 return False
             return self._data.value == int(other)
-        
+
         def __ne__(self, other):
             if other == inf:
                 return True
@@ -229,7 +278,7 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
             if math.isnan(other):
                 return True
             return self._data.value != int(other)
-        
+
         def __lt__(self, other):
             if other == inf:
                 return True
@@ -238,7 +287,7 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
             if math.isnan(other):
                 return False
             return self._data.value < int(other)
-        
+
         def __le__(self, other):
             if other == inf:
                 return True
@@ -247,7 +296,7 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
             if math.isnan(other):
                 return False
             return self._data.value <= int(other)
-        
+
         def __gt__(self, other):
             if other == inf:
                 return False
@@ -256,7 +305,7 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
             if math.isnan(other):
                 return False
             return self._data.value > int(other)
-        
+
         def __ge__(self, other):
             if other == inf:
                 return True
@@ -265,58 +314,58 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
             if math.isnan(other):
                 return False
             return self._data.value >= int(other)
-        
+
         def __abs__(self):
             return cinttype(self._dtype, self._tpname)(abs(self._data.value))
-        
+
         def __neg__(self):
             return cinttype(self._dtype, self._tpname)(-self._data.value)
-        
+
         def __pos__(self):
             return cinttype(self._dtype, self._tpname)(+self._data.value)
-    
+
         def __round__(self, ndigits=None):
             return cinttype(self._dtype, self._tpname)(round(self._data.value, ndigits))
-        
+
         def __add__(self, other: Any):
             return cinttype(self._dtype, self._tpname)(self._data.value + int(other))
-        
+
         def __sub__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value - int(other))
-        
+
         def __mul__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value * int(other))
-        
+
         def __truediv__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value / int(other))
-        
+
         def __floordiv__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value // int(other))
-        
+
         def __mod__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value % int(other))
-        
+
         def __pow__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value ** int(other))
-        
+
         def __lshift__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value << int(other))
-        
+
         def __rshift__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value >> int(other))
-        
+
         def __and__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value & int(other))
-        
+
         def __or__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value | int(other))
-        
+
         def __xor__(self, other):
             return cinttype(self._dtype, self._tpname)(self._data.value ^ int(other))
-        
+
         def __invert__(self):
             return cinttype(self._dtype, self._tpname)(~self._data.value)
-        
+
         def __iadd__(self, other):
             self._data.value += int(other)
             return cinttype(self._dtype, self._tpname)(self._data.value)
@@ -360,14 +409,14 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
         def __ior__(self, other):
             self._data.value |= int(other)
             return cinttype(self._dtype, self._tpname)(self._data.value)
-        
+
         def __ixor__(self, other):
             self._data.value ^= int(other)
             return cinttype(self._dtype, self._tpname)(self._data.value)
-        
+
         def __radd__(self, other):
             return cinttype(self._dtype, self._tpname)(int(other) + self._data.value)
-        
+
         def __rsub__(self, other):
             return cinttype(self._dtype, self._tpname)(int(other) - self._data.value)
 
@@ -399,32 +448,30 @@ def cinttype(dtype: _cinttype, name: Optional[str] = None):
         def __rxor__(self, other):
             return cinttype(self._dtype, self._tpname)(int(other) ^ self._data.value)
 
-
     return _CIntType
 
 
-int8   = byte             = cinttype(c_int8,   "byte")
-int16  = short            = cinttype(c_int16,  "short")
-int32  = integer          = cinttype(c_int32,  "integer")
-int64  = qword            = cinttype(c_int64,  "qword")
-uint8  = unsigned_byte    = cinttype(c_uint8,  "unsigned_byte")
-uint16 = unsigned_short   = cinttype(c_uint16, "unsigned_short")
+int8 = byte = cinttype(c_int8, "byte")
+int16 = short = cinttype(c_int16, "short")
+int32 = integer = cinttype(c_int32, "integer")
+int64 = qword = cinttype(c_int64, "qword")
+uint8 = unsigned_byte = cinttype(c_uint8, "unsigned_byte")
+uint16 = unsigned_short = cinttype(c_uint16, "unsigned_short")
 uint32 = unsigned_integer = cinttype(c_uint32, "unsigned_integer")
-uint64 = unsigned_qword   = cinttype(c_uint64, "unsigned_qword")
-
-
-
-
+uint64 = unsigned_qword = cinttype(c_uint64, "unsigned_qword")
 
 
 def get_function_module(func: Union[object, Callable]) -> str:
     "获取函数的模块"
     module = inspect.getmodule(func)
     if module is None:
-        module_name = func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        module_name = (
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        )
     else:
         module_name = module.__name__
     return module_name
+
 
 cwd = os.getcwd()
 """当前工作目录路径"""
@@ -436,14 +483,12 @@ debug = True
 """调试模式标志"""
 
 
-
-
-
 class NULLPTR:
     "虽然没用"
+
     def __eq__(self, value: object) -> bool:
         return isinstance(value, NULLPTR)
-    
+
     def __ne__(self, value: object) -> bool:
         return not isinstance(value, NULLPTR)
 
@@ -452,13 +497,13 @@ class NULLPTR:
 
     def __repr__(self) -> str:
         return "nullptr"
-    
+
     def __hash__(self):
         return -1
-    
+
     def __bool__(self):
         return False
-    
+
 
 null = NULLPTR()
 "空指针"
@@ -475,6 +520,7 @@ NoneType = type(None)
 
 
 DT = TypeVar("DT")
+
 
 class Stack(Generic[DT]):
     "非常朴素的栈"
@@ -508,22 +554,21 @@ class Stack(Generic[DT]):
         self.items = []
 
 
-
-
 class Thread(OrigThread):
     "自己做的一个可以返回数据的Thread"
 
     def __init__(
-            self,
-            group: None = None,
-            target: Optional[Callable] = None,
-            name: Optional[str] = None,
-            args: Iterable[Any] = None,
-            kwargs: Optional[Mapping[str, Any]] = None,
-            *,
-            daemon: Optional[bool] = None) -> None:
+        self,
+        group: None = None,
+        target: Optional[Callable] = None,
+        name: Optional[str] = None,
+        args: Iterable[Any] = None,
+        kwargs: Optional[Mapping[str, Any]] = None,
+        *,
+        daemon: Optional[bool] = None,
+    ) -> None:
         """初始化线程
-        
+
         :param group: 线程组，默认为None
         :param target: 线程函数，默认为None
         :param name: 线程名称，默认为None
@@ -532,11 +577,18 @@ class Thread(OrigThread):
         """
         args = () if args is None else args
         kwargs = {} if kwargs is None else kwargs
-        super().__init__(group=group, target=target, name=name, args=args, kwargs=kwargs, daemon=daemon)
+        super().__init__(
+            group=group,
+            target=target,
+            name=name,
+            args=args,
+            kwargs=kwargs,
+            daemon=daemon,
+        )
         self._return = None
         self._finished = False
         self.thread_id: Optional[int] = None
-        
+
     @property
     def return_value(self):
         "返回线程的返回值"
@@ -544,24 +596,22 @@ class Thread(OrigThread):
             return self._return
         else:
             raise RuntimeError("线程并未执行完成")
-    
 
     def run(self):
         "运行线程"
-        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long) \
-            (lambda: ctypes.pythonapi.PyThread_get_thread_ident()) ()
+        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long)(
+            lambda: ctypes.pythonapi.PyThread_get_thread_ident()
+        )()
         if self._target is not None:
             self._return = self._target(*self._args, **self._kwargs)
         self._finished = True
-        
 
-    def join(self, timeout:Optional[float]=None) -> Any:
-        """"等待线程完成并返回结果
-        
+    def join(self, timeout: Optional[float] = None) -> Any:
+        """ "等待线程完成并返回结果
+
         :param timeout: 超时时间，默认为None，表示无限等待"""
         super().join(timeout=timeout)
         return self._return
-
 
 
 inf = float("inf")
@@ -574,13 +624,13 @@ nan = float("nan")
 "非数"
 
 
-
-
-class ModifyingError(Exception):"修改出现错误。"
+class ModifyingError(Exception):
+    "修改出现错误。"
 
 
 class Mutex:
     "互斥锁"
+
     def __init__(self):
         self._lock = threading.Lock()
 
@@ -602,23 +652,21 @@ class Mutex:
         self.release()
 
 
-
-
-
 class FrameCounter:
     "帧计数器"
+
     def __init__(self, maxcount: Optional[int] = None, timeout: Optional[float] = None):
         "初始化帧计数器"
         self.maxcount = maxcount
         self.timeout = timeout
         self._c = 0
         self.running = False
-        
+
     @property
     def _t(self):
         "获取当前时间戳"
         return time.time()
-    
+
     @property
     def framerate(self):
         "获取帧率"
@@ -626,14 +674,17 @@ class FrameCounter:
             return 0
         return self._c / self._t
 
-
     def start(self):
         "启动计数器"
         if self.running:
             raise RuntimeError("这个计数器已经启动过了！")
         self._c = 0
         self.running = True
-        while (self.maxcount is None or self._c < self.maxcount) and (self.timeout is None or time.time() - self._t <= self.timeout) and self.running:
+        while (
+            (self.maxcount is None or self._c < self.maxcount)
+            and (self.timeout is None or time.time() - self._t <= self.timeout)
+            and self.running
+        ):
             self._c += 1
 
     def stop(self):
@@ -646,12 +697,11 @@ def gen_uuid(length: int = 32) -> str:
 
 
 def sep_uuid(uuid, sep: str = "/", length: int = 8) -> str:
-    return sep.join([uuid[i:i+length] for i in range(0, len(uuid), length)])
+    return sep.join([uuid[i : i + length] for i in range(0, len(uuid), length)])
 
 
 class Object(object):
     "一个基础类"
-
 
     @property
     def uuid(self):
@@ -660,7 +710,7 @@ class Object(object):
             self._uuid = gen_uuid()
 
         return self._uuid
-    
+
     @uuid.setter
     def uuid(self, value):
         "设置对象的UUID"
@@ -671,10 +721,9 @@ class Object(object):
     def uuid(self):
         "删除对象的UUID"
         raise AttributeError("不能删除对象的UUID")
-    
+
     def refresh_uuid(self):
         self._uuid = gen_uuid()
-
 
     def copy(self):
         "给自己复制一次，两个对象不会互相影响"
@@ -682,29 +731,30 @@ class Object(object):
 
     def __repr__(self):
         "返回这个对象的表达式"
-        return (f"{self.__class__.__name__}"
-        f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})")
+        return (
+            f"{self.__class__.__name__}"
+            f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})"
+        )
         # 我个人认为不要把下划线开头的变量输出出来（不过只以一个下划线开头的还得考虑考虑）
-
-
 
 
 class LoggerSettings:
     "日志配置"
-    def __init__(self,
-                log_file_path: Optional[str] = LOG_FILE_PATH,
-                fast_log_file_path: Optional[str] = None,
-                console_wrapper: Optional[TextIO] = stdout_orig,
-                log_mode: Literal["write_instantly", "write_buffered"] = \
-                    "write_instantly",
-                log_level: Literal["I", "W", "E", "F", "D", "C"] = "D",
-                draw_color: bool = True,
-                use_mutex: bool = True,
-                encoding: Optional[str] = "utf-8"
-                ):
+
+    def __init__(
+        self,
+        log_file_path: Optional[str] = LOG_FILE_PATH,
+        fast_log_file_path: Optional[str] = None,
+        console_wrapper: Optional[TextIO] = stdout_orig,
+        log_mode: Literal["write_instantly", "write_buffered"] = "write_instantly",
+        log_level: Literal["I", "W", "E", "F", "D", "C"] = "D",
+        draw_color: bool = True,
+        use_mutex: bool = True,
+        encoding: Optional[str] = "utf-8",
+    ):
         """
         初始化日志配置
-        
+
         :param log_file_path: 日志文件路径
         :param fast_log_file_path: 快速日志文件路径
         :param console_wrapper: 控制台的输出
@@ -730,11 +780,12 @@ class LoggerSettings:
         self.encoding = encoding
         "编码"
 
+
 log_settings = LoggerSettings()
 
 
 LIGHT_CYAN = "<light-cyan>" if log_settings.draw_color else ""
-LIGHT_GREEN = "<light-green>"  if log_settings.draw_color else ""
+LIGHT_GREEN = "<light-green>" if log_settings.draw_color else ""
 BLUE = "<blue>" if log_settings.draw_color else ""
 LEVEL = "<level>" if log_settings.draw_color else ""
 
@@ -746,71 +797,71 @@ LEVEL_CLOSE = "</level>" if log_settings.draw_color else ""
 # 初始化日志配置
 logger.remove()
 logger.add(
-    stdout_orig,            # 这样就不会重复读写了
-    format=\
-        f"{LIGHT_CYAN}{{time:YYYY-MM-DD HH:mm:ss.SSS}}"
-        f"{LIGHT_CYAN_CLOSE} | {LEVEL}{{level: <8}}{LEVEL_CLOSE} | "
-        f"{BLUE}{{extra[file]: <15}}{BLUE_CLOSE} | "
-        f"{LIGHT_GREEN}{{extra[source]}}:{{extra[lineno]}}"
-        f"{LIGHT_GREEN_CLOSE} - {LEVEL}{{message}}{LEVEL_CLOSE}",
+    stdout_orig,  # 这样就不会重复读写了
+    format=f"{LIGHT_CYAN}{{time:YYYY-MM-DD HH:mm:ss.SSS}}"
+    f"{LIGHT_CYAN_CLOSE} | {LEVEL}{{level: <8}}{LEVEL_CLOSE} | "
+    f"{BLUE}{{extra[file]: <15}}{BLUE_CLOSE} | "
+    f"{LIGHT_GREEN}{{extra[source]}}:{{extra[lineno]}}"
+    f"{LIGHT_GREEN_CLOSE} - {LEVEL}{{message}}{LEVEL_CLOSE}",
     backtrace=True,
-    diagnose=True
+    diagnose=True,
 )
 
 
 logger.add(
     LOG_FILE_PATH,
     rotation=None,
-    retention='7 days',
-    encoding='utf-8',
+    retention="7 days",
+    encoding="utf-8",
     format="{time:YYYY-MM-DD HH:mm:ss.SSS} | "
-        "{level: <8} | {extra[full_file]: <23} | "
-        "{extra[source_with_lineno]: <35} | {message}",
+    "{level: <8} | {extra[full_file]: <23} | "
+    "{extra[source_with_lineno]: <35} | {message}",
     backtrace=True,
-    diagnose=True
+    diagnose=True,
 )
-
 
 
 colorama.init(autoreset=True)
 
+
 class Color:
     """颜色类（给终端文字上色的）
-    
+
     :example:
-    
+
     >>> print(Color.RED + "Hello, " + Color.End + "World!")
     Hello, World!       (红色Hello，默认颜色的World)
-    
+
     """
-    RED     =   colorama.Fore.RED if log_settings.draw_color else ""
+
+    RED = colorama.Fore.RED if log_settings.draw_color else ""
     "红色"
-    GREEN   =   colorama.Fore.GREEN if log_settings.draw_color else ""
+    GREEN = colorama.Fore.GREEN if log_settings.draw_color else ""
     "绿色"
-    YELLOW  =   colorama.Fore.YELLOW if log_settings.draw_color else ""
+    YELLOW = colorama.Fore.YELLOW if log_settings.draw_color else ""
     "黄色"
-    BLUE    =   colorama.Fore.BLUE if log_settings.draw_color else ""
+    BLUE = colorama.Fore.BLUE if log_settings.draw_color else ""
     "蓝色"
-    MAGENTA =   colorama.Fore.MAGENTA if log_settings.draw_color else ""
+    MAGENTA = colorama.Fore.MAGENTA if log_settings.draw_color else ""
     "品红色"
-    CYAN    =   colorama.Fore.CYAN if log_settings.draw_color else ""
+    CYAN = colorama.Fore.CYAN if log_settings.draw_color else ""
     "青色"
-    WHITE   =   colorama.Fore.WHITE if log_settings.draw_color else ""
+    WHITE = colorama.Fore.WHITE if log_settings.draw_color else ""
     "白色"
-    BLACK   =   colorama.Fore.BLACK if log_settings.draw_color else ""
+    BLACK = colorama.Fore.BLACK if log_settings.draw_color else ""
     "黑色"
-    END     =   colorama.Fore.RESET if log_settings.draw_color else ""
+    END = colorama.Fore.RESET if log_settings.draw_color else ""
     "着色结束"
-    BOLD    =   colorama.Style.BRIGHT if log_settings.draw_color else ""
+    BOLD = colorama.Style.BRIGHT if log_settings.draw_color else ""
     "加粗"
     UNDERLINE = colorama.Style.DIM if log_settings.draw_color else ""
     "下划线"
     NORMAL = colorama.Style.NORMAL if log_settings.draw_color else ""
     "正常"
-    
+
     @staticmethod
     @final
-    def from_rgb(r:int, g:int, b:int) -> str:
+    def from_rgb(r: int, g: int, b: int) -> str:
         "从RGB数值中生成颜色"
         return f"\033[38;2;{r};{g};{b}m" if log_settings.draw_color else ""
 
@@ -821,15 +872,30 @@ logger.catch(onerror=lambda exc: Base.log_exc("logger捕获到异常", exc=exc))
 
 class Base(Object):
     "工具基层"
-    log_file: Optional[TextIO] = \
-        open(log_settings.log_file_path, "a",
-            encoding=log_settings.encoding, errors="ignore",
-            buffering=1) if log_settings.log_file_path else None
+
+    log_file: Optional[TextIO] = (
+        open(
+            log_settings.log_file_path,
+            "a",
+            encoding=log_settings.encoding,
+            errors="ignore",
+            buffering=1,
+        )
+        if log_settings.log_file_path
+        else None
+    )
     "日志文件"
-    fast_log_file: Optional[TextIO] = \
-        open(log_settings.fast_log_file_path, "a",
-            encoding=log_settings.encoding, errors="ignore",
-            buffering=1) if log_settings.fast_log_file_path else None
+    fast_log_file: Optional[TextIO] = (
+        open(
+            log_settings.fast_log_file_path,
+            "a",
+            encoding=log_settings.encoding,
+            errors="ignore",
+            buffering=1,
+        )
+        if log_settings.fast_log_file_path
+        else None
+    )
     "快速日志文件"
     log_mutex = Mutex()
     "日志互斥锁"
@@ -837,11 +903,17 @@ class Base(Object):
     "标准输出"
     stderr_orig = stderr_orig
     "标准错误"
-    captured_stdout = SystemLogger(sys.stdout, logger_name="sys.stdout",
-                                function=lambda m: Base.log("I", m, "sys.stdout"))
+    captured_stdout = SystemLogger(
+        sys.stdout,
+        logger_name="sys.stdout",
+        function=lambda m: Base.log("I", m, "sys.stdout"),
+    )
     "经过处理的输出"
-    captured_stderr = SystemLogger(sys.stderr, logger_name="sys.stderr",
-                                function=lambda m: Base.log("E", m, "sys.stderr"))
+    captured_stderr = SystemLogger(
+        sys.stderr,
+        logger_name="sys.stderr",
+        function=lambda m: Base.log("E", m, "sys.stderr"),
+    )
     "经过处理的错误输出"
     console_log_queue = Queue()
     "控制台日志队列"
@@ -849,8 +921,9 @@ class Base(Object):
     "日志文件日志队列"
     log_file_keepcount = 20
     "日志文件保留数量"
-    thread_id = int(ctypes.CFUNCTYPE(ctypes.c_long) \
-        (ctypes.pythonapi.PyThread_get_thread_ident) ())
+    thread_id = int(
+        ctypes.CFUNCTYPE(ctypes.c_long)(ctypes.pythonapi.PyThread_get_thread_ident)()
+    )
     # 一种很神奇的获取pid方法
     "当前进程的pid"
     thread_name = threading.current_thread().name
@@ -868,46 +941,55 @@ class Base(Object):
     log_settings = LoggerSettings()
     "日志配置"
 
-
-
     @staticmethod
-    def utc(precision:int=3):
+    def utc(precision: int = 3):
         """返回当前时间戳
 
         :param precision: 精度，默认为3
         """
         return int(time.time() * pow(10, precision))
 
-
     @staticmethod
     def gettime():
         "获得当前时间"
         lt = time.localtime()
-        return F"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} {lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}.{int((time.time()%1)*1000):03}"
-
+        return f"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} {lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}.{int((time.time()%1)*1000):03}"
 
     if log_style == "new":
+
         @staticmethod
-        def log(msg_type:Literal["I", "W", "E", "F", "D", "C"], msg:str, source:str="MainThread"):
+        def log(
+            msg_type: Literal["I", "W", "E", "F", "D", "C"],
+            msg: str,
+            source: str = "MainThread",
+        ):
             """
             向控制台和日志输出信息
 
-            :param level: 日志级别 (I=INFO, W=WARNING, 
+            :param level: 日志级别 (I=INFO, W=WARNING,
             E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
             :param msg: 日志消息
             :param source: 日志来源
             """
             # 如果日志等级太低就不记录
-            if (msg_type == "D" 
-                and Base.log_settings.log_level not in ("D"))                \
-                    or (msg_type == "I" 
-                        and Base.log_settings.log_level not in ("D", "I"))            \
-                    or (msg_type == "W" 
-                        and Base.log_settings.log_level not in ("D", "I", "W"))        \
-                    or (msg_type == "E" 
-                        and Base.log_settings.log_level not in ("D", "I", "W", "E"))    \
-                    or (msg_type == "F" or msg_type == "C" and 
-                        Base.log_settings.log_level not in ("D", "I", "W", "E", "F", "C")):
+            if (
+                (msg_type == "D" and Base.log_settings.log_level not in ("D"))
+                or (msg_type == "I" and Base.log_settings.log_level not in ("D", "I"))
+                or (
+                    msg_type == "W"
+                    and Base.log_settings.log_level not in ("D", "I", "W")
+                )
+                or (
+                    msg_type == "E"
+                    and Base.log_settings.log_level not in ("D", "I", "W", "E")
+                )
+                or (
+                    msg_type == "F"
+                    or msg_type == "C"
+                    and Base.log_settings.log_level
+                    not in ("D", "I", "W", "E", "F", "C")
+                )
+            ):
                 return
 
             if not isinstance(msg, str):
@@ -932,7 +1014,7 @@ class Base(Object):
                     "E": "ERROR",
                     "F": "CRITICAL",
                     "C": "CRITICAL",
-                    "D": "DEBUG"
+                    "D": "DEBUG",
                 }.get(msg_type, "INFO")
 
                 # 避免日志套娃，只在loguru中记录一次
@@ -944,18 +1026,28 @@ class Base(Object):
                 file_basename = os.path.basename(filename)
                 # func_name = caller_frame.f_code.co_name
                 lineno = caller_frame.f_lineno
-                logger.bind(file=file_basename, 
-                            source=source, 
-                            lineno=lineno, 
-                            full_file=file, 
-                            source_with_lineno=f"{source}:{lineno}").log(log_level, m)
-                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
+                logger.bind(
+                    file=file_basename,
+                    source=source,
+                    lineno=lineno,
+                    full_file=file,
+                    source_with_lineno=f"{source}:{lineno}",
+                ).log(log_level, m)
+                short_info = (
+                    f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
+                )
                 Base.short_log_info.append(short_info)
-                short_info = short_info[-Base.short_log_keep_length:]
+                short_info = short_info[-Base.short_log_keep_length :]
                 Base.logged_count += 1
+
     else:
+
         @staticmethod
-        def log(msg_type:Literal["I", "W", "E", "F", "D", "C"], msg:str, source:str="MainThread"):
+        def log(
+            msg_type: Literal["I", "W", "E", "F", "D", "C"],
+            msg: str,
+            source: str = "MainThread",
+        ):
             """
             向控制台和日志输出信息
 
@@ -966,7 +1058,6 @@ class Base(Object):
             """
             if Base.log_settings.use_mutex:
                 Base.log_mutex.acquire()
-            
 
             if not isinstance(msg, str):
                 msg = repr(msg)
@@ -983,7 +1074,7 @@ class Base(Object):
                     color = Color.CYAN
                 else:
                     color = Color.WHITE
-                
+
                 if not m.strip():
                     continue
                 frame = inspect.currentframe()
@@ -993,8 +1084,10 @@ class Base(Object):
                     lineno = 0
                 if file.startswith(("/", "\\")):
                     file = file[1:]
-                cm = (f"{Color.BLUE}{Base.gettime()}{Color.END} {color}{msg_type}{Color.END} "
-                f"{Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}")
+                cm = (
+                    f"{Color.BLUE}{Base.gettime()}{Color.END} {color}{msg_type}{Color.END} "
+                    f"{Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}"
+                )
                 lfm = f"{Base.gettime()} {msg_type} {(source + f' -> {file}:{lineno}').ljust(60)} {m}"
 
                 if Base.fast_log_file:
@@ -1011,13 +1104,14 @@ class Base(Object):
                     Base.console_log_queue.put(cm)
                     Base.logfile_log_queue.put(lfm)
 
-                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
+                short_info = (
+                    f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
+                )
                 Base.short_log_info.append(short_info)
-                Base.short_log_info = Base.short_log_info[-Base.short_log_keep_length:]
+                Base.short_log_info = Base.short_log_info[-Base.short_log_keep_length :]
                 Base.logged_count += 1
             if Base.log_settings.use_mutex:
                 Base.log_mutex.release()
-
 
     @staticmethod
     def log_thread_logfile():
@@ -1026,7 +1120,6 @@ class Base(Object):
             s = Base.logfile_log_queue.get()
             Base.log_file.write(s + "\n")
             Base.log_file.flush()
-
 
     @staticmethod
     def log_thread_console():
@@ -1041,13 +1134,18 @@ class Base(Object):
         "停止所有日志记录器"
         Base.logger_running = False
 
-    console_log_thread = Thread(target=lambda: Base.log_thread_console(), # pylint: disable=unnecessary-lambda
-                                daemon=True, name="ConsoleLogger")
+    console_log_thread = Thread(
+        target=lambda: Base.log_thread_console(),  # pylint: disable=unnecessary-lambda
+        daemon=True,
+        name="ConsoleLogger",
+    )
     "把日志写在终端的线程的线程对象"
-    logfile_log_thread = Thread(target=lambda: Base.log_thread_logfile(), # pylint: disable=unnecessary-lambda
-                                daemon=True, name="FileLogger")
+    logfile_log_thread = Thread(
+        target=lambda: Base.log_thread_logfile(),  # pylint: disable=unnecessary-lambda
+        daemon=True,
+        name="FileLogger",
+    )
     "把日志写进日志文件的线程的线程对象"
-
 
     abstract = abstractmethod
     "抽象方法"
@@ -1057,20 +1155,26 @@ class Base(Object):
         "清理日志文件"
         if not os.path.exists("log/"):
             return
-        log_files = sorted([f for f in os.listdir(os.path.dirname(LOG_FILE_PATH)) 
-                            if f.startswith("ClassManager_") and f.endswith(".log")], reverse=True)
+        log_files = sorted(
+            [
+                f
+                for f in os.listdir(os.path.dirname(LOG_FILE_PATH))
+                if f.startswith("ClassManager_") and f.endswith(".log")
+            ],
+            reverse=True,
+        )
         for f in log_files[keep_amount:]:
             os.remove(os.path.join(os.path.dirname(LOG_FILE_PATH), f))
-    
-
 
     @staticmethod
-    def log_exc(info:str="未知错误：", 
-                sender="MainThread -> Unknown", 
-                level:Literal["I", "W", "E", "F", "D", "C"]="E", 
-                exc:Exception=None):
+    def log_exc(
+        info: str = "未知错误：",
+        sender="MainThread -> Unknown",
+        level: Literal["I", "W", "E", "F", "D", "C"] = "E",
+        exc: Exception = None,
+    ):
         """向控制台和日志报错。
-        
+
         :param info: 信息
         :param sender: 发送者
         :param level: 级别
@@ -1082,17 +1186,25 @@ class Base(Object):
             if exc is None:
                 return
         Base.log(level, info, sender)
-        Base.log(level, ("").join(traceback.format_exception(exc.__class__, exc, exc.__traceback__)), sender)
+        Base.log(
+            level,
+            ("").join(
+                traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+            ),
+            sender,
+        )
         Base.log(level, "\n".join(format_exc_like_java(exc)), sender)
 
     @staticmethod
-    def log_exc_short(info:str="未知错误：",
-                        sender="MainThread -> Unknown",
-                        level:Literal["I", "W", "E", "F", "D", "C"]="W",
-                        exc:Exception=None):
+    def log_exc_short(
+        info: str = "未知错误：",
+        sender="MainThread -> Unknown",
+        level: Literal["I", "W", "E", "F", "D", "C"] = "W",
+        exc: Exception = None,
+    ):
         """
         向控制台和日志报错，但是相对精简，格式为[ERROR_TYPE] INFO
-        
+
         :param info: 信息
         :param sender: 发送者
         :param level: 级别
@@ -1105,6 +1217,7 @@ class Base(Object):
                 return
         Base.log(level, f"{info} [{exc.__class__.__qualname__}] {exc}", sender)
 
+
 if log_style == "old" and log_settings.log_mode == "write_buffered":
     # 性能能省一点是一点
     Base.console_log_thread.start()
@@ -1115,59 +1228,58 @@ class SupportsKeyOrdering(ABC):
     # 注：Supports是支持的意思（
     # 还有，其实把鼠标悬浮在"SupportsKeyOrdering"上就可以看到这个注释了，经过美化了的
     """支持key排序的抽象类。
-    
-        意思就是说这个类有一个``key``属性，这个属性是``str``类型
 
-        这个``SupportsKeyOrdering``是为了方便使用而设计的，因为很多类都需要一个``key``属性
+    意思就是说这个类有一个``key``属性，这个属性是``str``类型
 
-        （比如``ScoreModifactionTemplate``的``key``就表示模板本身的标识符）
+    这个``SupportsKeyOrdering``是为了方便使用而设计的，因为很多类都需要一个``key``属性
 
-        只要这个类实现了``key``属性，那么就可以使用``OrderedKeyList``（后面有讲）来存储这个类
+    （比如``ScoreModifactionTemplate``的``key``就表示模板本身的标识符）
 
-        （比如``OrderedKeyList[ScoreModificationTemplate]``）
+    只要这个类实现了``key``属性，那么就可以使用``OrderedKeyList``（后面有讲）来存储这个类
 
-        还有，只要继承这个类，然后自己写一下key的实现，就可以直接使用``OrderedKeyList``来存储这个类了
+    （比如``OrderedKeyList[ScoreModificationTemplate]``）
 
-        就像这样：
-        >>> class SomeClassThatSupportsKeyOrdering(SupportsKeyOrdering):
-        ...     def __init__(self, key: str):
-        ...         self.key = key      # 在一个OrderedKeyList里面每一个元素都有自己的key
-        ...                             # 至于这个key表示的是什么就由你来决定了
-        >>>                             # 但是但是，这个key只能是str，因为int拿来做索引值了，float和tuple(元组)之类的懒得写
+    还有，只要继承这个类，然后自己写一下key的实现，就可以直接使用``OrderedKeyList``来存储这个类了
+
+    就像这样：
+    >>> class SomeClassThatSupportsKeyOrdering(SupportsKeyOrdering):
+    ...     def __init__(self, key: str):
+    ...         self.key = key      # 在一个OrderedKeyList里面每一个元素都有自己的key
+    ...                             # 至于这个key表示的是什么就由你来决定了
+    >>>                             # 但是但是，这个key只能是str，因为int拿来做索引值了，float和tuple(元组)之类的懒得写
 
 
-        以前以来我们都用``collections.OrderedDict``来寻找模板，比如这样
+    以前以来我们都用``collections.OrderedDict``来寻找模板，比如这样
 
-        >>> DEFAULT_SCORE_TEMPLATES: OrderedDict[str, ScoreModificationTemplate] = OrderedDict([
-        ...   "go_to_school_early": ScoreModificationTemplate(
-        ...         "go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃"),
-        ...   "go_to_school_late": ScoreModificationTemplate(
-        ...         "go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
-        ... ])
-        >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
-        ScoreModificationTemplate("go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃")
+    >>> DEFAULT_SCORE_TEMPLATES: OrderedDict[str, ScoreModificationTemplate] = OrderedDict([
+    ...   "go_to_school_early": ScoreModificationTemplate(
+    ...         "go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃"),
+    ...   "go_to_school_late": ScoreModificationTemplate(
+    ...         "go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
+    ... ])
+    >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
+    ScoreModificationTemplate("go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃")
 
-        这样做的好处是我们可以直接通过key来获取模板，也可以通过模板反向找到它的key值
-        
-        但是缺点是如果``OrderedDict``中的key和``ScoreModification``中的key不一致就会出错
-        
-        现在我们可以用``OrderedKeyList``来存储模板这类"SupportsKeyOrdering"的对象，就不用写dict的key
+    这样做的好处是我们可以直接通过key来获取模板，也可以通过模板反向找到它的key值
 
-        这样就不用担心dict中的key和模板中的不一样了
+    但是缺点是如果``OrderedDict``中的key和``ScoreModification``中的key不一致就会出错
 
-        >>> DEFAULT_SCORE_TEMPLATES = OrderedKeyList([
-        ...   ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃"),
-        ...   ScoreModificationTemplate("go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
-        ... ])   # 这就不需要写Key了，而且这个东西支持所有list的方法和部分dict的方法
-        >>>      #（比如append，keys和items之类）
-        >>> DEFAULT_SCORE_TEMPLATES[0]
-        ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
-        >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
-        ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
+    现在我们可以用``OrderedKeyList``来存储模板这类"SupportsKeyOrdering"的对象，就不用写dict的key
 
-        你学废了吗？
-        """
+    这样就不用担心dict中的key和模板中的不一样了
 
+    >>> DEFAULT_SCORE_TEMPLATES = OrderedKeyList([
+    ...   ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃"),
+    ...   ScoreModificationTemplate("go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
+    ... ])   # 这就不需要写Key了，而且这个东西支持所有list的方法和部分dict的方法
+    >>>      #（比如append，keys和items之类）
+    >>> DEFAULT_SCORE_TEMPLATES[0]
+    ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
+    >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
+    ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
+
+    你学废了吗？
+    """
 
 
 _Template = TypeVar("_Template", bound=SupportsKeyOrdering)
@@ -1245,13 +1357,17 @@ class OrderedKeyList(list, Iterable[_Template]):
     keyattr = "key"
     'SupportsKeyOrdering的这个"Key"的属性名'
 
-
-    def __init__(self, objects: Union[Iterable[_Template], 
-                                        Dict[str, _Template], 
-                                        "OrderedDict[str, _Template]", 
-                                        "OrderedKeyList[_Template]"]):
+    def __init__(
+        self,
+        objects: Union[
+            Iterable[_Template],
+            Dict[str, _Template],
+            "OrderedDict[str, _Template]",
+            "OrderedKeyList[_Template]",
+        ],
+    ):
         """初始化OrderedKeyList
-        
+
         :param templates: 模板列表
         """
 
@@ -1259,8 +1375,12 @@ class OrderedKeyList(list, Iterable[_Template]):
         if isinstance(objects, (dict, OrderedDict)):
             for k, v in objects.items():
                 if getattr(v, self.keyattr) != k:
-                    Base.log("W", F"模板在dict中的key（{k!r}）与模板本身的（{getattr(v, self.keyattr)!r}）不一致，"
-                                    "已自动修正为dict中的key", "OrderedKeyList.__init__")
+                    Base.log(
+                        "W",
+                        f"模板在dict中的key（{k!r}）与模板本身的（{getattr(v, self.keyattr)!r}）不一致，"
+                        "已自动修正为dict中的key",
+                        "OrderedKeyList.__init__",
+                    )
                     setattr(v, self.keyattr, k)
                 self.append(v)
         elif isinstance(objects, OrderedKeyList):
@@ -1270,9 +1390,19 @@ class OrderedKeyList(list, Iterable[_Template]):
             for v in objects:
                 if getattr(v, self.keyattr) in keys:
                     if not self.allow_dumplicate:
-                        raise ValueError(F"模板的key（{getattr(v, self.keyattr)!r}）重复")
-                    Base.log("W", F"模板的key（{getattr(v, self.keyattr)!r}）重复，补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}", "OrderedKeyList.__init__")
-                    setattr(v, self.keyattr, getattr(v, self.keyattr) + self.dumplicate_suffix)
+                        raise ValueError(
+                            f"模板的key（{getattr(v, self.keyattr)!r}）重复"
+                        )
+                    Base.log(
+                        "W",
+                        f"模板的key（{getattr(v, self.keyattr)!r}）重复，补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}",
+                        "OrderedKeyList.__init__",
+                    )
+                    setattr(
+                        v,
+                        self.keyattr,
+                        getattr(v, self.keyattr) + self.dumplicate_suffix,
+                    )
                 keys.append(getattr(v, self.keyattr))
                 self.append(v)
 
@@ -1287,7 +1417,7 @@ class OrderedKeyList(list, Iterable[_Template]):
             for obj in self:
                 if obj is key:
                     return obj
-            raise KeyError(F"列表中不存在key为{key!r}的模板")
+            raise KeyError(f"列表中不存在key为{key!r}的模板")
 
     def __setitem__(self, key: Union[int, str, _Template], value: _Template):
         "设置指定索引或key的模板"
@@ -1300,12 +1430,17 @@ class OrderedKeyList(list, Iterable[_Template]):
                     return
                 elif obj is key:
                     super().__setitem__(i, value)
-            if getattr(value, self.keyattr) == key and isinstance(value, SupportsKeyOrdering) and isinstance(key, str):
-                self.append(value)  # 如果key是字符串，并且value是模板，则直接添加到列表中
+            if (
+                getattr(value, self.keyattr) == key
+                and isinstance(value, SupportsKeyOrdering)
+                and isinstance(key, str)
+            ):
+                self.append(
+                    value
+                )  # 如果key是字符串，并且value是模板，则直接添加到列表中
             else:
-                raise KeyError(F"列表中不存在key为{key!r}的模板")
-        
-    
+                raise KeyError(f"列表中不存在key为{key!r}的模板")
+
     def __delitem__(self, key: Union[int, str]):
         "删除指定索引或key的模板"
         if isinstance(key, int):
@@ -1315,12 +1450,11 @@ class OrderedKeyList(list, Iterable[_Template]):
                 if getattr(obj, self.keyattr) == key:
                     super().__delitem__(i)
                     return
-            raise KeyError(F"列表中不存在key为{key!r}的模板")
+            raise KeyError(f"列表中不存在key为{key!r}的模板")
 
     def __len__(self) -> int:
         "返回列表中模板的数量"
         return super().__len__()
-
 
     def __reversed__(self) -> Iterator[_Template]:
         "返回列表的反向迭代器"
@@ -1328,27 +1462,30 @@ class OrderedKeyList(list, Iterable[_Template]):
 
     def __contains__(self, item: _Template) -> bool:
         "判断列表中是否包含指定模板"
-        return super().__contains__(item) or [getattr(obj, self.keyattr) for obj in self].count(item) > 0
+        return (
+            super().__contains__(item)
+            or [getattr(obj, self.keyattr) for obj in self].count(item) > 0
+        )
 
     def swaps(self, lh: Union[int, str], rh: Union[int, str]):
         "交换指定索引或key的模板"
-        if  isinstance(lh, str):
+        if isinstance(lh, str):
             for i, obj in enumerate(self):
                 if getattr(obj, self.keyattr) == lh:
                     lh = i
                     break
             else:
-                raise KeyError(F"列表中不存在key为{lh!r}的模板")
+                raise KeyError(f"列表中不存在key为{lh!r}的模板")
         if isinstance(rh, str):
             for i, obj in enumerate(self):
                 if getattr(obj, self.keyattr) == rh:
                     lh = i
                     break
             else:
-                raise KeyError(F"列表中不存在key为{rh!r}的模板")
+                raise KeyError(f"列表中不存在key为{rh!r}的模板")
         self[lh], self[rh] = self[rh], self[lh]
         return self
-    
+
     def __iter__(self) -> Iterator[_Template]:
         "返回列表的迭代器"
         return super().__iter__()
@@ -1357,9 +1494,15 @@ class OrderedKeyList(list, Iterable[_Template]):
         "添加到列表"
         if getattr(obj, self.keyattr) in self.keys():
             if not self.allow_dumplicate:  # 如果不允许重复直接抛出异常
-                raise ValueError(F"模板的key（{getattr(obj, self.keyattr)!r}）重复")
-            Base.log("W", F"模板的key（{getattr(obj, self.keyattr)!r}）重复，补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}", "OrderedKeyList.append")
-            setattr(obj, self.keyattr, getattr(obj, self.keyattr) + self.dumplicate_suffix)
+                raise ValueError(f"模板的key（{getattr(obj, self.keyattr)!r}）重复")
+            Base.log(
+                "W",
+                f"模板的key（{getattr(obj, self.keyattr)!r}）重复，补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}",
+                "OrderedKeyList.append",
+            )
+            setattr(
+                obj, self.keyattr, getattr(obj, self.keyattr) + self.dumplicate_suffix
+            )
         super().append(obj)
         return self
 
@@ -1368,11 +1511,11 @@ class OrderedKeyList(list, Iterable[_Template]):
         for template in templates:
             self.append(template)
         return self
-    
+
     def keys(self) -> List[str]:
         "返回列表中所有元素的key"
         return [getattr(obj, self.keyattr) for obj in self]
-    
+
     def values(self) -> List[_Template]:
         "返回列表中所有模板"
         return [obj for obj in self]
@@ -1380,27 +1523,27 @@ class OrderedKeyList(list, Iterable[_Template]):
     def items(self) -> List[Tuple[str, _Template]]:
         "返回列表中所有模板的key和模板"
         return [(getattr(obj, self.keyattr), obj) for obj in self]
-    
 
     def __copy__(self) -> "OrderedKeyList[_Template]":
         "返回列表的浅拷贝"
         return OrderedKeyList(self)
-    
+
     def __deepcopy__(self, memo: dict) -> "OrderedKeyList[_Template]":
         "返回列表的深拷贝"
         return OrderedKeyList([copy.deepcopy(obj, memo) for obj in self])
-    
+
     def copy(self) -> "OrderedKeyList[_Template]":
         "返回列表的拷贝"
         return self.__copy__()
-    
+
     def to_dict(self) -> Dict[str, _Template]:
         "返回列表的字典表示"
         return dict(self.items())
 
     def __repr__(self) -> str:
         "返回列表的表达式"
-        return F"OrderedKeyList({super().__repr__()})"
+        return f"OrderedKeyList({super().__repr__()})"
+
 
 try:
     Base.clear_oldfile()
