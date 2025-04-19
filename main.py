@@ -5,6 +5,7 @@ import sys
 import time
 import copy
 import math
+import enum
 import random
 import psutil
 import pickle
@@ -688,6 +689,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     tip_update = Signal(tuple)
     """提示更新信号，用于更新侧边提示栏"""
 
+    anim_group_state_changed = Signal(int)
+    """动画组状态改变信号"""
+
     button_update = Signal(ObjectButton, tuple)
     """按钮状态更新信号，用于控制按钮闪烁效果（这个应该是吃性能最多的信号了）"""
 
@@ -861,7 +865,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.listWidget.doubleClicked.connect(self.click_opreation)
         self.tip_update.connect(lambda args: self._show_tip(*args))
-        self.button_update.connect(self.flash_button)
+        self.button_update.connect(self.add_new_btn_anim)
         self.log_window_refresh.connect(self._refresh_logwindow)
         self.pushButton.clicked.connect(self.dont_click)
         self.listView_data: List[Callable] = []
@@ -966,6 +970,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.window_info: ClassWindow.WindowInfo = ClassWindow.WindowInfo()
         "窗口信息"
         self.refresh_hint_widget()
+        self.btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
+        "按钮动画组"
+        self.anim_group_state_changed.connect(self._anim_group_state_changed)
         self.exit_action_finished: bool = False
         "退出动作是否完成"
         self.exit_tip: Optional[QLabel] = None
@@ -1770,6 +1777,29 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         v.event_accepting = t6 - t5
         v.total_time = t6 - t
 
+    class AnimationGroupStatement(enum.IntEnum):
+        "动画组状态"
+        CREATE_NEW = 0
+        "创建新动画组"
+        START = 1
+        "启动动画组"
+        STOP = 2
+        "停止动画组"
+        DELETE = 3
+        "删除动画组"
+
+    def _anim_group_state_changed(self, state: int):
+        """处理动画组状态变化"""
+        if state == self.AnimationGroupStatement.CREATE_NEW:
+            self.btns_anim_group = QParallelAnimationGroup(self)
+        elif state == self.AnimationGroupStatement.START:
+            self.btns_anim_group.start()
+        elif state == self.AnimationGroupStatement.STOP:
+            self.btns_anim_group.stop()
+        elif state == self.AnimationGroupStatement.DELETE:
+            self.btns_anim_group.deleteLater()
+            self.btns_anim_group = None
+
     @profile()
     def read_video_while_alive(self):
         """读取并处理背景视频文件，用于动态背景效果"""
@@ -1824,7 +1854,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     frame.data, w, h, 3 * w, QImage.Format.Format_BGR888
                 )
 
-                self.update()
+                # self.update()
                 self.video_framecount += 1
 
             self.video_framerate = 0
@@ -2004,9 +2034,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.displayed_on_the_log_window = self.logged_count
 
     @Slot(QPushButton, tuple)
-    def flash_button(self, obj: ObjectButton, args: tuple):
+    def add_new_btn_anim(self, obj: ObjectButton, args: tuple):
         """闪烁按钮"""
-        obj.flash(*args)
+        self.btns_anim_group.addAnimation(obj.get_flash_anim(*args))
 
     ##### 左上角信息栏控制 #####
 
@@ -3810,7 +3840,10 @@ class UpdateThread(QThread):
                     Thread(target=self.detect_new_version).start()
                     Thread(target=self.detect_update).start()
                     self.first_loop = False
+                self.mainwindow.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.START)
                 time.sleep(0.5)
+                self.mainwindow.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.CREATE_NEW)
+
 
             except BaseException as unused:  # pylint: disable=broad-exception-caught
                 Base.log_exc("更新窗口事件时发生错误", "UpdateThread.run")

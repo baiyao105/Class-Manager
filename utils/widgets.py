@@ -120,6 +120,28 @@ class ObjectButton(QPushButton):
         self.anim.setEndValue(QColor(*end))
         self.anim.start()
 
+    def get_flash_anim(self, start: Tuple[int, int, int], end: Tuple[int, int, int], duration: int,
+                       from_self: bool = True):
+        """
+        创建按钮颜色闪烁动画效果
+
+        :param start: 起始颜色RGB元组
+        :param end: 结束颜色RGB元组
+        :param duration: 动画持续时间(毫秒)
+        """
+        if from_self:
+            self.anim = QPropertyAnimation(self, b"color")
+            self.anim.setDuration(duration)
+            self.anim.setStartValue(QColor(*start))
+            self.anim.setEndValue(QColor(*end))
+            return self.anim
+        else:
+            anim = QPropertyAnimation(self, b"color")
+            anim.setDuration(duration)
+            anim.setStartValue(QColor(*start))
+            anim.setEndValue(QColor(*end))
+            return anim
+
 
 # 进度条动画控件
 class ProgressAnimatedItem(QWidget):
