@@ -4,17 +4,20 @@
 
 import copy
 from abc import ABC
-from typing import (Iterable, List, TypeVar, Union, 
-                    Dict, Iterator, Tuple, Optional)
+from typing import Iterable, List, TypeVar, Union, Dict, Iterator, Tuple, Optional
 from collections import OrderedDict
+
 try:
     from utils.logger import Logger
 except ImportError as unused:
+
     class Logger:
         "覆写用的日志记录类"
+
         def log(l, c, s):
             "记录日志"
             print(c)
+
 
 __all__ = ["SupportsKeyOrdering", "OrderedKeyList"]
 
@@ -24,7 +27,7 @@ class SupportsKeyOrdering(ABC):
     # 还有，其实把鼠标悬浮在"SupportsKeyOrdering"上就可以看到这个注释了，经过美化了的
     """
     支持key排序的抽象类。
-    
+
         意思就是说这个类有一个``key``属性，这个属性是``str``类型
 
         这个``SupportsKeyOrdering``是为了方便使用而设计的，因为很多类都需要一个``key``属性
@@ -57,9 +60,9 @@ class SupportsKeyOrdering(ABC):
         ScoreModificationTemplate("go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃")
 
         这样做的好处是我们可以直接通过key来获取模板，也可以通过模板反向找到它的key值
-        
+
         但是缺点是如果``OrderedDict``中的key和``ScoreModification``中的key不一致就会出错
-        
+
         现在我们可以用``OrderedKeyList``来存储模板这类"SupportsKeyOrdering"的对象，就不用写dict的key
 
         这样就不用担心dict中的key和模板中的不一样了
@@ -75,8 +78,7 @@ class SupportsKeyOrdering(ABC):
         ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
 
         你学废了吗？
-        """
-
+    """
 
 
 _Template = TypeVar("_Template", bound=SupportsKeyOrdering)
@@ -155,13 +157,17 @@ class OrderedKeyList(list, Iterable[_Template]):
     keyattr = "key"
     'SupportsKeyOrdering的这个"Key"的属性名'
 
-
-    def __init__(self, objects: Union[Iterable[_Template], 
-                                        Dict[str, _Template], 
-                                        "OrderedDict[str, _Template]", 
-                                        "OrderedKeyList[_Template]"]):
+    def __init__(
+        self,
+        objects: Union[
+            Iterable[_Template],
+            Dict[str, _Template],
+            "OrderedDict[str, _Template]",
+            "OrderedKeyList[_Template]",
+        ],
+    ):
         """初始化OrderedKeyList
-        
+
         :param templates: 模板列表
         """
 
@@ -169,11 +175,12 @@ class OrderedKeyList(list, Iterable[_Template]):
         if isinstance(objects, (dict, OrderedDict)):
             for k, v in objects.items():
                 if getattr(v, self.keyattr) != k:
-                    Logger.log("W",
-                        F"模板在dict中的key（{k!r}）与模板本身的（{getattr(v, self.keyattr)!r}）不一致，"
-                                    "已自动修正为dict中的key",
-                        "OrderedKeyList.__init__"
-                                    )
+                    Logger.log(
+                        "W",
+                        f"模板在dict中的key（{k!r}）与模板本身的（{getattr(v, self.keyattr)!r}）不一致，"
+                        "已自动修正为dict中的key",
+                        "OrderedKeyList.__init__",
+                    )
                     setattr(v, self.keyattr, k)
                 self.append(v)
         elif isinstance(objects, OrderedKeyList):
@@ -183,11 +190,20 @@ class OrderedKeyList(list, Iterable[_Template]):
             for v in objects:
                 if getattr(v, self.keyattr) in keys:
                     if not self.allow_dumplicate:
-                        raise ValueError(F"模板的key（{getattr(v, self.keyattr)!r}）重复")
-                    Logger.log("W", F"模板的key（{getattr(v, self.keyattr)!r}）重复，"
-                    f"补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}",
-                        "OrderedKeyList.__init__")
-                    setattr(v, self.keyattr, getattr(v, self.keyattr) + self.dumplicate_suffix)
+                        raise ValueError(
+                            f"模板的key（{getattr(v, self.keyattr)!r}）重复"
+                        )
+                    Logger.log(
+                        "W",
+                        f"模板的key（{getattr(v, self.keyattr)!r}）重复，"
+                        f"补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}",
+                        "OrderedKeyList.__init__",
+                    )
+                    setattr(
+                        v,
+                        self.keyattr,
+                        getattr(v, self.keyattr) + self.dumplicate_suffix,
+                    )
                 keys.append(getattr(v, self.keyattr))
                 self.append(v)
 
@@ -202,7 +218,7 @@ class OrderedKeyList(list, Iterable[_Template]):
             for obj in self:
                 if obj is key:
                     return obj
-            raise KeyError(F"列表中不存在key为{key!r}的模板")
+            raise KeyError(f"列表中不存在key为{key!r}的模板")
 
     def __setitem__(self, key: Union[int, str, _Template], value: _Template):
         "设置指定索引或key的模板"
@@ -215,13 +231,17 @@ class OrderedKeyList(list, Iterable[_Template]):
                     return
                 elif obj is key:
                     super().__setitem__(i, value)
-            if getattr(value, self.keyattr) == key \
-                and isinstance(value, SupportsKeyOrdering) and isinstance(key, str):
-                self.append(value)  # 如果key是字符串，并且value是模板，则直接添加到列表中
+            if (
+                getattr(value, self.keyattr) == key
+                and isinstance(value, SupportsKeyOrdering)
+                and isinstance(key, str)
+            ):
+                self.append(
+                    value
+                )  # 如果key是字符串，并且value是模板，则直接添加到列表中
             else:
-                raise KeyError(F"列表中不存在key为{key!r}的模板")
-        
-    
+                raise KeyError(f"列表中不存在key为{key!r}的模板")
+
     def __delitem__(self, key: Union[int, str]):
         "删除指定索引或key的模板"
         if isinstance(key, int):
@@ -231,12 +251,11 @@ class OrderedKeyList(list, Iterable[_Template]):
                 if getattr(obj, self.keyattr) == key:
                     super().__delitem__(i)
                     return
-            raise KeyError(F"列表中不存在key为{key!r}的模板")
+            raise KeyError(f"列表中不存在key为{key!r}的模板")
 
     def __len__(self) -> int:
         "返回列表中模板的数量"
         return super().__len__()
-
 
     def __reversed__(self) -> Iterator[_Template]:
         "返回列表的反向迭代器"
@@ -244,27 +263,30 @@ class OrderedKeyList(list, Iterable[_Template]):
 
     def __contains__(self, item: _Template) -> bool:
         "判断列表中是否包含指定模板"
-        return super().__contains__(item) or [getattr(obj, self.keyattr) for obj in self].count(item) > 0
+        return (
+            super().__contains__(item)
+            or [getattr(obj, self.keyattr) for obj in self].count(item) > 0
+        )
 
     def swaps(self, lh: Union[int, str], rh: Union[int, str]):
         "交换指定索引或key的模板"
-        if  isinstance(lh, str):
+        if isinstance(lh, str):
             for i, obj in enumerate(self):
                 if getattr(obj, self.keyattr) == lh:
                     lh = i
                     break
             else:
-                raise KeyError(F"列表中不存在key为{lh!r}的模板")
+                raise KeyError(f"列表中不存在key为{lh!r}的模板")
         if isinstance(rh, str):
             for i, obj in enumerate(self):
                 if getattr(obj, self.keyattr) == rh:
                     lh = i
                     break
             else:
-                raise KeyError(F"列表中不存在key为{rh!r}的模板")
+                raise KeyError(f"列表中不存在key为{rh!r}的模板")
         self[lh], self[rh] = self[rh], self[lh]
         return self
-    
+
     def __iter__(self) -> Iterator[_Template]:
         "返回列表的迭代器"
         return super().__iter__()
@@ -273,12 +295,16 @@ class OrderedKeyList(list, Iterable[_Template]):
         "添加到列表"
         if getattr(obj, self.keyattr) in self.keys():
             if not self.allow_dumplicate:  # 如果不允许重复直接抛出异常
-                raise ValueError(F"模板的key（{getattr(obj, self.keyattr)!r}）重复")
-            print("W",
-                     F"模板的key（{getattr(obj, self.keyattr)!r}）重复，"
-                     f"补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}",
-                     "OrderedKeyList.append")
-            setattr(obj, self.keyattr, getattr(obj, self.keyattr) + self.dumplicate_suffix)
+                raise ValueError(f"模板的key（{getattr(obj, self.keyattr)!r}）重复")
+            print(
+                "W",
+                f"模板的key（{getattr(obj, self.keyattr)!r}）重复，"
+                f"补充为{getattr(obj, self.keyattr)!r}{self.dumplicate_suffix}",
+                "OrderedKeyList.append",
+            )
+            setattr(
+                obj, self.keyattr, getattr(obj, self.keyattr) + self.dumplicate_suffix
+            )
         super().append(obj)
         return self
 
@@ -287,11 +313,11 @@ class OrderedKeyList(list, Iterable[_Template]):
         for template in templates:
             self.append(template)
         return self
-    
+
     def keys(self) -> List[str]:
         "返回列表中所有元素的key"
         return [getattr(obj, self.keyattr) for obj in self]
-    
+
     def values(self) -> List[_Template]:
         "返回列表中所有模板"
         return [obj for obj in self]
@@ -299,24 +325,23 @@ class OrderedKeyList(list, Iterable[_Template]):
     def items(self) -> List[Tuple[str, _Template]]:
         "返回列表中所有模板的key和模板"
         return [(getattr(obj, self.keyattr), obj) for obj in self]
-    
 
     def __copy__(self) -> "OrderedKeyList[_Template]":
         "返回列表的浅拷贝"
         return OrderedKeyList(self)
-    
+
     def __deepcopy__(self, memo: Optional[dict]) -> "OrderedKeyList[_Template]":
         "返回列表的深拷贝"
         return OrderedKeyList([copy.deepcopy(obj, memo) for obj in self])
-    
+
     def copy(self) -> "OrderedKeyList[_Template]":
         "返回列表的拷贝"
         return self.__copy__()
-    
+
     def to_dict(self) -> Dict[str, _Template]:
         "返回列表的字典表示"
         return dict(self.items())
 
     def __repr__(self) -> str:
         "返回列表的表达式"
-        return F"OrderedKeyList({super().__repr__()})"
+        return f"OrderedKeyList({super().__repr__()})"

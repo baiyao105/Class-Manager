@@ -20,7 +20,7 @@ enable_memory_tracing = False
 default_user = "测试用户1"
 """默认用户名常量"""
 
-app_style: Literal['windowsvista', 'Windows', 'Fusion', 'windows11'] = 'windowsvista'
+app_style: Literal["windowsvista", "Windows", "Fusion", "windows11"] = "windowsvista"
 "软件的样式"
 
 
@@ -61,10 +61,11 @@ nan = -math.nan
 
 cwd = os.getcwd()
 
-LOG_FILE_PATH = (f'log/ClassManager_log_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-                 + f"_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log")
+LOG_FILE_PATH = (
+    f'log/ClassManager_log_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+    + f"_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log"
+)
 "日志文件路径"
-
 
 
 runtime_flags: Dict[Any, Any] = {}

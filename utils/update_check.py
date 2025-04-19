@@ -21,7 +21,11 @@ REPO_NAME = "Class-Manager"
 
 MASTER = "master"
 
-DOWNLOAD_URL = "https://gitee.com/api/v5/repos/{}/{}/zipball?access_token={}&ref={}".format(AUTHOR, REPO_NAME, TOKEN, MASTER)
+DOWNLOAD_URL = (
+    "https://gitee.com/api/v5/repos/{}/{}/zipball?access_token={}&ref={}".format(
+        AUTHOR, REPO_NAME, TOKEN, MASTER
+    )
+)
 
 CLIENT_UPDATE_LOG = {
     10414: """
@@ -89,7 +93,6 @@ CLIENT_UPDATE_LOG = {
 修复内容：
  - 把之前1.2.1丢掉的一大段代码补回来了
 """,
-
     10203: """
 1.2.3（2024/12/2）更新日志：
 更新内容：
@@ -145,7 +148,6 @@ CLIENT_UPDATE_LOG = {
 修复内容：
  - 暂无
 """,
-
     10119: """
 1.1.19（2024/11/25） 更新日志：
 
@@ -158,7 +160,6 @@ CLIENT_UPDATE_LOG = {
 修复内容：
  - 暂无
 """,
-
     10118: """
 1.1.18（2024/11/25） 更新日志：
 
@@ -171,7 +172,6 @@ CLIENT_UPDATE_LOG = {
 修复内容：
  - 修复了学生分数折线图打不开的问题
 """,
-
     10117: """
 1.1.17（2024/11/24） 更新日志：
 
@@ -197,7 +197,6 @@ CLIENT_UPDATE_LOG = {
 
 修了一堆bug，你就说是不是大更新吧
  """,
-
     10116: """
 1.1.16 （2024/11/23） 更新日志：
 
@@ -216,7 +215,6 @@ CLIENT_UPDATE_LOG = {
 
 周末会大更新！
 对了，你猜猜私货指的是什么""",
-
     10115: """
 1.1.15 （2024/11/22） 更新日志：
 
@@ -232,7 +230,6 @@ CLIENT_UPDATE_LOG = {
 修复内容：
  - 没有修复什么bug
  - 新增了114514个bug""",
-
     10114: """
 1.1.14 （2024/11/21） 更新日志：
 
@@ -252,8 +249,6 @@ CLIENT_UPDATE_LOG = {
 
 
 """,
-    
-
     10113: """
 1.1.13（2024/11/18） 更新日志：
 
@@ -277,7 +272,6 @@ CLIENT_UPDATE_LOG = {
 写动画的时候属于是手（Thread）脚（QPropertyAnimation）并用了
 还有，存档定期爆炸的bug我不打算修
 孩子，老老实实建你的还原点吧""",
-
     10112: """
 1.1.12（2024/11/17） 更新日志：
 
@@ -305,7 +299,7 @@ CLIENT_UPDATE_LOG = {
 }
 
 
-CORE_UPDATE_LOG:Dict[int, str] = {
+CORE_UPDATE_LOG: Dict[int, str] = {
     10106: """
 
 1.1.6（2025/3/29）更新日志：
@@ -317,7 +311,7 @@ CORE_UPDATE_LOG:Dict[int, str] = {
 bug修复：
  - 修复了11个（应该数少了）个bug
 """,
-    10105:"""
+    10105: """
 
 1.1.5（2024/11/26） 更新日志：
 
@@ -344,13 +338,13 @@ bug修复：
  - 修复部分新版本加载老版本存档爆掉的问题
  - 修复了我精神状态过于正常的bug
 
-"""
-} 
+""",
+}
 
 
 # 获取本地版本信息
 try:
-    VERSION_INFO = json.loads(open("version", "r").read())
+    VERSION_INFO = json.loads(open("version", "r", encoding="utf-8").read())
     CORE_VERSION = VERSION_INFO["core_version"]
     CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
     CLIENT_VERSION = VERSION_INFO["client_version"]
@@ -361,7 +355,7 @@ except Exception as e:
         "core_version": "unknown",
         "core_version_code": 0,
         "client_version": "unknown",
-        "client_version_code": 0
+        "client_version_code": 0,
     }
     CORE_VERSION = VERSION_INFO["core_version"]
     CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
@@ -371,6 +365,7 @@ except Exception as e:
 
 url = f"https://gitee.com/{AUTHOR}/{REPO_NAME}/raw/{MASTER}/version"
 
+
 class UpdateInfo(enum.IntEnum):
     NO_UPDATE = 0
     UPDATE_AVAILABLE = 1
@@ -378,11 +373,11 @@ class UpdateInfo(enum.IntEnum):
     ERROR = 3
 
 
-
-def update_check(current_core_version:int, current_gui_version:int) -> Tuple[int, Union[str, BaseException, dict]]:
-
+def update_check(
+    current_core_version: int, current_gui_version: int
+) -> Tuple[int, Union[str, BaseException, dict]]:
     """获取更新信息。
-    
+
     Args:
         current_core_version (int): 当前核心版本号
         current_gui_version (int): 当前GUI版本号
@@ -399,17 +394,18 @@ def update_check(current_core_version:int, current_gui_version:int) -> Tuple[int
         gui_version = data["client_version_code"]
         if core_version > current_core_version or gui_version > current_gui_version:
             return UpdateInfo.UPDATE_AVAILABLE, data
-        elif core_version == current_core_version and gui_version == current_gui_version:
+        elif (
+            core_version == current_core_version and gui_version == current_gui_version
+        ):
             return UpdateInfo.NO_UPDATE, data
         else:
             return UpdateInfo.VERSION_IS_AHEAD, data
-            
+
     except Exception as e:
         return UpdateInfo.ERROR, e
-    
 
 
-def get_update_zip(path:str="update.zip") -> Union[Literal[True], Exception, dict]:
+def get_update_zip(path: str = "update.zip") -> Union[Literal[True], Exception, dict]:
     """下载更新包"""
     try:
         response = requests.get(DOWNLOAD_URL)
@@ -420,7 +416,8 @@ def get_update_zip(path:str="update.zip") -> Union[Literal[True], Exception, dic
     except Exception as e:
         return e
 
-def unzip_to_dir(path:str="update.zip", dir:str="update"):
+
+def unzip_to_dir(path: str = "update.zip", dir: str = "update"):
     """解压更新包到指定目录"""
     try:
         shutil.rmtree(dir)
@@ -433,11 +430,14 @@ def unzip_to_dir(path:str="update.zip", dir:str="update"):
     except Exception as e:
         return e
 
-def update(dir:str="update"):
+
+def update(dir: str = "update"):
     """执行更新操作"""
     try:
-        shutil.copytree(os.path.join(dir, f"{REPO_NAME}-{MASTER}"), os.getcwd(), dirs_exist_ok=True)
-        
+        shutil.copytree(
+            os.path.join(dir, f"{REPO_NAME}-{MASTER}"), os.getcwd(), dirs_exist_ok=True
+        )
+
     except Exception as e:
         print("更新失败，请手动更新")
         print(f"错误：[{e.__class__.__name__}] {e}")

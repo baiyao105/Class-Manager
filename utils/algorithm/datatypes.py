@@ -10,9 +10,10 @@ from typing import Any, Callable, Generic, Iterable, Mapping, Optional, TypeVar
 
 class NULLPTR:
     "虽然没用"
+
     def __eq__(self, value: object) -> bool:
         return isinstance(value, NULLPTR)
-    
+
     def __ne__(self, value: object) -> bool:
         return not isinstance(value, NULLPTR)
 
@@ -21,19 +22,21 @@ class NULLPTR:
 
     def __repr__(self) -> str:
         return "nullptr"
-    
+
     def __hash__(self):
         return -1
-    
+
     def __bool__(self):
         return False
-    
+
 
 null = NULLPTR()
 "空指针"
 
+
 class Node:
     "树节点"
+
     def __init__(self, value: object, left: object = null, right: object = null):
         self.value = value
         self.left = left
@@ -47,6 +50,8 @@ class Node:
 
 
 DT = TypeVar("DT")
+
+
 class Stack(Generic[DT]):
     "非常朴素的栈"
 
@@ -78,20 +83,22 @@ class Stack(Generic[DT]):
         "清空栈"
         self.items = []
 
+
 class Thread(OrigThread):
     "自己做的一个可以返回数据的Thread"
 
     def __init__(
-            self,
-            group: None = None,
-            target: Optional[Callable] = None,
-            name: Optional[str] = None,
-            args: Iterable[Any] = None,
-            kwargs: Optional[Mapping[str, Any]] = None,
-            *,
-            daemon: Optional[bool] = None) -> None:
+        self,
+        group: None = None,
+        target: Optional[Callable] = None,
+        name: Optional[str] = None,
+        args: Iterable[Any] = None,
+        kwargs: Optional[Mapping[str, Any]] = None,
+        *,
+        daemon: Optional[bool] = None,
+    ) -> None:
         """初始化线程
-        
+
         :param group: 线程组，默认为None
         :param target: 线程函数，默认为None
         :param name: 线程名称，默认为None
@@ -100,11 +107,18 @@ class Thread(OrigThread):
         """
         args = () if args is None else args
         kwargs = {} if kwargs is None else kwargs
-        super().__init__(group=group, target=target, name=name, args=args, kwargs=kwargs, daemon=daemon)
+        super().__init__(
+            group=group,
+            target=target,
+            name=name,
+            args=args,
+            kwargs=kwargs,
+            daemon=daemon,
+        )
         self._return = None
         self._finished = False
         self.thread_id: Optional[int] = None
-        
+
     @property
     def return_value(self):
         "返回线程的返回值"
@@ -112,26 +126,27 @@ class Thread(OrigThread):
             return self._return
         else:
             raise RuntimeError("线程并未执行完成")
-    
 
     def run(self):
         "运行线程"
-        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long) \
-            (lambda: ctypes.pythonapi.PyThread_get_thread_ident()) ()   # pylint: disable=W0108
+        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long)(
+            lambda: ctypes.pythonapi.PyThread_get_thread_ident()
+        )()  # pylint: disable=W0108
         if self._target is not None:
             self._return = self._target(*self._args, **self._kwargs)
         self._finished = True
-        
 
-    def join(self, timeout:Optional[float]=None) -> Any:
-        """"等待线程完成并返回结果
-        
+    def join(self, timeout: Optional[float] = None) -> Any:
+        """ "等待线程完成并返回结果
+
         :param timeout: 超时时间，默认为None，表示无限等待"""
         super().join(timeout=timeout)
         return self._return
 
+
 class Mutex:
     "互斥锁"
+
     def __init__(self):
         self._lock = Lock()
 
@@ -155,18 +170,19 @@ class Mutex:
 
 class FrameCounter:
     "帧计数器"
+
     def __init__(self, maxcount: Optional[int] = None, timeout: Optional[float] = None):
         "初始化帧计数器"
         self.maxcount = maxcount
         self.timeout = timeout
         self._c = 0
         self.running = False
-        
+
     @property
     def _t(self):
         "获取当前时间戳"
         return time.time()
-    
+
     @property
     def framerate(self):
         "获取帧率"
@@ -174,15 +190,17 @@ class FrameCounter:
             return 0
         return self._c / self._t
 
-
     def start(self):
         "启动计数器"
         if self.running:
             raise RuntimeError("这个计数器已经启动过了！")
         self._c = 0
         self.running = True
-        while (self.maxcount is None or self._c < self.maxcount) and \
-            (self.timeout is None or time.time() - self._t <= self.timeout) and self.running:
+        while (
+            (self.maxcount is None or self._c < self.maxcount)
+            and (self.timeout is None or time.time() - self._t <= self.timeout)
+            and self.running
+        ):
             self._c += 1
 
     def stop(self):
