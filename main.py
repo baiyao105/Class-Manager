@@ -55,10 +55,10 @@ from ui.py import (
     DebugWindow,
 )
 
-from utils.classobjects import (    # pylint: disable=unused-import
+from utils.classobjects import (  # pylint: disable=unused-import
     sys as base_sys,
     Class,
-    Student,  
+    Student,
     Achievement,
     AchievementTemplate,
     ScoreModification,
@@ -1021,8 +1021,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.noise_detector: Optional[NoiseDetectorWidget] = None
         "噪音检测窗口"
 
-
-
     def __repr__(self):  # 其实是因为直接继承ClassObjects的repr会导致无限递归
         return super(MyMainWindow, self).__repr__()
 
@@ -1701,6 +1699,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
             class PaintEventInfo(DataObject):
                 "上一个绘制事件时间的信息"
+
                 data_reading: float = 0.0
                 "数据处理时间"
                 painter_constructing: float = 0.0
@@ -3648,7 +3647,7 @@ class UpdateThread(QThread):
             unzip_to_dir,
             get_update_zip,
         )
-        from utils.update_check import AUTHOR, MASTER, REPO_NAME
+        from utils.update_check import AUTHOR, REPO_NAME
         from utils.update_check import UpdateInfo
 
         Base.log("I", "检测更新...", "UpdateThread.detect_new_version")
@@ -4328,18 +4327,16 @@ class GroupWidget(GroupWindow.Ui_Form, MyWidget):
                         / (
                             max(
                                 self.last_score["total"],
-                                *[abs(s.score) for s in self.group.members]
+                                *[abs(s.score) for s in self.group.members],
                             )
                             if (
                                 self.last_score["total"] != 0
                                 and max([abs(s.score) for s in self.group.members]) != 0
                             )
-                            else max(
-                                *[abs(s.score) for s in self.group.members], 0.1
-                            )
+                            else max(*[abs(s.score) for s in self.group.members], 0.1)
                         )
                     ),
-                    1
+                    1,
                 )
             end = min(
                 abs(
@@ -4356,7 +4353,7 @@ class GroupWidget(GroupWindow.Ui_Form, MyWidget):
                         else max(*[abs(s.score) for s in self.group.members], 0.1)
                     )
                 ),
-                1
+                1,
             )
             color = (
                 QColor(222, 252, 222) if member.score >= 0 else QColor(252, 222, 222)
@@ -5824,8 +5821,7 @@ class CleaningScoreSumUpWidget(CleaingScoreSumUp.Ui_Form, MyWidget):
             s = self.leader.pop(0)
             Base.log(
                 "I",
-                f"从组长列表移除{s.num}，" 
-                f"当前列表：{[s.num for s in self.leader]}",
+                f"从组长列表移除{s.num}，" f"当前列表：{[s.num for s in self.leader]}",
                 "CleaningScoreSumUpWidget",
             )
             self.update_students(refresh_stu=False)
@@ -5835,8 +5831,7 @@ class CleaningScoreSumUpWidget(CleaingScoreSumUp.Ui_Form, MyWidget):
             )
             Base.log(
                 "I",
-                f"从成员列表移除{s.num}，" 
-                f"当前列表：{[s.num for s in self.member]}",
+                f"从成员列表移除{s.num}，" f"当前列表：{[s.num for s in self.member]}",
                 "CleaningScoreSumUpWidget",
             )
             self.update_students(refresh_stu=False)
@@ -5950,7 +5945,7 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
             "leave",  # 临时请假
             "leave_early",  # 未知早退
             "leave_late",  # 晚退
-        ]
+        ],
     ):
         "考勤状态转字符串"
         if state == "normal":

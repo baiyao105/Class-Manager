@@ -2194,6 +2194,7 @@ class ClassObj(Base):
 
     class AttendanceInfo(Object):
         "考勤信息"
+
         chunk_type_name: Literal["AttendanceInfo"] = "AttendanceInfo"
         "类型名"
 

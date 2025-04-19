@@ -54,7 +54,7 @@ from utils.functions.sounds import (
     play_sound,
     play_music,
 )  # pylint: disable=unused-import
-from utils.functions.numbers import addrof, steprange
+from utils.functions.numbers import addrof
 from utils.dataloader import (
     Chunk,
     UserDataBase,
@@ -270,7 +270,7 @@ class ClassObj(OrigClassObj):
                 f.close()
                 try:
                     data = pickle.load(open(path + ".tmp", "rb"))
-                except AttributeError as unused:
+                except AttributeError:
                     data = pickle_orig.load(open(path + ".tmp", "rb"))
                 try:
                     os.remove(path + ".tmp")

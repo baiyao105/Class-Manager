@@ -53,7 +53,7 @@ def cinttype(dtype: CIntegerType, name: Optional[str] = None):
         def __init__(self, value: CIntegerType):
             try:
                 value = int(value)
-            except (ValueError, TypeError) as unused:
+            except (ValueError, TypeError):
                 value = int(value.value)
 
             self._dtype: CIntegerType = dtype
