@@ -4,7 +4,8 @@
 
 import copy
 from abc import ABC
-from typing import Iterable, List, TypeVar, Union, Dict, Iterator, Tuple
+from typing import (Iterable, List, TypeVar, Union, 
+                    Dict, Iterator, Tuple, Optional)
 from collections import OrderedDict
 try:
     from utils.logger import Logger
@@ -21,7 +22,8 @@ __all__ = ["SupportsKeyOrdering", "OrderedKeyList"]
 class SupportsKeyOrdering(ABC):
     # 注：Supports是支持的意思（
     # 还有，其实把鼠标悬浮在"SupportsKeyOrdering"上就可以看到这个注释了，经过美化了的
-    """支持key排序的抽象类。
+    """
+    支持key排序的抽象类。
     
         意思就是说这个类有一个``key``属性，这个属性是``str``类型
 
@@ -78,7 +80,8 @@ class SupportsKeyOrdering(ABC):
 
 
 _Template = TypeVar("_Template", bound=SupportsKeyOrdering)
-"""这东西不用管，写类型注释用的，方便理解
+"""
+这东西不用管，写类型注释用的，方便理解
 
 （可以理解为写在类型注释里的一个变量，绑定``SupportsKeyOrdering``的类，传进去什么类型就传出来什么类型）
 
@@ -302,7 +305,7 @@ class OrderedKeyList(list, Iterable[_Template]):
         "返回列表的浅拷贝"
         return OrderedKeyList(self)
     
-    def __deepcopy__(self, memo: dict) -> "OrderedKeyList[_Template]":
+    def __deepcopy__(self, memo: Optional[dict]) -> "OrderedKeyList[_Template]":
         "返回列表的深拷贝"
         return OrderedKeyList([copy.deepcopy(obj, memo) for obj in self])
     

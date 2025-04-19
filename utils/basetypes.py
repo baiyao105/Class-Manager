@@ -23,9 +23,21 @@ if not os.path.isdir("log"):
 class ModifyingError(Exception):"修改出现错误。"
 
 
-class Object(object):
-    "一个基础类"
+class DataObject(object):
 
+    def copy(self):
+        "给自己复制一次，两个对象不会互相影响"
+        return copy.deepcopy(self)
+
+    def __repr__(self):
+        "返回这个对象的表达式"
+        return (f"{self.__class__.__name__}"
+        f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})")
+        # 我个人认为不要把下划线开头的变量输出出来（不过只以一个下划线开头的还得考虑考虑）
+
+
+class Object(DataObject):
+    "一个基础类"
 
     @property
     def uuid(self):
@@ -49,16 +61,7 @@ class Object(object):
         self._uuid = gen_uuid()
 
 
-    def copy(self):
-        "给自己复制一次，两个对象不会互相影响"
-        return copy.deepcopy(self)
-
-    def __repr__(self):
-        "返回这个对象的表达式"
-        return (f"{self.__class__.__name__}"
-        f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})")
-        # 我个人认为不要把下划线开头的变量输出出来（不过只以一个下划线开头的还得考虑考虑）
-
+    
 
 class Base(Logger, Object):
     "工具基层"

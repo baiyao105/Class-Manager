@@ -63,6 +63,7 @@ from   utils.functions     import format_exc_like_java
 from   utils.settings      import SettingsInfo
 from   utils.system        import output_list
 from   utils.basetypes     import Logger, logger
+from   utils.basetypes     import Object, DataObject
 import utils.classdtypes   as ClassDataTypes
 import utils.functions.prompts       as PromptUtils
 
@@ -70,7 +71,6 @@ sys.stdout                        = Base.captured_stdout
 "重定向的标准输出"
 sys.stderr                        = Base.captured_stderr
 "重定向的错误输出"
-
 
 try:
     from utils.login     import login
@@ -121,13 +121,27 @@ else:
         Base.log("W", "memory_profiler模块未安装,相关性能分析功能将被禁用")
 
 
+last_process_time = 0
+"上次处理QCoreApplication.processEvents的时间"
+
+max_process_rate = 120
+"最大处理QCoreApplication.processEvents的频率"
+
+
+def do_nothing():
+    "啥也不干，让程序摸鱼一会"
+    global last_process_time
+    if time.time() - last_process_time > 1 / max_process_rate:
+        last_process_time = time.time()
+        QCoreApplication.processEvents()
 
 
 
 def exception_handler(exc_type: Optional[Type[BaseException]] = None,
                         exc_val: Optional[BaseException] = None,
                         exc_tb: Optional[TracebackType] = None):
-    """捕获未处理的异常并显示错误对话框
+    """
+    捕获未处理的异常并显示错误对话框
     
     用作sys.excepthook的处理函数
     """
@@ -246,12 +260,6 @@ QLoggingCategory.setFilterRules("*.*=true\n*.debug=false\n*.info=false")
 
 
 
-
-
-
-
-
-
 class MyMainWindow(QMainWindow):
     """主应用程序窗口类"""
     def __init__(self):
@@ -283,7 +291,7 @@ class MyMainWindow(QMainWindow):
         self.show()
 
 
-    def closeEvent(self, event:QCloseEvent, tip=True) -> bool:
+    def closeEvent(self, event: QCloseEvent, tip=True) -> bool:
         "处理窗口关闭事件"
         Base.log("I", "主窗口尝试退出", "MyMainWindow")
         self.close_count += 1
@@ -317,7 +325,8 @@ class MyWidget(QWidget):
     "自定义子窗口基类，包含动画效果"
 
     def __init__(self, master: Union["MyMainWindow", "MyWidget"]=None):
-        """初始化
+        """
+        初始化
 
         :param master: 父窗口，默认会浮在父窗口上面
         """
@@ -354,7 +363,8 @@ class MyWidget(QWidget):
                         end_value: Any, 
                         easing_curve: \
                         Union[QEasingCurve, QEasingCurve.Type] = QEasingCurve.Type.OutCubic):
-        """创建通用动画
+        """
+        创建通用动画
         
         Args:
             property_name: 目标属性名
@@ -425,7 +435,7 @@ class MyWidget(QWidget):
             
             # 等待第一阶段动画完成
             while self.closeanimation.state() != QAbstractAnimation.State.Stopped:
-                QCoreApplication.processEvents()
+                do_nothing()
             
             # 第二阶段动画：移出屏幕
             startpoint = QPoint(self.x(), self.y())
@@ -446,7 +456,7 @@ class MyWidget(QWidget):
             
             # 等待第二阶段动画完成
             while self.closeanimation.state() != QAbstractAnimation.State.Stopped:
-                QCoreApplication.processEvents()
+                do_nothing()
             self.hide()
             self.move(startpoint)       # 把窗口移回起点，不然如果下次启动如果没有动画窗口就会卡在屏幕下边
 
@@ -492,7 +502,8 @@ class MyWidget(QWidget):
 
 
     def setTopmost(self, topmost: bool=True):
-        """设置窗口置顶
+        """
+        设置窗口置顶
         
         :param topmost: 是否置顶，默认是
         """
@@ -617,7 +628,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     ###########################################################################
 
     def __init__(self, *args, class_name="测试班级", current_user=default_user, class_key="CLASS_TEST"):
-        """窗口初始化
+        """
+        窗口初始化
 
         :param class_name: 班级名称
         :param current_user: 当前用户
@@ -771,7 +783,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.terminal_locals = {}
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update)
-        self.update_timer.start(100)
+        self.update_timer.start(8)
         self.recent_command_update_timer = QTimer()
         self.recent_command_update_timer.timeout.connect(self.update_recent_command_btns)
         self.recent_command_update_timer.start(300)
@@ -789,6 +801,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                         InfoBarIcon.ERROR if msg_type == "error" else
                         InfoBarIcon.SUCCESS)
             )
+        self.window_info: ClassWindow.WindowInfo = ClassWindow.WindowInfo()
+        "窗口信息"
         self.refresh_hint_widget()
         
 
@@ -1261,7 +1275,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.exit_action_finished = False
             self.going_to_exit.emit()
             while not self.exit_action_finished:
-                QCoreApplication.processEvents()
+                do_nothing()
             self.hide()
             Base.log("I", "执行app.quit()", "MainWindow.closeEvent")
             self.app.quit()
@@ -1270,17 +1284,58 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     ###### 窗口绘制 ######
 
+    class WindowInfo(DataObject):
+        "窗口信息"
+
+        def __init__(self):
+            self.video = ClassWindow.WindowInfo.Video()
+        class Video(DataObject):
+            "视频信息"
+            def __init__(self):
+                self.last_paint_event = ClassWindow.WindowInfo.Video.PaintEventInfo()
+                self.last_update_event = ClassWindow.WindowInfo.Video.UpdateInfo()
+
+            class PaintEventInfo(DataObject):
+                "上一个绘制事件时间的信息"
+                data_reading: float = 0.0
+                "数据处理时间"
+                painter_constructing: float = 0.0
+                "绘制器构造时间"
+                background_dealing: float = 0.0
+                "背景处理时间"
+                pixmap_drawing: float = 0.0
+                "绘制Pixmap耗时"
+                event_accepting: float = 0.0
+                "事件处理耗时"
+                total_time: float = 0.0
+                "绘制事件总耗时"
+
+            class UpdateInfo(DataObject):
+                widget_updating: float = 0.0
+                "更新控件的时间"
+                super: float = 0.0
+                "PySide6处理时间"
+                total_time: float = 0.0
+                "总时间"
+
+        
+
+
+
+
+
+
     def paintEvent(self, event: QPaintEvent):
         """处理窗口绘制事件，渲染背景图像或视频帧"""
-
+        t = time.time()
         if time.time() - self.framerate_update_time >= 1:
             self.framerate = self.framecount
             self.framecount = 0
             self.framerate_update_time = time.time()
         self.framecount += 1
 
-        painter = QPainter(self)
         padding = 15 * self.devicePixelRatio()
+        t2 = time.time()
 
 
         if hasattr(self, "current_video_frame") and self.use_animate_background:
@@ -1291,11 +1346,30 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 shutil_copy("./img/main/default/background.jpg", "./img/main/background.jpg")
 
             pixmap = QPixmap("./img/main/background.jpg")
+        t3 = time.time()
+        
+
+        painter = QPainter(self)
+        t4 = time.time()
+
 
         painter.drawPixmap(-padding, -padding, 
                         self.width() + padding * 2, self.height() + padding * 2, pixmap)
         painter.end()
+        t5 = time.time()
+
         event.accept()
+        t6 = time.time()
+
+        v = self.window_info.video.last_paint_event
+        v.data_reading = t2 - t
+        v.background_dealing = t3 - t2
+        v.painter_constructing = t4 - t3
+        v.pixmap_drawing = t5 - t4
+        v.event_accepting = t6 - t5
+        v.total_time = t6 - t
+
+
 
     @profile()
     def read_video_while_alive(self):
@@ -1366,7 +1440,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Base.log("I", "准备显示按钮", "MainWindow.grid_buttons")
         for b in self.stu_buttons.values():
             b.deleteLater()
-            QCoreApplication.processEvents()
+            do_nothing()
         row = 0
         col = 0
         max_col = (self.scrollArea.width() + 6) // (81 + 6)
@@ -1413,6 +1487,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def update(self):
         "更新界面"
+        t = time.time()
         self.label_2.setText(F"{self.target_class.name}")
         self.label_3.setText(F"{len(self.target_class.students)}")
         self.label_4.setText(F"{self.target_class.owner}")
@@ -1422,7 +1497,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                         str(min(*[float(self.target_class.students[num].score)      
                         for num in self.target_class.students])))
         self.label_7.setText(f"{self.framerate}fps; {self.video_framerate}fps")
-        self.label_8.setText(f"{time.time() - self.create_time:.1f} s")
+        self.label_8.setText(f"{time.time() - self.create_time:.3f} s")
         self.label_9.setText(f"{threading.active_count()}")
         self.label_10.setText(str(round(psutil.Process(os.getpid()).memory_info().rss \
                                 / 1024 / 1024, 1)) + " MB")
@@ -1437,7 +1512,13 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             "中午" if 12 <= time.localtime().tm_hour < 14 else
             "下午" if 14 <= time.localtime().tm_hour < 18 else
             "晚上"))
+        t2 = time.time()
         super().update()
+        t3 = time.time()
+        v = self.window_info.video.last_update_event
+        v.widget_updating = t2 - t
+        v.super = t3 - t2
+        v.total_time = t3 - t
 
 
     def close(self):
@@ -1592,7 +1673,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         t = Thread(target=self._do_exit)
         t.start()
         while t.is_alive():
-            QCoreApplication.processEvents()
+            do_nothing()
         self.exit_action_finished = True
 
 
@@ -1945,7 +2026,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         else:
             try:
                 Base.log("I", "获取一言", "MainWindow._refresh_hint_widget")
-                self.label_23.setText("语录")
+                self.label_23.setText("一言")
                 text = requests.get("https://v1.hitokoto.cn", timeout=0.5).text
                 Base.log("I", f"返回：{text}", "MainWindow._refresh_hint_widget")
                 req = json.loads(text)
@@ -2057,7 +2138,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Thread(target=_load_history, name="HistoryLoader").start()
         self.is_loading_all_history = False
         while not finished:
-            QCoreApplication.processEvents()
+            do_nothing()
         view = ListView(
             self,
             self,
@@ -2315,7 +2396,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 y = int(math.cos(math.radians(i)) * 30 * i / 360 * 4)
                 self.move(orig_x + int(x), orig_y + int(y))
                 time.sleep(0.03)
-                QCoreApplication.processEvents()
+                do_nothing()
             self.move(200, 100)
             
 
@@ -2327,7 +2408,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             for i in range(100):
                 for obj in self.findChildren(QWidget):
                     obj.move(random.randint(0, self.width() // 2), random.randint(0, self.height() // 2))
-                QCoreApplication.processEvents()
+                do_nothing()
                 time.sleep(0.05)
             
             for obj in self.findChildren(QWidget):
@@ -2837,7 +2918,7 @@ class RecoveryPoint:
         Base.log("I", "还原点时间：" + str(self.time), "RecoveryPoint.load_onlydata")
         Base.log("I", "当前用户：" + current_user, "RecoveryPoint.load_onlydata")
         while widget.auto_saving:
-            QCoreApplication.processEvents()
+            do_nothing()
         self.load_onlydata(widget.current_user)
         widget.stop()
         rmtree(widget.save_path)
@@ -2857,7 +2938,7 @@ class RecoveryPoint:
         QMessageBox.information(widget, "恢复成功", "恢复成功，请重新启动程序")
 
         while widget.auto_saving:
-            QCoreApplication.processEvents()
+            do_nothing()
         _copy() # 我就不信保存两次还能失败
         pid = os.getpid()            # 获取当前进程的PID
         os.kill(pid, signal.SIGTERM) # 发送终止信号给当前进程（什么抽象关闭方法）
@@ -3321,7 +3402,7 @@ class SelectTemplateWidget(MyWidget, SelectTemplateWindow.Ui_Form):
         """阻塞调用，返回 (key, title, desc, mod)"""
         self.show()
         while self.result is None:
-            QCoreApplication.processEvents()
+            do_nothing()
         return self.result
 
 class ListView(MyWidget):   # pylint: disable=function-redefined
@@ -3468,12 +3549,12 @@ class ListView(MyWidget):   # pylint: disable=function-redefined
                 except BaseException as unused:    # pylint: disable=broad-exception-caught
                     pass
                 self.update()
-                QCoreApplication.processEvents()
+                do_nothing()
         else:
             self.ready = True
         while hasattr(self, "startanimation_2") and self.startanimation_2.state() != QAbstractAnimation.State.Running:
             self.update()
-            QCoreApplication.processEvents()
+            do_nothing()
         self.str_list = [item[0] for item in self.data]
         self.widget_items = [QListWidgetItem(string) for string in self.str_list]
         self.listWidget.clear()
@@ -3521,7 +3602,7 @@ class ListView(MyWidget):   # pylint: disable=function-redefined
 
         Base.log("D", "等待动画结束", "ListView.init_items")
         while not(all(self.anim_result)): 
-            QCoreApplication.processEvents()
+            do_nothing()
         Base.log("D", f"初始化项目完成，len(anim_result) = {len(self.anim_result)}", "ListView.init_items")
         self.ready = True
     
@@ -3839,7 +3920,7 @@ class MultiSelectWidget(MultiSelectWindow.Ui_Form, MyWidget):
         self.allow_none = allow_none
         self.show()
         while self.select_result is None:
-            QCoreApplication.processEvents()
+            do_nothing()
         Base.log("I", f"多选窗口执行结束，结果：{repr(self.select_result)}", "MultiSelectWidget")
         return self.select_result
 
@@ -4739,7 +4820,7 @@ class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
         "显示按钮的接口"
         for b in self.stu_buttons.values():
             b.destroy()
-            QCoreApplication.processEvents()
+            do_nothing()
         row = 0
         col = 0
         for num, stu in self.target_class.students.items():
@@ -5475,7 +5556,7 @@ for i in range(100):
             finished = True
         Thread(target=_send).start()
         while not finished:
-            QCoreApplication.processEvents()
+            do_nothing()
         self.command_history.append(cmd)
         self.history_index = len(self.command_history) - 1
         self.pushButton.setEnabled(True)
