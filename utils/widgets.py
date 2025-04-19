@@ -1,102 +1,125 @@
 import random
 import time
-from PySide6.QtCore    import Property, QPropertyAnimation, QCoreApplication, Qt, QRectF, QEasingCurve
-from PySide6.QtGui     import QColor, QIcon, QPixmap, QMouseEvent, QPaintEvent, QPainter, QPen
-from PySide6.QtCore    import QPoint, QTimer, Slot, QThreadPool, QThread
+from PySide6.QtCore import (
+    Property,
+    QPropertyAnimation,
+    QCoreApplication,
+    Qt,
+    QRectF,
+    QEasingCurve,
+)
+from PySide6.QtGui import (
+    QColor,
+    QIcon,
+    QPixmap,
+    QMouseEvent,
+    QPaintEvent,
+    QPainter,
+    QPen,
+)
+from PySide6.QtCore import QPoint, QTimer, Slot, QThreadPool, QThread
 from PySide6.QtWidgets import QPushButton, QGraphicsOpacityEffect, QWidget, QMessageBox
 from PySide6.QtWidgets import QListWidget, QMainWindow, QVBoxLayout, QListWidgetItem
 from PySide6.QtWidgets import QMainWindow, QLabel
-from typing            import Union, Tuple, Optional, Callable, List
+from typing import Union, Tuple, Optional, Callable, List
 from utils.classdtypes import Base
 from utils.classdtypes import Student, Group
-from utils.settings    import SettingsInfo
-from qfluentwidgets    import InfoBarIcon, InfoBarPosition, InfoBar
-from utils.functions.sounds   import play_sound
+from utils.settings import SettingsInfo
+from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar
+from utils.functions.sounds import play_sound
+
 
 class ObjectButton(QPushButton):
-        """学生按钮类，用于在界面上显示学生信息的交互按钮"""
+    """学生按钮类，用于在界面上显示学生信息的交互按钮"""
 
-        def _set_color(self, col:QColor):
-            """
-            设置按钮的背景颜色
-            
-            :param col: 要设置的颜色对象
-            """
+    def _set_color(self, col: QColor):
+        """
+        设置按钮的背景颜色
 
-            self.setStyleSheet("""\
+        :param col: 要设置的颜色对象
+        """
+
+        self.setStyleSheet(
+            """\
     QPushButton {
         font: 8pt;
         background-color: rgba(%d, %d, %d, %d);
         border-radius: 4px;
         border: 1px solid rgb(0, 0, 0);
     }
-""" % (col.red(), col.green(), col.blue(), self.opacity))
-            
-        @property
-        def opacity(self):
-            return self._opacity
-        
-        @opacity.setter
-        def opacity(self, opacity: int):
-            self._opacity = opacity
-            self._set_color(self.background_color)
+"""
+            % (col.red(), col.green(), col.blue(), self.opacity)
+        )
 
-        
+    @property
+    def opacity(self):
+        return self._opacity
 
-        color = Property(QColor, fset=_set_color)
+    @opacity.setter
+    def opacity(self, opacity: int):
+        self._opacity = opacity
+        self._set_color(self.background_color)
 
-        def __init__(self, 
-                     text:str, 
-                     parent=None, 
-                     icon:Union[QIcon, QPixmap]=None, 
-                     object:Union[Student, Group]=None):
+    color = Property(QColor, fset=_set_color)
 
-            """
-            初始化学生按钮
-            
-            :param text: 按钮显示的文字
-            :param parent: 父窗口对象
-            :param icon: 按钮图标
-            :param object: 按钮关联的学生或小组对象
-            """
-            if icon is not None:
-                super().__init__(icon=icon, text=text, parent=parent)
-            else:
-                super().__init__(text=text, parent=parent)
-            self.object = object
-            self.anim_border:QPropertyAnimation = None
-            self.background_color = QColor(255, 255, 255)
-            self._opacity = 162
-            self.setStyleSheet(QCoreApplication.translate("Form", """\
+    def __init__(
+        self,
+        text: str,
+        parent=None,
+        icon: Union[QIcon, QPixmap] = None,
+        object: Union[Student, Group] = None,
+    ):
+        """
+        初始化学生按钮
+
+        :param text: 按钮显示的文字
+        :param parent: 父窗口对象
+        :param icon: 按钮图标
+        :param object: 按钮关联的学生或小组对象
+        """
+        if icon is not None:
+            super().__init__(icon=icon, text=text, parent=parent)
+        else:
+            super().__init__(text=text, parent=parent)
+        self.object = object
+        self.anim_border: QPropertyAnimation = None
+        self.background_color = QColor(255, 255, 255)
+        self._opacity = 162
+        self.setStyleSheet(
+            QCoreApplication.translate(
+                "Form",
+                """\
     QPushButton {
         font: 8pt;
         background-color: rgba(255, 255, 255, %d);
         border-radius: 4px;
         border: 1px solid rgb(0, 0, 0);
     }
-""" % self._opacity))
+"""
+                % self._opacity,
+            )
+        )
 
+    def setOpacity(self, opacity: float):
+        op = QGraphicsOpacityEffect()
+        op.setOpacity(opacity)
+        self.setGraphicsEffect(op)
+        self.setAutoFillBackground(True)
 
-        def setOpacity(self, opacity:float):
-            op = QGraphicsOpacityEffect()
-            op.setOpacity(opacity)
-            self.setGraphicsEffect(op)
-            self.setAutoFillBackground(True)
+    def flash(self, start: Tuple[int, int, int], end: Tuple[int, int, int], duration):
+        """
+        创建按钮颜色闪烁动画效果
 
+        :param start: 起始颜色RGB元组
+        :param end: 结束颜色RGB元组
+        :param duration: 动画持续时间(毫秒)
+        """
+        self.anim = QPropertyAnimation(self, b"color")
+        self.anim.setDuration(duration)
+        self.anim.setStartValue(QColor(*start))
+        self.anim.setEndValue(QColor(*end))
+        self.anim.start()
 
-        def flash(self, start:Tuple[int, int, int], end:Tuple[int, int, int], duration):
-            """
-            创建按钮颜色闪烁动画效果
-            
-            :param start: 起始颜色RGB元组
-            :param end: 结束颜色RGB元组
-            :param duration: 动画持续时间(毫秒)
-            """
-            self.anim = QPropertyAnimation(self, b"color")
-            self.anim.setDuration(duration)
-            self.anim.setStartValue(QColor(*start))
-            self.anim.setEndValue(QColor(*end))
-            self.anim.start()
 
 # 进度条动画控件
 class ProgressAnimatedItem(QWidget):
@@ -108,7 +131,7 @@ class ProgressAnimatedItem(QWidget):
         self.setAutoFillBackground(True)
         self._is_selected = False  # 选中状态标志
         self._hovered = False  # 鼠标悬浮状态标志
-    
+
     @Property(QColor)
     def color(self):
         return self._color
@@ -129,13 +152,15 @@ class ProgressAnimatedItem(QWidget):
     def setSelected(self, selected: bool):
         """
         设置控件的选中状态
-        
+
         :param selected: 是否选中
         """
         self._is_selected = selected
         self.update()
 
-    def startProgressAnimation(self, start1, stop1, start2, stop2, duration, curve, loopCount):
+    def startProgressAnimation(
+        self, start1, stop1, start2, stop2, duration, curve, loopCount
+    ):
         self._progress = start1
         self._color = start2
         # 创建 QPropertyAnimation 对象并绑定动画
@@ -155,11 +180,10 @@ class ProgressAnimatedItem(QWidget):
             self._animation2.start()
         self._animation.start()
 
-
     def enterEvent(self, event: QMouseEvent):
         """
         处理鼠标进入控件区域的事件
-        
+
         :param event: 鼠标事件对象
         """
         self._hovered = True
@@ -168,7 +192,7 @@ class ProgressAnimatedItem(QWidget):
     def leaveEvent(self, event: QMouseEvent):
         """
         处理鼠标离开控件区域的事件
-        
+
         :param event: 鼠标事件对象
         """
         self._hovered = False
@@ -177,10 +201,15 @@ class ProgressAnimatedItem(QWidget):
     def paintEvent(self, event: QPaintEvent):
         """
         绘制控件的外观
-        
+
         :param event: 绘制事件对象
         """
-        self._color = QColor(self._color.red(), self._color.green(), self._color.blue(), min(192, self._color.alpha()))
+        self._color = QColor(
+            self._color.red(),
+            self._color.green(),
+            self._color.blue(),
+            min(192, self._color.alpha()),
+        )
         painter = QPainter(self)
         rect = self.rect()
 
@@ -209,17 +238,19 @@ class ProgressAnimatedListWidgetItem(QListWidgetItem):
         super().__init__(text)
         self.animated_item = ProgressAnimatedItem(text)
 
-    def startProgressAnimation(self, 
-                               startprogress: float, 
-                               stopprogress: float, 
-                               startcolor: QColor = QColor(100, 255, 100, 127), 
-                               endcolor: Optional[QColor] = None,
-                               duration: int = 1500, 
-                               curve: QEasingCurve = QEasingCurve.Type.OutCubic, 
-                               loopCount: int = 1):
+    def startProgressAnimation(
+        self,
+        startprogress: float,
+        stopprogress: float,
+        startcolor: QColor = QColor(100, 255, 100, 127),
+        endcolor: Optional[QColor] = None,
+        duration: int = 1500,
+        curve: QEasingCurve = QEasingCurve.Type.OutCubic,
+        loopCount: int = 1,
+    ):
         """
         启动进度条动画效果
-        
+
         :param startprogress: 起始进度值(0.0-1.0)
         :param stopprogress: 结束进度值(0.0-1.0)
         :param startcolor: 起始颜色
@@ -228,7 +259,15 @@ class ProgressAnimatedListWidgetItem(QListWidgetItem):
         :param curve: 动画缓动曲线
         :param loopCount: 动画循环次数
         """
-        self.animated_item.startProgressAnimation(startprogress, stopprogress, startcolor, endcolor, duration, curve, loopCount)
+        self.animated_item.startProgressAnimation(
+            startprogress,
+            stopprogress,
+            startcolor,
+            endcolor,
+            duration,
+            curve,
+            loopCount,
+        )
 
     def getWidget(self):
         return self.animated_item
@@ -238,15 +277,6 @@ class ProgressAnimatedListWidgetItem(QListWidgetItem):
         self.animated_item.setSelected(selected)
 
 
-class QListWidget(QListWidget):
-    def addItem(self, item: Union[ProgressAnimatedListWidgetItem, QListWidgetItem]):
-        super().addItem(item)
-        if isinstance(item, ProgressAnimatedListWidgetItem):
-            widget_item = item.getWidget()
-            self.setItemWidget(item, widget_item)
-
-
-        
 class ProgressAnimationTest(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -265,7 +295,19 @@ class ProgressAnimationTest(QMainWindow):
             if random.choice([True, False]):
                 item = ProgressAnimatedListWidgetItem(text)
                 self.list_widget.addItem(item)
-                item.startProgressAnimation(startprogress=random.randint(0, 1000) / 1000, stopprogress=random.randint(0, 1000) / 1000, startcolor=QColor(random.randint(160, 255), random.randint(160, 255), random.randint(160, 255), 127), duration=random.randint(1000, 5000), curve=QEasingCurve.Type.OutExpo, loopCount=1)
+                item.startProgressAnimation(
+                    startprogress=random.randint(0, 1000) / 1000,
+                    stopprogress=random.randint(0, 1000) / 1000,
+                    startcolor=QColor(
+                        random.randint(160, 255),
+                        random.randint(160, 255),
+                        random.randint(160, 255),
+                        127,
+                    ),
+                    duration=random.randint(1000, 5000),
+                    curve=QEasingCurve.Type.OutExpo,
+                    loopCount=1,
+                )
 
         # 双击事件
         self.list_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
@@ -275,31 +317,37 @@ class ProgressAnimationTest(QMainWindow):
 
     def on_item_double_clicked(self, item: QListWidgetItem):
         text = item.text()
-        QMessageBox.information(self, "选中项目", f"选中{text}，索引：{self.list_widget.row(item)}")
+        QMessageBox.information(
+            self, "选中项目", f"选中{text}，索引：{self.list_widget.row(item)}"
+        )
+
 
 from qfluentwidgets import InfoBar, InfoBarPosition
 
+
 class SideNotice:
     """侧边栏通知类，用于在界面边缘显示临时通知信息"""
+
     total = 0
     current = 0
-    waiting: int = 0 
+    waiting: int = 0
     showing: int = 0
-    
 
-    def __init__(self, 
-                 title:         str                                      = "提示",
-                 content:       str                                      = "这是一个提示", 
-                 master:        Optional[Union[QMainWindow, QWidget]]    = None,
-                 icon:          Optional[Union[InfoBarIcon, QIcon, str]] = None, 
-                 sound:         Optional[str]                            = None, 
-                 duration:      int                                      = 5000, 
-                 closeable:     bool                                     = True, 
-                 click_command: Optional[Callable]                       = None,
-                 further_info:  str                                      = "该提示没有详细信息。"):
+    def __init__(
+        self,
+        title: str = "提示",
+        content: str = "这是一个提示",
+        master: Optional[Union[QMainWindow, QWidget]] = None,
+        icon: Optional[Union[InfoBarIcon, QIcon, str]] = None,
+        sound: Optional[str] = None,
+        duration: int = 5000,
+        closeable: bool = True,
+        click_command: Optional[Callable] = None,
+        further_info: str = "该提示没有详细信息。",
+    ):
         """
         初始化侧边栏通知
-        
+
         :param text: 通知显示的文本内容
         :param master: 父窗口对象
         :param icon: 通知图标
@@ -308,7 +356,7 @@ class SideNotice:
         :param closeable: 是否允许用户关闭通知
         :param click_command: 点击通知时的回调函数
         """
-        
+
         self.index = SideNotice.total
         self.slot = -1
         SideNotice.total += 1
@@ -326,22 +374,24 @@ class SideNotice:
         self.waiting += 1
         self.create_time = time.time()
 
-
     def show(self):
         self.waiting -= 1
         self.showing += 1
+
         def _decrease():
             self.showing -= 1
+
         QTimer.singleShot(self.duration + 200, _decrease)
-        infobar = InfoBar.new( 
-                    self.icon or InfoBarIcon.INFORMATION, 
-                    self.title, 
-                    self.content, 
-                    Qt.Horizontal, 
-                    self.closeable, 
-                    self.duration,
-                    InfoBarPosition.BOTTOM_RIGHT, 
-                    self.master)
+        infobar = InfoBar.new(
+            self.icon or InfoBarIcon.INFORMATION,
+            self.title,
+            self.content,
+            Qt.Horizontal,
+            self.closeable,
+            self.duration,
+            InfoBarPosition.BOTTOM_RIGHT,
+            self.master,
+        )
         # self.infobar.contentLabel.setWordWrap(True)
         # self.infobar.contentLabel.setStyleSheet("color: black; font-size: 12px; padding: 0px 0px 0px 0px;")
         # self.infobar.titleLabel.setStyleSheet("color: black; font-size: 14px; padding: 0px 0px 0px 0px;")
@@ -350,8 +400,6 @@ class SideNotice:
         if self.sound:
             play_sound(self.sound)
         infobar.closeButton.clicked.connect(self.closebutton_clicked)
-
-
 
     def closebutton_clicked(self):
         if self.click_command:

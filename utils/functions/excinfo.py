@@ -1,9 +1,10 @@
 import inspect
 from typing import List, Union, Callable
 
+
 def get_function_namespace(func) -> str:
     """获取函数的命名空间
-    
+
     :param func: 函数对象
     :return: 函数的命名空间字符串
     """
@@ -11,33 +12,44 @@ def get_function_namespace(func) -> str:
     if not hasattr(func, "__module__"):
         try:
             return func.__qualname__
-        except BaseException as unused:    # pylint: disable=broad-exception-caught
+        except BaseException as unused:  # pylint: disable=broad-exception-caught
             try:
                 return func.__name__
-            except BaseException as unused:    # pylint: disable=broad-exception-caught, redefined-outer-name
+            except (
+                BaseException
+            ) as unused:  # pylint: disable=broad-exception-caught, redefined-outer-name
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
                 elif isinstance(func, classmethod):
                     return str(func.__func__.__qualname__)
                 try:
                     return func.__class__.__qualname__
-                except BaseException as unused:    # pylint: disable=broad-exception-caught, redefined-outer-name
-                    return func.__class__.__name__            
+                except (
+                    BaseException
+                ) as unused:  # pylint: disable=broad-exception-caught, redefined-outer-name
+                    return func.__class__.__name__
     if module is None:
-        module_name = func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        module_name = (
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        )
     else:
         module_name = module.__name__
 
     return f"{module_name}.{func.__qualname__}"
 
+
 def format_exc_like_java(exc: Exception) -> List[str]:
     "不是我做这东西有啥用啊"
-    result = [f"{get_function_namespace(exc.__class__)}: " + (str(exc) if str(exc).strip() else "no further information"), "Stacktrace:"]
+    result = [
+        f"{get_function_namespace(exc.__class__)}: "
+        + (str(exc) if str(exc).strip() else "no further information"),
+        "Stacktrace:",
+    ]
     tb = exc.__traceback__
     while tb is not None:
         frame = tb.tb_frame
         filename = frame.f_code.co_filename
-        filename_strip = (filename)
+        filename_strip = filename
         lineno = tb.tb_lineno
         funcname = frame.f_code.co_name
         _locals = frame.f_locals.copy()
@@ -66,7 +78,9 @@ def get_function_module(func: Union[object, Callable]) -> str:
     "获取函数的模块"
     module = inspect.getmodule(func)
     if module is None:
-        module_name = func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        module_name = (
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__
+        )
     else:
         module_name = module.__name__
     return module_name
