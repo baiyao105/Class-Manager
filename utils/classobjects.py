@@ -44,7 +44,7 @@ from utils.classdtypes import (
     AttendanceInfo,
     DayRecord,
     History,
-    ClassObj as OrigClassObj,
+    ClassDataObj as OrigClassObj,
     HomeworkRule,
     dummy_student,
 )
@@ -97,9 +97,6 @@ except ImportError as unused:  # pylint: disable=unused-variable
 
 ctrlc_times = 0  # pylint: disable=invalid-name
 """Ctrl+C按下计数器"""
-
-sys.stdout = Base.captured_stdout
-sys.stderr = Base.captured_stderr
 
 
 def sigint_handler(sigval: Optional[int], frame: Optional[FrameType]):

@@ -17,11 +17,11 @@ class SettingsInfo:
 
         :param kwargs: 键值对形式的初始设置参数
         """
-        self.reset()
+        self.reset_settings()
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    def reset(self) -> "SettingsInfo":
+    def reset_settings(self) -> "SettingsInfo":
         """重置所有设置参数为默认值
 
         :return: 重置后的设置信息对象
@@ -96,7 +96,7 @@ class SettingsInfo:
             self.__dict__.update(obj.get_dict())
         except Exception as e:
             Base.log_exc("加载设置失败，将会返回默认", "SettingsInfo.load_from", exc=e)
-            self.reset()
+            self.reset_settings()
             self.save_to(file_path)
         return self
 

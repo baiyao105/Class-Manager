@@ -1,29 +1,10 @@
 import random
 import time
-from PySide6.QtCore import (
-    Property,
-    QPropertyAnimation,
-    QCoreApplication,
-    Qt,
-    QRectF,
-    QEasingCurve,
-)
-from PySide6.QtGui import (
-    QColor,
-    QIcon,
-    QPixmap,
-    QMouseEvent,
-    QPaintEvent,
-    QPainter,
-    QPen,
-)
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QPushButton, QGraphicsOpacityEffect, QWidget, QMessageBox
-from PySide6.QtWidgets import QListWidget, QMainWindow, QVBoxLayout, QListWidgetItem
-from PySide6.QtWidgets import QMainWindow
 from typing import Union, Tuple, Optional, Callable
-from utils.classdtypes import Student, Group
 from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar
+
+from .Qt import *
+from utils.classdtypes import Student, Group
 from utils.functions.sounds import play_sound
 
 

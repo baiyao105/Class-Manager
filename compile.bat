@@ -211,8 +211,8 @@ set cmd=pyinstaller main.py -w ^
         --contents-directory "." ^
         --add-data           "audio;audio" ^
         --add-data           "img;img" ^
-        --add-data           "ui;ui" ^
         --add-data           "utils;utils" ^
+        --add-data           "widgets;widgets" ^
         --add-data           "LICENSE;." ^
         --add-data           "src;src" ^
         --add-data           "version;." ^
@@ -263,8 +263,8 @@ set cmd=python -m nuitka ^
         --enable-plugin=pyside6 ^
         --include-data-dir=audio=./audio ^
         --include-data-dir=img=./img ^
-        --include-data-dir=ui=./ui ^
         --include-data-dir=utils=./utils ^
+        --include-data-dir=widgets=./widgets ^
         --include-data-dir=src=./src ^
         --include-data-file=version=./version ^
         --include-data-file=LICENSE=./LICENSE ^

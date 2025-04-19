@@ -110,7 +110,7 @@ class UserDataBase(Object):
         last_reset: Optional[float] = None,
         history_data: Optional[Dict[float, History]] = None,
         classes: Optional[Dict[str, Class]] = None,
-        templates: Optional[Dict[str, "ClassObj.ScoreModificationTemplate"]] = None,
+        templates: Optional[Dict[str, "ClassDataObj.ScoreModificationTemplate"]] = None,
         achievements: Optional[Dict[str, AchievementTemplate]] = None,
         last_start_time: Optional[float] = None,
         weekday_record: Optional[List[DayRecord]] = None,
@@ -155,7 +155,7 @@ class UserDataBase(Object):
         last_reset: Optional[float] = None,
         history_data: Optional[Dict[float, History]] = None,
         classes: Optional[Dict[str, Class]] = None,
-        templates: Optional[Dict[str, "ClassObj.ScoreModificationTemplate"]] = None,
+        templates: Optional[Dict[str, "ClassDataObj.ScoreModificationTemplate"]] = None,
         achievements: Optional[Dict[str, AchievementTemplate]] = None,
         last_start_time: Optional[float] = None,
         weekday_record: Optional[List[DayRecord]] = None,
@@ -672,7 +672,7 @@ class Chunk:
                 DataObject.load_tasks.remove(_id)
                 return obj
 
-        ClassObj.LoadUUID = _load_object
+        ClassDataObj.LoadUUID = _load_object
         if history_uuid == "Current":
             path = os.path.join(self.path, "Current")
         else:
@@ -726,11 +726,11 @@ class Chunk:
         )
         classes = {}
         for _, class_uuid in class_uuids:
-            _class: Class = ClassObj.LoadUUID(class_uuid, Class)
+            _class: Class = ClassDataObj.LoadUUID(class_uuid, Class)
             classes[_class.key] = _class
 
         for _, weekday_uuid in weekday_uuids:
-            weekday: DayRecord = ClassObj.LoadUUID(weekday_uuid, DayRecord)
+            weekday: DayRecord = ClassDataObj.LoadUUID(weekday_uuid, DayRecord)
             self.bound_db.weekday_record.append(weekday)
 
         history = History(
@@ -782,7 +782,7 @@ class Chunk:
 
         for _, template_uuid in template_uuids:
             templates.append(
-                ClassObj.LoadUUID(template_uuid, ScoreModificationTemplate)
+                ClassDataObj.LoadUUID(template_uuid, ScoreModificationTemplate)
             )
 
         achievement_uuids = json.load(
@@ -794,7 +794,7 @@ class Chunk:
         )
         for _, achievement_uuid in achievement_uuids:
             achievements.append(
-                ClassObj.LoadUUID(achievement_uuid, AchievementTemplate)
+                ClassDataObj.LoadUUID(achievement_uuid, AchievementTemplate)
             )
 
         info = json.load(
