@@ -1,7 +1,7 @@
 from typing import Literal
 
 
-app_style: Literal['windowsvista', 'Windows', 'Fusion', 'windows11'] = 'windowsvista'
+app_style: Literal["windowsvista", "Windows", "Fusion", "windows11"] = "windowsvista"
 "软件的样式"
 
 
