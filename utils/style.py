@@ -168,6 +168,8 @@ class BackgroundScheme:
     def _run(self):
         self._running = True
         last_frame = None
+        target_fps = 30  # 目标帧率
+        frame_interval = 1.0 / target_fps
         while self._running:
             for bg in self.backgrounds:
                 first_frame_time = time.time()
@@ -179,29 +181,39 @@ class BackgroundScheme:
                 bg_array_cache = bg.background.array.copy()
                 # fade_in阶段
                 while time.time() - first_frame_time < bg.fade_in:
-                    progress = (time.time() - first_frame_time) / bg.fade_in
+                    frame_start_time = time.time()
+                    progress = (frame_start_time - first_frame_time) / bg.fade_in
                     self._array = (last_frame * (1 - progress)) + (bg_array_cache * progress)
                     arr_uint8 = self._array.astype(np.uint8)
                     now = time.time()
-                    if (prev_array is None or not np.array_equal(arr_uint8, prev_array)) and (now - prev_emit_time > 0.033):
-                        self._emit_frame_ready(arr_to_img(arr_uint8))
-                        prev_array = arr_uint8.copy()
-                        prev_emit_time = now
-                    time.sleep(0.01)
+                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
+                        if now - prev_emit_time >= frame_interval:
+                            self._emit_frame_ready(arr_to_img(arr_uint8))
+                            prev_array = arr_uint8.copy()
+                            prev_emit_time = now
+                    frame_end_time = time.time()
+                    sleep_time = frame_interval - (frame_end_time - frame_start_time)
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
                 show_time = time.time()
                 prev_array = None
                 prev_emit_time = 0
                 bg_array_cache = bg.background.array.copy()
                 # duration阶段
                 while time.time() - show_time < bg.duration:
+                    frame_start_time = time.time()
                     self._array = bg_array_cache
                     arr_uint8 = self._array.astype(np.uint8)
                     now = time.time()
-                    if (prev_array is None or not np.array_equal(arr_uint8, prev_array)) and (now - prev_emit_time > 0.033):
-                        self._emit_frame_ready(arr_to_img(arr_uint8))
-                        prev_array = arr_uint8.copy()
-                        prev_emit_time = now
-                    time.sleep(0.01)
+                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
+                        if now - prev_emit_time >= frame_interval:
+                            self._emit_frame_ready(arr_to_img(arr_uint8))
+                            prev_array = arr_uint8.copy()
+                            prev_emit_time = now
+                    frame_end_time = time.time()
+                    sleep_time = frame_interval - (frame_end_time - frame_start_time)
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
                 bg.background.stop()
                 last_frame = bg_array_cache
 
