@@ -2297,7 +2297,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 Base.log("I", f"返回：{text}", "MainWindow._refresh_hint_widget")
                 req = json.loads(text)
                 text = req["hitokoto"] + "\n\t- " + req["from"]
-                self.label_22.setText(text + ("\n（点击刷新）" if tip_refresh else ""))
+                self.label_22.setText(text)
             except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
                 Base.log(
                     "W",
@@ -2310,9 +2310,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                         for l in f.read().splitlines()
                         if ((not l.startswith("#")) and l.strip())
                     ]
-                self.label_23.setText("小提示")
+                self.label_23.setText("Tip:")
                 self.label_22.setText(
-                    random.choice(hints) + ("\n（点击刷新）" if tip_refresh else "")
+                    random.choice(hints)
                 )
 
     @Slot()
