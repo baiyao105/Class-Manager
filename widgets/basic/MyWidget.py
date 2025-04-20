@@ -139,7 +139,7 @@ class MyWidget(QWidget):
             self.closeanimation_1.start()
             close_anim_loop_1 = QEventLoop()
             self.closeanimation_1.finished.connect(close_anim_loop_1.quit)
-            close_anim_loop_1.exec(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+            close_anim_loop_1.exec()
             # 防止他们在窗口还在执行动画就又按了一次关闭按钮
             
             # 第二阶段动画：移出屏幕
@@ -158,7 +158,7 @@ class MyWidget(QWidget):
     
             close_anim_loop_2 = QEventLoop()
             self.closeanimation_2.finished.connect(close_anim_loop_2.quit)
-            close_anim_loop_2.exec(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+            close_anim_loop_2.exec()
 
             Base.log("D", "关闭动画展示完成，关闭窗口", "MyWidget.showCloseAnimation")
             self.hide()
