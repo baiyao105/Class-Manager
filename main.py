@@ -2592,43 +2592,87 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         tip_refresh = "hint_widget_tip_refresh" not in runtime_flags
         if tip_refresh:
             runtime_flags["hint_widget_tip_refresh"] = True
-        if mode < 20:
-            with open("utils/data/hints.txt", encoding="utf-8") as f:
-                hints = [
-                    l.replace("^#", "#")
-                    for l in f.read().splitlines()
-                    if ((not l.startswith("#")) and l.strip())
-                ]
-            self.label_23.setText("小提示")
-            self.label_22.setText(
-                random.choice(hints) + ("\n（点击刷新）" if tip_refresh else "")
-            )
 
-        else:
-            try:
-                Base.log("I", "获取一言", "MainWindow._refresh_hint_widget")
-                self.label_23.setText("一言")
-                text = requests.get("https://v1.hitokoto.cn", timeout=0.5).text
-                Base.log("I", f"返回：{text}", "MainWindow._refresh_hint_widget")
-                req = json.loads(text)
-                text = req["hitokoto"] + "\n\t- " + req["from"]
-                self.label_22.setText(text + ("\n（点击刷新）" if tip_refresh else ""))
-            except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
-                Base.log(
-                    "W",
-                    f"获取一言失败，错误类型：{e.__class__.__name__}",
-                    "MainWindow.refresh_hints",
-                )
+        fade_out = QPropertyAnimation(self.label_22, b"opacity")
+        fade_out.setDuration(500)
+        fade_out.setStartValue(1.0)
+        fade_out.setEndValue(0.0)
+        fade_out.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        fade_in = QPropertyAnimation(self.label_22, b"opacity")
+        fade_in.setDuration(500)
+        fade_in.setStartValue(0.0)
+        fade_in.setEndValue(1.0)
+        fade_in.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        self.hint_animation_group = QSequentialAnimationGroup()
+        self.hint_animation_group.addAnimation(fade_out)
+
+        def update_text():
+            if mode < 20:
                 with open("utils/data/hints.txt", encoding="utf-8") as f:
                     hints = [
                         l.replace("^#", "#")
                         for l in f.read().splitlines()
                         if ((not l.startswith("#")) and l.strip())
                     ]
-                self.label_23.setText("小提示")
-                self.label_22.setText(
-                    random.choice(hints) + ("\n（点击刷新）" if tip_refresh else "")
-                )
+                self.label_23.setText("Tip:")
+                text = random.choice(hints) + ("\n（点击刷新）" if tip_refresh else "")
+            else:
+                try:
+                    Base.log("I", "获取一言", "MainWindow._refresh_hint_widget")
+                    self.label_23.setText("一言:")
+                    text = requests.get("https://v1.hitokoto.cn", timeout=0.5).text
+                    Base.log("I", f"返回：{text}", "MainWindow._refresh_hint_widget")
+                    req = json.loads(text)
+                    text = req["hitokoto"] + "\n\t- " + req["from"]
+                except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+                    Base.log(
+                        "W",
+                        f"获取一言失败，错误类型：{e.__class__.__name__}",
+                        "MainWindow.refresh_hints",
+                    )
+                    with open("utils/data/hints.txt", encoding="utf-8") as f:
+                        hints = [
+                            l.replace("^#", "#")
+                            for l in f.read().splitlines()
+                            if ((not l.startswith("#")) and l.strip())
+                        ]
+                    self.label_23.setText("Tip:")
+                    text = random.choice(hints) + ("\n（点击刷新）" if tip_refresh else "")
+
+            font = self.label_22.font()
+            metrics = QFontMetrics(font)
+            available_width = self.label_22.width() - 10  # 减小边距
+            available_height = self.label_22.height() - 10
+            
+            # 从较大的字体大小开始调整
+            current_size = 14  # 起始字体大小
+            while current_size > 8:  # 增加最小字体大小
+                font.setPointSize(current_size)
+                metrics = QFontMetrics(font)
+                text_rect = metrics.boundingRect(0, 0, available_width, available_height, Qt.TextFlag.TextWordWrap, text)
+                if text_rect.width() <= available_width and text_rect.height() <= available_height:
+                    break
+                current_size -= 1
+            
+            self.label_22.setFont(font)
+            self.label_22.setWordWrap(True)
+            self.label_22.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)  # 左对齐
+            self.label_22.setText(text)
+
+        # 连接动画完成信号到文本更新函数
+        fade_out.finished.connect(update_text)
+        # 添加淡入动画
+        self.hint_animation_group.addAnimation(fade_in)
+        # 启动动画组
+        self.hint_animation_group.start()
+
+        # 设置10秒自动刷新定时器
+        if not hasattr(self, 'hint_refresh_timer'):
+            self.hint_refresh_timer = QTimer(self)
+            self.hint_refresh_timer.timeout.connect(lambda: self.refresh_hint_widget(0))
+            self.hint_refresh_timer.start(15000)  # 15秒
 
     @Slot()
     @as_command("open_setting_window", "设置窗口")
