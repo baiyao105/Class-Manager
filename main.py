@@ -1485,18 +1485,12 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def update_recent_command_btns(self):
         """更新最近使用命令按钮"""
-        try:
-            self.PushButton_10.clicked.disconnect(None)
-        except RuntimeError:
-            pass
-        try:
-            self.PushButton_11.clicked.disconnect(None)
-        except RuntimeError:
-            pass
-        try:
-            self.PushButton_12.clicked.disconnect(None)
-        except RuntimeError:
-            pass
+        # 批量断开信号槽连接
+        for btn in [self.PushButton_10, self.PushButton_11, self.PushButton_12]:
+            try:
+                btn.clicked.disconnect()
+            except (RuntimeError, TypeError):
+                pass
         self.PushButton_10.setText(
             lately_used_commands[-1].name if lately_used_commands else "暂无"
         )
@@ -3382,17 +3376,18 @@ class UpdateThread(QThread):
     ):
         "初始化"
         super().__init__(parent=parent)
-        Base.log("I", "更新线程初始化完成", "UpdateThread.__init__")
         self.mainwindow = mainwindow
         self.running = True
         self.stopped = False
         self.last_day_time = 0
         self.button_shown = False
         self.button_state_last_change = time.time()
-        self.last_student_list = [s for s in self.mainwindow.target_class.students]
-        self.last_group_list = [g for g in self.mainwindow.target_class.groups]
+        # 延迟初始化列表
+        self.last_student_list = []
+        self.last_group_list = []
         self.lastest_score: Dict[int, float] = {}
         self.lastest_grp_score: Dict[str, float] = {}
+        Base.log("I", "更新线程初始化完成", "UpdateThread.__init__")
 
     def update_stu_btns(self):
         "更新主窗口的学生按钮"

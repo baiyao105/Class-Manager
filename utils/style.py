@@ -2,10 +2,11 @@ import cv2
 import time
 import numpy as np
 from typing import Literal, Optional, Iterable
-from threading import Thread
+from threading import Thread, Lock
 from utils.functions.decorators import mat_to_pixmap
-from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtGui import QPixmap, QImage, QOpenGLContext, QSurfaceFormat
 from PySide6.QtCore import QEasingCurve
+from PySide6.QtOpenGL import QOpenGLBuffer, QOpenGLFramebufferObject
 
 
 class Background:
@@ -17,6 +18,7 @@ class Background:
         path: str,
         max_fr: Optional[int] = None,
         loop: bool = True,
+        max_size: Optional[tuple[int, int]] = None,
     ):
         self.type = type
         self.path = path
@@ -25,12 +27,13 @@ class Background:
         self._image = None
         self._frame_ready_callbacks = []
         self._reading = False
+        self.max_size = max_size
+        self._cap = None
         if self.type == "image":
-            self._image = mat_to_pixmap(cv2.imread(self.path))
-        elif self.type == "video":
-            _cap = cv2.VideoCapture(self.path)
-            self._image = mat_to_pixmap(_cap.read()[1])
-            _cap.release()
+            img = cv2.imread(self.path)
+            if self.max_size:
+                img = cv2.resize(img, self.max_size, interpolation=cv2.INTER_LINEAR)
+            self._image = mat_to_pixmap(img)
 
     def add_frame_ready_callback(self, callback):
         self._frame_ready_callbacks.append(callback)
@@ -70,16 +73,29 @@ class Background:
 
     def _start(self):
         if self.type == "video":
+            if not self._cap:
+                self._cap = cv2.VideoCapture(self.path)
+                if not self._cap.isOpened():
+                    return
+                ret, frame = self._cap.read()
+                if ret and self.max_size:
+                    frame = cv2.resize(frame, self.max_size, interpolation=cv2.INTER_LINEAR)
+                if ret:
+                    h, w, _ = frame.shape
+                    self._image = QImage(frame.data, w, h, 3 * w, QImage.Format.Format_BGR888)
+            
             self._reading = True
-            self._cap = cv2.VideoCapture(self.path)
             last_frame_time = time.time()
-            video_fps = self._cap.get(cv2.CAP_PROP_FPS)
-            interval = 1 / (min(self.max_fr, video_fps) if self.max_fr and video_fps else (video_fps if video_fps else 25))
+            video_fps = self._cap.get(cv2.CAP_PROP_FPS) if self._cap else 25
+            use_fps_limit = self.max_fr is not None
+            interval = 1 / min(self.max_fr, video_fps) if use_fps_limit else 1 / video_fps
+            
             while self._reading:
                 now = time.time()
-                if now - last_frame_time < interval:
+                if use_fps_limit and now - last_frame_time < interval:
                     time.sleep(interval - (now - last_frame_time))
                 last_frame_time = time.time()
+                
                 ret, frame = self._cap.read()
                 if not ret:
                     if not self.loop:
@@ -87,15 +103,27 @@ class Background:
                         break
                     self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = self._cap.read()
+                    if not ret:
+                        break
+                        
+                if self.max_size:
+                    frame = cv2.resize(frame, self.max_size, interpolation=cv2.INTER_LINEAR)
                 h, w, _ = frame.shape
                 img = QImage(frame.data, w, h, 3 * w, QImage.Format.Format_BGR888)
                 self._image = img
-                # 只在帧内容变化时更新缓存
-                arr = np.array(img.convertToFormat(QImage.Format.Format_RGB888).copy())
-                if not hasattr(self, "_array_cache") or not np.array_equal(self._array_cache, arr):
-                    self._array_cache = arr
+                
+                if not hasattr(self, "_array_cache"):
+                    self._array_cache = np.array(img.bits()).reshape(h, w, 3).copy()
                     self._emit_frame_ready(img)
-            self._cap.release()
+                else:
+                    new_arr = np.array(img.bits()).reshape(h, w, 3)
+                    if not np.array_equal(self._array_cache, new_arr):
+                        self._array_cache = new_arr.copy()
+                        self._emit_frame_ready(img)
+            
+            if self._cap:
+                self._cap.release()
+                self._cap = None
 
     def start(self):
         if self.type == "video":
@@ -143,6 +171,17 @@ class BackgroundScheme:
         self._running = False
         self._current_bg = None
         self._frame_ready_callbacks = []
+        self._buffer_lock = Lock()
+        self._front_buffer = None
+        self._back_buffer = None
+        
+        # 初始化OpenGL上下文和帧缓冲对象
+        self._gl_context = QOpenGLContext()
+        format = QSurfaceFormat()
+        format.setVersion(3, 3)
+        format.setProfile(QSurfaceFormat.CoreProfile)
+        self._gl_context.setFormat(format)
+        self._fbo = None
 
     def add_frame_ready_callback(self, callback):
         self._frame_ready_callbacks.append(callback)
@@ -168,54 +207,71 @@ class BackgroundScheme:
     def _run(self):
         self._running = True
         last_frame = None
-        target_fps = 30  # 目标帧率
+        last_update_time = time.time()
+        target_fps = 60  # 目标帧率
         frame_interval = 1.0 / target_fps
+        
+        # 初始化双缓冲
+        if not self._front_buffer or not self._back_buffer:
+            for bg in self.backgrounds:
+                shape = bg.background.array.shape
+                self._front_buffer = np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
+                self._back_buffer = np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
+                break
+        
         while self._running:
             for bg in self.backgrounds:
-                first_frame_time = time.time()
-                last_frame = (bg.background.array * 0 if last_frame is None else last_frame)
+                if last_frame is None:
+                    last_frame = np.zeros_like(self._front_buffer)
+                
                 bg.background.add_frame_ready_callback(self._emit_frame_ready)
                 bg.background.start()
-                prev_array = None
-                prev_emit_time = 0
-                bg_array_cache = bg.background.array.copy()
-                # fade_in阶段
-                while time.time() - first_frame_time < bg.fade_in:
-                    frame_start_time = time.time()
-                    progress = (frame_start_time - first_frame_time) / bg.fade_in
-                    self._array = (last_frame * (1 - progress)) + (bg_array_cache * progress)
-                    arr_uint8 = self._array.astype(np.uint8)
-                    now = time.time()
-                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
-                        if now - prev_emit_time >= frame_interval:
-                            self._emit_frame_ready(arr_to_img(arr_uint8))
-                            prev_array = arr_uint8.copy()
-                            prev_emit_time = now
-                    frame_end_time = time.time()
-                    sleep_time = frame_interval - (frame_end_time - frame_start_time)
-                    if sleep_time > 0:
-                        time.sleep(sleep_time)
-                show_time = time.time()
-                prev_array = None
-                prev_emit_time = 0
-                bg_array_cache = bg.background.array.copy()
+                
+                # 预加载背景
+                if not hasattr(bg, '_cached_array'):
+                    with self._buffer_lock:
+                        bg._cached_array = cv2.resize(bg.background.array, None, fx=0.5, fy=0.5,
+                                                    interpolation=cv2.INTER_LINEAR)
+                bg_array_cache = bg._cached_array
+                
+                # fade_in阶段优化
+                fade_start = time.time()
+                while self._running and time.time() - fade_start < bg.fade_in:
+                    current_time = time.time()
+                    elapsed = current_time - last_update_time
+                    
+                    if elapsed >= frame_interval:
+                        progress = min((current_time - fade_start) / bg.fade_in, 1.0)
+                        
+                        # OpenGL图像混合
+                        with self._buffer_lock:
+                            cv2.addWeighted(last_frame, 1 - progress, bg_array_cache, progress, 0, self._back_buffer)
+                            self._back_buffer, self._front_buffer = self._front_buffer, self._back_buffer
+                            self._array = self._front_buffer
+                            self._emit_frame_ready(arr_to_img(self._array))
+                        
+                        last_update_time = current_time
+                    else:
+                        time.sleep(max(0, frame_interval - elapsed))
+                
                 # duration阶段
-                while time.time() - show_time < bg.duration:
-                    frame_start_time = time.time()
-                    self._array = bg_array_cache
-                    arr_uint8 = self._array.astype(np.uint8)
-                    now = time.time()
-                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
-                        if now - prev_emit_time >= frame_interval:
-                            self._emit_frame_ready(arr_to_img(arr_uint8))
-                            prev_array = arr_uint8.copy()
-                            prev_emit_time = now
-                    frame_end_time = time.time()
-                    sleep_time = frame_interval - (frame_end_time - frame_start_time)
-                    if sleep_time > 0:
-                        time.sleep(sleep_time)
+                if bg.duration > 0:
+                    duration_start = time.time()
+                    with self._buffer_lock:
+                        self._array = bg_array_cache.copy()
+                    
+                    while self._running and time.time() - duration_start < bg.duration:
+                        current_time = time.time()
+                        elapsed = current_time - last_update_time
+                        
+                        if elapsed >= frame_interval:
+                            self._emit_frame_ready(arr_to_img(self._array))
+                            last_update_time = current_time
+                        else:
+                            time.sleep(max(0, frame_interval - elapsed))
+                
                 bg.background.stop()
-                last_frame = bg_array_cache
+                last_frame = bg_array_cache.copy()
 
     def start(self):
         Thread(target=self._run, daemon=True).start()
