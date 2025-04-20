@@ -56,7 +56,17 @@ class Background:
 
     @property
     def array(self) -> np.ndarray:
-        return np.array(self._image.convertToFormat(QImage.Format.Format_RGB888).copy())
+        if not hasattr(self, "_array_cache") or self._array_cache is None:
+            # 缓存QImage转np.ndarray
+            img = self._image
+            if isinstance(img, QImage):
+                ptr = img.bits()
+                ptr.setsize(img.width() * img.height() * 3)
+                arr = np.array(ptr, dtype=np.uint8).reshape((img.height(), img.width(), 3))
+                self._array_cache = arr.copy()
+            else:
+                self._array_cache = np.array(img.convertToFormat(QImage.Format.Format_RGB888).copy())
+        return self._array_cache
 
     def _start(self):
         if self.type == "video":
@@ -64,14 +74,11 @@ class Background:
             self._cap = cv2.VideoCapture(self.path)
             last_frame_time = time.time()
             video_fps = self._cap.get(cv2.CAP_PROP_FPS)
+            interval = 1 / (min(self.max_fr, video_fps) if self.max_fr and video_fps else (video_fps if video_fps else 25))
             while self._reading:
-                if self.max_fr and video_fps:
-                    interval = 1 / min(self.max_fr, video_fps)
-                else:
-                    interval = 1 / (video_fps if video_fps else 25)
                 now = time.time()
                 if now - last_frame_time < interval:
-                    time.sleep(max(interval - (now - last_frame_time), 0))
+                    time.sleep(interval - (now - last_frame_time))
                 last_frame_time = time.time()
                 ret, frame = self._cap.read()
                 if not ret:
@@ -83,7 +90,11 @@ class Background:
                 h, w, _ = frame.shape
                 img = QImage(frame.data, w, h, 3 * w, QImage.Format.Format_BGR888)
                 self._image = img
-                self._emit_frame_ready(img)
+                # 只在帧内容变化时更新缓存
+                arr = np.array(img.convertToFormat(QImage.Format.Format_RGB888).copy())
+                if not hasattr(self, "_array_cache") or not np.array_equal(self._array_cache, arr):
+                    self._array_cache = arr
+                    self._emit_frame_ready(img)
             self._cap.release()
 
     def start(self):
@@ -160,33 +171,39 @@ class BackgroundScheme:
         while self._running:
             for bg in self.backgrounds:
                 first_frame_time = time.time()
-                last_frame = (
-                    bg.background.array * 0 if last_frame is None else last_frame
-                )
+                last_frame = (bg.background.array * 0 if last_frame is None else last_frame)
                 bg.background.add_frame_ready_callback(self._emit_frame_ready)
                 bg.background.start()
                 prev_array = None
+                prev_emit_time = 0
+                bg_array_cache = bg.background.array.copy()
+                # fade_in阶段
                 while time.time() - first_frame_time < bg.fade_in:
                     progress = (time.time() - first_frame_time) / bg.fade_in
-                    self._array = (last_frame * (1 - progress)) + (
-                        bg.background.array * progress
-                    )
+                    self._array = (last_frame * (1 - progress)) + (bg_array_cache * progress)
                     arr_uint8 = self._array.astype(np.uint8)
-                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
+                    now = time.time()
+                    if (prev_array is None or not np.array_equal(arr_uint8, prev_array)) and (now - prev_emit_time > 0.033):
                         self._emit_frame_ready(arr_to_img(arr_uint8))
                         prev_array = arr_uint8.copy()
-                    time.sleep(0.02)
+                        prev_emit_time = now
+                    time.sleep(0.01)
                 show_time = time.time()
                 prev_array = None
+                prev_emit_time = 0
+                bg_array_cache = bg.background.array.copy()
+                # duration阶段
                 while time.time() - show_time < bg.duration:
-                    self._array = bg.background.array
+                    self._array = bg_array_cache
                     arr_uint8 = self._array.astype(np.uint8)
-                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
+                    now = time.time()
+                    if (prev_array is None or not np.array_equal(arr_uint8, prev_array)) and (now - prev_emit_time > 0.033):
                         self._emit_frame_ready(arr_to_img(arr_uint8))
                         prev_array = arr_uint8.copy()
-                    time.sleep(0.02)
+                        prev_emit_time = now
+                    time.sleep(0.01)
                 bg.background.stop()
-                last_frame = bg.background.array
+                last_frame = bg_array_cache
 
     def start(self):
         Thread(target=self._run, daemon=True).start()

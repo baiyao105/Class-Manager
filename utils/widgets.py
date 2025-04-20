@@ -151,69 +151,77 @@ class ProgressAnimatedItem(QWidget):
         self.setAutoFillBackground(True)
         self._is_selected = False  # 选中状态标志
         self._hovered = False  # 鼠标悬浮状态标志
-        self._animation_running = False
-        self._pending_progress = None
-        self._pending_color = None
+        self._progress_animation = None
+        self._color_animation = None
 
-    @Property(QColor)
+    @Property(QColor, user=True)
     def color(self):
         return self._color
 
     @color.setter
     def color(self, value: QColor):
-        self._color = value
+        if self._color != value:
+            self._color = value
+            self.update() # 通知重绘
 
-    @Property(float)
+    @Property(float, user=True)
     def progress(self):
         return self._progress
 
     @progress.setter
     def progress(self, value):
-        self._progress = value
-        self.update()  # 进度改变时，通知重绘
+        # 确保进度保持在 0.0 和 1.0 之间
+        value = max(0.0, min(1.0, value))
+        if self._progress != value:
+            self._progress = value
+            self.update()  # 通知重绘
 
     def setSelected(self, selected: bool):
         self._is_selected = selected
         self.update()
 
-    def setProgressAndColor(self, progress, color):
-        self._progress = progress
-        self._color = color
-        self.update()
+    def animateProgressAndColor(self, start_progress, stop_progress, start_color, stop_color, duration, curve=QEasingCurve.Type.OutCubic, loopCount=1):
+        """使用 QPropertyAnimation 驱动进度和颜色动画"""
+        # 停止之前的动画
+        if self._progress_animation and self._progress_animation.state() == QPropertyAnimation.State.Running:
+            self._progress_animation.stop()
+        if self._color_animation and self._color_animation.state() == QPropertyAnimation.State.Running:
+            self._color_animation.stop()
 
-    def startProgressAnimation(self, start1, stop1, start2, stop2, duration, curve, loopCount):
-        import threading, time
-        self._animation_running = True
-        def animate():
-            t0 = time.time()
-            while self._animation_running:
-                elapsed = (time.time() - t0)
-                if elapsed > duration/1000.0:
-                    break
-                ratio = min(elapsed / (duration/1000.0), 1.0)
-                progress = start1 + (stop1 - start1) * ratio
-                color = QColor(
-                    int(start2.red() + (stop2.red() - start2.red()) * ratio),
-                    int(start2.green() + (stop2.green() - start2.green()) * ratio),
-                    int(start2.blue() + (stop2.blue() - start2.blue()) * ratio),
-                    int(start2.alpha() + (stop2.alpha() - start2.alpha()) * ratio)
-                ) if stop2 else start2
-                self._pending_progress = progress
-                self._pending_color = color
-                QCoreApplication.postEvent(self, QPaintEvent(self.rect()))
-                time.sleep(0.016)
-            self._animation_running = False
-        threading.Thread(target=animate, daemon=True).start()
+        # 创建进度动画
+        self._progress_animation = QPropertyAnimation(self, b"progress", self)
+        self._progress_animation.setDuration(duration)
+        self._progress_animation.setStartValue(start_progress)
+        self._progress_animation.setEndValue(stop_progress)
+        self._progress_animation.setEasingCurve(curve)
+        self._progress_animation.setLoopCount(loopCount)
 
-    def customEvent(self, event):
-        # 主线程处理动画数据
-        if self._pending_progress is not None and self._pending_color is not None:
-            self.setProgressAndColor(self._pending_progress, self._pending_color)
-            self._pending_progress = None
-            self._pending_color = None
+        # 创建颜色动画 (如果提供了结束颜色)
+        if stop_color:
+            self._color_animation = QPropertyAnimation(self, b"color", self)
+            self._color_animation.setDuration(duration)
+            self._color_animation.setStartValue(start_color)
+            self._color_animation.setEndValue(stop_color)
+            self._color_animation.setEasingCurve(curve)
+            self._color_animation.setLoopCount(loopCount)
+            self._color_animation.start()
+        else:
+            # 如果没有结束颜色，确保颜色设置为起始颜色
+            self.color = start_color
+            self._color_animation = None # 清除旧的颜色动画实例
+
+        # Start progress animation after setting up color animation (if any)
+        self._progress_animation.start()
+
+    # Remove customEvent as it's no longer needed for animation updates
+    # def customEvent(self, event):
+    #     pass
 
     def stopAnimation(self):
-        self._animation_running = False
+        if self._progress_animation:
+            self._progress_animation.stop()
+        if self._color_animation:
+            self._color_animation.stop()
 
     def enterEvent(self, event: QMouseEvent):
         self._hovered = True
@@ -276,7 +284,8 @@ class ProgressAnimatedListWidgetItem(QListWidgetItem):
         :param curve: 动画缓动曲线
         :param loopCount: 动画循环次数
         """
-        self.animated_item.startProgressAnimation(
+        # Call the new animation method
+        self.animated_item.animateProgressAndColor(
             startprogress,
             stopprogress,
             startcolor,
