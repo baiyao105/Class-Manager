@@ -549,25 +549,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "动态背景帧数更新时间"
         self.displayed_on_the_log_window = 0
         "在小日志窗口上已经体现的日志条数，用来判断是否刷新"
-        if self.auto_save_enabled:
-            Thread(
-                target=lambda: self.auto_save(timeout=int(self.auto_save_interval)),
-                name="AutoSave",
-                daemon=True,
-            ).start()
-        Thread(
-            target=self.insert_action_history_info_while_alive,
-            name="InsertOpreationHandler",
-            daemon=True,
-        ).start()
-        Thread(
-            target=self.read_video_while_alive, daemon=True, name="VideoReader"
-        ).start()
-        Thread(
-            target=self.refresh_logwindow_while_alive,
-            daemon=True,
-            name="RefreshLogWindow",
-        ).start()
         self.tip_handler = self.TipHandler(self)
         self.tip_handler.start()
         self.logwindow_content: List[str] = ["这里是日志"]
@@ -612,6 +593,11 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 ),
             )
         )
+
+        self.background_pixmap: Optional[QPixmap] = None
+        "背景图片"
+        self.lastest_pixmap_update_time: float = 0.0
+        "上次更新背景图片的时间"
         self.window_info: ClassWindow.WindowInfo = ClassWindow.WindowInfo()
         "窗口信息"
         self.refresh_hint_widget()
@@ -674,6 +660,25 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "音乐列表"
         self.noise_detector: Optional[NoiseDetectorWidget] = None
         "噪音检测窗口"
+        if self.auto_save_enabled:
+            Thread(
+                target=lambda: self.auto_save(timeout=int(self.auto_save_interval)),
+                name="AutoSave",
+                daemon=True,
+            ).start()
+        Thread(
+            target=self.insert_action_history_info_while_alive,
+            name="InsertOpreationHandler",
+            daemon=True,
+        ).start()
+        Thread(
+            target=self.read_video_while_alive, daemon=True, name="VideoReader"
+        ).start()
+        Thread(
+            target=self.refresh_logwindow_while_alive,
+            daemon=True,
+            name="RefreshLogWindow",
+        ).start()
 
     def __repr__(self):  # 其实是因为直接继承ClassObjects的repr会导致无限递归
         return super(MyMainWindow, self).__repr__()
@@ -1394,17 +1399,27 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
         padding = 15 * self.devicePixelRatio()
         t2 = time.time()
-
+        
         if self.current_video_frame and self.use_animate_background:
-            pixmap = QPixmap.fromImage(self.current_video_frame)
+            self.background_pixmap = self.current_video_frame
+    
         else:
             if not os.path.exists("./img/main/background.jpg"):
                 # 为了防止更新的时候给原有的background.jpg覆盖了
                 shutil_copy(
-                    "./img/main/default/background.jpg", "./img/main/background.jpg"
+                    "./img/main/default/background.jpg", 
+                    "./img/main/background.jpg"
                 )
+                
+        
+            if not self.background_pixmap:
+                self.background_pixmap = QPixmap("./img/main/background.jpg")
 
-            pixmap = QPixmap("./img/main/background.jpg")
+            # 距离上一次更新差了一秒以上就更新
+            if time.time() - self.lastest_pixmap_update_time >= 1:
+                self.background_pixmap = time.time()
+                self.background_pixmap = QPixmap("./img/main/background.jpg")
+
         t3 = time.time()
 
         painter = QPainter(self)
@@ -1415,7 +1430,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             -padding,
             self.width() + padding * 2,
             self.height() + padding * 2,
-            pixmap,
+            self.background_pixmap,
         )
         painter.end()
         t5 = time.time()
@@ -1461,6 +1476,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.use_animate_background = False
             while not os.path.isfile("background.mp4"):
                 time.sleep(5)
+    
         while self.is_running:
             self.capture = cv2.VideoCapture("background.mp4")
             last_frame_time = time.time()
@@ -1483,9 +1499,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     self.capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = self.capture.read()
                 h, w, _ = frame.shape
-                self.current_video_frame = QImage(
+                self.current_video_frame = QPixmap(QImage(
                     frame.data, w, h, 3 * w, QImage.Format.Format_BGR888
-                )
+                ))
 
                 # self.update()
                 self.video_framecount += 1
