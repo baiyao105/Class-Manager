@@ -112,6 +112,7 @@ class StudentWidget(Ui_Form, MyWidget):
             f"加载历史记录，只读模式：{self.readonly}",
             "StudentWidget.load_history",
         )
+        self.history_data = []
         index = 0
         for key in reversed(self.student.history):
             history = self.student.history[key]

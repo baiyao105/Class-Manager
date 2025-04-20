@@ -13,6 +13,12 @@ except ImportError as unused:
     from logger import Logger as Base
 
 
+__all__ = [
+    "repeat",
+    "run_async",
+    "canbe",
+    "pass_exceptions",
+]
 def repeat(count):
     """
     装饰器，用于重复执行函数指定次数
@@ -123,11 +129,3 @@ def pass_exceptions(func):
     return wrapper
 
 
-def exc_info_short(desc: str = "出现了错误：", level: Literal["I", "W", "E"] = "E"):
-    "简单报一句错"
-    Base.log(
-        level,
-        f"{desc}  "
-        f"[{sys.exc_info()[1].__class__.__name__}] "
-        f"{sys.exc_info()[1].args[0] if sys.exc_info()[1].args else ''}",
-    )

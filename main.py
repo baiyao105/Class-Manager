@@ -12,7 +12,6 @@ import enum
 import random
 import pickle
 import signal
-import requests
 import warnings
 import traceback
 import threading
@@ -22,15 +21,14 @@ from typing import Optional, Union, List, Tuple, Dict, Callable, Literal, Type
 from shutil import copytree, rmtree, copy as shutil_copy
 from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
+from typing import Mapping, Any, Iterable
 
 
 import psutil
+import requests
 import numpy as np
 import customtkinter  # pylint: disable=unused-import
 import dill as pickle  # pylint: disable=shadowed-import
-from PySide6.QtCore import *  # pylint: disable=wildcard-import, unused-wildcard-import
-from PySide6.QtGui import *  # pylint: disable=wildcard-import, unused-wildcard-import
-from PySide6.QtWidgets import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.common import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.components import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.window import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -72,7 +70,7 @@ from utils.classobjects import (  # pylint: disable=unused-import, disable=wrong
 )
 
 
-from utils.functions import steprange, play_sound, play_music, stop_music, Thread
+from utils.functions import steprange, play_sound, play_music, stop_music
 from utils.classobjects import (
     CORE_VERSION,
     CORE_VERSION_CODE,
@@ -94,6 +92,7 @@ from utils.functions import format_exc_like_java
 from utils.settings import SettingsInfo
 from utils.system import output_list
 from utils.basetypes import DataObject
+from utils.algorithm import Thread
 import utils.functions.prompts as PromptUtils
 from widgets.custom.NoiseDetectorWidget import HAS_PYAUDIO
 from widgets import *
@@ -374,15 +373,16 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def __init__(
         self,
-        app,
-        *args,
-        class_name="测试班级",
-        current_user=default_user,
-        class_key="CLASS_TEST",
+        app: QApplication,
+        *args: str,
+        class_name: str = "测试班级",
+        current_user: str = default_user,
+        class_key: str ="CLASS_TEST",
     ):
         """
         窗口初始化
-
+        :param app: QApplication
+        :param args: 命令行参数
         :param class_name: 班级名称
         :param current_user: 当前用户
         :param class_key: 班级键
@@ -510,7 +510,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.listWidget.doubleClicked.connect(self.click_opreation)
         self.tip_update.connect(lambda args: self._show_tip(*args))
-        self.button_update.connect(self.add_new_btn_anim)
+        self.button_update.connect(self.btn_anim)
         self.log_window_refresh.connect(self._refresh_logwindow)
         self.pushButton.clicked.connect(self.dont_click)
         self.listView_data: List[Callable] = []
@@ -576,7 +576,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.terminal_locals = {}
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update)
-        self.update_timer.start(30)
+        self.update_timer.start(100)
         self.recent_command_update_timer = QTimer()
         self.recent_command_update_timer.timeout.connect(
             self.update_recent_command_btns
@@ -617,6 +617,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.refresh_hint_widget()
         self.btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
         "按钮动画组"
+        self.running_btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
+        "运行中的按钮动画组"
         self.anim_group_state_changed.connect(self._anim_group_state_changed)
         self.exit_action_finished: bool = False
         "退出动作是否完成"
@@ -1328,8 +1330,16 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.exit_tip.show()
             self.exit_action_finished = False
             self.going_to_exit.emit()
-            while not self.exit_action_finished:
-                do_nothing()
+            wait_loop = QEventLoop()
+            wait_timer = QTimer()
+            def _check_if_finished():
+                "检查是否完成退出操作"
+                if self.exit_action_finished:
+                    wait_loop.quit()
+                    wait_timer.stop()
+            wait_timer.timeout.connect(_check_if_finished)
+            wait_timer.start(33)
+            wait_loop.exec()
             self.hide()
             Base.log("I", "执行app.quit()", "MainWindow.closeEvent")
             self.app.quit()
@@ -1421,28 +1431,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         v.event_accepting = t6 - t5
         v.total_time = t6 - t
 
-    class AnimationGroupStatement(enum.IntEnum):
-        "动画组状态"
-        CREATE_NEW = 0
-        "创建新动画组"
-        START = 1
-        "启动动画组"
-        STOP = 2
-        "停止动画组"
-        DELETE = 3
-        "删除动画组"
 
-    def _anim_group_state_changed(self, state: int):
-        """处理动画组状态变化"""
-        if state == self.AnimationGroupStatement.CREATE_NEW:
-            self.btns_anim_group = QParallelAnimationGroup(self)
-        elif state == self.AnimationGroupStatement.START:
-            self.btns_anim_group.start()
-        elif state == self.AnimationGroupStatement.STOP:
-            self.btns_anim_group.stop()
-        elif state == self.AnimationGroupStatement.DELETE:
-            self.btns_anim_group.deleteLater()
-            self.btns_anim_group = None
 
     @profile()
     def read_video_while_alive(self):
@@ -1521,7 +1510,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Base.log("I", "准备显示按钮", "MainWindow.grid_buttons")
         for b in self.stu_buttons.values():
             b.deleteLater()
-            do_nothing()
         row = 0
         col = 0
         max_col = (self.scrollArea.width() + 6) // (81 + 6)
@@ -1678,9 +1666,36 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.displayed_on_the_log_window = self.logged_count
 
     @Slot(QPushButton, tuple)
-    def add_new_btn_anim(self, obj: ObjectButton, args: tuple):
+    def btn_anim(self, obj: ObjectButton, args: tuple):
         """闪烁按钮"""
-        self.btns_anim_group.addAnimation(obj.get_flash_anim(*args))
+        # self.btns_anim_group.addAnimation(obj.get_flash_anim(*args, from_self=False))
+        obj.flash(*args)
+    
+    class AnimationGroupStatement(enum.IntEnum):
+        "动画组状态"
+        CREATE_NEW = 0
+        "创建新动画组"
+        START = 1
+        "启动动画组"
+        STOP = 2
+        "停止动画组"
+        DELETE = 3
+        "删除动画组"
+
+    def _anim_group_state_changed(self, state: int):
+        """处理动画组状态变化"""
+        if self.btns_anim_group is None:
+            return
+        if state == self.AnimationGroupStatement.CREATE_NEW:
+            self.btns_anim_group = QParallelAnimationGroup(self)
+        elif state == self.AnimationGroupStatement.START:
+            self.running_btns_anim_group = self.btns_anim_group
+            self.running_btns_anim_group.start(QParallelAnimationGroup.DeletionPolicy.KeepWhenStopped)
+        elif state == self.AnimationGroupStatement.STOP:
+            self.running_btns_anim_group.stop()
+        elif state == self.AnimationGroupStatement.DELETE:
+            self.running_btns_anim_group.deleteLater()
+            self.btns_anim_group = None
 
     ##### 左上角信息栏控制 #####
 
@@ -1820,8 +1835,14 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Base.log("I", "进行将要退出操作", "MainWindow.on_exit")
         t = Thread(target=self._do_exit)
         t.start()
-        while t.is_alive():
-            do_nothing()
+        wait_timer = QTimer()
+        wait_loop = QEventLoop()
+        def _check_if_finished():
+            if not t.is_alive():
+                wait_loop.quit()
+        wait_timer.timeout.connect(_check_if_finished)
+        wait_timer.start(33)
+        wait_loop.exec()
         self.exit_action_finished = True
 
     def _do_exit(self):
@@ -2392,8 +2413,15 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.is_loading_all_history = True
         Thread(target=_load_history, name="HistoryLoader").start()
         self.is_loading_all_history = False
-        while not finished:
-            do_nothing()
+        wait_timer = QTimer()
+        wait_loop = QEventLoop()
+        def _check_if_finished():
+            if finished:
+                wait_timer.stop()
+                wait_loop.quit()
+        wait_timer.timeout.connect(_check_if_finished)
+        wait_timer.start(33)
+        wait_loop.exec()
         view = ListView(
             self,
             self,
@@ -2815,7 +2843,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 y = int(math.cos(math.radians(i)) * 30 * i / 360 * 4)
                 self.move(orig_x + int(x), orig_y + int(y))
                 time.sleep(0.03)
-                do_nothing()
+                QCoreApplication.processEvents()
             self.move(200, 100)
 
         elif style == 7:
@@ -2829,7 +2857,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                         random.randint(0, self.width() // 2),
                         random.randint(0, self.height() // 2),
                     )
-                do_nothing()
+                QCoreApplication.processEvents()
                 time.sleep(0.05)
 
             for obj in self.findChildren(QWidget):
@@ -3562,8 +3590,15 @@ class RecoveryPoint:
         Base.log("I", "还原点模式：" + self.mode, "RecoveryPoint.load_onlydata")
         Base.log("I", "还原点时间：" + str(self.time), "RecoveryPoint.load_onlydata")
         Base.log("I", "当前用户：" + current_user, "RecoveryPoint.load_onlydata")
-        while widget.auto_saving:
-            do_nothing()
+        wait_loop = QEventLoop()
+        wait_timer = QTimer()
+        def _check_if_finished():
+            if not widget.auto_saving:
+                wait_loop.quit()
+                wait_timer.stop()
+        wait_timer.timeout.connect(_check_if_finished)
+        wait_timer.start(33)
+        wait_loop.exec()
         self.load_onlydata(widget.current_user)
         widget.stop()
         rmtree(widget.save_path)
@@ -3600,8 +3635,15 @@ class RecoveryPoint:
         )
         QMessageBox.information(widget, "恢复成功", "恢复成功，请重新启动程序")
 
-        while widget.auto_saving:
-            do_nothing()
+        wait_loop = QEventLoop()
+        wait_timer = QTimer()
+        def _check_if_finished():
+            if not widget.auto_saving:
+                wait_loop.quit()
+                wait_timer.stop()
+        wait_timer.timeout.connect(_check_if_finished)
+        wait_timer.start(33)
+        wait_loop.exec()
         _copy()  # 我就不信保存两次还能失败
         pid = os.getpid()  # 获取当前进程的PID
         os.kill(pid, signal.SIGTERM)  # 发送终止信号给当前进程（什么抽象关闭方法）
@@ -3615,6 +3657,7 @@ class RecoveryPoint:
         Base.log("I", "当前用户：" + current_user, "RecoveryPoint.load_onlydata")
         return widget.load_data(self.get_data_path(current_user), strict=True)
 
+app = QApplication(sys.argv)
 
 
 @profile(precision=4)
@@ -3623,7 +3666,6 @@ def main():
     global widget
     user = "default"
     class_key = DEFAULT_CLASS_KEY
-    app = QApplication(sys.argv)
     widget = ClassWindow(app, *sys.argv, current_user=user, class_key=class_key)
     # 其实MainWindow也只是做了个接口，整个程序还没做完（因为还有分班和添加/删除学生）
 

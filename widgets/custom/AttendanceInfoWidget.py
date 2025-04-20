@@ -339,7 +339,6 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
         "显示按钮的接口"
         for b in self.stu_buttons.values():
             b.destroy()
-            do_nothing()
         row = 0
         col = 0
         for num, stu in self.target_class.students.items():

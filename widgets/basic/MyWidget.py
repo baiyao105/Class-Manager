@@ -44,7 +44,10 @@ class MyWidget(QWidget):
         )
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.startanimation: QPropertyAnimation = None
-        self.closeanimation: QPropertyAnimation = None
+        self.closeanimation_1: QPropertyAnimation = None
+        self.closeanimation_2: QPropertyAnimation = None
+
+
 
     if platform.system() != "Windows":
         warnings.warn("非Windows系统可能无法正常使用动画效果")
@@ -115,27 +118,32 @@ class MyWidget(QWidget):
             )
             self.startanimation.start()
 
+
     def showCloseAnimation(self):
         "执行窗口关闭动画"
         self.is_running = False
-        super().show()
+
         if SettingsInfo.current.animation_speed <= 114514:
+
             # 第一阶段动画：向上移动
+            Base.log("D", "关闭动画进入第一阶段", "MyWidget.showCloseAnimation")
+
             startpoint = QPoint(self.x(), self.y())
             endpoint = QPoint(startpoint.x(), self.y() - 75)
 
             # 使用通用动画创建方法
-            self.closeanimation = self.create_animation(
+            self.closeanimation_1 = self.create_animation(
                 b"pos", 150, startpoint, endpoint, QEasingCurve.Type.OutQuad
             )
-            self.closeanimation.start()
 
-            # 等待第一阶段动画完成
-            while self.closeanimation.state() != QAbstractAnimation.State.Stopped:
-                QCoreApplication.processEvents()
-                time.sleep(0.01)
-
+            self.closeanimation_1.start()
+            close_anim_loop_1 = QEventLoop()
+            self.closeanimation_1.finished.connect(close_anim_loop_1.quit)
+            close_anim_loop_1.exec(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+            # 防止他们在窗口还在执行动画就又按了一次关闭按钮
+            
             # 第二阶段动画：移出屏幕
+            Base.log("D", "关闭动画进入第二阶段", "MyWidget.showCloseAnimation")
             startpoint = QPoint(self.x(), self.y())
             endpoint = QPoint(
                 startpoint.x(),
@@ -143,21 +151,33 @@ class MyWidget(QWidget):
                 + QGuiApplication.primaryScreen().availableGeometry().height(),
             )
             # 使用通用动画创建方法
-            self.closeanimation = self.create_animation(
+            self.closeanimation_2 = self.create_animation(
                 b"pos", 230, startpoint, endpoint, QEasingCurve.Type.InQuad
             )
-            self.closeanimation.start()
+            self.closeanimation_2.start()
+    
+            close_anim_loop_2 = QEventLoop()
+            self.closeanimation_2.finished.connect(close_anim_loop_2.quit)
+            close_anim_loop_2.exec(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
-            # 等待第二阶段动画完成
-            while self.closeanimation.state() != QAbstractAnimation.State.Stopped:
-                QCoreApplication.processEvents()
-                time.sleep(0.01)
+            Base.log("D", "关闭动画展示完成，关闭窗口", "MyWidget.showCloseAnimation")
             self.hide()
-            self.move(
-                startpoint
-            )  # 把窗口移回起点，不然如果下次启动如果没有动画窗口就会卡在屏幕下边
+            self.move(startpoint)  # 把窗口移回起点，不然如果下次启动如果没有动画窗口就会卡在屏幕下边
+        
+
+    def closeEvent(self, event: QCloseEvent):
+        """
+        关闭事件处理器
+        
+        :param event: 传过来的关闭事件
+        """
+        self.is_running = False
+        self.showCloseAnimation()
+        self.hide()
+        event.accept()
 
     def show(self):
+        "展示窗口"
         self.is_running = True
         self.move(
             (
@@ -174,16 +194,12 @@ class MyWidget(QWidget):
         if SettingsInfo.current.animation_speed <= 114514:
             self.showStartAnimation()
 
-    def close(self):
-        self.is_running = False
-        self.closeEvent(QCloseEvent())
+    def orig_show(self):
+        "原生的展示函数"
+        super().show()
 
-    def closeEvent(self, event: QCloseEvent):
-        self.is_running = False
-        if SettingsInfo.current.animation_speed <= 114514:
-            self.showCloseAnimation()
-        self.hide()
-        event.accept()
+
+
 
     def hide(self):
         self.is_running = False

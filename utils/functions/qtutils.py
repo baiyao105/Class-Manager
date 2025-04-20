@@ -1,5 +1,6 @@
 import cv2
-from PySide6.QtGui import QPixmap, QImage
+from widgets.basic.Qt import *  # pylint: disable=wildcard-import, unused-wildcard-import
+
 
 
 def mat_to_pixmap(mat: cv2.Mat) -> QPixmap:

@@ -49,6 +49,10 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         self.comboBox.currentIndexChanged.connect(self.update_edit)
         self.result: Optional[Tuple[str, str, str, float]] = None
 
+    def show(self):
+        self.update_edit()
+        super().show()
+        
     def update_edit(self):
         index = self.comboBox.currentIndex()
         try:
@@ -83,7 +87,6 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         super(MyWidget, self).close()
 
     def closeEvent(self, event: QEvent):
-        self.result = ()
         Base.log("I", "选择模板窗口关闭（通过关闭事件）", "SelectTemplateWidget")
         super().closeEvent(event)
 
@@ -131,6 +134,13 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
     def exec(self) -> Optional[Tuple[str, str, str, float]]:
         """阻塞调用，返回 (key, title, desc, mod)"""
         self.show()
-        while self.result is None:
-            do_nothing()
+        loop = QEventLoop()
+        timer = QTimer()
+        def _check_if_finished():
+            if all(self.select_finished):
+                loop.quit()
+                timer.stop()
+        timer.timeout.connect(_check_if_finished)
+        timer.start(33)
+        loop.exec()
         return self.result
