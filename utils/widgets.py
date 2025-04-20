@@ -151,6 +151,9 @@ class ProgressAnimatedItem(QWidget):
         self.setAutoFillBackground(True)
         self._is_selected = False  # 选中状态标志
         self._hovered = False  # 鼠标悬浮状态标志
+        self._animation_running = False
+        self._pending_progress = None
+        self._pending_color = None
 
     @Property(QColor)
     def color(self):
@@ -170,61 +173,58 @@ class ProgressAnimatedItem(QWidget):
         self.update()  # 进度改变时，通知重绘
 
     def setSelected(self, selected: bool):
-        """
-        设置控件的选中状态
-
-        :param selected: 是否选中
-        """
         self._is_selected = selected
         self.update()
 
-    def startProgressAnimation(
-        self, start1, stop1, start2, stop2, duration, curve, loopCount
-    ):
-        self._progress = start1
-        self._color = start2
-        # 创建 QPropertyAnimation 对象并绑定动画
-        self._animation = QPropertyAnimation(self, b"progress")
-        self._animation.setStartValue(start1)
-        self._animation.setEndValue(stop1)
-        self._animation.setDuration(duration)
-        self._animation.setEasingCurve(curve)
-        self._animation.setLoopCount(loopCount)
-        if stop2:
-            self._animation2 = QPropertyAnimation(self, b"color")
-            self._animation2.setStartValue(start2)
-            self._animation2.setEndValue(stop2)
-            self._animation2.setDuration(duration)
-            self._animation2.setEasingCurve(curve)
-            self._animation2.setLoopCount(loopCount)
-            self._animation2.start()
-        self._animation.start()
+    def setProgressAndColor(self, progress, color):
+        self._progress = progress
+        self._color = color
+        self.update()
+
+    def startProgressAnimation(self, start1, stop1, start2, stop2, duration, curve, loopCount):
+        import threading, time
+        self._animation_running = True
+        def animate():
+            t0 = time.time()
+            while self._animation_running:
+                elapsed = (time.time() - t0)
+                if elapsed > duration/1000.0:
+                    break
+                ratio = min(elapsed / (duration/1000.0), 1.0)
+                progress = start1 + (stop1 - start1) * ratio
+                color = QColor(
+                    int(start2.red() + (stop2.red() - start2.red()) * ratio),
+                    int(start2.green() + (stop2.green() - start2.green()) * ratio),
+                    int(start2.blue() + (stop2.blue() - start2.blue()) * ratio),
+                    int(start2.alpha() + (stop2.alpha() - start2.alpha()) * ratio)
+                ) if stop2 else start2
+                self._pending_progress = progress
+                self._pending_color = color
+                QCoreApplication.postEvent(self, QPaintEvent(self.rect()))
+                time.sleep(0.016)
+            self._animation_running = False
+        threading.Thread(target=animate, daemon=True).start()
+
+    def customEvent(self, event):
+        # 主线程处理动画数据
+        if self._pending_progress is not None and self._pending_color is not None:
+            self.setProgressAndColor(self._pending_progress, self._pending_color)
+            self._pending_progress = None
+            self._pending_color = None
+
+    def stopAnimation(self):
+        self._animation_running = False
 
     def enterEvent(self, event: QMouseEvent):
-        """
-        处理鼠标进入控件区域的事件
-
-        :param event: 鼠标事件对象
-        """
         self._hovered = True
         self.update()
 
     def leaveEvent(self, event: QMouseEvent):
-        """
-        处理鼠标离开控件区域的事件
-
-        :param event: 鼠标事件对象
-        """
         self._hovered = False
         self.update()
 
     def paintEvent(self, event: QPaintEvent):
-        """
-        绘制控件的外观
-
-        :param event: 绘制事件对象
-        """
-        self._color = QColor(
+        color = QColor(
             self._color.red(),
             self._color.green(),
             self._color.blue(),
@@ -232,7 +232,6 @@ class ProgressAnimatedItem(QWidget):
         )
         painter = QPainter(self)
         rect = self.rect()
-
         if self._hovered:
             painter.setBrush(QColor(235, 235, 255))
         elif self._is_selected:
@@ -241,13 +240,11 @@ class ProgressAnimatedItem(QWidget):
             painter.setBrush(QColor(255, 255, 255))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRect(rect)
-
         progress_width = rect.width() * self._progress
         fill_rect = QRectF(rect.left(), rect.top(), progress_width, rect.height())
-        painter.setBrush(self._color)
+        painter.setBrush(color)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRect(fill_rect)
-
         painter.setPen(QPen(Qt.GlobalColor.black))
         text_rect = rect
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft, self._text)

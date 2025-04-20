@@ -22,12 +22,22 @@ class Background:
         self.path = path
         self.loop = loop
         self.max_fr = max_fr
+        self._image = None
+        self._frame_ready_callbacks = []
+        self._reading = False
         if self.type == "image":
             self._image = mat_to_pixmap(cv2.imread(self.path))
         elif self.type == "video":
             _cap = cv2.VideoCapture(self.path)
             self._image = mat_to_pixmap(_cap.read()[1])
             _cap.release()
+
+    def add_frame_ready_callback(self, callback):
+        self._frame_ready_callbacks.append(callback)
+
+    def _emit_frame_ready(self, frame):
+        for cb in self._frame_ready_callbacks:
+            cb(frame)
 
     @property
     def image(self) -> QImage:
@@ -55,40 +65,36 @@ class Background:
             last_frame_time = time.time()
             video_fps = self._cap.get(cv2.CAP_PROP_FPS)
             while self._reading:
-                if time.time() - self._video_framerate_update_time >= 1:
-                    self.video_framerate = self._video_framecount
-                    self._video_framecount = 0
-                    self._video_framerate_update_time = time.time()
-                if time.time() - last_frame_time < (1 / min(self.max_fr, video_fps)):
-                    time.sleep(
-                        max(
-                            1 / min(self.max_fr, video_fps)
-                            - (time.time() - last_frame_time),
-                            0,
-                        )
-                    )
+                if self.max_fr and video_fps:
+                    interval = 1 / min(self.max_fr, video_fps)
+                else:
+                    interval = 1 / (video_fps if video_fps else 25)
+                now = time.time()
+                if now - last_frame_time < interval:
+                    time.sleep(max(interval - (now - last_frame_time), 0))
                 last_frame_time = time.time()
                 ret, frame = self._cap.read()
                 if not ret:
                     if not self.loop:
                         self._reading = False
-                        return
+                        break
                     self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = self._cap.read()
                 h, w, _ = frame.shape
-                self._image = QImage(
-                    frame.data, w, h, 3 * w, QImage.Format.Format_BGR888
-                )
-                self._video_framecount += 1
+                img = QImage(frame.data, w, h, 3 * w, QImage.Format.Format_BGR888)
+                self._image = img
+                self._emit_frame_ready(img)
             self._cap.release()
 
     def start(self):
-        Thread(target=self._start).start()
+        if self.type == "video":
+            Thread(target=self._start, daemon=True).start()
 
     def stop(self):
         if self.type == "video":
             self._reading = False
-            self._cap.release()
+            if hasattr(self, "_cap"):
+                self._cap.release()
 
 
 def arr_to_img(arr: np.ndarray) -> QImage:
@@ -123,10 +129,20 @@ class BackgroundScheme:
         self.name = name
         self.backgrounds = backgrounds
         self._array = None
+        self._running = False
+        self._current_bg = None
+        self._frame_ready_callbacks = []
+
+    def add_frame_ready_callback(self, callback):
+        self._frame_ready_callbacks.append(callback)
+
+    def _emit_frame_ready(self, frame):
+        for cb in self._frame_ready_callbacks:
+            cb(frame)
 
     @property
     def array(self) -> np.ndarray:
-        if self._array is None:
+        if self._array is None and self.backgrounds:
             self._array = np.array(self.backgrounds[0].background.array)
         return self._array
 
@@ -138,7 +154,7 @@ class BackgroundScheme:
     def image(self) -> QImage:
         return arr_to_img(self.array)
 
-    def start(self):
+    def _run(self):
         self._running = True
         last_frame = None
         while self._running:
@@ -147,19 +163,28 @@ class BackgroundScheme:
                 last_frame = (
                     bg.background.array * 0 if last_frame is None else last_frame
                 )
+                bg.background.add_frame_ready_callback(self._emit_frame_ready)
                 bg.background.start()
                 while time.time() - first_frame_time < bg.fade_in:
                     progress = (time.time() - first_frame_time) / bg.fade_in
                     self._array = (last_frame * (1 - progress)) + (
                         bg.background.array * progress
                     )
+                    self._emit_frame_ready(arr_to_img(self._array.astype(np.uint8)))
                     time.sleep(0.01)
                 show_time = time.time()
                 while time.time() - show_time < bg.duration:
                     self._array = bg.background.array
+                    self._emit_frame_ready(arr_to_img(self._array.astype(np.uint8)))
                     time.sleep(0.01)
                 bg.background.stop()
                 last_frame = bg.background.array
+
+    def start(self):
+        Thread(target=self._run, daemon=True).start()
+
+    def stop(self):
+        self._running = False
 
 
 bs = BackgroundScheme(
