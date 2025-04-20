@@ -2594,13 +2594,13 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             runtime_flags["hint_widget_tip_refresh"] = True
 
         fade_out = QPropertyAnimation(self.label_22, b"opacity")
-        fade_out.setDuration(500)
+        fade_out.setDuration(200)  # 减少动画时间
         fade_out.setStartValue(1.0)
         fade_out.setEndValue(0.0)
         fade_out.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         fade_in = QPropertyAnimation(self.label_22, b"opacity")
-        fade_in.setDuration(500)
+        fade_in.setDuration(200)  # 减少动画时间
         fade_in.setStartValue(0.0)
         fade_in.setEndValue(1.0)
         fade_in.setEasingCurve(QEasingCurve.Type.InOutQuad)
@@ -2622,7 +2622,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 try:
                     Base.log("I", "获取一言", "MainWindow._refresh_hint_widget")
                     self.label_23.setText("一言:")
-                    text = requests.get("https://v1.hitokoto.cn", timeout=0.5).text
+                    text = requests.get("https://v1.hitokoto.cn", timeout=1.0).text
                     Base.log("I", f"返回：{text}", "MainWindow._refresh_hint_widget")
                     req = json.loads(text)
                     text = req["hitokoto"] + "\n\t- " + req["from"]
@@ -2641,34 +2641,26 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     self.label_23.setText("Tip:")
                     text = random.choice(hints) + ("\n（点击刷新）" if tip_refresh else "")
 
-            font = self.label_22.font()
-            metrics = QFontMetrics(font)
-            available_width = self.label_22.width() - 10  # 减小边距
-            available_height = self.label_22.height() - 10
-            
-            # 从较大的字体大小开始调整
-            current_size = 14  # 起始字体大小
-            while current_size > 8:  # 增加最小字体大小
-                font.setPointSize(current_size)
-                metrics = QFontMetrics(font)
-                text_rect = metrics.boundingRect(0, 0, available_width, available_height, Qt.TextFlag.TextWordWrap, text)
-                if text_rect.width() <= available_width and text_rect.height() <= available_height:
-                    break
-                current_size -= 1
-            
-            self.label_22.setFont(font)
+            self.label_22.setFont(QFont("Microsoft YaHei UI", 10))
             self.label_22.setWordWrap(True)
-            self.label_22.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)  # 左对齐
+            self.label_22.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             self.label_22.setText(text)
 
-        # 连接动画完成信号到文本更新函数
+            # 添加文本滚动动画
+            if len(text) > 50:  # 当文本较长时启用滚动
+                scroll = QPropertyAnimation(self.label_22, b"pos")
+                scroll.setDuration(len(text) * 100)  # 根据文本长度调整滚动时间
+                scroll.setLoopCount(-1)  # 循环播放
+                start_pos = self.label_22.pos()
+                scroll.setStartValue(start_pos)
+                scroll.setEndValue(QPoint(start_pos.x() - self.label_22.width(), start_pos.y()))
+                scroll.setEasingCurve(QEasingCurve.Type.Linear)
+                scroll.start()
+
         fade_out.finished.connect(update_text)
-        # 添加淡入动画
         self.hint_animation_group.addAnimation(fade_in)
-        # 启动动画组
         self.hint_animation_group.start()
 
-        # 设置10秒自动刷新定时器
         if not hasattr(self, 'hint_refresh_timer'):
             self.hint_refresh_timer = QTimer(self)
             self.hint_refresh_timer.timeout.connect(lambda: self.refresh_hint_widget(0))
