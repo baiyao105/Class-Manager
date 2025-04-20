@@ -508,21 +508,21 @@ class MyWidget(QWidget):
     def showCloseAnimation(self):
         "执行窗口关闭动画"
         self.is_running = False
-        super().show()
         if widget.animation_speed <= 114514:
+            self.setProperty("start_pos_before_close", self.pos())
+
             # 第一阶段动画：向上移动
-            startpoint = QPoint(self.x(), self.y())
+            startpoint = self.pos()
             endpoint = QPoint(startpoint.x(), self.y() - 75)
 
-            # 使用通用动画创建方法
             self.closeanimation = self.create_animation(
                 b"pos", 150, startpoint, endpoint, QEasingCurve.Type.OutQuad
             )
-            self.closeanimation.start()
-
             # 连接第一阶段动画完成信号到第二阶段动画
             self.closeanimation.finished.connect(self._start_close_animation_stage2)
             self.closeanimation.start()
+        else:
+            self.hide()
 
     def _start_close_animation_stage2(self):
         """执行关闭动画的第二阶段"""
@@ -547,29 +547,6 @@ class MyWidget(QWidget):
         self.hide()
         if original_pos:
             self.move(original_pos) # 动画结束后移回原始位置
-
-    def showCloseAnimation(self):
-        "执行窗口关闭动画"
-        self.is_running = False
-        super().show() # 确保窗口可见以播放动画
-        if widget.animation_speed <= 114514:
-            # 保存动画开始前的位置
-            self.setProperty("start_pos_before_close", self.pos())
-
-            # 第一阶段动画：向上移动
-            startpoint = self.pos()
-            endpoint = QPoint(startpoint.x(), self.y() - 75)
-
-            # 使用通用动画创建方法
-            self.closeanimation = self.create_animation(
-                b"pos", 150, startpoint, endpoint, QEasingCurve.Type.OutQuad
-            )
-            # 连接第一阶段动画完成信号到第二阶段动画
-            self.closeanimation.finished.connect(self._start_close_animation_stage2)
-            self.closeanimation.start()
-        else:
-            # 如果禁用动画，直接隐藏
-            self.hide()
 
     def show(self):
         self.is_running = True

@@ -162,7 +162,7 @@ class ProgressAnimatedItem(QWidget):
     def color(self, value: QColor):
         if self._color != value:
             self._color = value
-            self.update() # 通知重绘
+            QTimer.singleShot(16, self.update)
 
     @Property(float, user=True)
     def progress(self):
@@ -174,7 +174,7 @@ class ProgressAnimatedItem(QWidget):
         value = max(0.0, min(1.0, value))
         if self._progress != value:
             self._progress = value
-            self.update()  # 通知重绘
+            QTimer.singleShot(16, self.update)
 
     def setSelected(self, selected: bool):
         self._is_selected = selected
