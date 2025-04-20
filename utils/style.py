@@ -4,8 +4,7 @@ import numpy as np
 from typing import Literal, Optional, Iterable
 from threading import Thread
 from utils.functions.decorators import mat_to_pixmap
-from PySide6.QtGui import QPixmap, QImage
-from PySide6.QtCore import QEasingCurve
+from widgets.basic.Qt import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
 class Background:

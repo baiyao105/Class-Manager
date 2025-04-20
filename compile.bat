@@ -218,7 +218,7 @@ set cmd=pyinstaller main.py -w ^
         --add-data           "version;." ^
         --add-data           "main.py;." ^
         --hidden-import      "PyQt6.QtWebEngine" ^
-        --exclude-module     "PyQt5" ^
+        --exclude-module     "PySide6" ^
         --exclude-module     "PyQt6" ^
         --distpath           "dist" ^
         --workpath           "build" ^
@@ -300,12 +300,13 @@ set "temp_dir=ClassManager\Compile\temp"
 rd /s /q "%temp_dir%" 2>nul
 md "%temp_dir%"
 xcopy /E /Y "!OUTPUT_PATH!\*" "%temp_dir%\" >nul
-powershell -Command "$date=(Get-Date -Format 'yyyyMMdd'); $zipPath='ClassManager\Compile\main_'+$date+'.zip'; Compress-Archive -Path '%temp_dir%' -DestinationPath $zipPath -Force"
+for /f %%i in ('powershell -Command "$date=(Get-Date -Format 'yyyyMMdd'); $zipPath='ClassManager\Compile\main_'+$date+'.zip'; $zippath"') do set "formatted_date=%%i"
+powershell -Command "$zipPath='ClassManager\Compile\main_!formatted_date!.zip'; Compress-Archive -Path '%temp_dir%' -DestinationPath $zipPath -Force"
 rd /s /q "%temp_dir%"
 for /f %%i in ('powershell -Command "Get-Date -Uformat %%s"') do set "end_time=%%i"
 for /f %%i in ('powershell -Command "[Math]::Round(!end_time! - !start_time!, 3)"') do set "time=%%i"
 echo 压缩耗时：!time!秒
-if exist "ClassManager\Compile\main_*.zip" (
+if exist "ClassManager\Compile\main_!formatted_date!.zip" (
     echo | set /p "_dummy=发行包已生成："
     powershell -Command "$date=(Get-Date -Format 'yyyyMMdd'); $zipPath='ClassManager\Compile\main_'+$date+'.zip'; $zippath"
     rd /s /q dist build 2>nul

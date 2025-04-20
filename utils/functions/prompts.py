@@ -5,8 +5,8 @@
 import random
 from typing import Optional, Literal, List, Union
 
-from PySide6.QtWidgets import QWidget, QMessageBox
-from PySide6.QtGui import QPixmap, QIcon
+from widgets.basic.Qt import *  # pylint: disable=wildcard-import, unused-wildcard-import
+
 
 
 def button_ok_text():
@@ -69,16 +69,16 @@ def question_yes_no(
     """
     if msg_type == "question":
         box = QMessageBox(QMessageBox.Icon.Question, title, text, parent=master)
-        box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-help.png"))
+        box.setWindowIcon(pixmap or QIcon("./img/logo/favicon-help.png"))
     elif msg_type == "information":
         box = QMessageBox(QMessageBox.Icon.Information, title, text, parent=master)
-        box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-main.png"))
+        box.setWindowIcon(pixmap or QIcon("./img/logo/favicon-main.png"))
     elif msg_type == "warning":
         box = QMessageBox(QMessageBox.Icon.Warning, title, text, parent=master)
-        box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-warn.png"))
+        box.setWindowIcon(pixmap or QIcon("./img/logo/favicon-warn.png"))
     elif msg_type == "critical":
         box = QMessageBox(QMessageBox.Icon.Critical, title, text, parent=master)
-        box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-error.png"))
+        box.setWindowIcon(pixmap or QIcon("./img/logo/favicon-error.png"))
 
     box.setStandardButtons(
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No

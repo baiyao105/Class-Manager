@@ -251,9 +251,15 @@ for i in range(100):
                     sys.stdout.write(repr(ret) + "\n")
             finished = True
 
-        Thread(target=_send).start()
-        while not finished:
-            do_nothing()
+
+        loop = QEventLoop()
+        timer = QTimer()
+        def _check_if_finished():
+            if finished:
+                loop.quit()
+                timer.stop()
+        timer.start(33)
+        loop.exec()
         self.command_history.append(cmd)
         self.history_index = len(self.command_history) - 1
         self.pushButton.setEnabled(True)

@@ -97,7 +97,8 @@ class Thread(OrigThread):
         *,
         daemon: Optional[bool] = None,
     ) -> None:
-        """初始化线程
+        """
+        初始化线程
 
         :param group: 线程组，默认为None
         :param target: 线程函数，默认为None
@@ -137,9 +138,11 @@ class Thread(OrigThread):
         self._finished = True
 
     def join(self, timeout: Optional[float] = None) -> Any:
-        """ "等待线程完成并返回结果
+        """
+        等待线程完成并返回结果
 
-        :param timeout: 超时时间，默认为None，表示无限等待"""
+        :param timeout: 超时时间，默认为None，表示无限等待
+        """
         super().join(timeout=timeout)
         return self._return
 

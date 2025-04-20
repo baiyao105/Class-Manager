@@ -22,8 +22,7 @@ from typing import *  # pylint: disable=wildcard-import, unused-wildcard-import
 import pickle as pickle_orig
 import pickle  # pylint: disable=reimported
 import dill as pickle  # pylint: disable=shadowed-import
-from PySide6.QtGui import *  # pylint: disable=wildcard-import, unused-wildcard-import
-from PySide6.QtWidgets import QMessageBox
+from widgets.basic.Qt import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
 from utils.basetypes import Object, Base

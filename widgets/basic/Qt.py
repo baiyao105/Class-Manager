@@ -1,7 +1,7 @@
 """
 Qt处理模块，用来做多版本Qt适配
 """
-# pylint: disable
+# pylint: disable=E
 
 from utils.consts import qt_version
 
@@ -44,7 +44,10 @@ elif qt_version == "PySide6":
     from PySide6 import QtWidgets
 
 
+# from PySide6.QtWidgets import *
+# from PySide6.QtGui import *
+# from PySide6.QtCore import *
+
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
-

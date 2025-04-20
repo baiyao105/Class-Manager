@@ -52,19 +52,3 @@ def qt_messagehandler(
 qInstallMessageHandler(qt_messagehandler)
 QLoggingCategory.setFilterRules("*.*=true\n*.debug=false\n*.info=false")
 # 让Qt把除了debug和info以外的日志都输出到qtmessagehandler
-
-last_process_time = 0
-"上次处理QCoreApplication.processEvents的时间"
-
-max_process_rate = 120
-"最大处理QCoreApplication.processEvents的频率"
-
-def do_nothing():
-    "啥也不干，让程序摸鱼一会"
-    # global last_process_time
-    # if time.time() - last_process_time > 1 / max_process_rate:
-        # last_process_time = time.time()
-    try:
-        QCoreApplication.processEvents()
-    except (RuntimeError, ValueError) as unused:
-        pass
