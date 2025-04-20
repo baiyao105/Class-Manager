@@ -165,18 +165,26 @@ class BackgroundScheme:
                 )
                 bg.background.add_frame_ready_callback(self._emit_frame_ready)
                 bg.background.start()
+                prev_array = None
                 while time.time() - first_frame_time < bg.fade_in:
                     progress = (time.time() - first_frame_time) / bg.fade_in
                     self._array = (last_frame * (1 - progress)) + (
                         bg.background.array * progress
                     )
-                    self._emit_frame_ready(arr_to_img(self._array.astype(np.uint8)))
-                    time.sleep(0.01)
+                    arr_uint8 = self._array.astype(np.uint8)
+                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
+                        self._emit_frame_ready(arr_to_img(arr_uint8))
+                        prev_array = arr_uint8.copy()
+                    time.sleep(0.02)
                 show_time = time.time()
+                prev_array = None
                 while time.time() - show_time < bg.duration:
                     self._array = bg.background.array
-                    self._emit_frame_ready(arr_to_img(self._array.astype(np.uint8)))
-                    time.sleep(0.01)
+                    arr_uint8 = self._array.astype(np.uint8)
+                    if prev_array is None or not np.array_equal(arr_uint8, prev_array):
+                        self._emit_frame_ready(arr_to_img(arr_uint8))
+                        prev_array = arr_uint8.copy()
+                    time.sleep(0.02)
                 bg.background.stop()
                 last_frame = bg.background.array
 
