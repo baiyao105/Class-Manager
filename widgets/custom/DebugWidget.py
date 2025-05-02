@@ -6,7 +6,6 @@
 
 import traceback
 from widgets.basic import *
-from widgets.ui.pyside6.About import Ui_Form
 from utils import (
     ClassObj,
     format_exc_like_java, 
@@ -122,7 +121,7 @@ for i in range(100):
         for cmd, name in cmds:
             self.comboBox.addItem(name, cmd)
         self.comboBox.setCurrentIndex(0)
-        if len(self.command_history):
+        if self.command_history:
             self.textEdit.setText(self.command_history[self.history_index])
         self.update()
 
@@ -131,6 +130,7 @@ for i in range(100):
         self.output_lines = []
 
     def change_command(self):
+        "切换快捷命令"
         index = self.comboBox.currentIndex()
         if (
             index <= 0
@@ -173,6 +173,7 @@ for i in range(100):
         self.update_timer.stop()
 
     def prev_history(self):
+        "上一条历史命令"
         if len(DebugWidget.command_history) == 0 or self.history_index == 0:
             return
         self.history_index = max(0, self.history_index - 1)
@@ -180,6 +181,7 @@ for i in range(100):
             self.textEdit.setText(DebugWidget.command_history[self.history_index])
 
     def next_history(self):
+        "下一条历史命令"
         if len(DebugWidget.command_history) == 0:
             return
         self.history_index = min(
@@ -193,6 +195,7 @@ for i in range(100):
 
     @Slot()
     def send_command(self):
+        "发送当前命令"
         if not self.textEdit.toPlainText().strip():
             return
         cmd = self.textEdit.toPlainText()
@@ -221,6 +224,7 @@ for i in range(100):
 
     @Slot()
     def send_command_in_thread(self):
+        "在一个新线程中发送当前命令"
         self.pushButton.setEnabled(False)
         cmd = self.textEdit.toPlainText()
         if not cmd.strip():
@@ -258,7 +262,9 @@ for i in range(100):
             if finished:
                 loop.quit()
                 timer.stop()
+        timer.timeout.connect(_check_if_finished)
         timer.start(33)
+        Thread(target=_send).start()
         loop.exec()
         self.command_history.append(cmd)
         self.history_index = len(self.command_history) - 1
