@@ -396,7 +396,77 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.sidenotice_waiting_order = Queue()
         self.sidenotice_avilable_slots = list(range(5))
         self.opacity = 0.88
+        "背景透明度"
         self.current_user = current_user
+        "当前用户"
+        self.background_pixmap: Optional[QPixmap] = None
+        "背景图片"
+        self.lastest_pixmap_update_time: float = 0.0
+        "上次更新背景图片的时间"
+        self.window_info: ClassWindow.WindowInfo = ClassWindow.WindowInfo()
+        "窗口信息"
+        self.btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
+        "按钮动画组"
+        self.running_btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
+        "运行中的按钮动画组"
+        self.exit_action_finished: bool = False
+        "退出动作是否完成"
+        self.exit_tip: Optional[QLabel] = None
+        "退出时正在保存数据的提示"
+        # self.use_animate_background: bool = False
+        # "是否使用动态背景"
+        self.capture: Optional[cv2.VideoCapture] = None
+        "动态背景的捕获对象"
+        self.current_video_frame: Optional[QImage] = None
+        "当前的动态背景视频帧"
+        self.tip_viewer_window: Optional[TipViewerWindow] = None
+        "提示查看窗口"
+        self.template_listbox: Optional[ListView] = None
+        "模板列表框"
+        self.manage_template_cursel_index: Optional[int] = None
+        "管理模板时选中的索引"
+        self.new_template_window: Optional[NewTemplateWidget] = None
+        "新建模板窗口"
+        self.history_detail_window: Optional[HistoryWidget] = None
+        "历史详情窗口"
+        self.multi_select_window: Optional[StudentSelectorWidget] = None
+        "多选学生窗口"
+        self.multi_select_template_window: Optional[SelectTemplateWidget] = None
+        "多选学生打开的模板窗口（以前不会写信号和槽弄的）"
+        self.setting_window: Optional[SettingWidget] = None
+        "设置窗口"
+        self.cleaning_sumup_window: Optional[CleaningScoreSumUpWidget] = None
+        "卫生分总结窗口"
+        self.group_info_window: Optional[GroupWidget] = None
+        "小组信息窗口"
+        self.icon: Optional[QIcon] = None
+        "窗口图标"
+        self.random_select_window: Optional[RandomSelectWidget] = None
+        "随机选择窗口"
+        self.homework_sumup_window: Optional[HomeworkScoreSumUpWidget] = None
+        "作业分总结窗口"
+        self.attendance_window: Optional[AttendanceInfoWidget] = None
+        "考勤窗口"
+        self.is_loading_all_history: bool = False
+        "是否正在加载所有历史记录"
+        self.listview_history_classes: Optional[ListView] = None
+        "历史记录查看的所有班级列表"
+        self.listview_history_class: Optional[ListView] = None
+        "历史记录查看的班级列表"
+        self.recovery_points: Optional[Dict[float, RecoveryPoint]] = None
+        "所有的恢复点"
+        self.about_window: Optional[AboutWidget] = None
+        "关于窗口"
+        self.debug_window: Optional[DebugWidget] = None
+        "调试窗口"
+        self.music_listview: Optional[ListView] = None
+        "音乐列表"
+        self.noise_detector: Optional[NoiseDetectorWidget] = None
+        "噪音检测窗口"
+        self.stu_buttons: Optional[Dict[int, ObjectButton]] = None
+        "学生按钮列表"
+        self.grp_buttons: Optional[Dict[str, ObjectButton]] = None
+        "小组按钮列表"
         Base.log("I", "程序创建", "MainWindow.__init__")
         self.app = app
         if qt_version in ("PySide6", "PyQt6"):
@@ -537,6 +607,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.going_to_exit.connect(self.on_exit)
         self.dont_click_button_clicked.connect(self._dont_click)
         self.refresh_hint_widget_signal.connect(self._refresh_hint_widget)
+        self.anim_group_state_changed.connect(self._anim_group_state_changed)
+
         self.framecount = 0
         "自上一秒以来的更新帧数"
         self.framerate = 0
@@ -594,72 +666,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             )
         )
 
-        self.background_pixmap: Optional[QPixmap] = None
-        "背景图片"
-        self.lastest_pixmap_update_time: float = 0.0
-        "上次更新背景图片的时间"
-        self.window_info: ClassWindow.WindowInfo = ClassWindow.WindowInfo()
-        "窗口信息"
-        self.refresh_hint_widget()
-        self.btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
-        "按钮动画组"
-        self.running_btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
-        "运行中的按钮动画组"
-        self.anim_group_state_changed.connect(self._anim_group_state_changed)
-        self.exit_action_finished: bool = False
-        "退出动作是否完成"
-        self.exit_tip: Optional[QLabel] = None
-        "退出时正在保存数据的提示"
-        # self.use_animate_background: bool = False
-        # "是否使用动态背景"
-        self.capture: Optional[cv2.VideoCapture] = None
-        "动态背景的捕获对象"
-        self.current_video_frame: Optional[QImage] = None
-        "当前的动态背景视频帧"
-        self.tip_viewer_window: Optional[TipViewerWindow] = None
-        "提示查看窗口"
-        self.template_listbox: Optional[ListView] = None
-        "模板列表框"
-        self.manage_template_cursel_index: Optional[int] = None
-        "管理模板时选中的索引"
-        self.new_template_window: Optional[NewTemplateWidget] = None
-        "新建模板窗口"
-        self.history_detail_window: Optional[HistoryWidget] = None
-        "历史详情窗口"
-        self.multi_select_window: Optional[StudentSelectorWidget] = None
-        "多选学生窗口"
-        self.multi_select_template_window: Optional[SelectTemplateWidget] = None
-        "多选学生打开的模板窗口（以前不会写信号和槽弄的）"
-        self.setting_window: Optional[SettingWidget] = None
-        "设置窗口"
-        self.cleaning_sumup_window: Optional[CleaningScoreSumUpWidget] = None
-        "卫生分总结窗口"
-        self.group_info_window: Optional[GroupWidget] = None
-        "小组信息窗口"
-        self.icon: Optional[QIcon] = None
-        "窗口图标"
-        self.random_select_window: Optional[RandomSelectWidget] = None
-        "随机选择窗口"
-        self.homework_sumup_window: Optional[HomeworkScoreSumUpWidget] = None
-        "作业分总结窗口"
-        self.attendance_window: Optional[AttendanceInfoWidget] = None
-        "考勤窗口"
-        self.is_loading_all_history: bool = False
-        "是否正在加载所有历史记录"
-        self.listview_history_classes: Optional[ListView] = None
-        "历史记录查看的所有班级列表"
-        self.listview_history_class: Optional[ListView] = None
-        "历史记录查看的班级列表"
-        self.recovery_points: Optional[Dict[float, RecoveryPoint]] = None
-        "所有的恢复点"
-        self.about_window: Optional[AboutWidget] = None
-        "关于窗口"
-        self.debug_window: Optional[DebugWidget] = None
-        "调试窗口"
-        self.music_listview: Optional[ListView] = None
-        "音乐列表"
-        self.noise_detector: Optional[NoiseDetectorWidget] = None
-        "噪音检测窗口"
+
         if self.auto_save_enabled:
             Thread(
                 target=lambda: self.auto_save(timeout=int(self.auto_save_interval)),
@@ -685,11 +692,11 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def init_display_data(self):
         """ "初始化显示数据和存储数据"""
-        Base.log("I", "初始化本地显示数据", "MainWindow.init_siaplay_data")
+        Base.log("I", "初始化本地显示数据", "MainWindow.init_display_data")
         self.target_class: Class
-        if not hasattr(self, "stu_buttons"):
+        if not self.stu_buttons:
             self.stu_buttons: Dict[int, ObjectButton] = {}
-            self.grp_buttons: Dict[int, ObjectButton] = {}
+            self.grp_buttons: Dict[str, ObjectButton] = {}
         self.client_version = CLIENT_VERSION
         self.client_version_code = CLIENT_VERSION_CODE
         self.opacity = 0.88
@@ -1533,19 +1540,19 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.scrollAreaWidgetContents_2.setGeometry(
             0, 0, 901, max((51 + 4) * len(self.target_class.students), 410)
         )
-        for num, stu in self.target_class.students.items():
-            self.stu_buttons[num] = ObjectButton(
+        for key, stu in self.target_class.students.items():
+            self.stu_buttons[key] = ObjectButton(
                 f"{stu.num}号 {stu.name}\n{stu.score}分", self, object=stu
             )
-            self.stu_buttons[num].setObjectName("StudentButton" + str(stu.num))
-            self.stu_buttons[num].setGeometry(
+            self.stu_buttons[key].setObjectName("StudentButton" + str(stu.num))
+            self.stu_buttons[key].setGeometry(
                 QRect(10 + col * (81 + 6), 8 + row * (51 + 4), 81, 51)
             )
-            self.stu_buttons[num].setParent(self.scrollAreaWidgetContents_2)
-            self.stu_buttons[num].clicked.connect(
+            self.stu_buttons[key].setParent(self.scrollAreaWidgetContents_2)
+            self.stu_buttons[key].clicked.connect(
                 lambda *, stu=stu: self.student_info(stu)
             )
-            self.stu_buttons[num].show()
+            self.stu_buttons[key].show()
             col += 1
             if col == 1:
                 height += 51 + 4
@@ -1559,20 +1566,20 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         col = 0
         max_col = (self.scrollArea.width() + 6) // (162 + 6)
         height = 0
-        for num, grp in self.target_class.groups.items():
+        for key, grp in self.target_class.groups.items():
             if grp.belongs_to == self.target_class.key:
-                self.grp_buttons[num] = ObjectButton(
+                self.grp_buttons[key] = ObjectButton(
                     f"{grp.name}\n{stu.score}分", self, object=stu
                 )
-                self.grp_buttons[num].setObjectName("GroupButton" + str(stu.num))
-                self.grp_buttons[num].setGeometry(
+                self.grp_buttons[key].setObjectName("GroupButton" + str(stu.num))
+                self.grp_buttons[key].setGeometry(
                     QRect(10 + col * (162 + 6), 8 + row * (102 + 4), 162, 102)
                 )
-                self.grp_buttons[num].setParent(self.tab_4)
-                self.grp_buttons[num].clicked.connect(
+                self.grp_buttons[key].setParent(self.tab_4)
+                self.grp_buttons[key].clicked.connect(
                     lambda *, grp=grp: self.group_info(grp)
                 )
-                self.grp_buttons[num].show()
+                self.grp_buttons[key].show()
                 col += 1
                 if col == 1:
                     height += 102 + 4
@@ -1800,6 +1807,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         )
         self.setWindowIcon(self.icon)
         self.on_start_up_finished()
+        self.refresh_hint_widget()
         self.show()
         self.updator_thread.start()
         Base.log("I", "线程启动完成，exec()", "MainWindow.mainloop")
@@ -1958,7 +1966,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.target_class.key, [], [], [], [], [], []
         )
         try:
-            if hasattr(self, "attendance_window"):
+            if self.attendance_window:
                 self.attendance_window.close()
         except BaseException as unused:  # pylint: disable=broad-exception-caught
             Base.log_exc("关闭考勤窗口失败", "MainWindow.day_end")
@@ -2926,7 +2934,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 for i in range(6):
                     try:
                         copytree("chunks", p + "/chunks")
-                    except Exception as e:
+                    except OSError as e:
                         if i > 4:
                             raise e
                     else:
@@ -2964,7 +2972,13 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
         pickle.dump(infof, open(self.backup_path + "backup_info.dat", "wb"))
 
-    def exec_command(self, command: str):
+    def exec_command(self, command: str) -> Any:
+        """
+        执行一行字符串形式的Python命令。
+        
+        :param command: 要执行的命令
+        :return: 命令的返回值
+        """
         Base.log("I", f"执行命令：{repr(command)}", "MainWindow.exec_command")
         self.terminal_locals.update({"self": self})
         self.terminal_locals.update(globals())
@@ -2978,6 +2992,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @Slot()
     @as_command("refresh_window", "刷新窗口")
     def refresh_window(self):
+        "刷新窗口"
         Base.log("I", "刷新窗口", "MainWindow.refresh_window")
         self.updator_thread.terminate()
         self.updator_thread = UpdateThread(self, self)
@@ -3002,10 +3017,10 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @as_command("save_data_as", "另存为")
     def save_data_as(self):
         """另存为"""
-        path = QFileDialog.getSaveFileName(
-            self, "另存为", self.save_path, "数据文件 (分散文件)"
-        )[0]
-        if path:
+        path = QFileDialog.getExistingDirectory(
+            self, "另存为", self.save_path,
+        )
+        if path and path.strip() != "":
             self.save_data(path)
 
     @Slot()

@@ -110,5 +110,5 @@ sys.stderr = Base.captured_stderr
 if __name__ == "__main__":
     print("你闲的没事跑这玩意干啥")
 
-elif __name__ == "utils.basetypes":
-    print("基层已初步加载完成")
+# elif __name__ == "utils.basetypes":
+#     print("基层已初步加载完成")

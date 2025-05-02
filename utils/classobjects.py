@@ -542,7 +542,7 @@ class ClassObj(OrigClassObj):
             self.achievement_templates: Dict[str, ClassObj.AchievementTemplate] = (
                 OrderedKeyList(data.achievements).to_dict()
             )  # 转换为字典
-            self.modify_templates: Dict[str, ClassObj.ScoreModificationTemplate] = (
+            self.modify_templates: OrderedKeyList[ClassObj.ScoreModificationTemplate] = (
                 OrderedKeyList(data.templates).to_dict()
             )
 
@@ -2299,8 +2299,9 @@ class AchievementStatusObserver(Object):
 
     def start(self):
         "启动侦测器"
-        a = Thread(target=self._start, name="AchievementObserverThread", daemon=True)
+        a = Thread(target=self._start, name="AchievementStatusObserverThread", daemon=True)
         a.start()
+
 
     def stop(self):
         "停止侦测器"
