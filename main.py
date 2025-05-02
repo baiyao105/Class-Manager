@@ -3708,9 +3708,15 @@ def main():
         Base.log("E", traceback.format_exc(), "MainThread")
     Base.log("I", f"程序结束，返回值：{stat}", "MainThread")
     Base.log("I", "等待自动保存...", "MainThread")
-    while widget.auto_saving:
-        "等待自动保存完成"
-        time.sleep(0.1)
+    loop = QEventLoop()
+    timer = QTimer()
+    def _check_if_finished():
+        if not widget.auto_saving:
+            loop.quit()
+            timer.stop()
+    timer.timeout.connect(_check_if_finished)
+    timer.start(33)
+    loop.exec()
     Base.log("I", "自动保存完成，趋势", "MainThread")
     return stat
 
