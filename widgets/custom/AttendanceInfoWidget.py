@@ -117,7 +117,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
     @Slot()
     def show_attending_list(self):
         attending_list = [
-            (day.attendance_info, day.utc) for day in self.mainwindow.weekday_record
+            (day.attendance_info, day.utc) for day in self.mainwindow.weekday_record[self.target_class.key].values()
         ]
         self.listview = ListView(
             self.mainwindow,

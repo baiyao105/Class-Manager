@@ -96,7 +96,7 @@ from utils.algorithm import Thread
 import utils.functions.prompts as PromptUtils
 from widgets.custom.NoiseDetectorWidget import HAS_PYAUDIO
 from widgets import *
-
+from utils.functions import wait_until
 try:
     from utils.login import login
 except ImportError:
@@ -176,7 +176,7 @@ def exception_handler(
     total = int(np.ceil(len(exc_info) / pagesize))
     index = 0
     try:
-        parent = widget
+        parent = ClassWindow.main_instance
         for i in range(total):
             currenttext = exc_info[i * pagesize : (i + 1) * pagesize]
             for j in range(math.ceil(len(currenttext) / pagemaxchars)):
@@ -315,7 +315,10 @@ def as_command(
 
 
 class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
+
     """班级窗口实例化"""
+
+    main_instance: Optional["ClassWindow"] = None
 
     ##### 信号 #####
 
@@ -891,7 +894,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
         :param title: 对话框标题
         :param text: 对话框内容
-        :param pixmap: 自定义图标"""
+        :param pixmap: 自定义图标
+        """
         self.show_info.emit((title, text, pixmap))
 
     def _information(self, title, text, pixmap):
@@ -967,12 +971,14 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def question_if_exec(
         self, title: str, text: str, command: Callable, pixmap: Optional[QPixmap] = None
     ):
-        """显示确认对话框并在用户确认时执行指定函数
+        """
+        显示确认对话框并在用户确认时执行指定函数
 
         :param title: 对话框标题
         :param text: 对话框内容
         :param command: 用户确认时执行的回调函数
-        :param pixmap: 自定义图标"""
+        :param pixmap: 自定义图标
+        """
         self.show_question.emit((title, text, command, pixmap))
 
     def _question_if_exec(self, title, text, command, pixmap):
@@ -1006,6 +1012,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def refresh_quick_command_btns(self, reset_callable: bool = True):
         """
         刷新快捷命令按钮
+        
         :param reset_callable: 是否重置按钮的回调函数
         """
         for i in range(1, 9 + 1):
@@ -1342,16 +1349,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.exit_tip.show()
             self.exit_action_finished = False
             self.going_to_exit.emit()
-            wait_loop = QEventLoop()
-            wait_timer = QTimer()
-            def _check_if_finished():
-                "检查是否完成退出操作"
-                if self.exit_action_finished:
-                    wait_loop.quit()
-                    wait_timer.stop()
-            wait_timer.timeout.connect(_check_if_finished)
-            wait_timer.start(33)
-            wait_loop.exec()
+            wait_until(lambda: self.exit_action_finished)
             self.hide()
             Base.log("I", "执行app.quit()", "MainWindow.closeEvent")
             self.app.quit()
@@ -1514,9 +1512,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 self.video_framecount += 1
 
             self.video_framerate = 0
-            while not self.use_animate_background:
-                "等待到再次启用动态动画"
-                time.sleep(0.1)
+            wait_until(lambda: self.use_animate_background)
 
     def setup(self):
         """设置界面"""
@@ -1567,7 +1563,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         max_col = (self.scrollArea.width() + 6) // (162 + 6)
         height = 0
         for key, grp in self.target_class.groups.items():
-            if grp.belongs_to == self.target_class.key:
+            if grp.belongs_to == self.target_class_id:
                 self.grp_buttons[key] = ObjectButton(
                     f"{grp.name}\n{stu.score}分", self, object=stu
                 )
@@ -1859,14 +1855,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Base.log("I", "进行将要退出操作", "MainWindow.on_exit")
         t = Thread(target=self._do_exit)
         t.start()
-        wait_timer = QTimer()
-        wait_loop = QEventLoop()
-        def _check_if_finished():
-            if not t.is_alive():
-                wait_loop.quit()
-        wait_timer.timeout.connect(_check_if_finished)
-        wait_timer.start(33)
-        wait_loop.exec()
+        wait_until(lambda: not t.is_alive())
         self.exit_action_finished = True
 
     def _do_exit(self):
@@ -1943,27 +1932,33 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             super().reset_scores()
 
     def day_end(self, weekday: int, utc: float, show_msgbox: bool = True):
-        """每日结算
+        """
+        每日结算
 
         :param weekday: 星期几
         :param utc: UTC时间
         """
-        if len(self.weekday_record):
-            if any([utc <= day.utc for day in self.weekday_record]):  # 时间倒流了？？
+        if self.target_class_id not in self.weekday_record:
+            self.weekday_record[self.target_class_id] = {}
+        if len(self.weekday_record[self.target_class_id]):
+            if any([utc <= day.utc for day in self.weekday_record[self.target_class_id].values()]):  # 时间倒流了？？
                 self.information(
                     "提示",
                     "时间倒流了？给我干哪天来了？\n\n"
-                    f"（结算时间：{utc:.1f}, 历史记录记录到了{max([day.utc for day in self.weekday_record]):.1f}）\n"
+                    f"（结算时间：{utc:.1f}, 历史记录记录到了"
+                    f"{max([day.utc for day in self.weekday_record[self.target_class_id].values()]):.1f}）\n"
                     "（如果这是你第一次使用本程序，那么请忽略此提示）",
                 )
 
         Base.log("I", "准备每日结算", "MainWindow.day_end")
         yesterday = DayRecord(
-            self.target_class, weekday, utc, self.current_day_attendance
+            self.target_class, weekday, utc, self.current_day_attendance[self.target_class_id]
         )
-        self.weekday_record.append(yesterday)
-        self.current_day_attendance = AttendanceInfo(
-            self.target_class.key, [], [], [], [], [], []
+        if self.target_class_id not in self.weekday_record:
+            self.weekday_record[self.target_class_id] = {}
+        self.weekday_record[self.target_class_id][yesterday.utc] = yesterday
+        self.current_day_attendance[self.target_class_id] = AttendanceInfo(
+            self.target_class_id, [], [], [], [], [], []
         )
         try:
             if self.attendance_window:
@@ -2292,7 +2287,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     for l in f.read().splitlines()
                     if ((not l.startswith("#")) and l.strip())
                 ]
-            self.label_23.setText("小提示")
             self.label_22.setText(
                 random.choice(hints) + ("\n（点击刷新）" if tip_refresh else "")
             )
@@ -2407,7 +2401,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def show_attendance(self):
         """显示考勤"""
         self.attendance_window = AttendanceInfoWidget(
-            self, self, self.current_day_attendance
+            self, self, self.current_day_attendance[self.target_class_id]
         )
         self.attendance_window.show()
 
@@ -2437,15 +2431,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.is_loading_all_history = True
         Thread(target=_load_history, name="HistoryLoader").start()
         self.is_loading_all_history = False
-        wait_timer = QTimer()
-        wait_loop = QEventLoop()
-        def _check_if_finished():
-            if finished:
-                wait_timer.stop()
-                wait_loop.quit()
-        wait_timer.timeout.connect(_check_if_finished)
-        wait_timer.start(33)
-        wait_loop.exec()
+        wait_until(lambda: finished)
         view = ListView(
             self,
             self,
@@ -2761,6 +2747,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @Slot()
     @as_command("show_update_log", "更新日志")
     def show_update_log(self):
+        "展示更新日志"
         self.information(
             (
                 "更新了！"
@@ -3424,7 +3411,7 @@ class UpdateThread(QThread):
                             time.sleep(0.1)
                         update()
 
-                    except Exception as e:
+                    except (OSError, IOError) as e:
                         Base.log_exc("更新出现错误", "UpdateThread.update_self")
                         self.mainwindow.show_tip(
                             "错误",
@@ -3490,6 +3477,7 @@ class UpdateThread(QThread):
         ):
 
             # 没好的一天又开始力
+
             self.mainwindow.show_tip(
                 "日期刷新",
                 time.strftime(
@@ -3621,27 +3609,19 @@ class RecoveryPoint:
         Base.log("I", "还原点模式：" + self.mode, "RecoveryPoint.load_onlydata")
         Base.log("I", "还原点时间：" + str(self.time), "RecoveryPoint.load_onlydata")
         Base.log("I", "当前用户：" + current_user, "RecoveryPoint.load_onlydata")
-        wait_loop = QEventLoop()
-        wait_timer = QTimer()
-        def _check_if_finished():
-            if not widget.auto_saving:
-                wait_loop.quit()
-                wait_timer.stop()
-        wait_timer.timeout.connect(_check_if_finished)
-        wait_timer.start(33)
-        wait_loop.exec()
-        self.load_onlydata(widget.current_user)
-        widget.stop()
-        rmtree(widget.save_path)
+        wait_until(lambda: ClassWindow.main_instance.auto_saving)
+        self.load_onlydata(ClassWindow.main_instance.current_user)
+        ClassWindow.main_instance.stop()
+        rmtree(ClassWindow.main_instance.save_path)
 
         def _copy():
-            for root, dirs, files in os.walk(self.get_data_path(widget.current_user)):
+            for root, dirs, files in os.walk(self.get_data_path(ClassWindow.main_instance.current_user)):
                 for file in files:
                     os.makedirs(
                         os.path.join(
-                            widget.save_path,
+                            ClassWindow.main_instance.save_path,
                             os.path.relpath(
-                                root, self.get_data_path(widget.current_user)
+                                root, self.get_data_path(ClassWindow.main_instance.current_user)
                             ),
                         ),
                         exist_ok=True,
@@ -3649,9 +3629,9 @@ class RecoveryPoint:
                     shutil_copy(
                         os.path.join(root, file),
                         os.path.join(
-                            widget.save_path,
+                            ClassWindow.main_instance.save_path,
                             os.path.relpath(
-                                root, self.get_data_path(widget.current_user)
+                                root, self.get_data_path(ClassWindow.main_instance.current_user)
                             ),
                             file,
                         ),
@@ -3660,21 +3640,13 @@ class RecoveryPoint:
         _copy()
         Base.log(
             "I",
-            f"将文件从{self.get_data_path(widget.current_user)}"
-            f"复制到{widget.save_path}...",
+            f"将文件从{self.get_data_path(ClassWindow.main_instance.current_user)}"
+            f"复制到{ClassWindow.main_instance.save_path}...",
             "RecoveryPoint.load_onlydata_and_set",
         )
-        QMessageBox.information(widget, "恢复成功", "恢复成功，请重新启动程序")
+        QMessageBox.information(ClassWindow.main_instance, "恢复成功", "恢复成功，请重新启动程序")
 
-        wait_loop = QEventLoop()
-        wait_timer = QTimer()
-        def _check_if_finished():
-            if not widget.auto_saving:
-                wait_loop.quit()
-                wait_timer.stop()
-        wait_timer.timeout.connect(_check_if_finished)
-        wait_timer.start(33)
-        wait_loop.exec()
+        wait_until(lambda: not ClassWindow.main_instance.auto_saving)
         _copy()  # 我就不信保存两次还能失败
         pid = os.getpid()  # 获取当前进程的PID
         os.kill(pid, signal.SIGTERM)  # 发送终止信号给当前进程（什么抽象关闭方法）
@@ -3686,19 +3658,23 @@ class RecoveryPoint:
         Base.log("I", "还原点模式：" + self.mode, "RecoveryPoint.load_onlydata")
         Base.log("I", "还原点时间：" + str(self.time), "RecoveryPoint.load_onlydata")
         Base.log("I", "当前用户：" + current_user, "RecoveryPoint.load_onlydata")
-        return widget.load_data(self.get_data_path(current_user), strict=True)
+        return ClassWindow.main_instance.load_data(self.get_data_path(current_user), strict=True)
 
-app = QApplication(sys.argv)
 
 
 @profile(precision=4)
 def main():
+    "主函数"
     # 登录模块写在这里，用户名存在user里面就行
-    global widget
     user = "default"
     class_key = DEFAULT_CLASS_KEY
+    app = QApplication(sys.argv)
+
+    Base.log("I", "程序启动", "MainThread")
+
     widget = ClassWindow(app, *sys.argv, current_user=user, class_key=class_key)
     # 其实MainWindow也只是做了个接口，整个程序还没做完（因为还有分班和添加/删除学生）
+    ClassWindow.main_instance = widget
 
     try:
         stat = widget.mainloop()
@@ -3708,15 +3684,7 @@ def main():
         Base.log("E", traceback.format_exc(), "MainThread")
     Base.log("I", f"程序结束，返回值：{stat}", "MainThread")
     Base.log("I", "等待自动保存...", "MainThread")
-    loop = QEventLoop()
-    timer = QTimer()
-    def _check_if_finished():
-        if not widget.auto_saving:
-            loop.quit()
-            timer.stop()
-    timer.timeout.connect(_check_if_finished)
-    timer.start(33)
-    loop.exec()
+    wait_until(lambda: not ClassWindow.main_instance.auto_saving)
     Base.log("I", "自动保存完成，趋势", "MainThread")
     return stat
 

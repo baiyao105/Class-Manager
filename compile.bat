@@ -218,7 +218,7 @@ set cmd=pyinstaller main.py -w ^
         --add-data           "version;." ^
         --add-data           "main.py;." ^
         --hidden-import      "PyQt6.QtWebEngine" ^
-        --exclude-module     "PySide6" ^
+        --exclude-module     "PyQt5" ^
         --exclude-module     "PyQt6" ^
         --distpath           "dist" ^
         --workpath           "build" ^
@@ -260,7 +260,7 @@ set cmd=python -m nuitka ^
         --mingw64 ^
         --output-dir=dist ^
         --standalone ^
-        --enable-plugin=pyside6 ^
+        --enable-plugin=PySide6 ^
         --include-data-dir=audio=./audio ^
         --include-data-dir=img=./img ^
         --include-data-dir=utils=./utils ^

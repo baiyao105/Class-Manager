@@ -411,3 +411,14 @@ class SideNotice:
 
     def __repr__(self):
         return f"SideNotice(title={self.title!r}, content={self.content!r}, index={self.index}, slot={self.slot})"
+
+
+if __name__ == "__main__":
+    import sys
+
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    window = ProgressAnimationTest()
+    window.show()
+    sys.exit(app.exec_())

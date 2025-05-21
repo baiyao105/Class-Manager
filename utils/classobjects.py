@@ -150,8 +150,6 @@ class ClassObj(OrigClassObj):
         :param saving_path: 保存路径
         """
         super().__init__()
-        self.class_name = None
-        self.class_id = None
         self.current_user = user
         if save_path is None:
             save_path = os.path.join(os.getcwd(), "chunks", user)
@@ -178,11 +176,11 @@ class ClassObj(OrigClassObj):
         "分数修改模板"
         self.achievement_templates: Dict[str, ClassObj.AchievementTemplate]
         "成就模板"
-        self.current_day_attendance: ClassObj.AttendanceInfo
+        self.current_day_attendance: Dict[str, ClassObj.AttendanceInfo]
         "当前日考勤信息"
         self.classes: Dict[str, ClassObj.Class]
         "班级"
-        self.weekday_record: List[ClassObj.DayRecord]
+        self.weekday_record: Dict[str, Dict[float, ClassObj.DayRecord]]
         "每日记录"
         self.auto_saving: bool = False
         "是否正在进行自动保存"
@@ -210,9 +208,7 @@ class ClassObj(OrigClassObj):
         :param achievement_obs_tps: 成就侦测器刻速率
         """
         self.current_user = current_user
-        self.class_name = class_name
-        self.class_id = class_id
-        self.target_class = self.classes[self.class_id]
+        self.target_class = self.classes[class_id]
         self.class_obs = ClassStatusObserver(self, class_id, class_obs_tps)
         self.achievement_obs = AchievementStatusObserver(
             self, class_id, tps=achievement_obs_tps
@@ -220,7 +216,9 @@ class ClassObj(OrigClassObj):
         self.class_obs.start()
         self.achievement_obs.start()
         if self.current_day_attendance is None:
-            self.current_day_attendance = ClassObj.AttendanceInfo(self.target_class.key)
+            self.current_day_attendance = {}
+        if self.target_class_id not in self.current_day_attendance:
+            self.current_day_attendance[self.target_class_id] = ClassObj.AttendanceInfo(self.target_class.key)
         Base.log(
             "I",
             f"初始化完成：用户[{current_user}], "
@@ -230,6 +228,23 @@ class ClassObj(OrigClassObj):
             f"成就侦测器刻速率：{achievement_obs_tps}",
             "ClassObjects.init_class_data",
         )
+    
+    @property
+    def target_class_id(self):
+        "目标班级id"
+        try:
+            return self.target_class.key
+        except AttributeError as unused:
+            return None
+    
+    @property
+    def target_class_name(self):
+        "目标班级名称"
+        try:
+            return self.target_class.name
+        except AttributeError as unused:
+            return None
+
 
     @staticmethod
     def load_data(
@@ -652,20 +667,14 @@ class ClassObj(OrigClassObj):
             if "current_day_attendance" in data:
                 self.current_day_attendance = data.current_day_attendance
             else:
-                self.current_day_attendance = (
-                    ClassObj.AttendanceInfo(
-                        self.target_class.key, [], [], [], [], [], [], []
-                    )
-                    if self.target_class is not None
-                    else None
-                )
+                self.current_day_attendance = {
+                    self.target_class_id: AttendanceInfo()
+                }
 
             if "weekday_record" in data:
-                self.weekday_record: List[ClassObj.DayRecord] = [
-                    day for day in data.weekday_record if day.utc > 1000000000
-                ]
+                self.weekday_record = data.weekday_record
             else:
-                self.weekday_record = []
+                self.weekday_record = {}
 
         if reset_missing:  # 如果需要重置，则重置
             self.reset_missing()
@@ -708,8 +717,8 @@ class ClassObj(OrigClassObj):
         templates: Dict[str, "ClassObj.ScoreModificationTemplate"],
         achievements: Dict[str, AchievementTemplate],
         last_start_time: float,
-        weekday_record: List[DayRecord],
-        current_day_attendance: AttendanceInfo,
+        weekday_record: Dict[str, List[DayRecord]],
+        current_day_attendance: Dict[str, AttendanceInfo],
         *,
         path: str = os.getcwd() + os.sep + f"chunks/{default_user}/",
         mode: Literal["pickle", "sqlite"] = "sqlite",
@@ -758,7 +767,7 @@ class ClassObj(OrigClassObj):
                 path = os.path.dirname(path) if path.endswith(".datas") else path
                 chunk = Chunk(path, database)
                 t = time.time()
-                chunk.save()
+                chunk.save_data()
                 Base.log(
                     "I",
                     f"写入文件完成 ({time.time()-t:.3f}s)",
@@ -879,8 +888,8 @@ class ClassObj(OrigClassObj):
             DEFAULT_SCORE_TEMPLATES.copy(),
             DEFAULT_ACHIEVEMENTS.copy(),
             time.time(),
-            [],
-            ClassObj.AttendanceInfo(DEFAULT_CLASS_KEY).copy(),
+            {DEFAULT_CLASS_KEY: {}},
+            {DEFAULT_CLASS_KEY: ClassObj.AttendanceInfo(DEFAULT_CLASS_KEY)}.copy(),
             path=path,
             mode=mode,
         )
@@ -1714,7 +1723,9 @@ class ClassObj(OrigClassObj):
     def reset_scores(self) -> Dict[str, Class]:
         "结算所有数据"
         history = ClassObj.History(
-            copy.deepcopy(self.classes), self.weekday_record, time.time()
+            copy.deepcopy(self.classes), 
+            self.weekday_record, 
+            time.time()
         )
         Base.log("W", "正在重置所有班级...", "ClassObjects.reset")
 
@@ -1728,8 +1739,8 @@ class ClassObj(OrigClassObj):
         self.history_data[time.time()] = history
         self.class_obs.opreation_record.clear()
         self.last_reset = time.time()
-        self.weekday_record = []
-        self.current_day_attendance = ClassObj.AttendanceInfo(self.target_class.key)
+        self.weekday_record = {}
+        self.current_day_attendance[self.target_class_id] = ClassObj.AttendanceInfo(self.target_class.key)
         ClassObj.archive_uuid = gen_uuid()
         return self.classes
 
@@ -1843,7 +1854,7 @@ class ClassObj(OrigClassObj):
 
         :param exc_info: 错误信息
         """
-        Base.log_exc("自动保存失败", "class_window.auto_save", "W", exc=exc_info)
+        Base.log_exc("自动保存失败", "class_window.auto_save", "W", exc=exc_info[1])
 
     def auto_save(self, timeout: int = 60):
         """
@@ -1992,7 +2003,8 @@ class ClassStatusObserver(Object):
     "班级状态侦测器"
 
     def __init__(self, base: ClassObj, class_id: str, tps: int = 20):
-        """构造一个新的侦测器
+        """
+        构造一个新的侦测器
 
         :param base: 班级数据 (self.classes)
         :param class_id: 班级id
@@ -2032,44 +2044,41 @@ class ClassStatusObserver(Object):
             Base.log_exc("获取班级信息失败", "ClassStatusObserver.__init__")
             raise ClassObj.ObserverError("获取班级信息失败")
 
-    def _start(self):
+    def run(self):
         "内部用来启动侦测器的函数"
-        if not self.on_active:
-            self.on_active = True
-            last_frame_time = time.time()
-            while self.on_active:
-                last_opreate_time = time.time()
-                if self.limited_tps:
-                    time.sleep(
-                        max((1 / self.limited_tps) - (time.time() - last_frame_time), 0)
-                    )
-                last_frame_time = time.time()
-                if time.time() - self.last_update > 1:
-                    self.last_update = time.time()
-                for k, s in self.target_class.students.items():
-                    if s.num != k:
-                        orig = s.num
-                        s.num = k
-                        Base.log(
-                            "I",
-                            f"学生 {s.name} 的学号已"
-                            f"从 {orig} 变为 {s.num}（二者不同步）",
-                            "ClassStatusObserver._start",
-                        )
-                self.stu_score_ord = dict(
-                    enumerate(
-                        sorted(
-                            list(self.classes[self.class_id].students.values()),
-                            key=lambda a: a.score,
-                        ),
-                        start=1,
-                    )
+        self.on_active = True
+        last_frame_time = time.time()
+        while self.on_active:
+            last_opreate_time = time.time()
+            if self.limited_tps:
+                time.sleep(
+                    max((1 / self.limited_tps) - (time.time() - last_frame_time), 0)
                 )
-                self.mspt = (time.time() - last_frame_time) * 1000
-                self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
+            last_frame_time = time.time()
+            if time.time() - self.last_update > 1:
+                self.last_update = time.time()
+            for k, s in self.target_class.students.items():
+                if s.num != k:
+                    orig = s.num
+                    s.num = k
+                    Base.log(
+                        "I",
+                        f"学生 {s.name} 的学号已"
+                        f"从 {orig} 变为 {s.num}（二者不同步）",
+                        "ClassStatusObserver._start",
+                    )
+            self.stu_score_ord = dict(
+                enumerate(
+                    sorted(
+                        list(self.classes[self.class_id].students.values()),
+                        key=lambda a: a.score,
+                    ),
+                    start=1,
+                )
+            )
+            self.mspt = (time.time() - last_frame_time) * 1000
+            self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
 
-        else:
-            Base.log("I", "已经有存在的侦测线程了，无需再次启动")
 
     @property
     def student_total_score(self) -> int:
@@ -2117,8 +2126,8 @@ class ClassStatusObserver(Object):
 
     def start(self):
         "启动侦测器"
-        a = Thread(target=self._start, name="ClassStatusObserverThread", daemon=True)
-        a.start()
+        self.on_active = True
+        Thread(target=self.run, name="ClassStatusObserver", daemon=True).start()
 
     def stop(self):
         "停止侦测器"
@@ -2199,88 +2208,85 @@ class AchievementStatusObserver(Object):
             "AchievementStatusObserver._start",
         )
 
-    def _start(self):
+    def run(self):
         "内部启动用函数"
-        if not self.on_active:
-            self.total_frame_count = 0
-            self.on_active = True
-            t = Thread(
-                target=self._display_thread, name="DisplayAchievement", daemon=True
-            )
-            t.start()
-            start_time = time.time()
+        self.total_frame_count = 0
+        self.on_active = True
+        t = Thread(
+            target=self._display_thread, name="DisplayAchievement", daemon=True
+        )
+        t.start()
+        start_time = time.time()
+        last_frame_time = time.time()
+        overload_count = 0
+        while self.on_active:
+            self.total_frame_count += 1
+            last_opreate_time = time.time()
+
+            if time.time() - self.last_update > 1:
+                self.last_update = time.time()
+            if self.limited_tps:
+                time.sleep(
+                    max((1 / self.limited_tps) - (time.time() - last_frame_time), 0)
+                )
             last_frame_time = time.time()
-            overload_count = 0
-            while self.on_active:
-                self.total_frame_count += 1
-                last_opreate_time = time.time()
+            opreated = False
+            # 性能优化点：O(n²)复杂度(?)
+            for s in list(self.classes[self.class_id].students.values()):
 
-                if time.time() - self.last_update > 1:
-                    self.last_update = time.time()
-                if self.limited_tps:
-                    time.sleep(
-                        max((1 / self.limited_tps) - (time.time() - last_frame_time), 0)
-                    )
-                last_frame_time = time.time()
-                opreated = False
-                # 性能优化点：O(n²)复杂度(?)
-                for s in list(self.classes[self.class_id].students.values()):
+                for a in list(self.achievement_templates.keys()):
 
-                    for a in list(self.achievement_templates.keys()):
-
+                    if self.achievement_templates[a].achieved_by(
+                        s, self.class_obs
+                    ) and (
+                        self.achievement_templates[a].key
+                        not in [  # 判断成就是否已经达成过
+                            a.temp.key
+                            for a in self.classes[self.class_id]
+                            .students[s.num]
+                            .achievements.values()
+                        ]
+                    ):
+                        opreated = True
+                        time.sleep(0.1)  # 等待操作完成，避免竞态条件
                         if self.achievement_templates[a].achieved_by(
                             s, self.class_obs
-                        ) and (
-                            self.achievement_templates[a].key
-                            not in [  # 判断成就是否已经达成过
-                                a.temp.key
-                                for a in self.classes[self.class_id]
-                                .students[s.num]
-                                .achievements.values()
-                            ]
                         ):
-                            opreated = True
-                            time.sleep(0.1)  # 等待操作完成，避免竞态条件
-                            if self.achievement_templates[a].achieved_by(
-                                s, self.class_obs
-                            ):
-                                Base.log(
-                                    "I",
-                                    f"[{s.name}] 达成了成就 [{self.achievement_templates[a].name}]",
-                                )
-                                a2 = ClassObj.Achievement(
-                                    self.achievement_templates[a], s
-                                )
-                                a2.give()
-                                self.display_achievement_queue.put(
-                                    {"achievement": a, "student": s}
-                                )
+                            Base.log(
+                                "I",
+                                f"[{s.name}] 达成了成就 [{self.achievement_templates[a].name}]",
+                            )
+                            a2 = ClassObj.Achievement(
+                                self.achievement_templates[a], s
+                            )
+                            a2.give()
+                            self.display_achievement_queue.put(
+                                {"achievement": a, "student": s}
+                            )
 
-                cur_time = time.time()
-                self.mspt = (cur_time - last_frame_time) * 1000
-                overload_before = self.overloaded
-                if not opreated:  # 只在空扫描的时候才检测是否过载
-                    if self.mspt > 1000 / self.limited_tps * self.overload_ratio:
-                        self.overloaded = True
-                        overload_count += 1
-                    else:
-                        self.overloaded = False
-                        overload_count = 0
-                    if (
-                        self.overloaded
-                        and overload_count > self.overload_warning_frame_limit
-                        and (cur_time - start_time) > 1
-                        and not overload_before
-                    ):
-                        # 刚才才开始过载并且已经开了有一段时间了
-                        self.on_observer_overloaded(
-                            last_frame_time, last_opreate_time, self.mspt
-                        )
-                    time.sleep((self.mspt * (1 / self.overload_ratio)) / 1000)
-                self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
+            cur_time = time.time()
+            self.mspt = (cur_time - last_frame_time) * 1000
+            overload_before = self.overloaded
+            if not opreated:  # 只在空扫描的时候才检测是否过载
+                if self.mspt > 1000 / self.limited_tps * self.overload_ratio:
+                    self.overloaded = True
+                    overload_count += 1
+                else:
+                    self.overloaded = False
+                    overload_count = 0
+                if (
+                    self.overloaded
+                    and overload_count > self.overload_warning_frame_limit
+                    and (cur_time - start_time) > 1
+                    and not overload_before
+                ):
+                    # 刚才才开始过载并且已经开了有一段时间了
+                    self.on_observer_overloaded(
+                        last_frame_time, last_opreate_time, self.mspt
+                    )
+                time.sleep((self.mspt * (1 / self.overload_ratio)) / 1000)
+            self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
 
-        else:
-            Base.log("I", "已经有存在的侦测线程了，无需再次启动")
 
     def _display_thread(self):
         "显示成就的线程"
@@ -2299,8 +2305,8 @@ class AchievementStatusObserver(Object):
 
     def start(self):
         "启动侦测器"
-        a = Thread(target=self._start, name="AchievementStatusObserverThread", daemon=True)
-        a.start()
+        self.on_active = True
+        Thread(target=self.run, name="AchievementStatusObserver", daemon=True).start()
 
 
     def stop(self):
