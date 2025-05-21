@@ -9,6 +9,7 @@ from typing import Union, Any
 
 from utils.settings import SettingsInfo
 from utils.basetypes import Base
+
 from .Qt import *
 from widgets.basic.MyMainWindow import MyMainWindow
 
@@ -95,22 +96,41 @@ class MyWidget(QWidget):
         self.is_running = True
         if SettingsInfo.current.animation_speed <= 114514:
             # 计算动画终点位置
-            endpoint = (
-                self.master.geometry().topLeft()
-                + QPoint(
-                    self.master.geometry().width() / 2,
-                    self.master.geometry().height() / 2,
+            if self.master:
+                endpoint = (
+                    self.master.geometry().topLeft()
+                    + QPoint(
+                        self.master.geometry().width() / 2,
+                        self.master.geometry().height() / 2,
+                    )
+                    - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                    + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
                 )
-                - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
-                + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
-            )
 
-            # 计算动画起点位置
-            startpoint = QPoint(
-                endpoint.x(),
-                QGuiApplication.primaryScreen().availableGeometry().height()
-                + QGuiApplication.primaryScreen().availableGeometry().top(),
-            )
+                # 计算动画起点位置
+                startpoint = QPoint(
+                    endpoint.x(),
+                    QGuiApplication.primaryScreen().availableGeometry().height()
+                    + QGuiApplication.primaryScreen().availableGeometry().top(),
+                )
+
+            else:
+                # 如果没有父窗口就默认以屏幕中心为最终位置
+                endpoint = (
+                    QPoint(
+                        QGuiApplication.primaryScreen().availableGeometry().width() / 2,
+                        QGuiApplication.primaryScreen().availableGeometry().height() / 2,
+                    )
+                    - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                    + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
+                    )
+                
+                startpoint = QPoint(
+                    endpoint.x(),
+                    QGuiApplication.primaryScreen().availableGeometry().height()
+                    + QGuiApplication.primaryScreen().availableGeometry().top(),
+                )
+                
 
             # 使用通用动画创建方法
             self.startanimation = self.create_animation(
@@ -179,8 +199,8 @@ class MyWidget(QWidget):
     def show(self):
         "展示窗口"
         self.is_running = True
-        self.move(
-            (
+        if self.master:
+            pos = (
                 self.master.geometry().topLeft()
                 + QPoint(
                     self.master.geometry().width() / 2,
@@ -189,7 +209,17 @@ class MyWidget(QWidget):
                 - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
                 + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
             )
-        )
+
+        else:
+            pos = (QPoint(
+                QGuiApplication.primaryScreen().availableGeometry().width() / 2,
+                QGuiApplication.primaryScreen().availableGeometry().height() / 2,
+            )
+                - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
+            )
+        
+        self.move(pos)
         super().show()
         if SettingsInfo.current.animation_speed <= 114514:
             self.showStartAnimation()

@@ -11,6 +11,7 @@ import sqlite3
 from utils.functions.prompts import question_yes_no
 from utils.classdtypes import *  # pylint: disable=unused-wildcard-import, wildcard-import
 from utils.classobjects import gen_uuid
+from utils.default import DEFAULT_CLASS_KEY
 
 # 数据加载器
 
@@ -113,8 +114,8 @@ class UserDataBase(Object):
         templates: Optional[Dict[str, "ClassDataObj.ScoreModificationTemplate"]] = None,
         achievements: Optional[Dict[str, AchievementTemplate]] = None,
         last_start_time: Optional[float] = None,
-        weekday_record: Optional[List[DayRecord]] = None,
-        current_day_attendance: Optional[AttendanceInfo] = None,
+        weekday_record: Optional[Dict[str, Dict[float, DayRecord]]] = None,
+        current_day_attendance: Optional[Dict[str, AttendanceInfo]] = None,
     ):
         """
         构建一个数据库对象。
@@ -129,7 +130,8 @@ class UserDataBase(Object):
         :param templates: 当前分数模板
         :param achievements: 当前成就模板
         :param last_start_time: 上次启动时间
-        :param current_day_attendance: 今日出勤状况
+        :param weekday_record: 每周出勤记录
+        :param current_day_attendance: 每个班级的今日出勤状况
         """
         self.loaded = False
         self.user = user or "unknown"
@@ -142,8 +144,8 @@ class UserDataBase(Object):
         self.templates = templates or {}
         self.achievements = achievements or {}
         self.last_start_time = last_start_time or time.time()
-        self.weekday_record = weekday_record or []
-        self.current_day_attendance = current_day_attendance or AttendanceInfo()
+        self.weekday_record = weekday_record or {}
+        self.current_day_attendance = current_day_attendance or {}
         self.loaded = user is not None  # 任一参数非空即视为已加载
 
     def set(
@@ -158,10 +160,12 @@ class UserDataBase(Object):
         templates: Optional[Dict[str, "ClassDataObj.ScoreModificationTemplate"]] = None,
         achievements: Optional[Dict[str, AchievementTemplate]] = None,
         last_start_time: Optional[float] = None,
-        weekday_record: Optional[List[DayRecord]] = None,
-        current_day_attendance: Optional[AttendanceInfo] = None,
+        weekday_record: Optional[Dict[str, Dict[float, DayRecord]]] = None,
+        current_day_attendance: Optional[Dict[str, AttendanceInfo]] = None,
     ):
-        """构建一个数据库对象。
+        """
+        构建一个数据库对象。
+
         :param user: 用户名
         :param save_time: 保存时间
         :param version: 算法核心版本
@@ -183,8 +187,8 @@ class UserDataBase(Object):
         self.templates = templates or {}
         self.achievements = achievements or {}
         self.last_start_time = last_start_time or time.time()
-        self.weekday_record = weekday_record or []
-        self.current_day_attendance = current_day_attendance or AttendanceInfo()
+        self.weekday_record = weekday_record
+        self.current_day_attendance = current_day_attendance
         self.loaded = user is not None  # 任一参数非空即视为已加载
 
     def __contains__(self, key):
@@ -555,7 +559,7 @@ class Chunk:
 
     def __init__(self, path: str, bound_database: Optional[UserDataBase] = None):
         self.path = path
-        self.bound_db = bound_database or UserDataBase(path)
+        self.bound_db = bound_database or UserDataBase()
         self.is_saving = False
         os.makedirs(
             self.path if not path.endswith(".datas") else os.path.dirname(self.path),
@@ -612,6 +616,11 @@ class Chunk:
             history_uuid: UUIDKind[History] = history_uuid,
         ) -> _DT:
             _id = (history_uuid, data_type.chunk_type_name, uuid)
+            if uuid is None:
+                if "noticed_uuid_is_none" not in runtime_flags:
+                    Base.log("D", "加载时遇到uuid为None，将会直接返回None", "Chunk.load_history._load_object")
+                    runtime_flags["noticed_uuid_is_none"] = True
+                return None
 
             DataObject.load_tasks.append(_id)
             try:
@@ -628,7 +637,8 @@ class Chunk:
                         (history_uuid, data_type.chunk_type_name)
                     ]
                 except KeyError:
-                    # 如果没连接就直接开一个新的连接放连接池，不用反复开开关关的节约性能（加载完记得relase_connections，清理内存）
+                    # 如果没连接就直接开一个新的连接放连接池，不用反复开开关关的节约性能
+                    # （加载完记得relase_connections，清理内存）
                     conn = sqlite3.connect(
                         os.path.join(path, f"{data_type.chunk_type_name}.db"),
                         check_same_thread=False,
@@ -651,7 +661,10 @@ class Chunk:
                     )
                     DataObject.load_tasks.remove(_id)
                     failures.append(_id)
-                    return data_type.new_dummy()
+                    obj = data_type.new_dummy()
+                    obj.archive_uuid = _id[0]
+                    obj.uuid = _id[2]
+                    return obj
 
                 if result is None:
                     Base.log(
@@ -661,7 +674,10 @@ class Chunk:
                     )
                     DataObject.load_tasks.remove(_id)
                     failures.append(_id)
-                    return data_type.new_dummy()
+                    obj = data_type.new_dummy()
+                    obj.archive_uuid = _id[0]
+                    obj.uuid = _id[2]
+                    return obj
 
                 obj_shallow_loaded = data_type.new_dummy()
                 # 先浅层加载一下，防止触发无限递归
@@ -721,17 +737,25 @@ class Chunk:
         class_uuids = json.load(
             open(os.path.join(path, "classes.json"), "r", encoding="utf-8")
         )
-        weekday_uuids = json.load(
+        weekday_uuids: Dict[str, Dict[float, UUIDKind[DayRecord]]] = json.load(
             open(os.path.join(path, "weekdays.json"), "r", encoding="utf-8")
         )
+        index = 0
+        for item in weekday_uuids:
+            if len(item) <= 2:
+                weekday_uuids[index] = [DEFAULT_CLASS_KEY, *item]
+            index += 1
         classes = {}
         for _, class_uuid in class_uuids:
             _class: Class = ClassDataObj.LoadUUID(class_uuid, Class)
             classes[_class.key] = _class
 
-        for _, weekday_uuid in weekday_uuids:
-            weekday: DayRecord = ClassDataObj.LoadUUID(weekday_uuid, DayRecord)
-            self.bound_db.weekday_record.append(weekday)
+        for target_class, item in weekday_uuids.items():
+            for time_key, weekday_uuid in item.items():
+                weekday: DayRecord = ClassDataObj.LoadUUID(weekday_uuid, DayRecord)
+                if target_class not in self.bound_db.weekday_record:
+                    self.bound_db.weekday_record[target_class] = {}
+                self.bound_db.weekday_record[target_class][weekday.utc] = weekday
 
         history = History(
             classes,
@@ -769,7 +793,9 @@ class Chunk:
 
         templates = []
         achievements = []
-        current_day_attendance = AttendanceInfo()
+        current_day_attendance = {}
+
+
 
         # 有个细节，这里的LoadUUID是纲刚刚加载完这周的，所以不用填默认参数
         template_uuids = json.load(
@@ -795,6 +821,18 @@ class Chunk:
         for _, achievement_uuid in achievement_uuids:
             achievements.append(
                 ClassDataObj.LoadUUID(achievement_uuid, AchievementTemplate)
+            )
+
+        current_day_attendance_uuids = json.load(
+            open(
+                os.path.join(self.path, "Current", "current_day_attendance.json"),
+                "r",
+                encoding="utf-8",
+            )
+        )
+        for target_class, uuid in current_day_attendance_uuids:
+            current_day_attendance[target_class] = ClassDataObj.LoadUUID(
+                uuid, AttendanceInfo
             )
 
         info = json.load(
@@ -831,8 +869,8 @@ class Chunk:
             templates,
             achievements,
             info["last_start_time"],
-            list(current_record.weekdays.values()),
-            current_day_attendance,
+            current_record.weekdays,
+            current_day_attendance
         )
 
     @staticmethod
@@ -845,7 +883,7 @@ class Chunk:
         if clear_dataobj_connections:
             DataObject.relase_connections(False)
 
-    def save(
+    def save_data(
         self,
         save_history: bool = True,
         save_only_if_not_exist: bool = True,
@@ -918,11 +956,15 @@ class Chunk:
                 modify_templates: List[ScoreModificationTemplate] = list(
                     self.bound_db.templates.values()
                 )
+                day_records: List[DayRecord] = []
                 achivement_templates: List[AchievementTemplate] = list(
                     self.bound_db.achievements.values()
                 )
-                day_records: List[DayRecord] = list(self.bound_db.weekday_record)
-                day_records.append(self.bound_db.current_day_attendance)
+
+                for c, records in current_history.weekdays.items():
+                    for r in records.values():
+                        day_records.append(r)
+                    
                 students: List[Student] = []
                 modifies: List[ScoreModification] = []
                 achievements: List[Achievement] = []
@@ -941,7 +983,7 @@ class Chunk:
                             Student.last_reset_info_keep_turns
                         ):  # 保留最近几次的重置信息
                             # TODO: 把这个废性能的方法改一下，last_reset_info改成动态查询
-                            if s.last_reset_info:
+                            if s._last_reset_info:
                                 students.append(student.last_reset_info)
                                 modifies.extend(
                                     student.last_reset_info.history.values()
@@ -1084,6 +1126,9 @@ class Chunk:
                     "Chunk.save",
                 )
                 t = time.time()
+                for attendance_info in self.bound_db.current_day_attendance.values():
+                    DataObject(attendance_info, self).save(path)
+                    total_objects += 1
                 Base.log(
                     "D",
                     f"历史记录中的{uuid}的当前出勤保存完成，"
@@ -1122,9 +1167,17 @@ class Chunk:
                 )
 
                 json.dump(
-                    [(d.utc, d.uuid) for d in current_history.weekdays.values()],
+                    {
+                        _class: {k: v.uuid for k, v in item.items()}
+                        for _class, item in current_history.weekdays.items()
+                        
+                    },
                     open(os.path.join(path, "weekdays.json"), "w", encoding="utf-8"),
                     indent=4,
+                )
+                json.dump(
+                    [(a.target_class, a.uuid) for a in self.bound_db.current_day_attendance.values()],
+                    open(os.path.join(path, "current_day_attendance.json"), "w", encoding="utf-8"),             
                 )
 
                 json.dump(

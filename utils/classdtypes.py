@@ -523,7 +523,7 @@ class ClassDataObj(Base):
                     "belongs_to_group": self.belongs_to_group,
                     "total_score": self.total_score,
                     "last_reset_info": (
-                        self.last_reset_info.uuid if self.last_reset_info else None
+                        self.last_reset_info.uuid if self._last_reset_info else None
                     ),
                     "uuid": self.uuid,
                     "archive_uuid": self.archive_uuid,
@@ -1866,13 +1866,14 @@ class ClassDataObj(Base):
                     NameError,
                     TypeError,
                     SystemError,
-                    AttributeError
+                    AttributeError,
+                    RuntimeError
                 ) as e:  # pylint: disable=unused-variable
-                    if len(e.args):
+                    if e.args:
                         if e.args[0] == "name 'student' is not defined":
                             Base.log(
                                 "W",
-                                "为加载完成，未定义student",
+                                "未加载完成，未定义student",
                                 "AchievementTemplate.achieved",
                             )
                         elif e.args[0] == "unknown opcode":
@@ -2418,16 +2419,16 @@ class ClassDataObj(Base):
         def __init__(
             self,
             classes: Dict[str, "ClassDataObj.Class"],
-            weekdays: Union[
-                List["ClassDataObj.DayRecord"], Dict[float, "ClassDataObj.DayRecord"]
-            ],
+            weekdays: Dict[str, Dict[float, "ClassDataObj.DayRecord"]],
             save_time: Optional[float] = None,
         ):
             self.classes = dict(classes)
             self.time = save_time or time.time()
-            self.weekdays: Dict[float, DayRecord] = (
-                {d.utc: d for d in weekdays} if isinstance(weekdays, list) else weekdays
-            )
+            weekdays = weekdays.copy()
+
+            self.weekdays: Dict[str, Dict[float, "ClassDataObj.DayRecord"]] \
+                = weekdays
+            
             self.uuid = self.archive_uuid = ClassDataObj.archive_uuid
             # IMPORTANT: 这里的对象uuid和归档uuid是一样的
 
@@ -2436,14 +2437,16 @@ class ClassDataObj(Base):
 
         def to_string(self):
             "将历史记录转换为字符串。"
-            if isinstance(self.weekdays, list):
-                self.weekdays = {d.utc: d for d in self.weekdays}
+            for _class, item in self.weekdays.items():
+                if isinstance(item, list):
+                    self.weekdays[_class] = {d.utc: d for d in item}
 
             return json.dumps(
                 {
                     "classes": {k: v.uuid for k, v in self.classes.items()},
                     "time": self.time,
-                    "weekdays": {k: v.uuid for k, v in self.weekdays.items()},
+                    "weekdays": [[(_class, time_key, day.uuid) for time_key, day in item.items()] \
+                                    for _class, item in self.weekdays.items()],
                     "uuid": self.uuid,
                     "archive_uuid": self.archive_uuid,
                 }
@@ -2461,11 +2464,13 @@ class ClassDataObj(Base):
                 classes={
                     k: ClassDataObj.LoadUUID(v, Class) for k, v in d["classes"].items()
                 },
-                weekdays={
-                    k: ClassDataObj.LoadUUID(v, DayRecord) for k, v in d["weekdays"].items()
-                },
+                weekdays={},
                 save_time=d["time"],
             )
+            for _class, time_key, day_uuid in d["weekdays"]:
+                if _class not in obj.weekdays:
+                    obj.weekdays[_class] = {}
+                obj.weekdays[_class][time_key] = ClassDataObj.LoadUUID(day_uuid, DayRecord)
             obj.uuid = d["uuid"]
             obj.archive_uuid = d["archive_uuid"]
             assert obj.uuid == obj.archive_uuid, (
@@ -2482,6 +2487,7 @@ class ClassDataObj(Base):
 
 
 class ClassStatusObserver(Object):
+
     "班级状态侦测器"
 
     on_active: bool
