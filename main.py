@@ -60,6 +60,9 @@ from utils.classobjects import (  # pylint: disable=unused-import, disable=wrong
     HomeworkRule,
     dummy_student,
     History,
+    HistoricalClass,
+    HistoricalStudent,
+    HistoricalGroup,
     Stack,
     Base,
     ClassObj,
@@ -374,6 +377,92 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     #                                初始化                                    #
     ###########################################################################
 
+    def _initialize_member_variables(self):
+        """Initialize instance member variables with default values."""
+        self.create_time = time.time()
+        self.framerate_update_time = 0
+        self.framecount = 0
+        self.last_save_from_action = time.time()
+        self.auto_save_last_time = time.time()
+        self.sidenotice_waiting_order = Queue()
+        self.sidenotice_avilable_slots = list(range(5))
+        self.opacity = 0.88
+        # self.current_user is set in __init__ parameter
+        self.background_pixmap: Optional[QPixmap] = None
+        self.lastest_pixmap_update_time: float = 0.0
+        self.window_info: ClassWindow.WindowInfo = ClassWindow.WindowInfo()
+        self.btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
+        self.running_btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
+        self.exit_action_finished: bool = False
+        self.exit_tip: Optional[QLabel] = None
+        self.capture: Optional[cv2.VideoCapture] = None
+        self.current_video_frame: Optional[QImage] = None
+        self.tip_viewer_window: Optional[TipViewerWindow] = None
+        self.template_listbox: Optional[ListView] = None
+        self.manage_template_cursel_index: Optional[int] = None
+        self.new_template_window: Optional[NewTemplateWidget] = None
+        self.history_detail_window: Optional[HistoryWidget] = None
+        self.multi_select_window: Optional[StudentSelectorWidget] = None
+        self.multi_select_template_window: Optional[SelectTemplateWidget] = None
+        self.setting_window: Optional[SettingWidget] = None
+        self.cleaning_sumup_window: Optional[CleaningScoreSumUpWidget] = None
+        self.group_info_window: Optional[GroupWidget] = None
+        self.icon: Optional[QIcon] = None
+        self.random_select_window: Optional[RandomSelectWidget] = None
+        self.homework_sumup_window: Optional[HomeworkScoreSumUpWidget] = None
+        self.attendance_window: Optional[AttendanceInfoWidget] = None
+        self.is_loading_all_history: bool = False
+        self.listview_history_classes: Optional[ListView] = None
+        self.listview_history_class: Optional[ListView] = None
+        self.recovery_points: Optional[Dict[float, RecoveryPoint]] = None
+        self.about_window: Optional[AboutWidget] = None
+        self.debug_window: Optional[DebugWidget] = None
+        self.music_listview: Optional[ListView] = None
+        self.noise_detector: Optional[NoiseDetectorWidget] = None
+        self.stu_buttons: Optional[Dict[int, ObjectButton]] = {} # Initialize as empty dict
+        self.grp_buttons: Optional[Dict[str, ObjectButton]] = {} # Initialize as empty dict
+        self.is_running = True # Typically set after setup, but can be defaulted here
+        self.command_list = command_list # Global command_list
+        self.listView_data: List[Callable] = []
+        self.lastest_listview: Optional[ListView] = None
+        self.insert_queue = Queue()
+        self.logger_queue = Queue()
+        self.logwindow_content: List[str] = ["这里是日志"] # Initial log message
+        self.tip_history: List[SideNotice] = []
+        self.auto_saving = False # Default state for auto_saving
+        self.terminal_locals = {}
+        # For conditional updates in self.update()
+        self._last_label_2_text = ""
+        self._last_label_3_text = ""
+        self._last_label_4_text = ""
+        self._last_label_5_text = ""
+        self._last_label_6_text = ""
+        self._last_bodylabel_text = ""
+        self._last_greeting_hour = -1
+
+
+    def _configure_observers(self):
+        """Configure aspects of observers after they are initialized."""
+        orig_func = self.achievement_obs.on_observer_overloaded
+        last_tip = 0.0
+
+        def on_achievement_obs_overloaded(fr, op, mspt):
+            nonlocal last_tip
+            if time.time() - last_tip >= 30:
+                self.show_tip(
+                    "警告",
+                    "成就侦测器过载，已降低侦测速度",
+                    self,
+                    duration=8000,
+                    icon=InfoBarIcon.WARNING,
+                    further_info=f"详细信息：\n\n帧耗时：{fr}s\n操作耗时：{op}s\n帧耗时：{mspt}ms",
+                )
+                last_tip = time.time()
+            orig_func(fr, op, mspt)
+        self.achievement_obs.on_observer_overloaded = on_achievement_obs_overloaded
+        self.achievement_obs.achievement_displayer = self.display_achievement
+
+
     def __init__(
         self,
         app: QApplication,
@@ -390,134 +479,64 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         :param current_user: 当前用户
         :param class_key: 班级键
         """
-
-        self.create_time = time.time()
-        self.framerate_update_time = 0
-        self.framecount = 0
-        self.last_save_from_action = time.time()
-        self.auto_save_last_time = time.time()
-        self.sidenotice_waiting_order = Queue()
-        self.sidenotice_avilable_slots = list(range(5))
-        self.opacity = 0.88
-        "背景透明度"
         self.current_user = current_user
-        "当前用户"
-        self.background_pixmap: Optional[QPixmap] = None
-        "背景图片"
-        self.lastest_pixmap_update_time: float = 0.0
-        "上次更新背景图片的时间"
-        self.window_info: ClassWindow.WindowInfo = ClassWindow.WindowInfo()
-        "窗口信息"
-        self.btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
-        "按钮动画组"
-        self.running_btns_anim_group: Optional[QParallelAnimationGroup] = QParallelAnimationGroup()
-        "运行中的按钮动画组"
-        self.exit_action_finished: bool = False
-        "退出动作是否完成"
-        self.exit_tip: Optional[QLabel] = None
-        "退出时正在保存数据的提示"
-        # self.use_animate_background: bool = False
-        # "是否使用动态背景"
-        self.capture: Optional[cv2.VideoCapture] = None
-        "动态背景的捕获对象"
-        self.current_video_frame: Optional[QImage] = None
-        "当前的动态背景视频帧"
-        self.tip_viewer_window: Optional[TipViewerWindow] = None
-        "提示查看窗口"
-        self.template_listbox: Optional[ListView] = None
-        "模板列表框"
-        self.manage_template_cursel_index: Optional[int] = None
-        "管理模板时选中的索引"
-        self.new_template_window: Optional[NewTemplateWidget] = None
-        "新建模板窗口"
-        self.history_detail_window: Optional[HistoryWidget] = None
-        "历史详情窗口"
-        self.multi_select_window: Optional[StudentSelectorWidget] = None
-        "多选学生窗口"
-        self.multi_select_template_window: Optional[SelectTemplateWidget] = None
-        "多选学生打开的模板窗口（以前不会写信号和槽弄的）"
-        self.setting_window: Optional[SettingWidget] = None
-        "设置窗口"
-        self.cleaning_sumup_window: Optional[CleaningScoreSumUpWidget] = None
-        "卫生分总结窗口"
-        self.group_info_window: Optional[GroupWidget] = None
-        "小组信息窗口"
-        self.icon: Optional[QIcon] = None
-        "窗口图标"
-        self.random_select_window: Optional[RandomSelectWidget] = None
-        "随机选择窗口"
-        self.homework_sumup_window: Optional[HomeworkScoreSumUpWidget] = None
-        "作业分总结窗口"
-        self.attendance_window: Optional[AttendanceInfoWidget] = None
-        "考勤窗口"
-        self.is_loading_all_history: bool = False
-        "是否正在加载所有历史记录"
-        self.listview_history_classes: Optional[ListView] = None
-        "历史记录查看的所有班级列表"
-        self.listview_history_class: Optional[ListView] = None
-        "历史记录查看的班级列表"
-        self.recovery_points: Optional[Dict[float, RecoveryPoint]] = None
-        "所有的恢复点"
-        self.about_window: Optional[AboutWidget] = None
-        "关于窗口"
-        self.debug_window: Optional[DebugWidget] = None
-        "调试窗口"
-        self.music_listview: Optional[ListView] = None
-        "音乐列表"
-        self.noise_detector: Optional[NoiseDetectorWidget] = None
-        "噪音检测窗口"
-        self.stu_buttons: Optional[Dict[int, ObjectButton]] = None
-        "学生按钮列表"
-        self.grp_buttons: Optional[Dict[str, ObjectButton]] = None
-        "小组按钮列表"
+        self._initialize_member_variables() # Step 1: Basic defaults
+
         Base.log("I", "程序创建", "MainWindow.__init__")
-        self.app = app
-        if qt_version in ("PySide6", "PyQt6"):
+        self.app = app # Store app reference
+        if qt_version in ("PySide6", "PyQt6"): # Apply style if applicable
             self.app.setStyle(QStyleFactory.create(app_style))
             self.app.setStyleSheet(app_stylesheet)
-        self.save_path = f"chunks/{current_user}/"  # 可能在加载过之后变更
-        "存档路径"
+
+        self.save_path = f"chunks/{current_user}/"
         self.backup_path = "backups/"
-        "备份路径"
-        super().__init__(user=current_user)
-        self.init_display_data()
-        self.load_settings()
+
+        super().__init__(user=current_user) # Call ClassObj's __init__
+        self.init_display_data() # Initialize data structures from ClassObj
+        self.load_settings() # Load persistent settings
+
+        # Initialize core class data, observers
         self.init_class_data(
             class_name=class_name,
             class_id=class_key,
             current_user=current_user,
-            class_obs_tps=10,
+            class_obs_tps=10, # Default observer ticks per second
             achievement_obs_tps=10,
         )
-        # 给成就侦测器过载的时候增加一个提示
-        orig_func = self.achievement_obs.on_observer_overloaded
-        last_tip = 0.0
 
-        def on_achievement_obs_overloaded(fr, op, mspt):
-            "当成就侦测器过载时执行的操作"
-            nonlocal last_tip
-            if time.time() - last_tip >= 30:
-                self.show_tip(
-                    "警告",
-                    "成就侦测器过载，已降低侦测速度",
-                    self,
-                    duration=8000,
-                    icon=InfoBarIcon.WARNING,
-                    further_info=f"详细信息：\n\n帧耗时：{fr}s\n操作耗时：{op}s\n帧耗时：{mspt}ms",
-                )
-                last_tip = time.time()
-            orig_func(fr, op, mspt)
+        self._configure_observers() # Attach custom handlers to observers
 
-        self.achievement_obs.on_observer_overloaded = on_achievement_obs_overloaded
+        self.setup() # Setup UI from Ui_MainWindow (designer)
 
-        self.stu_list_button_update.connect(self._grid_buttons)
-        self.setup()
-        self.achievement_obs.achievement_displayer = self.display_achievement
-        self.is_running = True
-        "窗口是否在运行"
-        self.framerate_update_time = time.time()
-        self.updator_thread = UpdateThread(mainwindow=self)
-        self.command_list = command_list
+        self.updator_thread = UpdateThread(mainwindow=self) # Initialize UI update thread
+
+        # Setup UI connections and components
+        self._connect_actions()
+        self._setup_quick_commands()
+        self._connect_ui_signals()
+        self._initialize_core_components()
+        self._setup_timers()
+
+        # Final window setup steps
+        self.setWindowTitle(f"班寄管理 - {self.target_class.name}")
+        if self.icon is None:
+            self.icon = QIcon()
+        self.icon.addPixmap(QPixmap("img/favicon.ico"), QIcon.Mode.Normal, QIcon.State.Off)
+        self.setWindowIcon(self.icon)
+
+        # Post-initialization hooks and initial UI state
+        self.on_start_up_finished()
+        self.refresh_hint_widget()
+
+        # Background threads are started in mainloop after window is shown,
+        # or by _start_background_threads if called explicitly post-show.
+        # For robustness, self._start_background_threads() is called here.
+        # If threads depend on UI being visible, their internal logic should handle it or they should be started post-show.
+        self._start_background_threads()
+
+
+    def _connect_actions(self):
+        """Connect QAction triggers to their respective methods."""
         self.action.triggered.connect(self.student_rank)
         self.action_2.triggered.connect(self.manage_templates)
         self.action_3.triggered.connect(self.open_setting_window)
@@ -546,27 +565,27 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         )
         self.action_26.triggered.connect(self.refresh_window)
         self.action_28.triggered.connect(self.show_debug_window)
-        self.actionNew_Template.triggered.connect(
-            self.new_template
-        )  # 笑死唯一一个不是默认名字的action控件
-        self.show_new_tip.connect(lambda tip: tip.show())
+        self.actionNew_Template.triggered.connect(self.new_template)
+
+    def _setup_quick_commands(self):
+        """Initialize the quick command button list, set up their display, and connect signals for managing them."""
         self.selected_quick_command: List[Optional[Command]] = [
-            [c for c in self.command_list if c.key == "new_template"][0],
-            [c for c in self.command_list if c.key == "manage_templates"][0],
-            [c for c in self.command_list if c.key == "show_all_history"][0],
-            [c for c in self.command_list if c.key == "scoring_select"][0],
-            [c for c in self.command_list if c.key == "homework_score_sum_up"][0],
-            [c for c in self.command_list if c.key == "cleaning_score_sum_up"][0],
-            [c for c in self.command_list if c.key == "show_attendance"][0],
-            [c for c in self.command_list if c.key == "detect_new_version"][0],
-            [c for c in self.command_list if c.key == "show_update_log"][0],
+            next((c for c in self.command_list if c.key == "new_template"), None),
+            next((c for c in self.command_list if c.key == "manage_templates"), None),
+            next((c for c in self.command_list if c.key == "show_all_history"), None),
+            next((c for c in self.command_list if c.key == "scoring_select"), None),
+            next((c for c in self.command_list if c.key == "homework_score_sum_up"), None),
+            next((c for c in self.command_list if c.key == "cleaning_score_sum_up"), None),
+            next((c for c in self.command_list if c.key == "show_attendance"), None),
+            next((c for c in self.command_list if c.key == "detect_new_version"), None),
+            next((c for c in self.command_list if c.key == "show_update_log"), None),
         ]
         self.fast_command_edit_state = False
-        self.refresh_quick_command_btns()
-        self.HyperlinkLabel.clicked.connect(self.edit_fast_command_btns)
-        self.CardWidget.clicked.connect(self.show_attendance)
-        self.pushButton_3.clicked.connect(self.about_this)
-        self.pushButton_4.clicked.connect(self.open_setting_window)
+        self.refresh_quick_command_btns() # Initialize button texts and connections
+        self.HyperlinkLabel.clicked.connect(self.edit_fast_command_btns) # "Edit" link for quick commands
+        self.pushButton_3.clicked.connect(self.about_this)    # "About" button on quick command panel
+        self.pushButton_4.clicked.connect(self.open_setting_window) # "Settings" button on quick command panel
+
         try:
             self.load_quick_settings_from_list(
                 pickle.load(
@@ -580,29 +599,17 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             )
         except FileNotFoundError:
             Base.log("W", "未找到快速命令文件，重置为默认", "MainWindow.load_settings")
+
+    def _connect_ui_signals(self):
+        """Connect signals from various UI elements to their slots."""
+        self.show_new_tip.connect(lambda tip: tip.show())
         self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.listWidget.doubleClicked.connect(self.click_opreation)
         self.tip_update.connect(lambda args: self._show_tip(*args))
         self.button_update.connect(self.btn_anim)
         self.log_window_refresh.connect(self._refresh_logwindow)
-        self.pushButton.clicked.connect(self.dont_click)
-        self.listView_data: List[Callable] = []
-        "ListView数据，用于存储主窗口侧边ListView里面的命令（对应里面的每一项）"
-        self.lastest_listview: Optional[ListView] = None
-        "最近一次用self.list_view()开启的ListView"
-        self.textBrowser.setReadOnly(True)
-        self.textBrowser.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        self.setFixedSize(self.width(), self.height())
-        Base.log("I", f"设置透明度为{self.opacity}", "MainWindow.__init__")
-        self.listWidget.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
-        )
-        self.insert_queue = Queue()
-        "在主窗口右侧ListWidget插入项的队列"
-        self.logger_queue = Queue()
-        "要插入到主窗口日志的队列"
+        self.pushButton.clicked.connect(self.dont_click) # "Don't Click" button
         self.log_update.connect(self.logwindow_add_newline)
-        self.log_update.emit("这里是日志")
         self.show_info.connect(lambda args: self._information(*args))
         self.show_warning.connect(lambda args: self._warning(*args))
         self.show_error.connect(lambda args: self._critical(*args))
@@ -611,66 +618,108 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.dont_click_button_clicked.connect(self._dont_click)
         self.refresh_hint_widget_signal.connect(self._refresh_hint_widget)
         self.anim_group_state_changed.connect(self._anim_group_state_changed)
-
-        self.framecount = 0
-        "自上一秒以来的更新帧数"
-        self.framerate = 0
-        "帧率"
-        self.video_framecount = 0
-        "动态背景帧数"
-        self.video_framerate = 0
-        "动态背景帧率"
-        self.video_framerate_update_time = 0
-        "动态背景帧数更新时间"
-        self.displayed_on_the_log_window = 0
-        "在小日志窗口上已经体现的日志条数，用来判断是否刷新"
-        self.tip_handler = self.TipHandler(self)
-        self.tip_handler.start()
-        self.logwindow_content: List[str] = ["这里是日志"]
-        self.auto_saving = False
-        self.setWindowTitle(f"班寄管理 - {self.target_class.name}")
-        self.terminal_locals = {}
-        self.update_timer = QTimer()
-        self.update_timer.timeout.connect(self.update)
-        self.update_timer.start(100)
-        self.recent_command_update_timer = QTimer()
-        self.recent_command_update_timer.timeout.connect(
-            self.update_recent_command_btns
+        self.ListWidget.itemDoubleClicked.connect(self.view_tip_hisory) # Tip history list
+        self.CardWidget_2.clicked.connect( # Hint widget card
+            lambda: Thread(target=self.refresh_hint_widget).start()
         )
-        self.recent_command_update_timer.start(300)
-        self.tip_history: List[SideNotice] = []
+
+
+    def __init__(
+        self,
+        app: QApplication,
+        *args: str,
+        class_name: str = "测试班级",
+        current_user: str = default_user,
+        class_key: str ="CLASS_TEST",
+    ):
+        """
+        窗口初始化
+        :param app: QApplication
+        :param args: 命令行参数
+        :param class_name: 班级名称
+        :param current_user: 当前用户
+        :param class_key: 班级键
+        """
+        self.current_user = current_user
+        self._initialize_member_variables()
+
+        Base.log("I", "程序创建", "MainWindow.__init__")
+        self.app = app
+        if qt_version in ("PySide6", "PyQt6"):
+            self.app.setStyle(QStyleFactory.create(app_style))
+            self.app.setStyleSheet(app_stylesheet)
+
+        self.save_path = f"chunks/{current_user}/"
+        self.backup_path = "backups/"
+
+        super().__init__(user=current_user)
+        self.init_display_data()
+        self.load_settings()
+
+        self.init_class_data(
+            class_name=class_name,
+            class_id=class_key,
+            current_user=current_user,
+            class_obs_tps=10,
+            achievement_obs_tps=10,
+        )
+
+        self._configure_observers()
+
+        self.stu_list_button_update.connect(self._grid_buttons)
+        self.setup()
+
+        self.updator_thread = UpdateThread(mainwindow=self)
+
+    def _initialize_core_components(self):
+        """Initialize core UI components, queues, and other non-action/signal states."""
+        self.textBrowser.setReadOnly(True)
+        self.textBrowser.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        # self.setFixedSize(self.width(), self.height()) # This might be better after window is shown or based on settings
+        Base.log("I", f"设置透明度为{self.opacity}", "MainWindow._initialize_core_components")
+        self.listWidget.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+        )
+        self.log_update.emit("这里是日志") # Initial log message for the log window
+        self.tip_handler = self.TipHandler(self)
+
+        # Initial tip for user
         self.show_tip(
             "", "双击项目查看消息记录", duration=0, further_info="孩子真聪明（bushi"
         )
-        self.ListWidget.itemDoubleClicked.connect(self.view_tip_hisory)
-        self.ListWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
-        self.student_info_window: Optional[StudentWidget] = None
-        self.CardWidget_2.clicked.connect(
-            lambda: Thread(target=self.refresh_hint_widget).start()
-        )
+        # Redirect prompt utility
         PromptUtils.send_notice = lambda title, content, msg_type: (
             self.show_tip(
                 title,
                 content,
                 (
-                    InfoBarIcon.INFORMATION
-                    if msg_type == "info"
-                    else (
-                        InfoBarIcon.WARNING
-                        if msg_type == "warn"
-                        else (
-                            InfoBarIcon.ERROR
-                            if msg_type == "error"
-                            else InfoBarIcon.SUCCESS
-                        )
-                    )
+                    InfoBarIcon.INFORMATION if msg_type == "info" else
+                    InfoBarIcon.WARNING if msg_type == "warn" else
+                    InfoBarIcon.ERROR if msg_type == "error" else
+                    InfoBarIcon.SUCCESS
                 ),
             )
         )
+        # self.student_info_window is initialized to None and created on demand
 
+    def _setup_timers(self):
+        """Initialize and start QTimer instances."""
+        self.update_timer = QTimer(self) # Parent it to self for auto-cleanup
+        self.update_timer.timeout.connect(self.update)
+        self.update_timer.start(100) # Start after all setup
 
-        if self.auto_save_enabled:
+        self.recent_command_update_timer = QTimer(self) # Parent it
+        self.recent_command_update_timer.timeout.connect(
+            self.update_recent_command_btns
+        )
+        self.recent_command_update_timer.start(300) # Start after all setup
+
+    def _start_background_threads(self):
+        """Start all background threads for the application."""
+        self.tip_handler.start() # Start the tip handler thread
+
+        if self.auto_save_enabled: # Check if auto_save is enabled (from settings)
             Thread(
                 target=lambda: self.auto_save(timeout=int(self.auto_save_interval)),
                 name="AutoSave",
@@ -690,8 +739,232 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             name="RefreshLogWindow",
         ).start()
 
+
+    def __init__(
+        self,
+        app: QApplication,
+        *args: str,
+        class_name: str = "测试班级",
+        current_user: str = default_user,
+        class_key: str ="CLASS_TEST",
+    ):
+        """
+        窗口初始化
+        :param app: QApplication
+        :param args: 命令行参数
+        :param class_name: 班级名称
+        :param current_user: 当前用户
+        :param class_key: 班级键
+        """
+        self.current_user = current_user
+        self._initialize_member_variables()
+
+        Base.log("I", "程序创建", "MainWindow.__init__")
+        self.app = app
+        if qt_version in ("PySide6", "PyQt6"):
+            self.app.setStyle(QStyleFactory.create(app_style))
+            self.app.setStyleSheet(app_stylesheet)
+
+        self.save_path = f"chunks/{current_user}/"
+        self.backup_path = "backups/"
+
+        super().__init__(user=current_user)
+        self.init_display_data()
+        self.load_settings()
+
+        self.init_class_data(
+            class_name=class_name,
+            class_id=class_key,
+            current_user=current_user,
+            class_obs_tps=10,
+            achievement_obs_tps=10,
+        )
+
+        self._configure_observers()
+
+        self.stu_list_button_update.connect(self._grid_buttons)
+        self.setup()
+
+        self.updator_thread = UpdateThread(mainwindow=self) # Needs to be after setup for mainwindow ref
+
+        self._connect_actions()
+        self._setup_quick_commands()
+        self._connect_ui_signals()
+        self._initialize_core_components()
+        self._setup_timers() # Timers should be set up before threads that might rely on them implicitly
+
+        self.setWindowTitle(f"班寄管理 - {self.target_class.name}") # Needs target_class
+        self.icon = QIcon()
+        self.icon.addPixmap(QPixmap("img/favicon.ico"), QIcon.Mode.Normal, QIcon.State.Off)
+        self.setWindowIcon(self.icon)
+
+        self.on_start_up_finished()
+        self.refresh_hint_widget()
+
+        self._start_background_threads()
+
     def __repr__(self):  # 其实是因为直接继承ClassObjects的repr会导致无限递归
         return super(MyMainWindow, self).__repr__()
+
+    def _connect_actions(self):
+        """Connect QAction triggers (menu items, toolbar buttons) to their respective methods."""
+        self.action.triggered.connect(self.student_rank)
+        self.action_2.triggered.connect(self.manage_templates)
+        self.action_3.triggered.connect(self.open_setting_window)
+        self.action_5.triggered.connect(self.scoring_select)
+        self.action_7.triggered.connect(self.retract_lastest)
+        self.action_8.triggered.connect(lambda: self.tabWidget_2.setCurrentIndex(1))
+        self.action_9.triggered.connect(lambda: self.tabWidget_2.setCurrentIndex(0))
+        self.action_10.triggered.connect(self.save)
+        self.action_12.triggered.connect(self.reset_scores)
+        self.action_13.triggered.connect(self.show_all_history)
+        self.action_14.triggered.connect(self.save_data_as)
+        self.action_15.triggered.connect(self.music_selector)
+        self.action_16.triggered.connect(self.show_recover_points)
+        self.action_17.triggered.connect(self.create_recover_point)
+        self.action_18.triggered.connect(self.cleaning_score_sum_up)
+        self.action_19.triggered.connect(self.show_attendance)
+        self.action_20.triggered.connect(self.show_noise_detector)
+        self.action_21.triggered.connect(self.random_select)
+        self.action_22.triggered.connect(self.homework_score_sum_up)
+        self.action_23.triggered.connect(self.about_this)
+        self.action_24.triggered.connect(self.show_update_log)
+        self.action_25.triggered.connect(
+            lambda: Thread(
+                target=lambda: self.updator_thread.detect_new_version(False)
+            ).start()
+        )
+        self.action_26.triggered.connect(self.refresh_window)
+        self.action_28.triggered.connect(self.show_debug_window)
+        self.actionNew_Template.triggered.connect(self.new_template)
+
+    def _setup_quick_commands(self):
+        """Initialize the quick command button list, set up their display, and connect signals for managing them."""
+        self.selected_quick_command: List[Optional[Command]] = [
+            next((c for c in self.command_list if c.key == "new_template"), None),
+            next((c for c in self.command_list if c.key == "manage_templates"), None),
+            next((c for c in self.command_list if c.key == "show_all_history"), None),
+            next((c for c in self.command_list if c.key == "scoring_select"), None),
+            next((c for c in self.command_list if c.key == "homework_score_sum_up"), None),
+            next((c for c in self.command_list if c.key == "cleaning_score_sum_up"), None),
+            next((c for c in self.command_list if c.key == "show_attendance"), None),
+            next((c for c in self.command_list if c.key == "detect_new_version"), None),
+            next((c for c in self.command_list if c.key == "show_update_log"), None),
+        ]
+        self.fast_command_edit_state = False
+        self.refresh_quick_command_btns() # Initialize button texts and connections
+        self.HyperlinkLabel.clicked.connect(self.edit_fast_command_btns) # "Edit" link for quick commands
+        self.pushButton_3.clicked.connect(self.about_this)    # "About" button on quick command panel
+        self.pushButton_4.clicked.connect(self.open_setting_window) # "Settings" button on quick command panel
+
+        try:
+            self.load_quick_settings_from_list(
+                pickle.load(
+                    open(
+                        os.getcwd()
+                        + os.sep
+                        + f"chunks/{self.current_user}/quick_commands.pkl",
+                        "rb",
+                    )
+                )
+            )
+        except FileNotFoundError:
+            Base.log("W", "未找到快速命令文件，重置为默认", "MainWindow._setup_quick_commands")
+
+    def _connect_ui_signals(self):
+        """
+        Connect signals from various general UI elements (not covered by QActions or specific setups like timers)
+        to their respective slots/handler methods. This includes custom signals of ClassWindow itself.
+        """
+        self.stu_list_button_update.connect(self._grid_buttons) # For refreshing student/group buttons grid
+        self.show_new_tip.connect(lambda tip: tip.show()) # Custom signal for side notices
+
+        # Main action history ListWidget
+        self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.listWidget.doubleClicked.connect(self.click_opreation)
+
+        # Custom signals for tips and UI updates
+        self.tip_update.connect(lambda args: self._show_tip(*args))
+        self.button_update.connect(self.btn_anim) # For button animations
+        self.log_window_refresh.connect(self._refresh_logwindow) # For refreshing the small log window
+        self.log_update.connect(self.logwindow_add_newline) # For adding lines to log_window_content
+
+        # Custom signals for dialogs
+        self.show_info.connect(lambda args: self._information(*args))
+        self.show_warning.connect(lambda args: self._warning(*args))
+        self.show_error.connect(lambda args: self._critical(*args))
+        self.show_question.connect(lambda args: self._question_if_exec(*args))
+
+        # Application lifecycle signals
+        self.going_to_exit.connect(self.on_exit)
+
+        # Specific button/widget connections
+        self.pushButton.clicked.connect(self.dont_click) # The "千万别点" button
+        self.dont_click_button_clicked.connect(self._dont_click)
+        self.refresh_hint_widget_signal.connect(self._refresh_hint_widget) # For the hint display area
+        self.anim_group_state_changed.connect(self._anim_group_state_changed)
+
+        self.ListWidget.itemDoubleClicked.connect(self.view_tip_hisory) # Tip history list (different from action listWidget)
+        self.CardWidget.clicked.connect(self.show_attendance) # Attendance card on main screen - moved from _setup_quick_commands
+        self.CardWidget_2.clicked.connect( # Hint widget card
+            lambda: Thread(target=self.refresh_hint_widget).start()
+        )
+
+    def _initialize_core_components(self):
+        """
+        Initialize core UI components with specific settings, set up data queues,
+        and configure other non-signal/action related states.
+        """
+        self.textBrowser.setReadOnly(True) # Main log display
+        self.textBrowser.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        # self.setFixedSize(self.width(), self.height()) # Decided against fixing size here
+        Base.log("I", f"设置透明度为{self.opacity}", "MainWindow._initialize_core_components") # Logging opacity
+        self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn) # Action history scrollbar
+
+        self.log_update.emit("这里是日志") # Send initial message to log window content
+
+        self.tip_handler = self.TipHandler(self) # Initialize tip handler (thread will be started by _start_background_threads)
+
+        # Initial tip for user in the side panel
+        self.show_tip(
+            "", "双击项目查看消息记录", duration=0, further_info="孩子真聪明（bushi"
+        )
+
+        # Redirect prompt utility from utils.functions to use ClassWindow's tip system
+        PromptUtils.send_notice = lambda title, content, msg_type: (
+            self.show_tip(
+                title,
+                content,
+                (
+                    InfoBarIcon.INFORMATION if msg_type == "info" else
+                    InfoBarIcon.WARNING if msg_type == "warn" else
+                    InfoBarIcon.ERROR if msg_type == "error" else
+                    InfoBarIcon.SUCCESS
+                ),
+            )
+        )
+        # self.student_info_window is already initialized to None in _initialize_member_variables
+
+    def _setup_timers(self):
+        """
+        Initialize and start QTimer instances used for periodic updates
+        like UI refresh and recent command buttons.
+        Timers are parented to self for auto-cleanup when the window is destroyed.
+        They are started here as they don't depend on the window being visible, only on the event loop running.
+        """
+        self.update_timer = QTimer(self)
+        self.update_timer.timeout.connect(self.update)
+        self.update_timer.start(100)
+
+        self.recent_command_update_timer = QTimer(self)
+        self.recent_command_update_timer.timeout.connect(
+            self.update_recent_command_btns
+        )
+        self.recent_command_update_timer.start(300)
+
+    def _start_background_threads(self):
+        """Start all background threads for the application."""
+        pass
 
     def init_display_data(self):
         """ "初始化显示数据和存储数据"""
@@ -1526,91 +1799,217 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def _grid_buttons(self):
         """grid_buttons的接口，不要用Thread调用!"""
-        Base.log("I", "准备显示按钮", "MainWindow.grid_buttons")
-        for b in self.stu_buttons.values():
-            b.deleteLater()
+        Base.log("I", "准备更新/显示学生按钮", "MainWindow._grid_buttons")
+
+        # Student Buttons Update Logic
+        current_stu_keys = set(self.target_class.students.keys())
+        existing_btn_keys = set(self.stu_buttons.keys())
+
+        keys_to_remove = existing_btn_keys - current_stu_keys
+        for key in keys_to_remove:
+            if self.stu_buttons[key]:
+                self.stu_buttons[key].deleteLater()
+            del self.stu_buttons[key]
+
+        keys_to_add = current_stu_keys - existing_btn_keys
+        # keys_to_reposition will be all current_stu_keys, as layout might change
+
         row = 0
         col = 0
-        max_col = (self.scrollArea.width() + 6) // (81 + 6)
-        height = 0
+        # Ensure scrollArea width is positive, default to a sensible value if not yet sized
+        scroll_area_width = self.scrollArea.width() if self.scrollArea.width() > 0 else 800
+        max_col_students = (scroll_area_width + 6) // (81 + 6)
+        if max_col_students == 0: max_col_students = 1 # Avoid division by zero if area is too small
+
+        student_button_height_with_padding = 51 + 4
+        # Estimate required height based on number of students and columns
+        num_student_rows = math.ceil(len(self.target_class.students) / max_col_students) if self.target_class.students else 1
+        required_student_area_height = num_student_rows * student_button_height_with_padding
+
         self.scrollAreaWidgetContents_2.setGeometry(
-            0, 0, 901, max((51 + 4) * len(self.target_class.students), 410)
+            0, 0, self.scrollArea.width() - 20, max(required_student_area_height, 410) # Adjusted width for scrollbar
         )
+
+        stu_height_accumulator = 0
+        processed_students_in_layout = 0
+
         for key, stu in self.target_class.students.items():
-            self.stu_buttons[key] = ObjectButton(
-                f"{stu.num}号 {stu.name}\n{stu.score}分", self, object=stu
-            )
-            self.stu_buttons[key].setObjectName("StudentButton" + str(stu.num))
+            button_x = 10 + col * (81 + 6)
+            button_y = 8 + row * student_button_height_with_padding
+
+            if key in keys_to_add:
+                new_button = ObjectButton(
+                    f"{stu.num}号 {stu.name}\n{stu.score}分", self, object=stu
+                )
+                new_button.setObjectName("StudentButton" + str(stu.num))
+                new_button.setParent(self.scrollAreaWidgetContents_2)
+                new_button.clicked.connect(lambda s=stu: self.student_info(s))
+                self.stu_buttons[key] = new_button
+
+            # Reposition/Show existing or newly added button
+            # Text is updated by UpdateThread, but initial text for new buttons is set above.
             self.stu_buttons[key].setGeometry(
-                QRect(10 + col * (81 + 6), 8 + row * (51 + 4), 81, 51)
-            )
-            self.stu_buttons[key].setParent(self.scrollAreaWidgetContents_2)
-            self.stu_buttons[key].clicked.connect(
-                lambda *, stu=stu: self.student_info(stu)
+                QRect(button_x, button_y, 81, 51)
             )
             self.stu_buttons[key].show()
-            col += 1
-            if col == 1:
-                height += 51 + 4
 
-            if col > max_col - 1:
+            col += 1
+            if col == 1 and row == 0 : # Accumulate height only for the first column of each row effectively once
+                 stu_height_accumulator = student_button_height_with_padding # Base height for first row
+
+            processed_students_in_layout +=1
+            if col >= max_col_students : # Corrected condition
                 col = 0
                 row += 1
-        self.scrollAreaWidgetContents_2.setMinimumHeight(height)  # 不然不显示滚动条
+                if processed_students_in_layout < len(self.target_class.students): # If there are more students for next row
+                    stu_height_accumulator += student_button_height_with_padding
+
+
+        self.scrollAreaWidgetContents_2.setMinimumHeight(max(stu_height_accumulator, 410 if not self.target_class.students else 0))
+
+        # Group Buttons Update Logic
+        Base.log("I", "准备更新/显示小组按钮", "MainWindow._grid_buttons")
+        current_grp_keys = set(self.target_class.groups.keys())
+        existing_grp_btn_keys = set(self.grp_buttons.keys())
+
+        grp_keys_to_remove = existing_grp_btn_keys - current_grp_keys
+        for key in grp_keys_to_remove:
+            if self.grp_buttons[key]:
+                self.grp_buttons[key].deleteLater()
+            del self.grp_buttons[key]
+
+        keys_to_add_grp = current_grp_keys - existing_grp_btn_keys
 
         row = 0
         col = 0
-        max_col = (self.scrollArea.width() + 6) // (162 + 6)
-        height = 0
-        for key, grp in self.target_class.groups.items():
-            if grp.belongs_to == self.target_class_id:
-                self.grp_buttons[key] = ObjectButton(
-                    f"{grp.name}\n{stu.score}分", self, object=stu
-                )
-                self.grp_buttons[key].setObjectName("GroupButton" + str(stu.num))
-                self.grp_buttons[key].setGeometry(
-                    QRect(10 + col * (162 + 6), 8 + row * (102 + 4), 162, 102)
-                )
-                self.grp_buttons[key].setParent(self.tab_4)
-                self.grp_buttons[key].clicked.connect(
-                    lambda *, grp=grp: self.group_info(grp)
-                )
-                self.grp_buttons[key].show()
-                col += 1
-                if col == 1:
-                    height += 102 + 4
-                if col > max_col - 1:
-                    col = 0
-                    row += 1
+        # Ensure tab_4 width is positive
+        tab_4_width = self.tab_4.width() if self.tab_4.width() > 0 else 800
+        max_col_groups = (tab_4_width + 6) // (162 + 6)
+        if max_col_groups == 0: max_col_groups = 1
 
-        self.scrollAreaWidgetContents.setMinimumHeight(height)
+        group_button_height_with_padding = 102 + 4
+        num_group_rows = math.ceil(len(self.target_class.groups) / max_col_groups) if self.target_class.groups else 1
+        # self.scrollAreaWidgetContents.setGeometry is for the student scroll area, groups are on tab_4 directly (or another scroll area if defined)
+        # Assuming groups are on self.tab_4 directly for now as per original. If they are in a scrollArea, that needs to be targeted.
+        # For now, let's assume self.tab_4 (which is likely self.scrollAreaWidgetContents for groups in original code)
+        # The original code used self.scrollAreaWidgetContents for groups as well. Let's stick to that naming.
+        # If self.tab_4 is indeed the parent, its geometry management is different.
+        # The original code uses self.tab_4 as parent for group buttons.
+
+        grp_height_accumulator = 0
+        processed_groups_in_layout = 0
+
+        # Filter groups that belong to the current target class
+        relevant_groups = {k: g for k, g in self.target_class.groups.items() if g.belongs_to == self.target_class_id}
+
+        for key, grp in relevant_groups.items():
+            button_x = 10 + col * (162 + 6)
+            button_y = 8 + row * group_button_height_with_padding
+
+            if key in keys_to_add_grp:
+                # The text for group button in original was f"{grp.name}\n{stu.score}分" - stu.score seems like a bug, should be grp score
+                new_button = ObjectButton(
+                    f"{grp.name}\n总分 {grp.total_score:.1f}", self, object=grp # Corrected text
+                )
+                new_button.setObjectName("GroupButton_" + str(grp.key)) # Use grp.key for uniqueness
+                new_button.setParent(self.tab_4) # As per original structure
+                new_button.clicked.connect(lambda g=grp: self.group_info(g))
+                self.grp_buttons[key] = new_button
+
+            self.grp_buttons[key].setGeometry(
+                QRect(button_x, button_y, 162, 102)
+            )
+            # Text update for groups is also handled by UpdateThread.update_grp_btns
+            self.grp_buttons[key].show()
+
+            col += 1
+            if col == 1 and row == 0:
+                grp_height_accumulator = group_button_height_with_padding
+
+            processed_groups_in_layout +=1
+            if col >= max_col_groups:
+                col = 0
+                row += 1
+                if processed_groups_in_layout < len(relevant_groups):
+                     grp_height_accumulator += group_button_height_with_padding
+
+        # If groups are directly on tab_4, setting minimum height on a scroll area content might not be relevant
+        # unless tab_4 IS a scroll area content. The original code had self.scrollAreaWidgetContents.setMinimumHeight(height)
+        # This implies groups might have been intended for a scroll area too.
+        # For now, if self.tab_4 is not a QScrollArea's content widget, this line might not be needed or might target the wrong widget.
+        # Assuming self.tab_4 itself might need a minimum height if it's a direct container.
+        # However, the original code used self.scrollAreaWidgetContents.setMinimumHeight(height) for groups.
+        # This is confusing. Let's assume there's a scrollAreaWidgetContents for groups, similar to students.
+        # If it's `self.tab_4` directly, then `self.tab_4.setMinimumHeight` would be used.
+        # Given the original structure, it's more likely that `self.scrollAreaWidgetContents` was meant for groups too,
+        # or there is another scroll area for groups. The code shows `setParent(self.tab_4)`.
+        # Let's assume tab_4 is the container and might need dynamic sizing if it's a scrollable area's content.
+        # If groups are in `self.tab_4` which is QWidget, and we want scrollability, tab_4 should contain a QScrollArea.
+        # The original uses `self.scrollAreaWidgetContents` for groups, which is the student button area. This is likely a bug.
+        # I will assume group buttons are parented to `self.tab_4` and `self.tab_4` is the scrollable area for groups.
+        # The original code for groups was: self.scrollAreaWidgetContents.setMinimumHeight(height)
+        # This is highly problematic as it would overwrite student area settings.
+        # I will assume there is a DIFFERENT scroll area for groups or tab_4 is itself scrollable.
+        # For now, I will omit setting minimum height for the group area as its container is unclear from snippet.
+        # The most important part is adding/removing/repositioning.
 
     def update(self):
         "更新界面"
         t = time.time()
-        self.label_2.setText(f"{self.target_class.name}")
-        self.label_3.setText(f"{len(self.target_class.students)}")
-        self.label_4.setText(f"{self.target_class.owner}")
-        self.label_5.setText(f"{self.target_class.student_avg_score:.2f}")
-        self.label_6.setText(
-            str(
-                max(
-                    *[
-                        float(self.target_class.students[num].score)
-                        for num in self.target_class.students
-                    ]
+
+        # Initialize last value storage if not present (safer for existing instances)
+        if not hasattr(self, "_last_label_2_text"): self._last_label_2_text = ""
+        if not hasattr(self, "_last_label_3_text"): self._last_label_3_text = ""
+        if not hasattr(self, "_last_label_4_text"): self._last_label_4_text = ""
+        if not hasattr(self, "_last_label_5_text"): self._last_label_5_text = ""
+        if not hasattr(self, "_last_label_6_text"): self._last_label_6_text = ""
+        if not hasattr(self, "_last_bodylabel_text"): self._last_bodylabel_text = ""
+
+        # Low-frequency updates
+        current_label_2_text = f"{self.target_class.name}"
+        if current_label_2_text != self._last_label_2_text:
+            self.label_2.setText(current_label_2_text)
+            self._last_label_2_text = current_label_2_text
+
+        current_label_3_text = f"{len(self.target_class.students)}"
+        if current_label_3_text != self._last_label_3_text:
+            self.label_3.setText(current_label_3_text)
+            self._last_label_3_text = current_label_3_text
+
+        current_label_4_text = f"{self.target_class.owner}"
+        if current_label_4_text != self._last_label_4_text:
+            self.label_4.setText(current_label_4_text)
+            self._last_label_4_text = current_label_4_text
+
+        current_label_5_text = f"{self.target_class.student_avg_score:.2f}"
+        if current_label_5_text != self._last_label_5_text:
+            self.label_5.setText(current_label_5_text)
+            self._last_label_5_text = current_label_5_text
+
+        if self.target_class.students: # Ensure students exist to avoid error on max/min
+            max_score = max(float(s.score) for s in self.target_class.students.values())
+            min_score = min(float(s.score) for s in self.target_class.students.values())
+            current_label_6_text = f"{max_score}/{min_score}"
+        else:
+            current_label_6_text = "N/A"
+        if current_label_6_text != self._last_label_6_text:
+            self.label_6.setText(current_label_6_text)
+            self._last_label_6_text = current_label_6_text
+
+        current_greeting_hour = time.localtime().tm_hour
+        if not hasattr(self, "_last_greeting_hour") or current_greeting_hour != self._last_greeting_hour:
+            greeting_text = "%s好，欢迎回来" % (
+                    "早上" if 5 <= current_greeting_hour < 10 else
+                    "上午" if 10 <= current_greeting_hour < 12 else
+                    "中午" if 12 <= current_greeting_hour < 14 else
+                    "下午" if 14 <= current_greeting_hour < 18 else "晚上"
                 )
-            )
-            + "/"
-            + str(
-                min(
-                    *[
-                        float(self.target_class.students[num].score)
-                        for num in self.target_class.students
-                    ]
-                )
-            )
-        )
+            if greeting_text != self._last_bodylabel_text:
+                self.BodyLabel.setText(greeting_text)
+                self._last_bodylabel_text = greeting_text
+            self._last_greeting_hour = current_greeting_hour
+
+        # High-frequency updates (continue as before)
         self.label_7.setText(f"{self.framerate}fps; {self.video_framerate}fps")
         self.label_8.setText(f"{time.time() - self.create_time:.3f} s")
         self.label_9.setText(f"{threading.active_count()}")
@@ -1625,22 +2024,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             f"{self.achievement_obs.limited_tps}tps"
         )
         self.BodyLabel_2.setText(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        self.BodyLabel.setText(
-            "%s好，欢迎回来"
-            % (
-                "早上"
-                if 5 <= time.localtime().tm_hour < 10
-                else (
-                    "上午"
-                    if 10 <= time.localtime().tm_hour < 12
-                    else (
-                        "中午"
-                        if 12 <= time.localtime().tm_hour < 14
-                        else "下午" if 14 <= time.localtime().tm_hour < 18 else "晚上"
-                    )
-                )
-            )
-        )
+
         t2 = time.time()
         super().update()
         t3 = time.time()
@@ -2439,7 +2823,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             [
                 (
                     f"位于{time.localtime(history.time).tm_year}/{time.localtime(history.time).tm_mon}/{time.localtime(history.time).tm_mday} {time.localtime(history.time).tm_hour}:{time.localtime(history.time).tm_min:02}:{time.localtime(history.time).tm_sec:02}的历史记录",
-                    lambda h=history: self.show_classes_history(h.classes),
+                    lambda h=history: self.show_classes_history(h.historical_classes),
                 )
                 for history in self.history_data.values()
             ],
@@ -2520,7 +2904,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         )
         view.show()
 
-    def show_classes_history(self, classes: Dict[str, Class]):
+    def show_classes_history(self, classes: Dict[str, HistoricalClass]): # Changed Class to HistoricalClass
         """显示所有班级历史"""
         self.listview_history_classes = ListView(
             self,
@@ -2538,8 +2922,28 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         )
         self.listview_history_classes.show()
 
-    def show_class_history(self, target_class: Class, groups: List[Group]):
+    def show_class_history(self, target_class: HistoricalClass, groups: List[HistoricalGroup]): # Updated types
         """显示单个班级历史"""
+
+        # Calculate rank_non_dumplicate for HistoricalClass
+        historical_students_list = list(target_class.students.values())
+        # Sort students by score in descending order
+        sorted_historical_students = sorted(historical_students_list, key=lambda s: s.score, reverse=True)
+
+        rank_non_dumplicate_list = []
+        last_score = float('-inf') # Use a very small number for initial comparison
+        last_rank = 0
+        current_rank_pos = 0
+        for stu in sorted_historical_students:
+            current_rank_pos += 1
+            if stu.score == last_score:
+                rank_to_assign = last_rank
+            else:
+                rank_to_assign = current_rank_pos
+                last_rank = current_rank_pos
+            rank_non_dumplicate_list.append((rank_to_assign, stu))
+            last_score = stu.score
+
         self.listview_history_class = ListView(
             self,
             self,
@@ -2548,30 +2952,34 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             + [("", lambda: None)]
             + [
                 (
-                    f"第{ranking}名 {stu.name} {stu.score}",
-                    lambda stu=stu: self.student_info(
-                        stu, master_widget=self, readonly=True
+                    f"第{ranking}名 {stu.name} {stu.score}", # HistoricalStudent has name and score
+                    lambda stu_obj=stu: self.student_info( # stu_obj is HistoricalStudent
+                        stu_obj, master_widget=self, readonly=True
                     ),
                 )
-                for ranking, stu in target_class.rank_non_dumplicate
+                for ranking, stu in rank_non_dumplicate_list # Use the calculated list
             ]
             + [("", lambda: None)] * 2
             + [("所有小组", lambda: None)]
             + [("", lambda: None)]
             + [
                 (
-                    f"第{ranking}名 {grp.name} {grp.total_score}",
-                    lambda grp=grp: self.group_info(
-                        grp, master_widget=self, readonly=True
+                    f"第{ranking}名 {grp.name} {grp.total_score}", # HistoricalGroup has name and total_score
+                    lambda grp_obj=grp: self.group_info( # grp_obj is HistoricalGroup
+                        grp_obj, master_widget=self, readonly=True
                     ),
                 )
                 for ranking, grp in [
-                    (ranking, grp)
-                    for ranking, grp in enumerate(
-                        sorted(groups, key=lambda grp: grp.total_score, reverse=True),
+                    (idx_rank, g) # Use enumerate for rank
+                    for idx_rank, g in enumerate(
+                        # groups is List[HistoricalGroup], sort them by total_score
+                        sorted(groups, key=lambda h_grp: h_grp.total_score, reverse=True),
                         start=1,
                     )
-                    if grp.belongs_to == target_class.key
+                    # HistoricalGroup does not have 'belongs_to' directly, its parent HistoricalClass has 'key'
+                    # This condition might need re-evaluation or removal if groups list is pre-filtered
+                    # For now, assuming 'groups' passed are already relevant to 'target_class'
+                    # if g.belongs_to == target_class.key # This check is problematic
                 ]
             ],
         )

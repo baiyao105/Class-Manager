@@ -983,23 +983,48 @@ class ClassObj(OrigClassObj):
             if not strict:
                 return ClassObj.EditErrInfo.FindStudent.ClassNotExists
             raise ClassObj.ClassNotExistError(f"班级{repr(from_class)}不存在") from e
+
         if isinstance(identifier, int):
-            for k in real_class.students.keys():
-                if real_class.students[k].num == identifier:
-                    s = real_class.students[k]
-                    Base.log(
-                        "D",
-                        f"寻找到了该学生，信息：来自{real_class.name} "
-                        f"(班主任：{real_class.owner})"
-                        f"\n{str(s)}".replace("\n", ", "),
-                        "MainThread.findstu",
-                    )
-                    return s
+            # Attempt direct lookup using student number (assuming keys in real_class.students are student numbers)
+            student = real_class.students.get(identifier)
+            if student is not None:
+                # It's important to ensure that the key used in .get() (identifier)
+                # actually matches the student's .num attribute if the dictionary
+                # keys aren't guaranteed to be the student numbers.
+                # However, the original loop `real_class.students[k].num == identifier`
+                # implies that keys `k` might not be `identifier`.
+                # Let's assume `real_class.students` is Dict[int, Student] where int is student_num.
+                # If this assumption is wrong, the original loop was necessary.
+                # Given the context of `add_student` using `num` as key:
+                # `self.classes[to_class].students[num] = ClassObj.Student(...)`
+                # this direct lookup should be safe and correct.
+
+                # Verify if the object found indeed has this num, if dict keys could be arbitrary
+                # This check is only strictly needed if dict keys are not guaranteed to be student.num
+                # if student.num == identifier: # This check might be redundant if keys are student numbers
+                Base.log(
+                    "D",
+                    f"寻找到了该学生 (学号: {identifier})，信息：来自{real_class.name} "
+                    f"(班主任：{real_class.owner})"
+                    f"\n{str(student)}".replace("\n", ", "),
+                    "MainThread.findstu",
+                )
+                return student
+                # else:
+                # This case would mean the dict key `identifier` fetched a student,
+                # but that student's `num` attribute is different. This implies an inconsistent state
+                # or that the dictionary is not keyed by student numbers directly.
+                # Falling back to iteration might be an option here if desired, but sticking to direct lookup.
+                # pass # Student's internal num doesn't match identifier key, proceed to error/raise
+
+            # If student is None or the (optional) number check above failed
             if not strict:
                 return ClassObj.EditErrInfo.FindStudent.StudentNotExists
-            raise ClassObj.StudentNotExistError("没有找到指定的学生")
+            raise ClassObj.StudentNotExistError(f"没有找到学号为 {identifier} 的学生")
+
         elif isinstance(identifier, str):
-            for k in real_class.students.keys():
+            # Iterate for string identifiers (student names)
+            for k in real_class.students.keys(): # k is student number here
                 if real_class.students[k].name == identifier:
                     s = real_class.students[k]
                     return s
@@ -1722,8 +1747,10 @@ class ClassObj(OrigClassObj):
 
     def reset_scores(self) -> Dict[str, Class]:
         "结算所有数据"
+        # Pass the live self.classes and self.weekday_record to the History constructor.
+        # The History class's __init__ method will now handle the selective copying.
         history = ClassObj.History(
-            copy.deepcopy(self.classes), 
+            self.classes,
             self.weekday_record, 
             time.time()
         )
@@ -2230,44 +2257,57 @@ class AchievementStatusObserver(Object):
                     max((1 / self.limited_tps) - (time.time() - last_frame_time), 0)
                 )
             last_frame_time = time.time()
-            opreated = False
-            # 性能优化点：O(n²)复杂度(?)
+            # oprated = False # This flag's role changes with batched processing.
+            potential_achievements_this_cycle: List[Tuple[Student, str]] = []
+
+            # Main loop for detecting potential achievements
             for s in list(self.classes[self.class_id].students.values()):
+                # Efficient "Already Earned" Check: Create set of earned keys once per student
+                earned_keys = {ach.temp.key for ach in s.achievements.values()}
 
-                for a in list(self.achievement_templates.keys()):
+                for template_key_str, template_obj in self.achievement_templates.items():
+                    if template_key_str not in earned_keys: # Check against pre-calculated set
+                        if template_obj.achieved_by(s, self.class_obs):
+                            potential_achievements_this_cycle.append((s, template_key_str))
 
-                    if self.achievement_templates[a].achieved_by(
-                        s, self.class_obs
-                    ) and (
-                        self.achievement_templates[a].key
-                        not in [  # 判断成就是否已经达成过
-                            a.temp.key
-                            for a in self.classes[self.class_id]
-                            .students[s.num]
-                            .achievements.values()
-                        ]
-                    ):
-                        opreated = True
-                        time.sleep(0.1)  # 等待操作完成，避免竞态条件
-                        if self.achievement_templates[a].achieved_by(
-                            s, self.class_obs
-                        ):
-                            Base.log(
-                                "I",
-                                f"[{s.name}] 达成了成就 [{self.achievement_templates[a].name}]",
-                            )
-                            a2 = ClassObj.Achievement(
-                                self.achievement_templates[a], s
-                            )
-                            a2.give()
-                            self.display_achievement_queue.put(
-                                {"achievement": a, "student": s}
-                            )
+            opreated_in_cycle = False # To track if any achievement was actually granted in this cycle
+
+            # Post-Cycle Validation and Granting
+            if potential_achievements_this_cycle:
+                for student_obj, template_key_str in potential_achievements_this_cycle:
+                    current_template = self.achievement_templates.get(template_key_str)
+                    if not current_template:
+                        Base.log("E", f"Template {template_key_str} not found during post-cycle validation.", "AchievementStatusObserver.run")
+                        continue
+
+                    # Re-check if already earned (important for batch processing, in case of near-simultaneous grants within the same cycle if not careful)
+                    # This check should ideally use the student_obj's current state.
+                    # If ach_instance.give() updates s.achievements immediately and s is the same object,
+                    # this check might prevent duplicate processing if a student earns multiple achievements
+                    # where one might make them eligible for another that was also in potential_achievements_this_cycle.
+                    # However, the primary "already earned" check is done before adding to potential_achievements_this_cycle.
+                    # This secondary check ensures that if two distinct templates are achieved, and processing one
+                    # immediately adds to student_obj.achievements, the check against `earned_keys` at the start of the student's
+                    # processing for the *next* template in the *same cycle* would be up-to-date.
+                    # The crucial part is that `earned_keys` is per-student at the start of their template scan.
+                    # This re-check here is more about the *current* state of student_obj.achievements before calling give().
+
+                    # For simplicity and to adhere to prompt, let's re-evaluate current earned keys for THIS student_obj
+                    # This handles cases where `give()` on one achievement might affect eligibility or already-earned status for another in the same batch.
+                    current_student_earned_keys = {ach.temp.key for ach in student_obj.achievements.values()}
+
+                    if template_key_str not in current_student_earned_keys: # Ensure it wasn't granted by a previous item in this batch
+                        if current_template.achieved_by(student_obj, self.class_obs): # Final condition check
+                            Base.log("I", f"[{student_obj.name}] 达成了成就 [{current_template.name}]", "AchievementStatusObserver.run")
+                            ach_instance = ClassObj.Achievement(current_template, student_obj)
+                            ach_instance.give() # This should update student_obj.achievements
+                            self.display_achievement_queue.put({"achievement": template_key_str, "student": student_obj})
+                            opreated_in_cycle = True
 
             cur_time = time.time()
             self.mspt = (cur_time - last_frame_time) * 1000
             overload_before = self.overloaded
-            if not opreated:  # 只在空扫描的时候才检测是否过载
+            if not opreated_in_cycle:  # Check if any achievements were processed in this cycle
                 if self.mspt > 1000 / self.limited_tps * self.overload_ratio:
                     self.overloaded = True
                     overload_count += 1

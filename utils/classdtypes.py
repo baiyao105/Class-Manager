@@ -53,8 +53,174 @@ ClassDataType = Union[
     "Achievement",
     "AchievementTemplate",
     "DayRecord",
+    "HistoricalStudent",
+    "HistoricalGroup",
+    "HistoricalClass",
 ]
 
+# --- Start of New Historical Data Classes ---
+
+class HistoricalStudent(Object):
+    "A snapshot of a student's state for historical records."
+    chunk_type_name: Literal["HistoricalStudent"] = "HistoricalStudent"
+
+    def __init__(self, name: str, num: int, score: float,
+                 history_data: Dict[int, "ClassDataObj.ScoreModification"],
+                 achievements_data: Dict[int, "ClassDataObj.Achievement"],
+                 belongs_to_group_key: Optional[str],
+                 highest_score_val: float, lowest_score_val: float, total_score_val: float,
+                 original_student_uuid: str):
+        super().__init__()
+        self.name = name
+        self.num = num
+        self.score = score
+        self.history: Dict[int, "ClassDataObj.ScoreModification"] = history_data
+        self.achievements: Dict[int, "ClassDataObj.Achievement"] = achievements_data
+        self.belongs_to_group_key = belongs_to_group_key
+        self.highest_score = highest_score_val
+        self.lowest_score = lowest_score_val
+        self.total_score = total_score_val
+        self.original_student_uuid = original_student_uuid
+        self.archive_uuid = ClassDataObj.archive_uuid
+
+    def to_string(self) -> str:
+        return json.dumps({
+            "type": self.chunk_type_name,
+            "name": self.name, "num": self.num, "score": self.score,
+            "history": {k: v.to_string() for k, v in self.history.items()},
+            "achievements": {k: v.to_string() for k, v in self.achievements.items()},
+            "belongs_to_group_key": self.belongs_to_group_key,
+            "highest_score": self.highest_score, "lowest_score": self.lowest_score,
+            "total_score": self.total_score,
+            "original_student_uuid": self.original_student_uuid,
+            "uuid": self.uuid,
+            "archive_uuid": self.archive_uuid
+        })
+
+    @staticmethod
+    def from_string(s_data: str) -> "HistoricalStudent":
+        d = json.loads(s_data)
+        if d["type"] != HistoricalStudent.chunk_type_name:
+            raise TypeError(f"Type mismatch for HistoricalStudent: {d['type']}")
+
+        hist_student = HistoricalStudent(
+            name=d["name"], num=d["num"], score=d["score"],
+            history_data={int(k): ClassDataObj.ScoreModification.from_string(v) for k, v in d["history"].items()},
+            achievements_data={int(k): ClassDataObj.Achievement.from_string(v) for k, v in d["achievements"].items()},
+            belongs_to_group_key=d.get("belongs_to_group_key"), # .get for backward compatibility
+            highest_score_val=d["highest_score"],
+            lowest_score_val=d["lowest_score"],
+            total_score_val=d["total_score"],
+            original_student_uuid=d["original_student_uuid"]
+        )
+        hist_student.uuid = d["uuid"]
+        hist_student.archive_uuid = d.get("archive_uuid", ClassDataObj.archive_uuid)
+        return hist_student
+
+    def inst_from_string(self, string: str):
+        obj = HistoricalStudent.from_string(string)
+        self.__dict__.update(obj.__dict__)
+        return self
+
+class HistoricalGroup(Object):
+    "A snapshot of a group's state for historical records."
+    chunk_type_name: Literal["HistoricalGroup"] = "HistoricalGroup"
+
+    def __init__(self, key: str, name: str, leader_num: Optional[int],
+                 member_nums: List[int], total_score_val: float, average_score_val: float,
+                 further_desc: str, original_group_uuid: str):
+        super().__init__()
+        self.key = key
+        self.name = name
+        self.leader_num = leader_num
+        self.member_nums = member_nums
+        self.total_score = total_score_val
+        self.average_score = average_score_val
+        self.further_desc = further_desc
+        self.original_group_uuid = original_group_uuid
+        self.archive_uuid = ClassDataObj.archive_uuid
+
+    def to_string(self) -> str:
+        return json.dumps({
+            "type": self.chunk_type_name,
+            "key": self.key, "name": self.name, "leader_num": self.leader_num,
+            "member_nums": self.member_nums, "total_score": self.total_score,
+            "average_score": self.average_score, "further_desc": self.further_desc,
+            "original_group_uuid": self.original_group_uuid,
+            "uuid": self.uuid,
+            "archive_uuid": self.archive_uuid
+        })
+
+    @staticmethod
+    def from_string(s_data: str) -> "HistoricalGroup":
+        d = json.loads(s_data)
+        if d["type"] != HistoricalGroup.chunk_type_name:
+            raise TypeError(f"Type mismatch for HistoricalGroup: {d['type']}")
+        hist_group = HistoricalGroup(
+            key=d["key"], name=d["name"], leader_num=d.get("leader_num"),
+            member_nums=d["member_nums"], total_score_val=d["total_score"],
+            average_score_val=d["average_score"], further_desc=d["further_desc"],
+            original_group_uuid=d["original_group_uuid"]
+        )
+        hist_group.uuid = d["uuid"]
+        hist_group.archive_uuid = d.get("archive_uuid", ClassDataObj.archive_uuid)
+        return hist_group
+
+    def inst_from_string(self, string: str):
+        obj = HistoricalGroup.from_string(string)
+        self.__dict__.update(obj.__dict__)
+        return self
+
+class HistoricalClass(Object):
+    "A snapshot of a class's state for historical records."
+    chunk_type_name: Literal["HistoricalClass"] = "HistoricalClass"
+
+    def __init__(self, key: str, name: str, owner: str,
+                 students_data: Dict[int, HistoricalStudent],
+                 groups_data: Dict[str, HistoricalGroup],
+                 original_class_uuid: str):
+        super().__init__()
+        self.key = key
+        self.name = name
+        self.owner = owner
+        self.students: Dict[int, HistoricalStudent] = students_data
+        self.groups: Dict[str, HistoricalGroup] = groups_data
+        self.original_class_uuid = original_class_uuid
+        self.archive_uuid = ClassDataObj.archive_uuid
+
+    def to_string(self) -> str:
+        return json.dumps({
+            "type": self.chunk_type_name,
+            "key": self.key, "name": self.name, "owner": self.owner,
+            "students": {str(k): v.to_string() for k, v in self.students.items()},
+            "groups": {k: v.to_string() for k, v in self.groups.items()},
+            "original_class_uuid": self.original_class_uuid,
+            "uuid": self.uuid,
+            "archive_uuid": self.archive_uuid
+        })
+
+    @staticmethod
+    def from_string(s_data: str) -> "HistoricalClass":
+        d = json.loads(s_data)
+        if d["type"] != HistoricalClass.chunk_type_name:
+            raise TypeError(f"Type mismatch for HistoricalClass: {d['type']}")
+
+        hist_class = HistoricalClass(
+            key=d["key"], name=d["name"], owner=d["owner"],
+            students_data={int(k): HistoricalStudent.from_string(v) for k,v in d["students"].items()},
+            groups_data={k: HistoricalGroup.from_string(v) for k,v in d["groups"].items()},
+            original_class_uuid=d["original_class_uuid"]
+        )
+        hist_class.uuid = d["uuid"]
+        hist_class.archive_uuid = d.get("archive_uuid", ClassDataObj.archive_uuid)
+        return hist_class
+
+    def inst_from_string(self, string: str):
+        obj = HistoricalClass.from_string(string)
+        self.__dict__.update(obj.__dict__)
+        return self
+
+# --- End of New Historical Data Classes ---
 
 _UT = TypeVar("_UT")
 
@@ -2418,35 +2584,83 @@ class ClassDataObj(Base):
 
         def __init__(
             self,
-            classes: Dict[str, "ClassDataObj.Class"],
-            weekdays: Dict[str, Dict[float, "ClassDataObj.DayRecord"]],
+            live_classes_data: Dict[str, "ClassDataObj.Class"], # Expects live data to snapshot
+            weekdays_data: Dict[str, Dict[float, "ClassDataObj.DayRecord"]],
             save_time: Optional[float] = None,
         ):
-            self.classes = dict(classes)
+            super().__init__()
             self.time = save_time or time.time()
-            weekdays = weekdays.copy()
 
-            self.weekdays: Dict[str, Dict[float, "ClassDataObj.DayRecord"]] \
-                = weekdays
+            self.historical_classes: Dict[str, "HistoricalClass"] = {}
+            for class_key, live_class_obj in live_classes_data.items():
+                historical_students_dict = {}
+                if live_class_obj.students: # Check if students dict is not None
+                    for stu_num, live_student_obj in live_class_obj.students.items():
+                        copied_history = copy.deepcopy(live_student_obj.history)
+                        copied_achievements = copy.deepcopy(live_student_obj.achievements)
+
+                        historical_students_dict[stu_num] = HistoricalStudent(
+                            name=live_student_obj.name,
+                            num=live_student_obj.num,
+                            score=live_student_obj.score,
+                            history_data=copied_history,
+                            achievements_data=copied_achievements,
+                            belongs_to_group_key=live_student_obj.belongs_to_group,
+                            highest_score_val=live_student_obj.highest_score,
+                            lowest_score_val=live_student_obj.lowest_score,
+                            total_score_val=live_student_obj.total_score,
+                            original_student_uuid=live_student_obj.uuid
+                        )
+
+                historical_groups_dict = {}
+                if live_class_obj.groups: # Check if groups dict is not None
+                    for group_key, live_group_obj in live_class_obj.groups.items():
+                        historical_groups_dict[group_key] = HistoricalGroup(
+                            key=live_group_obj.key,
+                            name=live_group_obj.name,
+                            leader_num=live_group_obj.leader.num if live_group_obj.leader else None,
+                            member_nums=[m.num for m in live_group_obj.members], # Ensure members are processed safely
+                            total_score_val=live_group_obj.total_score,
+                            average_score_val=live_group_obj.average_score,
+                            further_desc=live_group_obj.further_desc,
+                            original_group_uuid=live_group_obj.uuid
+                        )
+
+                self.historical_classes[class_key] = HistoricalClass(
+                    key=live_class_obj.key,
+                    name=live_class_obj.name,
+                    owner=live_class_obj.owner,
+                    students_data=historical_students_dict,
+                    groups_data=historical_groups_dict,
+                    original_class_uuid=live_class_obj.uuid
+                )
             
-            self.uuid = self.archive_uuid = ClassDataObj.archive_uuid
-            # IMPORTANT: 这里的对象uuid和归档uuid是一样的
+            self.weekdays: Dict[str, Dict[float, "ClassDataObj.DayRecord"]] = copy.deepcopy(weekdays_data)
+
+            self.uuid = ClassDataObj.archive_uuid
+            self.archive_uuid = ClassDataObj.archive_uuid
+
 
         def __repr__(self):
-            return f"<History object at time {self.time:.3f}>"
+            return f"<History object at time {self.time:.3f}, classes: {len(self.historical_classes)}>"
 
         def to_string(self):
             "将历史记录转换为字符串。"
-            for _class, item in self.weekdays.items():
-                if isinstance(item, list):
-                    self.weekdays[_class] = {d.utc: d for d in item}
+            processed_weekdays = {}
+            if self.weekdays: # Check if weekdays dict is not None
+                for class_key, day_records_map in self.weekdays.items():
+                    processed_weekdays[class_key] = {
+                        # Ensure day_record is not None before accessing uuid
+                        time_key: day_record.uuid if day_record else None
+                        for time_key, day_record in day_records_map.items()
+                    }
 
             return json.dumps(
                 {
-                    "classes": {k: v.uuid for k, v in self.classes.items()},
+                    "type": self.chunk_type_name,
+                    "historical_classes": {k: v.to_string() for k, v in self.historical_classes.items()},
                     "time": self.time,
-                    "weekdays": [[(_class, time_key, day.uuid) for time_key, day in item.items()] \
-                                    for _class, item in self.weekdays.items()],
+                    "weekdays": processed_weekdays,
                     "uuid": self.uuid,
                     "archive_uuid": self.archive_uuid,
                 }
