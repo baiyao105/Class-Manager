@@ -16,16 +16,16 @@ __all__ = ["CleaningScoreSumUpWidget"]
 
 class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
     def __init__(
-        self, master_widget: Optional[WidgetType] = None, mainwindow: Optional[ClassObj] = None
+        self, master_widget: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
     ):
         """
         初始化
 
         :param master_widget: 这个窗口的父窗口
-        :param mainwindow: 程序的主窗口，方便传参
+        :param main_window: 程序的主窗口，方便传参
         """
         super().__init__(master=master_widget)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.setupUi(self)
         self.finished = False
@@ -76,32 +76,32 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
     def update_students(self, refresh_stu=True):
         "更新学生"
         self.label_5.setText(
-            self.mainwindow.modify_templates[
+            self.main_window.modify_templates[
                 self.mod_member[self.comboBox_2.currentIndex()]
             ].desc
         )
         selected = self.comboBox.currentIndex() + 1
         if refresh_stu:
             self.leader = copy.deepcopy(
-                self.mainwindow.target_class.cleaning_mapping[selected]["leader"]
+                self.main_window.target_class.cleaning_mapping[selected]["leader"]
             )
             self.member = copy.deepcopy(
-                self.mainwindow.target_class.cleaning_mapping[selected]["member"]
+                self.main_window.target_class.cleaning_mapping[selected]["member"]
             )
 
         self.listWidget.clear()
         for s in self.leader:
             index = self.comboBox_2.currentIndex()
             if index == 0:
-                score = self.mainwindow.modify_templates["cleaning_5.0_leader"].mod
+                score = self.main_window.modify_templates["cleaning_5.0_leader"].mod
             elif index == 1:
-                score = self.mainwindow.modify_templates["cleaning_4.9_leader"].mod
+                score = self.main_window.modify_templates["cleaning_4.9_leader"].mod
             elif index == 2:
-                score = self.mainwindow.modify_templates["cleaning_4.8_leader"].mod
+                score = self.main_window.modify_templates["cleaning_4.8_leader"].mod
             elif index == 3:
-                score = self.mainwindow.modify_templates["cleaning_4.7_leader"].mod
+                score = self.main_window.modify_templates["cleaning_4.7_leader"].mod
             else:
-                score = self.mainwindow.modify_templates[
+                score = self.main_window.modify_templates[
                     "cleaning_4.6_and_lower_leader"
                 ].mod
             self.listWidget.addItem(
@@ -111,15 +111,15 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
         for s in self.member:
             index = self.comboBox_2.currentIndex()
             if index == 0:
-                score = self.mainwindow.modify_templates["cleaning_5.0_member"].mod
+                score = self.main_window.modify_templates["cleaning_5.0_member"].mod
             elif index == 1:
-                score = self.mainwindow.modify_templates["cleaning_4.9_member"].mod
+                score = self.main_window.modify_templates["cleaning_4.9_member"].mod
             elif index == 2:
-                score = self.mainwindow.modify_templates["cleaning_4.8_member"].mod
+                score = self.main_window.modify_templates["cleaning_4.8_member"].mod
             elif index == 3:
-                score = self.mainwindow.modify_templates["cleaning_4.7_member"].mod
+                score = self.main_window.modify_templates["cleaning_4.7_member"].mod
             else:
-                score = self.mainwindow.modify_templates[
+                score = self.main_window.modify_templates[
                     "cleaning_4.6_and_lower_member"
                 ].mod
             self.listWidget.addItem(
@@ -160,18 +160,18 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
         if not self.finished:
             self.finished = True
 
-            self.mainwindow.send_modify(
+            self.main_window.send_modify(
                 self.mod_leader[self.comboBox_2.currentIndex()],
                 [
-                    self.mainwindow.classes[l.belongs_to].students[l.num]
+                    self.main_window.classes[l.belongs_to].students[l.num]
                     for l in self.leader
                 ],
             )
 
-            self.mainwindow.send_modify(
+            self.main_window.send_modify(
                 self.mod_member[self.comboBox_2.currentIndex()],
                 [
-                    self.mainwindow.classes[m.belongs_to].students[m.num]
+                    self.main_window.classes[m.belongs_to].students[m.num]
                     for m in self.member
                 ],
             )

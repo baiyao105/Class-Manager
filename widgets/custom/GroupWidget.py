@@ -21,7 +21,7 @@ class GroupWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        mainwindow: Optional[ClassObj]= None,
+        main_window: Optional[ClassObj]= None,
         master_widget: Optional[WidgetType] = None,
         group: Group = None,
         readonly: bool = False,
@@ -29,7 +29,7 @@ class GroupWidget(Ui_Form, MyWidget):
         """
         初始化
 
-        :param mainwindow: 程序的主窗口，方便传参
+        :param main_window: 程序的主窗口，方便传参
         :param master_widget: 这个窗口的父窗口
         :param group: 这个学生窗口对应的小组
         """
@@ -45,7 +45,7 @@ class GroupWidget(Ui_Form, MyWidget):
         self.last_score = {}
         self.update_timer.timeout.connect(self.update_label)
         self.update_timer.start(100)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.listWidget_order = []
         for member in self.group.members:
@@ -82,17 +82,17 @@ class GroupWidget(Ui_Form, MyWidget):
 
     def select_member_and_send(self):
         "选择当前组员并发送"
-        self.stu_selector = StudentSelectorWidget(self.mainwindow, self, self.group.members, title="选择组员")
+        self.stu_selector = StudentSelectorWidget(self.main_window, self, self.group.members, title="选择组员")
         result = self.stu_selector.exec()
-        self.tmp_selector = SelectTemplateWidget(self.mainwindow, self)
+        self.tmp_selector = SelectTemplateWidget(self.main_window, self)
         key, title, desc, mod = self.tmp_selector.exec()
-        self.mainwindow.send_modify(key, result, title, desc, mod, "选组员发送")
+        self.main_window.send_modify(key, result, title, desc, mod, "选组员发送")
 
     def send_to_all_members(self):
         "发送至所有组员"
-        self.tmp_selector = SelectTemplateWidget(self.mainwindow, self)
+        self.tmp_selector = SelectTemplateWidget(self.main_window, self)
         key, title, desc, mod = self.tmp_selector.exec()
-        self.mainwindow.send_modify(key, self.group.members, title, desc, mod, "选组员发送")
+        self.main_window.send_modify(key, self.group.members, title, desc, mod, "选组员发送")
 
 
 
@@ -111,7 +111,7 @@ class GroupWidget(Ui_Form, MyWidget):
         if hasattr(self, "student_window"):
             self.student_window.destroy()  # pylint: disable=access-member-before-definition
         self.student_window = StudentWidget(
-            self.mainwindow, self, student
+            self.main_window, self, student
         )  # pylint: disable=attribute-defined-outside-init
         self.student_window.show(self.readonly)
 
@@ -122,7 +122,7 @@ class GroupWidget(Ui_Form, MyWidget):
             str(self.group.total_score)
             + f"（均分{self.group.average_score}，去最低分{self.group.average_score_without_lowest}）"
         )
-        self.label_7.setText(str(self.mainwindow.classes[self.group.belongs_to].name))
+        self.label_7.setText(str(self.main_window.classes[self.group.belongs_to].name))
         self.label_11.setText(str(self.group.leader.name))
 
     def update_stu_list(self):

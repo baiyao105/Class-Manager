@@ -16,17 +16,17 @@ class AchievementWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master_widget: Optional[WidgetType] = None,
-        mainwindow: Optional[ClassObj] = None,
+        main_window: Optional[ClassObj] = None,
         achievement: Union[Achievement, AchievementTemplate] = None,
     ):
         """
         初始化
 
         :param master_widget: 这个窗口的父窗口
-        :param mainwindow: 程序的主窗口，方便传参
+        :param main_window: 程序的主窗口，方便传参
         """
         super().__init__(master=master_widget)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.achievement = achievement
         self.setupUi(self)
@@ -38,7 +38,7 @@ class AchievementWidget(Ui_Form, MyWidget):
             self.label_15.setText("不到啊，可能是侦测器爆了")
             self.label_7.setText(str(self.achievement.time))
 
-            for i, s in self.mainwindow.class_obs.rank_non_dumplicate:
+            for i, s in self.main_window.class_obs.rank_non_dumplicate:
                 if (
                     s.num == self.achievement.target.num
                     and s.belongs_to == self.achievement.target.belongs_to
@@ -50,7 +50,7 @@ class AchievementWidget(Ui_Form, MyWidget):
         self.label_5.setText(self.achievement.name)
         self.label_6.setText(self.achievement.desc)
         self.textBrowser.setPlainText(
-            self.achievement.condition_desc(self.mainwindow.class_obs)
+            self.achievement.condition_desc(self.main_window.class_obs)
         )
         self.textBrowser_2.setPlainText(self.achievement.further_info)
 

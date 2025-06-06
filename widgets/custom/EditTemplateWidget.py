@@ -16,7 +16,7 @@ class EditTemplateWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        mainwindow: Optional[ClassObj] = None,
+        main_window: Optional[ClassObj] = None,
         master_widget: Optional[WidgetType] = None,
         template: ScoreModificationTemplate = None,
         in_listview: ListView = None,
@@ -25,7 +25,7 @@ class EditTemplateWidget(Ui_Form, MyWidget):
         """
         初始化
 
-        :param mainwindow: 程序的主窗口，方便传参
+        :param main_window: 程序的主窗口，方便传参
         :param master_widget: 这个窗口的父窗口
         :param template: 要修改的模板
         :param in_listview: 模板所在的listview
@@ -34,7 +34,7 @@ class EditTemplateWidget(Ui_Form, MyWidget):
         super().__init__(master=master_widget)
         self.setupUi(self)
         self.show()
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.template = template
         self.in_listview = in_listview
@@ -70,7 +70,7 @@ class EditTemplateWidget(Ui_Form, MyWidget):
             QMessageBox.warning(self, "警告", "模板描述不能为空")
             return
 
-        self.mainwindow.add_template(
+        self.main_window.add_template(
             self.template.key,
             self.lineEdit.text(),
             self.doubleSpinBox.value(),
@@ -91,7 +91,7 @@ class EditTemplateWidget(Ui_Form, MyWidget):
         Base.log("I", "询问是否删除模板", "EditTemplateWidget.delete")
         if question_yes_no(self, "警告", "确认删除模板？", False, "warning"):
             Base.log("I", "删除模板", "EditTemplateWidget.delete")
-            self.mainwindow.del_template(self.template.key, "模板编辑器中删除")
+            self.main_window.del_template(self.template.key, "模板编辑器中删除")
             self.in_listview.setText(self.listview_index, "(已删除)")
             self.in_listview.setCallable(self.listview_index, lambda: None)
             self.closeEvent(QCloseEvent())

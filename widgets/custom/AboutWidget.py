@@ -24,12 +24,12 @@ class AboutWidget(Ui_Form, MyWidget):
     """
 
     def __init__(
-        self, master: Optional[WidgetType] = None, mainwindow: Optional[ClassObj] = None
+        self, master: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
     ):
 
         super().__init__(master)
         self.setupUi(self)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master = master
         self.versioninfo.setText(
             f"客户端版本：{CLIENT_VERSION} ({CLIENT_VERSION_CODE})       核心版本: {CORE_VERSION} ({CORE_VERSION_CODE})"

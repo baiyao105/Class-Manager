@@ -12,19 +12,19 @@ class NewTemplateWidget(Ui_Form, MyWidget):
     """创建新模板的窗口"""
 
     def __init__(
-        self, mainwindow: ClassWindow = None, master_widget: Optional[WidgetType] = None
+        self, main_window: ClassWindow = None, master_widget: Optional[WidgetType] = None
     ):
         """
         初始化
 
-        :param mainwindow: 程序的主窗口，方便传参
+        :param main_window: 程序的主窗口，方便传参
         :param master_widget: 这个窗口的父窗口
         :param student: 这个学生窗口对应的学生
         """
         super().__init__(master=master_widget)
         self.setupUi(self)
         self.show()
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.buttonBox.accepted.connect(self.commit)
         self.buttonBox.rejected.connect(self.cancel)
@@ -45,7 +45,7 @@ class NewTemplateWidget(Ui_Form, MyWidget):
             QMessageBox.warning(self, "警告", "模板描述不能为空")
             return
 
-        self.mainwindow.add_template(
+        self.main_window.add_template(
             "userset_" + str(Base.utc()),
             self.lineEdit.text(),
             self.doubleSpinBox.value(),

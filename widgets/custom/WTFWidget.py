@@ -15,7 +15,7 @@ class WTFWidget(Ui_Form, MyWidget):
         """
         初始化
 
-        :param mainwindow: 程序的主窗口，方便传参
+        :param main_window: 程序的主窗口，方便传参
         :param master_widget: 这个窗口的父窗口
         """
         super().__init__(master=master_widget)
