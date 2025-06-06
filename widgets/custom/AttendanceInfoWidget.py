@@ -116,9 +116,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
 
     @Slot()
     def show_attending_list(self):
-        attending_list = [
-            (day.attendance_info, day.utc) for day in self.mainwindow.weekday_record[self.target_class.key].values()
-        ]
+        try:
+            attending_list = [
+                (day.attendance_info, day.utc) for day in self.mainwindow.weekday_record[self.target_class.key].values()
+            ]
+        except:
+            QMessageBox.information(self, "提示", f"当前班级（{self.target_class.name}）没有考勤记录")
+            return
         self.listview = ListView(
             self.mainwindow,
             self,

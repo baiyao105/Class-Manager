@@ -1,5 +1,5 @@
 """
-窗口文件
+所有的窗口文件
 """
 
 from typing import Union
@@ -27,6 +27,7 @@ from .custom.SelectTemplateWidget import SelectTemplateWidget
 from .custom.SettingWidget import SettingWidget
 from .custom.StudentWidget import StudentWidget
 from .custom.WTFWidget import WTFWidget
+from .custom.LoadingScreen import LoadingScreenWidget
 
 from .basic import *
 

@@ -8,7 +8,7 @@ from math import inf
 from typing import Dict
 
 
-from utils.classdtypes import (
+from utils.classdatatypes import (
     Class,
     Student,
     AchievementTemplate,

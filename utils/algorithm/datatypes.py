@@ -8,6 +8,7 @@ from threading import Thread as OrigThread, Lock
 from typing import Any, Callable, Generic, Iterable, Mapping, Optional, TypeVar
 
 
+
 class NULLPTR:
     "虽然没用"
 
@@ -169,6 +170,18 @@ class Mutex:
     def __exit__(self, exc_type, exc_val, exc_tb):
         "退出上下文管理器"
         self.release()
+        return False
+
+    def locked(self):
+        "判断锁是否被占用"
+        return self._lock.locked()
+    
+    def __bool__(self):
+        "判断锁是否被占用"
+        return self.locked()
+    
+    def __repr__(self):
+        return f"Mutex(locked={self.locked()})"
 
 
 class FrameCounter:

@@ -33,6 +33,7 @@ from utils.basetypes import Base, Object
 from utils.consts import inf, debug, runtime_flags
 from utils.algorithm import SupportsKeyOrdering, OrderedKeyList, Stack
 from utils.functions import send_notice as _send_notice, utc
+from utils.events.event import EventSignal, EventType
 
 
 def send_notice(
@@ -57,6 +58,11 @@ ClassDataType = Union[
 
 
 _UT = TypeVar("_UT")
+
+
+
+
+    
 
 
 class UUIDKind(Generic[_UT], str):
@@ -124,16 +130,16 @@ class ClassDataObj(Base):
             num: int,
             score: float,
             belongs_to: str,
-            history: Dict[Any, "ClassDataObj.ScoreModification"] = None,
+            history: Dict[Any, "ScoreModification"] = None,
             last_reset: Optional[float] = None,
             highest_score: float = 0.0,
             lowest_score: float = 0.0,
-            achievements: Dict[int, "ClassDataObj.Achievement"] = None,
+            achievements: Dict[int, "Achievement"] = None,
             total_score: float = None,
             highest_score_cause_time: float = 0.0,
             lowest_score_cause_time: float = 0.0,
             belongs_to_group: Optional[str] = None,
-            last_reset_info: Optional["ClassDataObj.Student"] = None,
+            last_reset_info: Optional["Student"] = None,
         ):
             """
             一个学生。
@@ -166,9 +172,9 @@ class ClassDataObj(Base):
             "分数上次重置的时间"
             self._highest_score_cause_time = highest_score_cause_time
             self._lowest_score_cause_time = lowest_score_cause_time
-            self.history: Dict[int, "ClassDataObj.ScoreModification"] = history or {}
+            self.history: Dict[int, "ScoreModification"] = history or {}
             "历史记录， key为时间戳（utc*1000）"
-            self.achievements: Dict[int, "ClassDataObj.Achievement"] = achievements or {}
+            self.achievements: Dict[int, "Achievement"] = achievements or {}
             "所获得的所有成就， key为时间戳（utc*1000）"
             self.belongs_to_group = belongs_to_group
             "所属小组"
@@ -340,7 +346,7 @@ class ClassDataObj(Base):
 
         def reset_score(
             self,
-        ) -> Tuple[float, float, float, Dict[int, "ClassDataObj.ScoreModification"]]:
+        ) -> Tuple[float, float, float, Dict[int, "ScoreModification"]]:
             """重置学生分数。
 
             :return: Tuple[当前分数, 历史最高分, 历史最低分,
@@ -359,11 +365,11 @@ class ClassDataObj(Base):
             self.highest_score_cause_time = 0.0
             self.lowest_score_cause_time = 0.0
             self.last_reset = time.time()
-            self.history: Dict[int, ClassDataObj.ScoreModification] = dict()
+            self.history: Dict[int, ScoreModification] = dict()
             self.achievements = dict()
             return returnval
 
-        def reset_achievements(self) -> Dict[int, "ClassDataObj.Achievement"]:
+        def reset_achievements(self) -> Dict[int, "Achievement"]:
             """重置学生成就。
 
             :return: Dict[成就达成时间utc*1000, 成就]"""
@@ -376,8 +382,8 @@ class ClassDataObj(Base):
             float,
             float,
             float,
-            Dict[int, "ClassDataObj.ScoreModification"],
-            Optional[Dict[int, "ClassDataObj.Achievement"]],
+            Dict[int, "ScoreModification"],
+            Optional[Dict[int, "Achievement"]],
         ]:
             """重置学生分数和成就。
                 这个操作会更新学生的last_reset_info属性，以记录重置前的分数和成就。
@@ -393,7 +399,7 @@ class ClassDataObj(Base):
             self.refresh_uuid()
             return (score, highest, lowest, history, achievements)
 
-        def get_group(self, class_obs: "ClassStatusObserver") -> "ClassDataObj.Group":
+        def get_group(self, class_obs: "ClassStatusObserver") -> "Group":
             """获取学生所在小组。
 
             :param class_obs: 班级侦测器
@@ -413,7 +419,7 @@ class ClassDataObj(Base):
                 )
 
             else:
-                ranking_data: List[Tuple[int, "ClassDataObj.Student"]] = (
+                ranking_data: List[Tuple[int, "Student"]] = (
                     class_obs.rank_non_dumplicate
                 )
                 for index, student in ranking_data:
@@ -436,7 +442,7 @@ class ClassDataObj(Base):
                 )
 
             else:
-                ranking_data: List[Tuple[int, "ClassDataObj.Student"]] = (
+                ranking_data: List[Tuple[int, "Student"]] = (
                     class_obs.rank_non_dumplicate
                 )
                 for index, student in ranking_data:
@@ -447,10 +453,10 @@ class ClassDataObj(Base):
             )
 
         def __add__(
-            self, value: Union["ClassDataObj.Student", float]
-        ) -> "ClassDataObj.Student":
+            self, value: Union["Student", float]
+        ) -> "Student":
             "这种东西做出来是致敬班级小管家的（bushi"
-            if isinstance(value, ClassDataObj.Student):
+            if isinstance(value, Student):
                 history = self.history.copy()
                 history.update(value.history)
                 achievements = self.achievements.copy()
@@ -461,7 +467,7 @@ class ClassDataObj(Base):
                     "Student.__add__",
                 )
                 Base.log("W", "孩子，这不好笑", "Student.__add__")
-                return ClassDataObj.Student(
+                return Student(
                     "合并学生："
                     f"({self.name.replace('合并学生：(', '').replace(')', '')}, "
                     f"{value.name.replace('合并学生：(', '').replace(')', '')})",
@@ -485,9 +491,9 @@ class ClassDataObj(Base):
                 return self
 
         def __iadd__(
-            self, value: Union["ClassDataObj.Student", float]
-        ) -> "ClassDataObj.Student":
-            if isinstance(value, ClassDataObj.Student):
+            self, value: Union["Student", float]
+        ) -> "Student":
+            if isinstance(value, Student):
                 self.achievements.update(value.achievements)
                 self.history.update(value.history)
                 self.score += value
@@ -531,14 +537,14 @@ class ClassDataObj(Base):
             )
 
         @staticmethod
-        def from_string(string: str) -> "ClassDataObj.Student":
+        def from_string(string: str) -> "Student":
             "将字符串转换为学生对象。"
             data = json.loads(string)
             if data["type"] != Student.chunk_type_name:
                 raise TypeError(
                     f"类型不匹配：{data['type']} != {Student.chunk_type_name}"
                 )
-            obj = ClassDataObj.Student(
+            obj = Student(
                 name=data["name"],
                 num=data["num"],
                 score=Student.score_dtype(data["score"]),
@@ -575,7 +581,7 @@ class ClassDataObj(Base):
         "一个简单的学生对象，用于存储学生信息"
 
         @overload
-        def __init__(self, stu: "ClassDataObj.Student"): ...
+        def __init__(self, stu: "Student"): ...
 
         @overload
         def __init__(
@@ -591,7 +597,7 @@ class ClassDataObj(Base):
             history=None,
             **kwargs,
         ):
-            if isinstance(stu_or_name, ClassDataObj.Student):
+            if isinstance(stu_or_name, Student):
                 super().__init__(
                     stu_or_name._name,
                     stu_or_name._num,
@@ -625,8 +631,8 @@ class ClassDataObj(Base):
             self,
             key: str,
             name: str,
-            leader: "ClassDataObj.Student",
-            members: List["ClassDataObj.Student"],
+            leader: "Student",
+            members: List["Student"],
             belongs_to: str,
             further_desc: str = "这个小组的组长还没有为这个小组提供详细描述",
         ) -> None:
@@ -686,7 +692,7 @@ class ClassDataObj(Base):
 
         # 如果只有一人则返回0
 
-        def has_member(self, student: "ClassDataObj.Student"):
+        def has_member(self, student: "Student"):
             "查看一个学生是否在这个小组。"
             return any([s.num == student.num for s in self.members])
 
@@ -729,7 +735,7 @@ class ClassDataObj(Base):
 
         def inst_from_string(self, string: str):
             "将字符串转化为小组对象。"
-            obj = ClassDataObj.Group.from_string(string)
+            obj = Group.from_string(string)
             self.__dict__.update(obj.__dict__)
             return self
 
@@ -870,8 +876,8 @@ class ClassDataObj(Base):
 
         def __init__(
             self,
-            template: "ClassDataObj.ScoreModificationTemplate",
-            target: "ClassDataObj.Student",
+            template: "ScoreModificationTemplate",
+            target: "Student",
             title: Optional[str] = None,
             desc: Optional[str] = None,
             mod: Optional[float] = None,
@@ -989,7 +995,7 @@ class ClassDataObj(Base):
                         lowesttimekey = 0
                         # 重新计算最高分和最低分
                         for i in self.target.history:
-                            tmp: ClassDataObj.ScoreModification = self.target.history[i]
+                            tmp: ScoreModification = self.target.history[i]
 
                             if (
                                 tmp.execute_time_key != self.execute_time_key
@@ -1018,7 +1024,7 @@ class ClassDataObj(Base):
                         highestscore = 0.0
                         highesttimekey = 0
                         for i in self.target.history:
-                            tmp: ClassDataObj.ScoreModification = self.target.history[i]
+                            tmp: ScoreModification = self.target.history[i]
                             if (
                                 tmp.execute_time_key != self.execute_time_key
                                 and tmp.executed
@@ -1091,12 +1097,12 @@ class ClassDataObj(Base):
         def from_string(string: str):
             "将字符串转换为分数修改对象。"
             d = json.loads(string)
-            if d["type"] != ClassDataObj.ScoreModification.chunk_type_name:
+            if d["type"] != ScoreModification.chunk_type_name:
                 raise ValueError(
                     f"类型不匹配：{d['type']} != "
-                    f"{ClassDataObj.ScoreModification.chunk_type_name}"
+                    f"{ScoreModification.chunk_type_name}"
                 )
-            obj = ClassDataObj.ScoreModification(
+            obj = ScoreModification(
                 template=ClassDataObj.LoadUUID(d["template"], ScoreModificationTemplate),
                 target=ClassDataObj.LoadUUID(d["target"], Student),
                 title=d["title"],
@@ -1139,7 +1145,7 @@ class ClassDataObj(Base):
             key: str,
             subject_name: str,
             ruler: str,
-            rule_mapping: Dict[str, "ClassDataObj.ScoreModificationTemplate"],
+            rule_mapping: Dict[str, "ScoreModificationTemplate"],
         ):
             """
             作业规则构造函数。
@@ -1175,12 +1181,12 @@ class ClassDataObj(Base):
         def from_string(s: str):
             "从字符串加载作业规则对象。"
             d = json.loads(s)
-            if d["type"] != ClassDataObj.HomeworkRule.chunk_type_name:
+            if d["type"] != HomeworkRule.chunk_type_name:
                 raise ValueError(
                     f"类型不匹配：{d['type']} != "
-                    f"{ClassDataObj.HomeworkRule.chunk_type_name}"
+                    f"{HomeworkRule.chunk_type_name}"
                 )
-            obj = ClassDataObj.HomeworkRule(
+            obj = HomeworkRule(
                 key=d["key"],
                 subject_name=d["subject_name"],
                 ruler=d["ruler"],
@@ -1221,19 +1227,19 @@ class ClassDataObj(Base):
             name: str,
             owner: str,
             students: Union[
-                Dict[int, "ClassDataObj.Student"], OrderedKeyList["ClassDataObj.Student"]
+                Dict[int, "Student"], OrderedKeyList["Student"]
             ],
             key: str,
             groups: Union[
-                Dict[str, "ClassDataObj.Group"], OrderedKeyList["ClassDataObj.Group"]
+                Dict[str, "Group"], OrderedKeyList["Group"]
             ],
             cleaning_mapping: Optional[
-                Dict[int, Dict[Literal["member", "leader"], List["ClassDataObj.Student"]]]
+                Dict[int, Dict[Literal["member", "leader"], List["Student"]]]
             ] = None,
             homework_rules: Optional[
                 Union[
-                    Dict[str, "ClassDataObj.HomeworkRule"],
-                    OrderedKeyList["ClassDataObj.HomeworkRule"],
+                    Dict[str, "HomeworkRule"],
+                    OrderedKeyList["HomeworkRule"],
                 ]
             ] = None,
         ):
@@ -1312,7 +1318,7 @@ class ClassDataObj(Base):
             ]"""
             stu_list = self.students.values()
             stu_list = sorted(stu_list, key=lambda s: s.score, reverse=True)
-            stu_list2: List[Tuple[int, "ClassDataObj.Student"]] = []
+            stu_list2: List[Tuple[int, "Student"]] = []
             last = inf
             last_ord = 0
             cur_ord = 0
@@ -1336,32 +1342,26 @@ class ClassDataObj(Base):
             [
                 (1, Student(name="某个学生", score=114, ...)),
                 (2, Student(name="某个学生", score=51,  ...)),
-                (3, Student(name="某个学生", score=51,  ...)),
-                (4, Student(name="某个学生", score=41,  ...)),
-                (5, Student(name="某个学生", score=9,   ...)),
-                (6, Student(name="某个学生", score=9,   ...)),
-                (7, Student(name="某个学生", score=1,   ...))
+                (2, Student(name="某个学生", score=51,  ...)),
+                (3, Student(name="某个学生", score=41,  ...)),
+                (4, Student(name="某个学生", score=9,   ...)),
+                (4, Student(name="某个学生", score=9,   ...)),
+                (5, Student(name="某个学生", score=1,   ...))
             ]"""
             stu_list = self.students.values()
             stu_list = sorted(stu_list, key=lambda s: s.score, reverse=True)
-            stu_list2: List[Tuple[int, "ClassDataObj.Student"]] = []
+            stu_list2: List[Tuple[int, "Student"]] = []
             last = inf
             last_ord = 0
-            cur_ord = 0
             for stu in stu_list:
-                if stu.score == last:
-                    _ord = last_ord
-                    cur_ord += 1
-
-                else:
-                    cur_ord += 1
-                    _ord = cur_ord
-                    last_ord = cur_ord
-                stu_list2.append((_ord, stu))
-                last = stu.score
+                if stu.score != last:
+                    last_ord += 1
+                    last = stu.score
+                stu_list2.append((last_ord, stu))
+                
             return stu_list2
 
-        def reset(self) -> "ClassDataObj.Class":
+        def reset(self) -> "Class":
             "重置班级"
             class_orig = copy.deepcopy(self)
             Base.log("W", f" -> 重置班级：{self.name} ({self.key})")
@@ -1378,7 +1378,7 @@ class ClassDataObj(Base):
                 # 也是因为之前的拼写错误
                 self.cleaning_mapping: Optional[
                     Dict[
-                        int, Dict[Literal["member", "leader"], List["ClassDataObj.Student"]]
+                        int, Dict[Literal["member", "leader"], List["Student"]]
                     ]
                 ] = getattr(self, "cleaing_mapping")
             return json.dumps(
@@ -1402,7 +1402,7 @@ class ClassDataObj(Base):
             )
 
         @staticmethod
-        def from_string(string: str) -> "ClassDataObj.Class":
+        def from_string(string: str) -> "Class":
             "从字符串加载班级对象。"
             d = json.loads(string)
             if d["type"] != Class.chunk_type_name:
@@ -1411,21 +1411,21 @@ class ClassDataObj(Base):
                 name=d["name"],
                 owner=d["owner"],
                 students={
-                    n: ClassDataObj.LoadUUID(s, ClassDataObj.Student) for n, s in d["students"]
+                    n: ClassDataObj.LoadUUID(s, Student) for n, s in d["students"]
                 },
                 key=d["key"],
                 groups={
-                    k: ClassDataObj.LoadUUID(g, ClassDataObj.Group) for k, g in d["groups"]
+                    k: ClassDataObj.LoadUUID(g, Group) for k, g in d["groups"]
                 },
                 cleaning_mapping={
                     k: {
-                        t: [ClassDataObj.LoadUUID(s, ClassDataObj.Student) for s in s]
+                        t: [ClassDataObj.LoadUUID(s, Student) for s in s]
                         for t, s in v
                     }
                     for k, v in d["cleaning_mapping"]
                 },
                 homework_rules={
-                    n: ClassDataObj.HomeworkRule.from_string(h)
+                    n: HomeworkRule.from_string(h)
                     for n, h in d["homework_rules"]
                 },
             )
@@ -1444,8 +1444,8 @@ class ClassDataObj(Base):
 
         def __init__(
             self,
-            student: "ClassDataObj.Student",
-            classes: Dict[str, "ClassDataObj.Class"] = None,
+            student: "Student",
+            classes: Dict[str, "Class"] = None,
             class_obs: "ClassStatusObserver" = None,
             achievement_obs: "AchievementStatusObserver" = None,
         ):
@@ -1538,8 +1538,8 @@ class ClassDataObj(Base):
             # 指定点评次数的范围（必须全部符合）
             others: Optional[
                 Union[
-                    Callable[["ClassDataObj.ClassData"], bool],
-                    Iterable[Callable[["ClassDataObj.ClassData"], bool]],
+                    Callable[["ClassData"], bool],
+                    Iterable[Callable[["ClassData"], bool]],
                 ]
             ] = None,
             # 其他条件
@@ -1852,7 +1852,7 @@ class ClassDataObj(Base):
 
             if hasattr(self, "other"):
                 try:
-                    d = ClassDataObj.ClassData(
+                    d = ClassData(
                         student=student,
                         classes=class_obs.classes,
                         class_obs=class_obs,
@@ -2113,8 +2113,8 @@ class ClassDataObj(Base):
 
         def __init__(
             self,
-            template: "ClassDataObj.AchievementTemplate",
-            target: "ClassDataObj.Student",
+            template: "AchievementTemplate",
+            target: "Student",
             reach_time: str = None,
             reach_time_key: int = None,
         ):
@@ -2214,13 +2214,13 @@ class ClassDataObj(Base):
         def __init__(
             self,
             target_class: str = "CLASS_TEST",
-            is_early: List["ClassDataObj.Student"] = None,
-            is_late: List["ClassDataObj.Student"] = None,
-            is_late_more: List["ClassDataObj.Student"] = None,
-            is_absent: List["ClassDataObj.Student"] = None,
-            is_leave: List["ClassDataObj.Student"] = None,
-            is_leave_early: List["ClassDataObj.Student"] = None,
-            is_leave_late: List["ClassDataObj.Student"] = None,
+            is_early: List["Student"] = None,
+            is_late: List["Student"] = None,
+            is_late_more: List["Student"] = None,
+            is_absent: List["Student"] = None,
+            is_leave: List["Student"] = None,
+            is_leave_early: List["Student"] = None,
+            is_leave_late: List["Student"] = None,
         ):
             """考勤信息
 
@@ -2286,7 +2286,7 @@ class ClassDataObj(Base):
             )
 
         @staticmethod
-        def from_string(string: str) -> "ClassDataObj.AttendanceInfo":
+        def from_string(string: str) -> "AttendanceInfo":
             "从字符串加载出勤信息对象。"
             d = json.loads(string)
             if d["type"] != AttendanceInfo.chunk_type_name:
@@ -2311,7 +2311,7 @@ class ClassDataObj(Base):
             obj.archive_uuid = d["archive_uuid"]
             return obj
 
-        def is_normal(self, target_class: "ClassDataObj.Class") -> List["ClassDataObj.Student"]:
+        def is_normal(self, target_class: "Class") -> List["Student"]:
             "正常出勤的学生，没有缺席"
             return [
                 s
@@ -2349,10 +2349,10 @@ class ClassDataObj(Base):
 
         def __init__(
             self,
-            target_class: "ClassDataObj.Class",
+            target_class: "Class",
             weekday: int,
             create_utc: float,
-            attendance_info: "ClassDataObj.AttendanceInfo",
+            attendance_info: "AttendanceInfo",
         ):
             """构造函数。
 
@@ -2384,7 +2384,7 @@ class ClassDataObj(Base):
             )
 
         @staticmethod
-        def from_string(string: str) -> "ClassDataObj.DayRecord":
+        def from_string(string: str) -> "DayRecord":
             "从字符串加载每日记录对象。"
             d = json.loads(string)
             if d["type"] != DayRecord.chunk_type_name:
@@ -2418,15 +2418,15 @@ class ClassDataObj(Base):
 
         def __init__(
             self,
-            classes: Dict[str, "ClassDataObj.Class"],
-            weekdays: Dict[str, Dict[float, "ClassDataObj.DayRecord"]],
+            classes: Dict[str, "Class"],
+            weekdays: Dict[str, Dict[float, "DayRecord"]],
             save_time: Optional[float] = None,
         ):
             self.classes = dict(classes)
             self.time = save_time or time.time()
             weekdays = weekdays.copy()
 
-            self.weekdays: Dict[str, Dict[float, "ClassDataObj.DayRecord"]] \
+            self.weekdays: Dict[str, Dict[float, "DayRecord"]] \
                 = weekdays
             
             self.uuid = self.archive_uuid = ClassDataObj.archive_uuid
@@ -2453,7 +2453,7 @@ class ClassDataObj(Base):
             )
 
         @staticmethod
-        def from_string(s: str) -> "ClassDataObj.History":
+        def from_string(s: str) -> "History":
             "从字符串加载历史记录。"
             d = json.loads(s)
             if d["type"] != History.chunk_type_name:
@@ -2486,6 +2486,29 @@ class ClassDataObj(Base):
             return self
 
 
+class ClassObjectEvents:
+    "班级数据对象的事件"
+    NewStudentCreated = EventType("NewStudentCreated", ClassDataObj.Student)
+    "新学生创建"
+    StudentRemoved = EventType("StudentRemoved", ClassDataObj.Student)
+    "学生移除"
+    StudentModified = EventType("StudentModified", ClassDataObj.Student)
+    "学生修改"
+    StudentAddedToGroup = EventType("StudentAddedToGroup", ClassDataObj.Group)
+    "学生加入小组"
+    StudentRemovedFromGroup = EventType("StudentRemovedFromGroup", ClassDataObj.Group)
+    "学生移出小组"
+    StudentAttendanceChanged = EventType("StudentAttendanceChanged", ClassDataObj.Student)
+    "学生出勤状态改变"
+    StudentScoreChanged = EventType("StudentScoreChanged", ClassDataObj.Student)
+    "学生分数改变"
+    StudentScoreModified = EventType("StudentScoreModified", ClassDataObj.Student)
+    "学生分数修改"
+    StudentScoreReset = EventType("StudentScoreReset", ClassDataObj.Student)
+    "学生分数重置"
+    StudentScoreRemoved = EventType("StudentScoreRemoved", ClassDataObj.Student)
+    "学生分数移除"
+
 class ClassStatusObserver(Object):
 
     "班级状态侦测器"
@@ -2500,15 +2523,15 @@ class ClassStatusObserver(Object):
     "班级ID"
     stu_score_ord: dict
     "学生分数排序"
-    classes: Dict[str, ClassDataObj.Class]
+    classes: Dict[str, "Class"]
     "所有班级，是一个字典（ID, 班级对象）"
-    target_class: ClassDataObj.Class
+    target_class: "Class"
     "目标班级"
-    templates: Dict[str, ClassDataObj.ScoreModificationTemplate]
+    templates: Dict[str, "ScoreModificationTemplate"]
     "所有模板"
     opreation_record: Stack
     "操作记录"
-    groups: Dict[str, ClassDataObj.Group]
+    groups: Dict[str, "Group"]
     "所有小组"
     base: "ClassDataObj"
     "后面用到的ClassObjects，算法基层"
@@ -2516,9 +2539,9 @@ class ClassStatusObserver(Object):
     "上次更新时间"
     tps: int
     "最大每秒更新次数"
-    rank_non_dumplicate: List[Tuple[int, ClassDataObj.Student]]
+    rank_non_dumplicate: List[Tuple[int, "Student"]]
     "去重排名"
-    rank_dumplicate: List[Tuple[int, ClassDataObj.Student]]
+    rank_dumplicate: List[Tuple[int, "Student"]]
     "不去重排名"
 
 
@@ -2529,19 +2552,19 @@ class AchievementStatusObserver(Object):
     "是否激活"
     class_id: str
     "班级ID"
-    classes: Dict[str, ClassDataObj.Class]
+    classes: Dict[str, "Class"]
     "所有班级"
-    achievement_templates: Dict[str, ClassDataObj.AchievementTemplate]
+    achievement_templates: Dict[str, "AchievementTemplate"]
     "所有成就模板"
     class_obs: ClassStatusObserver
     "班级状态侦测器"
     display_achievement_queue: Queue
     "成就显示队列"
-    achievement_displayer: Callable[[str, ClassDataObj.Student], Any]
+    achievement_displayer: Callable[[str, "Student"], Any]
     "成就显示函数"
     last_update: float
     "上次更新时间"
-    base: "ClassDataObj.ClassObjects"
+    base: "ClassDataObj"
     "算法基层"
     tps: int
     "最大每秒更新次数"

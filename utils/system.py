@@ -12,14 +12,15 @@ stdout_queue = Queue()
 stderr_queue = Queue()
 output_list = []
 
-__all__ = ["SystemLogger", 
-           "CommandOutput", 
-           "system", 
-           "system_lined",
-           "output_list",
-           "stdout_queue",
-           "stderr_queue"
-           ]
+__all__ = [
+    "SystemLogger", 
+    "CommandOutput", 
+    "system", 
+    "system_lined",
+    "output_list",
+    "stdout_queue",
+    "stderr_queue"
+    ]
 
 class SystemLogger(TextIOWrapper):
     """用于重定向标准输出的日志记录类

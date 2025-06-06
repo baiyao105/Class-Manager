@@ -14,6 +14,8 @@ from utils import ClassObj
 from widgets.basic import *
 from widgets.ui.pyside6.NoiseDetector import Ui_Form
 
+
+__all__ = ["NoiseDetectorWidget"]
 class NoiseDetectorWidget(Ui_Form, MyWidget):
     """噪音检测器"""
 

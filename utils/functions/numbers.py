@@ -1,10 +1,16 @@
+"""
+关于数字的函数
+"""
+
 import time
 import random
 from typing import Union, List
 
 
+
 def utc(prec: int = 3):
-    """获取当前UTC时间戳
+    """
+    获取当前UTC时间戳
 
     :param prec: 精度，表示小数点后的位数
     :return: 指定精度的UTC时间戳
@@ -15,7 +21,8 @@ def utc(prec: int = 3):
 def steprange(
     start: Union[int, float], stop: Union[int, float], step: int
 ) -> List[float]:
-    """生成step步长的从start到stop的列表
+    """
+    生成step步长的从start到stop的列表
 
     :param start: 起始值
     :param stop: 结束值
@@ -36,7 +43,8 @@ def steprange(
 
 
 def addrof(obj) -> str:
-    """获取对象的内存地址
+    """
+    获取对象的内存地址
 
     :param obj: 任意Python对象
     :return: 十六进制格式的内存地址字符串

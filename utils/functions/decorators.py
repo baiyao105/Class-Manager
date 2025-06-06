@@ -7,10 +7,7 @@ import functools
 from threading import Thread
 from typing import Literal
 
-try:    
-    from utils.logger import Logger as Base
-except ImportError as unused:
-    from logger import Logger as Base
+from utils.logger import Logger as Base
 
 
 __all__ = [
@@ -19,6 +16,8 @@ __all__ = [
     "canbe",
     "pass_exceptions",
 ]
+
+
 def repeat(count):
     """
     装饰器，用于重复执行函数指定次数
@@ -120,7 +119,7 @@ def pass_exceptions(func):
             return func(*args, **kwargs)
         except (
             BaseException
-        ) as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
+        ) as unused:  # pylint: disable=broad-exception-caught
             Base.log_exc(
                 f"执行函数{repr(func.__name__)}时捕获到异常",
                 f"pass_exceptions -> {func.__name__}",

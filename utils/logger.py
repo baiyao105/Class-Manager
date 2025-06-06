@@ -8,25 +8,19 @@ import time
 import inspect
 import traceback
 from queue import Queue
-from threading import Thread
+from threading import Thread, Lock
 from typing import Optional, TextIO, Literal, final, List
 
 import colorama
 from loguru import logger
-try:
-    import utils.consts as consts
-    from utils.consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
-    from utils.algorithm import Mutex
-    from utils.system import SystemLogger
-    from utils.functions.excinfo import format_exc_like_java
-    from utils.functions.numbers import get_time
-except ImportError as unsued:
-    import consts
-    from consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
-    from algorithm import Mutex
-    from system import SystemLogger
-    from functions.excinfo import format_exc_like_java
-    from functions.numbers import get_time
+
+import utils.consts as consts
+
+from utils.consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
+from utils.system import SystemLogger
+from utils.functions.excinfo import format_exc_like_java
+from utils.functions.numbers import get_time
+
 
 __all__ = ["LoggerSettings", "log_settings", "Logger", "Color"]
 
@@ -211,7 +205,7 @@ class Logger:
     )
     "经过处理的错误输出"
 
-    log_mutex = Mutex()
+    log_mutex = Lock()
     "日志互斥锁"
 
     @staticmethod

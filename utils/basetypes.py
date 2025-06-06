@@ -5,19 +5,28 @@
 import os
 import sys
 import time
+import random
+import psutil
 import threading
 import ctypes
 import copy
 
-try:
-    from .functions import gen_uuid
-    from .logger import Logger, logger
-except ImportError as unused:
-    from functions import gen_uuid
-    from logger import Logger, logger
+from .logger import Logger, logger
 
 
 
+__all__ = [
+    "ModifyingError",
+    "DataObject",
+    "Object",
+    "Base",
+    "stdout_orig",
+    "stderr_orig"
+]
+
+def gen_uuid(length: int = 32) -> str:
+    "生成一个长32位的uuid"
+    return "".join([str(random.choice("0123456789abcdef")) for _ in range(length)])
 
 os.makedirs(os.getcwd() + "/log", exist_ok=True)
 
@@ -100,6 +109,60 @@ class Base(Logger, Object):
             + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
             + f".{int((time.time()%1)*1000):03}"
         )
+    
+class SysMemTracer:
+    "系统内存追踪器"
+
+    def __init__(self, trace_interval: float = 0.1, record_data: bool = False):
+        """
+        构造一个新的追踪器。
+
+        :param trace_interval: 追踪间隔
+        :param record_data: 是否记录数据
+        """
+
+        self.trace_interval = trace_interval
+        "追踪间隔"
+        self.record_data = record_data
+        "是否记录数据"
+        self.data = {}
+        "内存使用数据"
+        self.current_usage = 0
+        "当前内存使用量"
+        self._running = False
+
+    def __enter__(self):
+        self.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
+    def start(self):
+        "开始追踪"
+        if self._running:
+            return
+
+        self._running = True
+        self._thread = threading.Thread(target=self._trace, name=f"SysMemTracer_{id(self):x}")
+        self._thread.start()
+    
+    def stop(self):
+        "停止追踪"
+        self._running = False
+
+
+    def _trace(self):
+        "追踪"
+        while True:
+            self.current_usage = self._get_memory_usage()
+            if self.record_data:
+                self.data[time.time()] = self.current_usage
+            time.sleep(self.trace_interval)
+
+    def _get_memory_usage(self):
+        "获取内存使用量"
+        return psutil.Process().memory_info().rss
+
 
 stdout_orig = sys.stdout
 stderr_orig = sys.stderr

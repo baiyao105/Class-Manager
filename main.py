@@ -23,12 +23,12 @@ from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import Mapping, Any, Iterable
 
-
 import psutil
 import requests
 import numpy as np
 import customtkinter  # pylint: disable=unused-import
 import dill as pickle  # pylint: disable=shadowed-import
+import pyqtgraph as pg
 from qfluentwidgets.common import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.components import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.window import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -41,7 +41,12 @@ from widgets.ui.pyside6 import (
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
 
-from utils.basetypes import logger # pylint: disable=wrong-import-position
+from utils.basetypes import logger, SysMemTracer # pylint: disable=wrong-import-position
+from utils.consts import debug, enable_memory_tracing
+sys_mem_tracer = SysMemTracer(record_data=True)
+
+if enable_memory_tracing:
+    sys_mem_tracer.start()
 
 from utils.classobjects import (  # pylint: disable=unused-import, disable=wrong-import-position
     sys as base_sys,
@@ -86,6 +91,8 @@ from utils.consts import (
     enable_memory_tracing,
     runtime_flags
 )
+
+
 from widgets.basic.widgets import ObjectButton, ProgressAnimatedListWidgetItem, SideNotice
 from utils.functions import question_yes_no as question_yes_no_orig, question_chooose
 from utils.functions import format_exc_like_java
@@ -392,12 +399,29 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """
 
         self.create_time = time.time()
+        "程序创建时间"
         self.framerate_update_time = 0
+        "帧率上次更新时间"
         self.framecount = 0
+        "自上一秒以来的更新帧数"
+        self.framerate = 0
+        "帧率"
+        self.video_framecount = 0
+        "动态背景帧数"
+        self.video_framerate = 0
+        "动态背景帧率"
+        self.video_framerate_update_time = 0
+        "动态背景帧数上次更新时间"
+        self.displayed_on_the_log_window = 0
+        "在小日志窗口上已经体现的日志条数，用来判断是否刷新"
         self.last_save_from_action = time.time()
+        "上次手动保存的时间"
         self.auto_save_last_time = time.time()
+        "上次自动保存的时间"
         self.sidenotice_waiting_order = Queue()
+        "提示栏等待顺序"
         self.sidenotice_avilable_slots = list(range(5))
+        "提示栏可用槽位"
         self.opacity = 0.88
         "背景透明度"
         self.current_user = current_user
@@ -466,12 +490,15 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "音乐列表"
         self.noise_detector: Optional[NoiseDetectorWidget] = None
         "噪音检测窗口"
-        self.stu_buttons: Optional[Dict[int, ObjectButton]] = None
+        self.stu_buttons: Optional[Dict[int, ObjectButton]] = {}
         "学生按钮列表"
-        self.grp_buttons: Optional[Dict[str, ObjectButton]] = None
+        self.grp_buttons: Optional[Dict[str, ObjectButton]] = {}
         "小组按钮列表"
         Base.log("I", "程序创建", "MainWindow.__init__")
+
+
         self.app = app
+        "应用程序对象"
         if qt_version in ("PySide6", "PyQt6"):
             self.app.setStyle(QStyleFactory.create(app_style))
             self.app.setStyleSheet(app_stylesheet)
@@ -480,7 +507,67 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.backup_path = "backups/"
         "备份路径"
         super().__init__(user=current_user)
-        self.init_display_data()
+
+        # 初始化设置信息
+        self.client_version = CLIENT_VERSION
+        "客户端版本号"
+        self.client_version_code = CLIENT_VERSION_CODE
+        "客户端版本号"
+        self.opacity = 0.88
+        "窗口透明度"
+        self.score_up_color_mixin_begin = (0xCA, 0xFF, 0xCA)
+        "加分动画颜色渐变开始颜色"
+        self.score_up_color_mixin_end = (0x33, 0xCF, 0x6C)
+        "加分动画颜色渐变结束颜色"
+        self.score_up_color_mixin_start = 2
+        "加分动画颜色渐变开始值（分）"
+        self.score_up_color_mixin_step = 15
+        "加分动画颜色渐变开始值（分）"
+        self.score_up_flash_framelength_base = 300
+        "加分动画基础持续时间（毫秒）"
+        self.score_up_flash_framelength_step = 100
+        "加分动画每多加一分增加动画时间（毫秒）"
+        self.score_up_flash_framelength_max = 2000
+        "加分动画基础持续时间（毫秒）"
+
+        self.score_down_color_mixin_begin = (0xFC, 0xB5, 0xB5)
+        "扣分动画颜色渐变开始颜色"
+        self.score_down_color_mixin_end = (0xA9, 0x00, 0x00)
+        "扣分动画颜色渐变结束颜色"
+        self.score_down_color_mixin_start = 2
+        "扣分动画颜色渐变开始值（分）"
+        self.score_down_color_mixin_step = 15
+        "扣分动画颜色渐变总步长（分）"
+        self.score_down_flash_framelength_base = 300
+        "扣分动画基础持续时间（毫秒）"
+        self.score_down_flash_framelength_step = 100
+        "扣分动画每多扣一分增加动画时间（毫秒）"
+        self.score_down_flash_framelength_max = 2000
+        "扣分动画最长持续时间（毫秒）"
+        self.log_keep_linecount = 100
+        "日志窗口保留行数"
+        self.log_update_interval = 0.1
+        "日志窗口更新间隔（秒）"
+        self.auto_save_enabled = False
+        "是否启用自动保存"
+        self.auto_save_interval = 120
+        "自动保存间隔（秒）"
+        self.auto_save_path: Literal["folder", "user"] = "folder"
+        "自动保存路径"
+        self.auto_backup_scheme: Literal["none", "only_data", "all"] = "only_data"
+        "自动备份方案"
+        self.animation_speed = 1.0
+        "动画速度"
+        self.subwindow_x_offset = 0
+        "子窗口x偏移量"
+        self.subwindow_y_offset = 0
+        "子窗口y偏移量"
+        self.use_animate_background = False
+        "是否使用动态背景"
+        self.max_framerate = 60
+        "动态背景最大帧率"
+        self.saving = False
+        "正在保存"
         self.load_settings()
         self.init_class_data(
             class_name=class_name,
@@ -489,7 +576,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             class_obs_tps=10,
             achievement_obs_tps=10,
         )
-        # 给成就侦测器过载的时候增加一个提示
+
+        # 给成就侦测器过载的时候增加一个提示（覆写原来的on_observer_overloaded）
         orig_func = self.achievement_obs.on_observer_overloaded
         last_tip = 0.0
 
@@ -515,8 +603,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.achievement_obs.achievement_displayer = self.display_achievement
         self.is_running = True
         "窗口是否在运行"
-        self.framerate_update_time = time.time()
         self.updator_thread = UpdateThread(mainwindow=self)
+        "更新线程"
         self.command_list = command_list
         self.action.triggered.connect(self.student_rank)
         self.action_2.triggered.connect(self.manage_templates)
@@ -611,34 +699,28 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.dont_click_button_clicked.connect(self._dont_click)
         self.refresh_hint_widget_signal.connect(self._refresh_hint_widget)
         self.anim_group_state_changed.connect(self._anim_group_state_changed)
-
-        self.framecount = 0
-        "自上一秒以来的更新帧数"
-        self.framerate = 0
-        "帧率"
-        self.video_framecount = 0
-        "动态背景帧数"
-        self.video_framerate = 0
-        "动态背景帧率"
-        self.video_framerate_update_time = 0
-        "动态背景帧数更新时间"
-        self.displayed_on_the_log_window = 0
-        "在小日志窗口上已经体现的日志条数，用来判断是否刷新"
         self.tip_handler = self.TipHandler(self)
+        "提示处理器"
         self.tip_handler.start()
         self.logwindow_content: List[str] = ["这里是日志"]
+        "主窗口日志内容"
         self.auto_saving = False
+        "是否正在自动保存"
         self.setWindowTitle(f"班寄管理 - {self.target_class.name}")
         self.terminal_locals = {}
+        "终端的本地变量"
         self.update_timer = QTimer()
+        "更新定时器"
         self.update_timer.timeout.connect(self.update)
         self.update_timer.start(100)
         self.recent_command_update_timer = QTimer()
+        "最近命令更新定时器"
         self.recent_command_update_timer.timeout.connect(
             self.update_recent_command_btns
         )
         self.recent_command_update_timer.start(300)
         self.tip_history: List[SideNotice] = []
+        "提示历史"
         self.show_tip(
             "", "双击项目查看消息记录", duration=0, further_info="孩子真聪明（bushi"
         )
@@ -646,6 +728,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.ListWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.student_info_window: Optional[StudentWidget] = None
+        "学生信息窗口"
         self.CardWidget_2.clicked.connect(
             lambda: Thread(target=self.refresh_hint_widget).start()
         )
@@ -701,37 +784,64 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.stu_buttons: Dict[int, ObjectButton] = {}
             self.grp_buttons: Dict[str, ObjectButton] = {}
         self.client_version = CLIENT_VERSION
+        "客户端版本号"
         self.client_version_code = CLIENT_VERSION_CODE
+        "客户端版本号"
         self.opacity = 0.88
+        "窗口透明度"
         self.score_up_color_mixin_begin = (0xCA, 0xFF, 0xCA)
+        "加分动画颜色渐变开始颜色"
         self.score_up_color_mixin_end = (0x33, 0xCF, 0x6C)
-        self.score_up_color_mixin_step = 15
+        "加分动画颜色渐变结束颜色"
         self.score_up_color_mixin_start = 2
+        "加分动画颜色渐变开始值（分）"
+        self.score_up_color_mixin_step = 15
+        "加分动画颜色渐变开始值（分）"
         self.score_up_flash_framelength_base = 300
+        "加分动画基础持续时间（毫秒）"
         self.score_up_flash_framelength_step = 100
+        "加分动画每多加一分增加动画时间（毫秒）"
         self.score_up_flash_framelength_max = 2000
+        "加分动画基础持续时间（毫秒）"
 
         self.score_down_color_mixin_begin = (0xFC, 0xB5, 0xB5)
+        "扣分动画颜色渐变开始颜色"
         self.score_down_color_mixin_end = (0xA9, 0x00, 0x00)
-        self.score_down_color_mixin_step = 15
+        "扣分动画颜色渐变结束颜色"
         self.score_down_color_mixin_start = 2
+        "扣分动画颜色渐变开始值（分）"
+        self.score_down_color_mixin_step = 15
+        "扣分动画颜色渐变总步长（分）"
         self.score_down_flash_framelength_base = 300
+        "扣分动画基础持续时间（毫秒）"
         self.score_down_flash_framelength_step = 100
+        "扣分动画每多扣一分增加动画时间（毫秒）"
         self.score_down_flash_framelength_max = 2000
-
+        "扣分动画最长持续时间（毫秒）"
         self.log_keep_linecount = 100
+        "日志窗口保留行数"
         self.log_update_interval = 0.1
-
+        "日志窗口更新间隔（秒）"
         self.auto_save_enabled = False
+        "是否启用自动保存"
         self.auto_save_interval = 120
+        "自动保存间隔（秒）"
         self.auto_save_path: Literal["folder", "user"] = "folder"
+        "自动保存路径"
         self.auto_backup_scheme: Literal["none", "only_data", "all"] = "only_data"
-
+        "自动备份方案"
         self.animation_speed = 1.0
+        "动画速度"
         self.subwindow_x_offset = 0
+        "子窗口x偏移量"
         self.subwindow_y_offset = 0
+        "子窗口y偏移量"
         self.use_animate_background = False
+        "是否使用动态背景"
         self.max_framerate = 60
+        "动态背景最大帧率"
+        self.saving = False
+        "正在保存"
 
     ###########################################################################
     #                            用户提示类                                    #
@@ -1351,6 +1461,13 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.going_to_exit.emit()
             wait_until(lambda: self.exit_action_finished)
             self.hide()
+            if enable_memory_tracing:
+                Base.log("I", "绘制内存使用记录", "MainWindow.closeEvent")
+                sys_mem_tracer_widget = pg.PlotWidget()
+                sys_mem_tracer_widget = pg.plot(title="内存使用记录", clear=True)
+                sys_mem_tracer_widget.plot(list(sys_mem_tracer.data.keys()), list(sys_mem_tracer.data.values()), pen=(255, 0, 0))
+                sys_mem_tracer_widget.show()
+            wait_until(lambda: sys_mem_tracer_widget.isHidden())
             Base.log("I", "执行app.quit()", "MainWindow.closeEvent")
             self.app.quit()
 
@@ -1823,7 +1940,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         lt = time.localtime()
         if (lt.tm_mon, lt.tm_mday) == (4, 1):
             e = ClassObj.ObserverError(
-                f"数据加载失败，详情请查看日志[{random.randint(114514, 1919810)}]"
+                f"数据加d载失败，详情请查看日志[{random.randint(114514, 1919810)}]"
             )
             self.question_if_exec(
                 "警告",
@@ -2247,6 +2364,29 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def save(self):
         "保存当前存档。"
         if self.last_save_from_action - time.time() < -3:
+            Chunk.loading_info["history_stage"] = "保存存档"
+            Chunk.loading_info["current_saving_obj_name"] = "存档"
+            Chunk.loading_info["current_saving_obj_current"] = 1
+            Chunk.loading_info["current_saving_obj_total"] = 1
+            Chunk.loading_info["total_percentage"] = 0
+            loading_screen = LoadingScreenWidget(
+                self,
+                progress_condition=lambda: Chunk.loading_info["total_percentage"],
+                stage_desc_condition=lambda: Chunk.loading_info["history_stage"],
+                stage_progress_desc_condition=lambda: (
+                    "保存" +
+                    Chunk.loading_info["current_saving_obj_name"] + 
+                    "（" +
+                    str(Chunk.loading_info["current_saving_obj_current"]) +
+                    "/" +
+                    str(Chunk.loading_info["current_saving_obj_total"]) +
+                    "）"
+                ))
+            loading_screen.show()
+            finished = False
+            def _set_finished():
+                nonlocal finished
+                finished = True
             Base.log("I", "保存当前存档", "MainWindow.save")
             self.last_save_from_action = time.time()
             Thread(
@@ -2262,8 +2402,12 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                         further_info="保存成功，没什么好说的",
                     ),
                     Base.log("I", "存档保存完成", "MainWindow.save"),
+                    _set_finished()
                 )
             ).start()
+            wait_until(lambda: finished)
+            loading_screen.close()
+
 
     def refresh_hint_widget(self, mode: int = 0):
         """
@@ -3691,4 +3835,6 @@ def main():
 
 if __name__ == "__main__":
     return_code = main()
+    
     sys.exit(return_code)
+    
