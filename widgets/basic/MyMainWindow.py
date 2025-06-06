@@ -2,7 +2,7 @@
 我的主窗口
 """
 from typing import Optional
-from utils.basetypes import Base
+from utils.logger import Logger
 from .Qt import *
 from utils import question_yes_no
 
@@ -51,7 +51,7 @@ class MyMainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent, tip=True) -> bool:
         "处理窗口关闭事件"
-        Base.log("I", "主窗口尝试退出", "MyMainWindow")
+        Logger.log("I", "主窗口尝试退出", "MyMainWindow")
         self.close_count += 1
         if tip:
             if self.isEnabled():
@@ -60,23 +60,23 @@ class MyMainWindow(QMainWindow):
                     "提示",
                     "确定退出？" if self.close_count <= 5 else "确认退出程序？",
                 )
-                # 判断返回结果处理相应事项
+                # 判断返回结果处理相应事项w
                 if reply:
-                    Base.log("I", "确认退出", "MyMainWindow")
+                    Logger.log("I", "确认退出", "MyMainWindow")
                     event.accept()
                     self.is_running = False
                     return True
 
                 else:
-                    Base.log("I", "取消退出", "MyMainWindow")
+                    Logger.log("I", "取消退出", "MyMainWindow")
                     event.ignore()
                     return False
             else:
-                Base.log("I", "子窗口未关闭，无法退出", "MyMainWindow")
+                Logger.log("I", "子窗口未关闭，无法退出", "MyMainWindow")
                 event.ignore()
                 return False
         else:
-            Base.log("I", "退出", "MyMainWindow")
+            Logger.log("I", "退出", "MyMainWindow")
             event.accept()
             self.is_running = False
             return True

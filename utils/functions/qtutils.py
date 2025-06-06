@@ -1,3 +1,7 @@
+"""
+关于Qt的函数
+"""
+
 import cv2
 import time
 from typing import Callable, Optional, Literal
@@ -51,6 +55,6 @@ def wait_until(
     timer.start(check_interval)
     loop.exec()
     if timeout_handling == "raise" and not result:
-        raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000: d} /{timeout} ms)")
+        raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} /{timeout} ms)")
     return result
 

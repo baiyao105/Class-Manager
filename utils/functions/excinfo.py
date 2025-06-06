@@ -1,9 +1,15 @@
 import inspect
 from typing import List, Union, Callable
 
+"""
+关于格式化异常信息的函数
+"""
+
+
 
 def get_function_namespace(func) -> str:
-    """获取函数的命名空间
+    """
+    获取函数的命名空间
 
     :param func: 函数对象
     :return: 函数的命名空间字符串
@@ -17,7 +23,7 @@ def get_function_namespace(func) -> str:
                 return func.__name__
             except (
                 BaseException
-            ) as unused:  # pylint: disable=broad-exception-caught, redefined-outer-name
+            ) as unused:  # pylint: disable=broad-exception-caught
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
                 elif isinstance(func, classmethod):
@@ -26,7 +32,7 @@ def get_function_namespace(func) -> str:
                     return func.__class__.__qualname__
                 except (
                     BaseException
-                ) as unused:  # pylint: disable=broad-exception-caught, redefined-outer-name
+                ) as unused_2:  # pylint: disable=broad-exception-caught
                     return func.__class__.__name__
     if module is None:
         module_name = (
