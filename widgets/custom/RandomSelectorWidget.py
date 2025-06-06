@@ -17,14 +17,14 @@ class RandomSelectWidget(Ui_Form, MyWidget):
     """随机点名窗口"""
 
     def __init__(
-        self, master: Optional[WidgetType] = None, mainwindow: Optional[ClassObj] = None
+        self, master: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
     ):
         super().__init__(master)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master = master
         self.setupUi(self)
         self.from_students: List[Student] = list(
-            mainwindow.target_class.students.values()
+            main_window.target_class.students.values()
         )
         self.includes_students: List[Student] = []
         self.excludes_students: List[Student] = []
@@ -71,7 +71,7 @@ class RandomSelectWidget(Ui_Form, MyWidget):
         self.select_window = StudentSelectorWidget(
             self,
             self,
-            self.mainwindow.target_class.students.values(),
+            self.main_window.target_class.students.values(),
             self.from_students,
         )
         self.from_students = self.select_window.exec()
@@ -85,7 +85,7 @@ class RandomSelectWidget(Ui_Form, MyWidget):
         self.select_window = StudentSelectorWidget(
             self,
             self,
-            self.mainwindow.target_class.students.values(),
+            self.main_window.target_class.students.values(),
             self.includes_students,
         )
         self.includes_students = self.select_window.exec(allow_none=True)
@@ -99,7 +99,7 @@ class RandomSelectWidget(Ui_Form, MyWidget):
         self.select_window = StudentSelectorWidget(
             self,
             self,
-            self.mainwindow.target_class.students.values(),
+            self.main_window.target_class.students.values(),
             self.excludes_students,
         )
         self.excludes_students = self.select_window.exec(allow_none=True)
@@ -110,7 +110,7 @@ class RandomSelectWidget(Ui_Form, MyWidget):
         self.update_widgets()
 
     def start(self):
-        self.result = self.mainwindow.random_choose_stu(
+        self.result = self.main_window.random_choose_stu(
             min(
                 self.spinBox.value(),
                 (len(self.from_students) - len(self.excludes_students)),
@@ -128,5 +128,5 @@ class RandomSelectWidget(Ui_Form, MyWidget):
 
     def show_stu_info(self, stu: Student):
         Base.log("I", f"显示学生信息：{stu.name}", "RandomSelectWindow.show_stu_info")
-        self.stu_info_window = StudentWidget(self.mainwindow, self, stu)
+        self.stu_info_window = StudentWidget(self.main_window, self, stu)
         self.stu_info_window.show()

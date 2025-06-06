@@ -21,19 +21,19 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master: Optional[WidgetType] = None,
-        mainwindow: ClassObj = None,
+        main_window: ClassObj = None,
         attendanceinfo: AttendanceInfo = None,
     ):
         """
         构造新窗口
 
         :param parent: 父窗口
-        :param mainwindow: 主窗口
+        :param main_window: 主窗口
         :param attendanceinfo: 考勤信息
         """
         super().__init__(master)
         self.setupUi(self)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.attendanceinfo = attendanceinfo
         self.finished = False
         self.stu_buttons: Dict[int, ObjectButton] = {}
@@ -50,7 +50,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                 "leave_late"
             ],
         ] = {}
-        self.target_class = self.mainwindow.classes[attendanceinfo.target_class]
+        self.target_class = self.main_window.classes[attendanceinfo.target_class]
         for s in self.target_class.students.values():
             self.stu_states[s.num] = "normal"
         for s in self.attendanceinfo.is_absent:
@@ -118,13 +118,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
     def show_attending_list(self):
         try:
             attending_list = [
-                (day.attendance_info, day.utc) for day in self.mainwindow.weekday_record[self.target_class.key].values()
+                (day.attendance_info, day.utc) for day in self.main_window.weekday_record[self.target_class.key].values()
             ]
         except:
             QMessageBox.information(self, "提示", f"当前班级（{self.target_class.name}）没有考勤记录")
             return
         self.listview = ListView(
-            self.mainwindow,
+            self.main_window,
             self,
             "考勤记录",
             [
@@ -139,7 +139,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
 
     def show_attendance(self, attendanceinfo: AttendanceInfo):
         self.view = AttendanceInfoViewWidget(
-            self.listview, self.mainwindow, attendanceinfo
+            self.listview, self.main_window, attendanceinfo
         )
         self.view.show()
 
@@ -159,7 +159,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
     ):
         # 这写的是什么爆炸东西
 
-        stu = self.mainwindow.target_class.students[num]
+        stu = self.main_window.target_class.students[num]
 
         if self.stu_states[num] == "early" and state != "early":
             for h in reversed(stu.history.values()):  # 从最近的开始遍历
@@ -169,13 +169,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                     and h.executed
                 ):
                     # 防止今天把昨天的撤掉了
-                    self.mainwindow.retract_modify(h, info="<考勤撤回早到>")
+                    self.main_window.retract_modify(h, info="<考勤撤回早到>")
                     break  # 因为只要撤回一个就行了
 
         if self.stu_states[num] != "early" and state == "early":
-            self.mainwindow.send_modify(
+            self.main_window.send_modify(
                 "go_to_school_early",
-                self.mainwindow.target_class.students[num],
+                self.main_window.target_class.students[num],
                 info="<考勤早到>",
             )
 
@@ -186,13 +186,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                     and time.time() - h.execute_time_key / 1000 <= 86400
                     and h.executed
                 ):
-                    self.mainwindow.retract_modify(h, info="<考勤撤回迟到>")
+                    self.main_window.retract_modify(h, info="<考勤撤回迟到>")
                     break
 
         if self.stu_states[num] != "late" and state == "late":
-            self.mainwindow.send_modify(
+            self.main_window.send_modify(
                 "go_to_school_late",
-                self.mainwindow.target_class.students[num],
+                self.main_window.target_class.students[num],
                 info="<考勤迟到>",
             )
 
@@ -203,13 +203,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                     and time.time() - h.execute_time_key / 1000 <= 86400
                     and h.executed
                 ):
-                    self.mainwindow.retract_modify(h, info="<考勤撤回迟到过久>")
+                    self.main_window.retract_modify(h, info="<考勤撤回迟到过久>")
                     break
 
         if self.stu_states[num] != "late_more" and state == "late_more":
-            self.mainwindow.send_modify(
+            self.main_window.send_modify(
                 "go_to_school_late_more",
-                self.mainwindow.target_class.students[num],
+                self.main_window.target_class.students[num],
                 info="<考勤迟到过久>",
             )
 

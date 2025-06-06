@@ -17,7 +17,7 @@ class StudentWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        mainwindow: ClassObj = None,
+        main_window: ClassObj = None,
         master_widget: Optional[WidgetType] = None,
         student: Student = None,
         readonly: bool = False,
@@ -25,7 +25,7 @@ class StudentWidget(Ui_Form, MyWidget):
         """
         初始化
 
-        :param mainwindow: 程序的主窗口，方便传参
+        :param main_window: 程序的主窗口，方便传参
         :param master_widget: 这个学生窗口的父窗口
         :param student: 这个学生窗口对应的学生
         """
@@ -37,7 +37,7 @@ class StudentWidget(Ui_Form, MyWidget):
         self.mainLayout = QVBoxLayout()
         self.setWindowTitle("学生信息 - " + str(student.name))
         self.setLayout(self.mainLayout)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update)
@@ -77,7 +77,7 @@ class StudentWidget(Ui_Form, MyWidget):
         self.label_6.setText(str(self.student.num))
         self.label_12.setText(str(self.student.score))
         self.label_13.setText(
-            str(self.mainwindow.classes[self.student.belongs_to].name)
+            str(self.main_window.classes[self.student.belongs_to].name)
         )
         self.label_8.setText(
             str(round(self.student.highest_score, 1))
@@ -85,7 +85,7 @@ class StudentWidget(Ui_Form, MyWidget):
             + str(round(self.student.lowest_score, 1))
         )
         self.label_7.setText(str(self.student.total_score))
-        for i, s in self.mainwindow.class_obs.rank_non_dumplicate:
+        for i, s in self.main_window.class_obs.rank_non_dumplicate:
             if s.num == self.student.num and s.belongs_to == self.student.belongs_to:
                 self.label_16.setText(str(i))
                 break
@@ -100,7 +100,7 @@ class StudentWidget(Ui_Form, MyWidget):
             f"发送：{repr((result[0], self.student, result[1], result[2], result[3]))}",
             "StudentWidget.send",
         )
-        self.mainwindow.send_modify(
+        self.main_window.send_modify(
             result[0], self.student, result[1], result[2], result[3]
         )
 
@@ -156,7 +156,7 @@ class StudentWidget(Ui_Form, MyWidget):
 
                 index += 1
         self.history_list_window = ListView(
-            self.mainwindow,
+            self.main_window,
             self,
             f"历史记录 - {self.student.name}",
             self.history_data,
@@ -202,7 +202,7 @@ class StudentWidget(Ui_Form, MyWidget):
         Base.log("I", "显示分数折线图", "StudentWidget.show_score_graph")
         if not len([m for m in self.student.history.values() if m.executed]):
             Base.log("I", "没有历史记录", "StudentWidget.show_score_graph")
-            self.mainwindow.information("?", "可是都没有记录你点进来干嘛")
+            self.main_window.information("?", "可是都没有记录你点进来干嘛")
             return
         window = StudentWidget.ScoreGraphWindow(self.history_list_window, self.student)
         window.show()
@@ -224,7 +224,7 @@ class StudentWidget(Ui_Form, MyWidget):
             )
             index += 1
         self.achievement_list_window = ListView(
-            self.mainwindow, self, f"成就 - {self.student.name}", self.achievement_data
+            self.main_window, self, f"成就 - {self.student.name}", self.achievement_data
         )
         self.achievement_list_window.show()
 
@@ -239,7 +239,7 @@ class StudentWidget(Ui_Form, MyWidget):
             "StudentWidget.history_detail",
         )
         self.history_detail_window = HistoryWidget(
-            self.mainwindow,
+            self.main_window,
             self.history_list_window,
             history,
             self.history_list_window,
@@ -255,14 +255,14 @@ class StudentWidget(Ui_Form, MyWidget):
         :param index: 在listView中的索引"""
         Base.log("I", f"选中成就： {achievement}", "StudentWidget.achievement_detail")
         self.achievement_detail_window = AchievementWidget(
-            self.achievement_list_window, self.mainwindow, achievement
+            self.achievement_list_window, self.main_window, achievement
         )
         self.achievement_detail_window.show()
 
     @Slot()
     def select_and_send(self):
         "选择模板并发送点评"
-        self.template_selector = SelectTemplateWidget(self.mainwindow, self)
+        self.template_selector = SelectTemplateWidget(self.main_window, self)
         self.template_selector.show()
         self.template_selector.return_result.connect(self.send)
         self.template_selector.select()

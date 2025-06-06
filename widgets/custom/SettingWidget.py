@@ -15,14 +15,14 @@ class SettingWidget(Ui_Form, MyWidget):
     """设置窗口"""
 
     def __init__(
-        self, master_widget: Optional[WidgetType] = None, mainwindow: Optional[SettingsInfo] = None
+        self, master_widget: Optional[WidgetType] = None, main_window: Optional[SettingsInfo] = None
     ):
         """初始化
 
         :param master_widget: 这个窗口的父窗口
-        :param mainwindow: 程序的主窗口，方便传参"""
+        :param main_window: 程序的主窗口，方便传参"""
         super().__init__(master=master_widget)
-        self.setting_obj = mainwindow
+        self.setting_obj = main_window
         self.master_widget = master_widget
         self.setupUi(self)
         self.show()

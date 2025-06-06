@@ -17,7 +17,7 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        mainwindow: ClassObj = None,
+        main_window: ClassObj = None,
         master: Optional[WidgetType] = None,
         target_students: List[Student] = None,
         default_selection: List[Student] = None,
@@ -27,14 +27,14 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
         """
         学生选择器
 
-        :param mainwindow: 主窗口
+        :param main_window: 主窗口
         :param master_widget: 父窗口
         :param target_students: 目标学生列表
         :param default_selection: 默认选择的学生
         :param allow_none: 是否允许选择空列表
         :param title: 窗口标题
         """
-        super().__init__(master=mainwindow)
+        super().__init__(master=main_window)
         if target_students is None:
             target_students = []
         self.setupUi(self)
@@ -42,7 +42,7 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
         self.label.setText(title)
         self.mainLayout = QVBoxLayout()
         self.setLayout(self.mainLayout)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master
         self.target_students = target_students
         self.default_selection = (

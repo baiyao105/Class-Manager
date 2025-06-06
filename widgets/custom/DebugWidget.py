@@ -25,11 +25,11 @@ class DebugWidget(Ui_Form, MyWidget):
     command_history = []
 
     def __init__(
-        self, master: Optional[WidgetType] = None, mainwindow: Optional[ClassObj] = None
+        self, master: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
     ):
         super().__init__(master)
         self.setupUi(self)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master = master
         self.pushButton.clicked.connect(self.send_command)
         self.pushButton_4.clicked.connect(self.send_command_in_thread)
@@ -141,18 +141,18 @@ for i in range(100):
         self.textEdit.setFocus()
 
     def update(self):
-        self.label_5.setText(str(self.mainwindow.sidenotice_waiting_order.qsize()))
+        self.label_5.setText(str(self.main_window.sidenotice_waiting_order.qsize()))
         self.label_6.setText(str(SideNotice.showing))
         self.label_7.setText(str(SideNotice.waiting))
         self.label_8.setText(str(SideNotice.current))
-        self.label_21.setText(str(round(self.mainwindow.class_obs.tps, 3)))
-        self.label_22.setText(str(round(self.mainwindow.achievement_obs.tps, 3)))
-        self.label_23.setText(str(round(time.time() - self.mainwindow.create_time, 3)))
+        self.label_21.setText(str(round(self.main_window.class_obs.tps, 3)))
+        self.label_22.setText(str(round(self.main_window.achievement_obs.tps, 3)))
+        self.label_23.setText(str(round(time.time() - self.main_window.create_time, 3)))
         self.label_24.setText(
-            str(self.mainwindow.achievement_obs.display_achievement_queue.qsize())
+            str(self.main_window.achievement_obs.display_achievement_queue.qsize())
         )
-        self.label_27.setText(str(round(self.mainwindow.class_obs.mspt, 3)))
-        self.label_28.setText(str(round(self.mainwindow.achievement_obs.mspt, 3)))
+        self.label_27.setText(str(round(self.main_window.class_obs.mspt, 3)))
+        self.label_28.setText(str(round(self.main_window.achievement_obs.mspt, 3)))
 
         self.textbroser_last = len(output_list)
         self.label_9.setText(
@@ -209,7 +209,7 @@ for i in range(100):
         self.pushButton_4.setEnabled(True)
         ret = None
         try:
-            ret = self.mainwindow.exec_command(cmd)
+            ret = self.main_window.exec_command(cmd)
         except BaseException as unused:  # pylint: disable=broad-exception-caught
             sys.stderr.write(traceback.format_exc() + "\n")
             sys.stderr.write("-----------------------------------------" + "\n")
@@ -243,7 +243,7 @@ for i in range(100):
         def _send():
             nonlocal ret, finished
             try:
-                ret = self.mainwindow.exec_command(cmd) # XXX 这里也有逻辑问题
+                ret = self.main_window.exec_command(cmd) # XXX 这里也有逻辑问题
             except BaseException as unused:  # pylint: disable=broad-exception-caught
                 sys.stderr.write(traceback.format_exc() + "\n")
                 sys.stderr.write("-----------------------------------------" + "\n")

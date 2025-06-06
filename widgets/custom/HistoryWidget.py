@@ -16,7 +16,7 @@ class HistoryWidget(MyWidget, Ui_Form):
 
     def __init__(
         self,
-        mainwindow: ClassObj = None,
+        main_window: ClassObj = None,
         master_widget: Optional[WidgetType] = None,
         history: ScoreModification = None,
         listview_widget: ListView = None,
@@ -26,7 +26,7 @@ class HistoryWidget(MyWidget, Ui_Form):
         """
         初始化一个分数修改历史记录窗口
 
-        :param mainwindow: 主窗口
+        :param main_window: 主窗口
         :param master_widget: 父窗口
         :param history: 分数修改历史记录
         :param listview_widget: 所属的ListView
@@ -34,12 +34,12 @@ class HistoryWidget(MyWidget, Ui_Form):
         :param readonly: 是否只读
         """
 
-        super().__init__(master=mainwindow)
+        super().__init__(master=main_window)
         self.setupUi(self)
 
         self.mainLayout = QVBoxLayout()
         self.setLayout(self.mainLayout)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.history = history
         self.listview_index = listview_index
@@ -74,7 +74,7 @@ class HistoryWidget(MyWidget, Ui_Form):
             self.label_15.setText("无法撤回（只读）")
         elif (
             self.history
-            not in self.mainwindow.classes[self.history.target.belongs_to]
+            not in self.main_window.classes[self.history.target.belongs_to]
             .students[self.history.target.num]
             .history.values()
         ):
@@ -86,7 +86,7 @@ class HistoryWidget(MyWidget, Ui_Form):
 
     def retract(self):
         Base.log("I", f"撤销：{repr(self.history)}", "HistoryWidget")
-        status, result = self.mainwindow.retract_modify(self.history)
+        status, result = self.main_window.retract_modify(self.history)
         Base.log("I", f"撤销结果：{repr((status, result))}", "HistoryWidget")
 
         if status:

@@ -29,13 +29,13 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master: Optional[WidgetType] = None,
-        mainwindow: Optional[ClassObj] = None,
+        main_window: Optional[ClassObj] = None,
         target_class: Class = None,
         target_students: Dict[int, Student] = None,
     ):
         super().__init__(master)
         self.setupUi(self)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master = master
         self.target_class = target_class
         self.target_students = target_students
@@ -84,7 +84,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
         }
         self.comboBox_13.clear()
         for t in [
-            _t for _t in self.mainwindow.modify_templates.values() if _t.is_visible
+            _t for _t in self.main_window.modify_templates.values() if _t.is_visible
         ]:
             self.comboBox_13.addItem(t.title)
             # -1的原因：有一个是error_template
@@ -241,7 +241,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
                     ),
                 )
             )
-            self.mainwindow.send_modify_instance(self.sent_list[num][-1], "<作业登分>")
+            self.main_window.send_modify_instance(self.sent_list[num][-1], "<作业登分>")
             self.anims[num] = QPropertyAnimation(self.buttons[num], b"color")
             self.anims[num].setDuration(300)
             self.anims[num].setStartValue(
@@ -258,7 +258,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
 
         if mode == "sub":
             self.list_view = ListView(
-                self.mainwindow, self, "已发送的作业等第点评", None
+                self.main_window, self, "已发送的作业等第点评", None
             )
 
             self.list_view.setData(
@@ -268,7 +268,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
                         (
                             f"{m.title} {m.execute_time.split('.')[0]} {m.mod:+.1f}",
                             lambda m=m: (
-                                self.mainwindow.retract_modify(m, "<作业登分>"),
+                                self.main_window.retract_modify(m, "<作业登分>"),
                                 self.sent_list[num].remove(m),
                                 self.list_view.close(),
                             ),
@@ -303,7 +303,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
 
         if mode == "info":
             self.list_view = ListView(
-                self.mainwindow, self, "已发送的作业等第点评", None
+                self.main_window, self, "已发送的作业等第点评", None
             )
             self.list_view.setData(
                 [
@@ -312,7 +312,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
                         (
                             f"{m.title} {m.execute_time.split('.')[0]} {m.mod:+.1f}",
                             lambda m=m, index=index: (
-                                self.mainwindow.history_window(
+                                self.main_window.history_window(
                                     m, index, self.list_view, master=self
                                 ),
                             ),
@@ -348,19 +348,19 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
         if mode == "clear":
             if not len([m for m in self.sent_list[num] if m.executed]):
                 QMessageBox.information(
-                    self.mainwindow,
+                    self.main_window,
                     "提示",
                     f"烫知识：你选择的{num}号并没有发送任何作业等第点评",
                 )
                 return
             if question_yes_no(
-                self.mainwindow,
+                self.main_window,
                 "确认",
                 f"确定要把刚刚所有的作业等第点评全部删除吗？\n（选中了{num}号，已经发送了{len([m for m in self.sent_list[num] if m.executed])}个）",
                 False,
                 "warning",
             ):
-                self.mainwindow.retract_modify(
+                self.main_window.retract_modify(
                     [m for m in self.sent_list[num] if m.executed], "<作业登分>"
                 )
                 self.sent_list[num] = []

@@ -603,7 +603,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.achievement_obs.achievement_displayer = self.display_achievement
         self.is_running = True
         "窗口是否在运行"
-        self.updator_thread = UpdateThread(mainwindow=self)
+        self.updator_thread = UpdateThread(main_window=self)
         "更新线程"
         self.command_list = command_list
         self.action.triggered.connect(self.student_rank)
@@ -851,7 +851,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self,
         title: str = "提示",
         content: str = "这是一个提示",
-        master: Optional[WidgetType] = None,
+        master: Optional[Union[
+            QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
+        ]] = None,
         icon: Optional[Union[InfoBarIcon, QIcon, str]] = None,
         sound: Optional[str] = None,
         duration: int = 5000,
@@ -1467,7 +1469,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 sys_mem_tracer_widget = pg.plot(title="内存使用记录", clear=True)
                 sys_mem_tracer_widget.plot(list(sys_mem_tracer.data.keys()), list(sys_mem_tracer.data.values()), pen=(255, 0, 0))
                 sys_mem_tracer_widget.show()
-            wait_until(lambda: sys_mem_tracer_widget.isHidden())
+                wait_until(lambda: sys_mem_tracer_widget.isHidden())
             Base.log("I", "执行app.quit()", "MainWindow.closeEvent")
             self.app.quit()
 
@@ -2466,7 +2468,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def open_setting_window(self):
         """设置窗口"""
         Base.log("I", "打开设置窗口", "MainWindow.setting_window")
-        self.setting_window = SettingWidget(mainwindow=self, master_widget=self)
+        self.setting_window = SettingWidget(main_window=self, master_widget=self)
         self.setting_window.show()
 
     @Slot()
@@ -2475,7 +2477,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """打扫分数结算"""
         Base.log("I", "打开打扫分数结算窗口", "MainWindow.cleaning_sumup")
         self.cleaning_sumup_window = CleaningScoreSumUpWidget(
-            mainwindow=self, master_widget=self
+            main_window=self, master_widget=self
         )
         self.cleaning_sumup_window.show()
 
@@ -2491,7 +2493,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             "I", f"打开学生信息窗口，学生名：{student.name}", "MainWindow.student_info"
         )
         self.student_info_window = StudentWidget(
-            mainwindow=self,
+            main_window=self,
             student=student,
             master_widget=master_widget or self,
             readonly=readonly,
@@ -2503,7 +2505,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def group_info(
         self,
         group: Group,
-        master_widget: Optional[WidgetType] = None,
+        master_widget: Optional[Union[
+            QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
+        ]] = None,
         readonly: bool = False,
     ):
         """
@@ -2533,7 +2537,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """作业总分结算窗口"""
         Base.log("I", "打开作业总分结算窗口", "MainWindow.homework_sumup")
         self.homework_sumup_window = HomeworkScoreSumUpWidget(
-            mainwindow=self,
+            main_window=self,
             master=self,
             target_class=self.target_class,
             target_students=self.target_class.students,
@@ -2725,7 +2729,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self,
         data: List[Tuple[str, Callable]],
         title: str,
-        master: Optional[WidgetType] = None,
+        master: Optional[Union[
+            QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
+        ]] = None,
         commands: List[Tuple[str, Callable]] = None,
         select_once_then_exit: bool = False,
     ):
@@ -2739,7 +2745,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         第一个元素是显示的文本，第二个元素是一个函数，会以按钮形式显示在列表一边，点击后执行
         """
         self.lastest_listview = ListView(
-            mainwindow=self,
+            main_window=self,
             master_widget=master,
             data=data,
             title=title,
@@ -3210,44 +3216,48 @@ class UpdateThread(QThread):
     "是否是第一次循环"
 
     def __init__(
-        self, parent: Optional[WidgetType] = None, mainwindow: ClassWindow = None
+        self, 
+        parent: Optional[Union[
+            QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
+        ]] = None, 
+        main_window: ClassWindow = None
     ):
         "初始化"
         super().__init__(parent=parent)
         Base.log("I", "更新线程初始化完成", "UpdateThread.__init__")
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.running = True
         self.stopped = False
         self.last_day_time = 0
         self.button_shown = False
         self.button_state_last_change = time.time()
-        self.last_student_list = [s for s in self.mainwindow.target_class.students]
-        self.last_group_list = [g for g in self.mainwindow.target_class.groups]
+        self.last_student_list = [s for s in self.main_window.target_class.students]
+        self.last_group_list = [g for g in self.main_window.target_class.groups]
         self.lastest_score: Dict[int, float] = {}
         self.lastest_grp_score: Dict[str, float] = {}
 
     def update_stu_btns(self):
         "更新主窗口的学生按钮"
-        if self.last_student_list != [s for s in self.mainwindow.target_class.students]:
+        if self.last_student_list != [s for s in self.main_window.target_class.students]:
             Base.log("I", "学生列表变动, 准备更新", "UpdateThread.run")
-            self.last_student_list = [s for s in self.mainwindow.target_class.students]
+            self.last_student_list = [s for s in self.main_window.target_class.students]
             self.lastest_score = {
-                s: 0 for s in self.mainwindow.target_class.students.keys()
+                s: 0 for s in self.main_window.target_class.students.keys()
             }
-            self.mainwindow.grid_buttons()
+            self.main_window.grid_buttons()
             Base.log("I", "学生列表更新完成", "UpdateThread.run")
-        for num, stu in self.mainwindow.target_class.students.items():
-            self.mainwindow.stu_buttons[num].setText(
+        for num, stu in self.main_window.target_class.students.items():
+            self.main_window.stu_buttons[num].setText(
                 f"{stu.num}号 {stu.name}\n{stu.score}分"
             )
             if stu.score > self.lastest_score[stu.num]:
-                begin = self.mainwindow.score_up_color_mixin_begin
-                end = self.mainwindow.score_up_color_mixin_end
-                step = self.mainwindow.score_up_color_mixin_step
-                mixin_start = self.mainwindow.score_up_color_mixin_start
+                begin = self.main_window.score_up_color_mixin_begin
+                end = self.main_window.score_up_color_mixin_end
+                step = self.main_window.score_up_color_mixin_step
+                mixin_start = self.main_window.score_up_color_mixin_start
                 value = abs(int(stu.score) - int(self.lastest_score[stu.num]))
-                self.mainwindow.button_update.emit(
-                    self.mainwindow.stu_buttons[num],
+                self.main_window.button_update.emit(
+                    self.main_window.stu_buttons[num],
                     (
                         (
                             int(
@@ -3286,23 +3296,23 @@ class UpdateThread(QThread):
                         ),
                         (255, 255, 255),
                         min(
-                            self.mainwindow.score_up_flash_framelength_max,
+                            self.main_window.score_up_flash_framelength_max,
                             int(
-                                value * self.mainwindow.score_up_flash_framelength_step
-                                + self.mainwindow.score_up_flash_framelength_base
+                                value * self.main_window.score_up_flash_framelength_step
+                                + self.main_window.score_up_flash_framelength_base
                             ),
                         ),
                     ),
                 )
                 self.lastest_score[stu.num] = stu.score
             elif stu.score < self.lastest_score[stu.num]:
-                begin = self.mainwindow.score_down_color_mixin_begin
-                end = self.mainwindow.score_down_color_mixin_end
-                step = self.mainwindow.score_down_color_mixin_step
-                mixin_start = self.mainwindow.score_down_color_mixin_start
+                begin = self.main_window.score_down_color_mixin_begin
+                end = self.main_window.score_down_color_mixin_end
+                step = self.main_window.score_down_color_mixin_step
+                mixin_start = self.main_window.score_down_color_mixin_start
                 value = abs(stu.score - self.lastest_score[stu.num])
-                self.mainwindow.button_update.emit(
-                    self.mainwindow.stu_buttons[num],
+                self.main_window.button_update.emit(
+                    self.main_window.stu_buttons[num],
                     (
                         (
                             int(
@@ -3341,11 +3351,11 @@ class UpdateThread(QThread):
                         ),
                         (255, 255, 255),
                         min(
-                            self.mainwindow.score_up_flash_framelength_max,
+                            self.main_window.score_up_flash_framelength_max,
                             int(
                                 value
-                                * self.mainwindow.score_down_flash_framelength_step
-                                + self.mainwindow.score_down_flash_framelength_base
+                                * self.main_window.score_down_flash_framelength_step
+                                + self.main_window.score_down_flash_framelength_base
                             ),
                         ),
                     ),
@@ -3367,30 +3377,30 @@ class UpdateThread(QThread):
 
     def update_grp_btns(self):
         "更新主界面的小组按钮"
-        if self.last_group_list != [g for g in self.mainwindow.target_class.groups]:
+        if self.last_group_list != [g for g in self.main_window.target_class.groups]:
             Base.log("I", "小组列表变动, 准备更新", "UpdateThread.run")
-            self.last_group_list = [g for g in self.mainwindow.target_class.groups]
+            self.last_group_list = [g for g in self.main_window.target_class.groups]
             self.lastest_grp_score = {
-                g: 0 for g in self.mainwindow.target_class.groups.keys()
+                g: 0 for g in self.main_window.target_class.groups.keys()
             }
-            self.mainwindow.grid_buttons()
+            self.main_window.grid_buttons()
             Base.log("I", "小组列表更新完成", "UpdateThread.run")
 
-        for key, grp in self.mainwindow.target_class.groups.items():
+        for key, grp in self.main_window.target_class.groups.items():
             grp: Group
-            self.mainwindow.grp_buttons[key].setText(
+            self.main_window.grp_buttons[key].setText(
                 f"{grp.name}\n\n总分 {grp.total_score:.1f}分\n"
                 f"平均 {grp.average_score:.2f}分\n"
                 f"去最低平均 {grp.average_score_without_lowest:.2f}分"
             )
             if grp.total_score > self.lastest_grp_score[key]:
-                begin = self.mainwindow.score_up_color_mixin_begin
-                end = self.mainwindow.score_up_color_mixin_end
-                step = self.mainwindow.score_up_color_mixin_step
-                mixin_start = self.mainwindow.score_up_color_mixin_start
+                begin = self.main_window.score_up_color_mixin_begin
+                end = self.main_window.score_up_color_mixin_end
+                step = self.main_window.score_up_color_mixin_step
+                mixin_start = self.main_window.score_up_color_mixin_start
                 value = abs(int(grp.total_score) - int(self.lastest_grp_score[key]))
-                self.mainwindow.button_update.emit(
-                    self.mainwindow.grp_buttons[key],
+                self.main_window.button_update.emit(
+                    self.main_window.grp_buttons[key],
                     (
                         (
                             int(
@@ -3429,23 +3439,23 @@ class UpdateThread(QThread):
                         ),
                         (255, 255, 255),
                         min(
-                            self.mainwindow.score_up_flash_framelength_max,
+                            self.main_window.score_up_flash_framelength_max,
                             int(
-                                value * self.mainwindow.score_up_flash_framelength_step
-                                + self.mainwindow.score_up_flash_framelength_base
+                                value * self.main_window.score_up_flash_framelength_step
+                                + self.main_window.score_up_flash_framelength_base
                             ),
                         ),
                     ),
                 )
                 self.lastest_grp_score[key] = grp.total_score
             elif grp.total_score < self.lastest_grp_score[key]:
-                begin = self.mainwindow.score_down_color_mixin_begin
-                end = self.mainwindow.score_down_color_mixin_end
-                step = self.mainwindow.score_down_color_mixin_step
-                mixin_start = self.mainwindow.score_down_color_mixin_start
+                begin = self.main_window.score_down_color_mixin_begin
+                end = self.main_window.score_down_color_mixin_end
+                step = self.main_window.score_down_color_mixin_step
+                mixin_start = self.main_window.score_down_color_mixin_start
                 value = abs(grp.total_score - self.lastest_grp_score[key])
-                self.mainwindow.button_update.emit(
-                    self.mainwindow.grp_buttons[key],
+                self.main_window.button_update.emit(
+                    self.main_window.grp_buttons[key],
                     (
                         (
                             int(
@@ -3484,11 +3494,11 @@ class UpdateThread(QThread):
                         ),
                         (255, 255, 255),
                         min(
-                            self.mainwindow.score_up_flash_framelength_max,
+                            self.main_window.score_up_flash_framelength_max,
                             int(
                                 value
-                                * self.mainwindow.score_down_flash_framelength_step
-                                + self.mainwindow.score_down_flash_framelength_base
+                                * self.main_window.score_down_flash_framelength_step
+                                + self.main_window.score_down_flash_framelength_base
                             ),
                         ),
                     ),
@@ -3497,12 +3507,12 @@ class UpdateThread(QThread):
 
     def detect_update(self):
         "检测是否有更新过"
-        if self.mainwindow.client_version_code < CLIENT_VERSION_CODE:
+        if self.main_window.client_version_code < CLIENT_VERSION_CODE:
             play_sound("audio/sounds/orb.ogg")
-            self.mainwindow.show_update_log()
-            self.mainwindow.client_version_code = CLIENT_VERSION_CODE
-            self.mainwindow.client_version = CLIENT_VERSION
-            self.mainwindow.save_current_settings()
+            self.main_window.show_update_log()
+            self.main_window.client_version_code = CLIENT_VERSION_CODE
+            self.main_window.client_version = CLIENT_VERSION
+            self.main_window.save_current_settings()
 
     def detect_new_version(self, from_system: bool = True):
         "检测是否有新版本"
@@ -3522,7 +3532,7 @@ class UpdateThread(QThread):
             Base.log_exc(
                 "检测更新出现错误", "UpdateThread.detect_new_version", exc=info
             )
-            self.mainwindow.show_tip(
+            self.main_window.show_tip(
                 "错误",
                 "检测更新出现错误，请检查网络连接",
                 duration=5000,
@@ -3534,30 +3544,30 @@ class UpdateThread(QThread):
             )
 
         elif res == UpdateInfo.UPDATE_AVAILABLE:
-            self.mainwindow.show_tip("提示", "发现新版本！", duration=5000)
+            self.main_window.show_tip("提示", "发现新版本！", duration=5000)
 
             def update_self(self: UpdateThread):
 
-                self.mainwindow.show_tip("提示", "正在下载更新...", duration=5000)
+                self.main_window.show_tip("提示", "正在下载更新...", duration=5000)
 
                 def _update(self: UpdateThread):
                     try:
                         get_update_zip()
                         unzip_to_dir()
-                        self.mainwindow.information(
+                        self.main_window.information(
                             "更新下载完成",
                             "10秒之后将会重启程序以完成更新。（按任意键关闭后开始计时）",
                         )
                         time.sleep(10)
-                        self.mainwindow.save_data()
-                        self.mainwindow.save_current_settings()
-                        while self.mainwindow.auto_saving:
+                        self.main_window.save_data()
+                        self.main_window.save_current_settings()
+                        while self.main_window.auto_saving:
                             time.sleep(0.1)
                         update()
 
                     except (OSError, IOError) as e:
                         Base.log_exc("更新出现错误", "UpdateThread.update_self")
-                        self.mainwindow.show_tip(
+                        self.main_window.show_tip(
                             "错误",
                             "更新出现错误",
                             duration=5000,
@@ -3574,7 +3584,7 @@ class UpdateThread(QThread):
                 Base.log(
                     "I", "当前为发行版，无法自动更新", "UpdateThread.detect_new_version"
                 )
-                self.mainwindow.question_if_exec(
+                self.main_window.question_if_exec(
                     "发现新版本！",
                     "有新版本了！\n\n"
                     f"界面版本：{CLIENT_VERSION}({CLIENT_VERSION_CODE})"
@@ -3586,7 +3596,7 @@ class UpdateThread(QThread):
                     lambda: os.startfile(f"https://gitee.com/{AUTHOR}/{REPO_NAME}"),
                 )
             else:
-                self.mainwindow.question_if_exec(
+                self.main_window.question_if_exec(
                     "发现新版本!",
                     "有新版本了！\n\n"
                     f"界面版本：{CLIENT_VERSION}({CLIENT_VERSION_CODE})"
@@ -3599,10 +3609,10 @@ class UpdateThread(QThread):
                 )
 
         elif res == UpdateInfo.NO_UPDATE:
-            self.mainwindow.show_tip("提示", "当前已是最新版本。", duration=5000)
+            self.main_window.show_tip("提示", "当前已是最新版本。", duration=5000)
 
         elif res == UpdateInfo.VERSION_IS_AHEAD:  # 版本号比服务器高，不过一般应该不会吧
-            self.mainwindow.show_tip(
+            self.main_window.show_tip(
                 "?",
                 "你对版本号文件做什么了。。。",
                 duration=5000,
@@ -3612,55 +3622,55 @@ class UpdateThread(QThread):
     def detect_newday(self):
         "检测是否是新的一天"
         if time.localtime(
-            self.mainwindow.last_start_time
+            self.main_window.last_start_time
         ).tm_wday != time.localtime().tm_wday or (  # 不是一周的同一天
-            time.time() - self.mainwindow.last_start_time
+            time.time() - self.main_window.last_start_time
             >= 86400  # 是一周的同一天旦超过一天
-            and time.localtime(self.mainwindow.last_start_time).tm_wday
+            and time.localtime(self.main_window.last_start_time).tm_wday
             == time.localtime().tm_wday
         ):
 
             # 没好的一天又开始力
 
-            self.mainwindow.show_tip(
+            self.main_window.show_tip(
                 "日期刷新",
                 time.strftime(
                     "%Y年%m月%d日过去了，",
-                    time.localtime(self.mainwindow.last_start_time),
+                    time.localtime(self.main_window.last_start_time),
                 )
                 + "新的一天开始了！",
-                self.mainwindow,
+                self.main_window,
                 duration=6000,
                 sound="audio/sounds/orb.ogg",
                 icon=InfoBarIcon.INFORMATION,
             )
 
-            self.mainwindow.day_end(
-                time.localtime(self.mainwindow.last_start_time).tm_wday,
-                self.mainwindow.last_start_time,
-                time.time() - self.mainwindow.last_start_time <= 86400,
+            self.main_window.day_end(
+                time.localtime(self.main_window.last_start_time).tm_wday,
+                self.main_window.last_start_time,
+                time.time() - self.main_window.last_start_time <= 86400,
             )
-            self.mainwindow.last_start_time += min(
-                time.time() - self.mainwindow.last_start_time, 86400
+            self.main_window.last_start_time += min(
+                time.time() - self.main_window.last_start_time, 86400
             )
 
         else:
-            self.mainwindow.last_start_time += min(
-                time.time() - self.mainwindow.last_start_time, 86400
+            self.main_window.last_start_time += min(
+                time.time() - self.main_window.last_start_time, 86400
             )
 
     def run(self):
         "线程运行"
         Base.log("I", "更新线程开始运行", "UpdateThread.run")
         self.lastest_score: Dict[int, float] = dict(
-            [(stu.num, 0.0) for stu in self.mainwindow.target_class.students.values()]
+            [(stu.num, 0.0) for stu in self.main_window.target_class.students.values()]
         )
 
         self.lastest_grp_score: Dict[str, float] = dict(
-            [(grp.key, 0.0) for grp in self.mainwindow.target_class.groups.values()]
+            [(grp.key, 0.0) for grp in self.main_window.target_class.groups.values()]
         )
 
-        while self.mainwindow.is_running:
+        while self.main_window.is_running:
             try:
                 self.detect_newday()
                 try:
@@ -3670,14 +3680,14 @@ class UpdateThread(QThread):
                     Base.log_exc_short(
                         "疑似添加/减少学生，正在重新加载: ", "UpdateThread.run", "W", e
                     )
-                    self.mainwindow.grid_buttons()
+                    self.main_window.grid_buttons()
                 if self.first_loop:
                     Thread(target=self.detect_new_version).start()
                     Thread(target=self.detect_update).start()
                     self.first_loop = False
-                self.mainwindow.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.START)
+                self.main_window.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.START)
                 time.sleep(0.5)
-                self.mainwindow.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.CREATE_NEW)
+                self.main_window.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.CREATE_NEW)
 
 
             except BaseException as unused:  # pylint: disable=broad-exception-caught

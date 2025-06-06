@@ -16,12 +16,12 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
     "返回信号：(模板key，修改标题，修改描述，修改分数) (Tuple[str, str, str, float])"
 
     def __init__(
-        self, mainwindow: Optional[ClassObj] = None, master_widget: Optional[WidgetType] = None
+        self, main_window: Optional[ClassObj] = None, master_widget: Optional[WidgetType] = None
     ):
         """
         初始化
 
-        :mainwindow: 主窗口
+        :main_window: 主窗口
         :master_widget: 父窗口
         """
         super().__init__(master=master_widget)
@@ -29,7 +29,7 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         self.setWindowTitle("选择模板")
         index = 0
         self.index_map = {}
-        self.data_obj = mainwindow
+        self.data_obj = main_window
         self.master_widget = master_widget
         self.show()
         self.comboBox.clear()

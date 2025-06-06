@@ -17,19 +17,19 @@ class AttendanceInfoViewWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master: Optional[WidgetType] = None,
-        mainwindow: Optional[ClassObj] = None,
+        main_window: Optional[ClassObj] = None,
         attendanceinfo: AttendanceInfo = None,
     ):
         """
         构造新窗口
 
         :param master: 父窗口
-        :param mainwindow: 主窗口
+        :param main_window: 主窗口
         :param attendanceinfo: 考勤信息
         """
         super().__init__(master)
         self.setupUi(self)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.attendanceinfo = attendanceinfo
 
         self.listWidget.addItems(

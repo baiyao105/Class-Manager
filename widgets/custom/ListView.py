@@ -48,7 +48,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
 
     def __init__(
         self,
-        mainwindow: ClassWindow = None,
+        main_window: ClassWindow = None,
         master_widget: Optional[WidgetType] = None,
         title: str = "列表",
         data: List[
@@ -65,7 +65,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         """
         初始化窗口
 
-        :param mainwindow: 主窗口
+        :param main_window: 主窗口
         :param master_widget: 父窗口
         :param title: 窗口标题
         :param data: 数据，格式为 [(文本, 回调函数, 可选(起始颜色, 结束颜色, 总渐变步数, 每次变化间隔))]
@@ -78,7 +78,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             data = [("空", lambda: None)]
         if commands is None:
             commands = []
-        super().__init__(master=mainwindow)
+        super().__init__(master=main_window)
         self.setupui(self)
         self.orig_height = self.height()
         self.data = data
@@ -86,7 +86,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.title = title
         self.allow_pre_action = allow_pre_action
         self.setWindowTitle(title)
-        self.mainwindow = mainwindow
+        self.main_window = main_window
         self.master_widget = master_widget
         self.listWidget.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
