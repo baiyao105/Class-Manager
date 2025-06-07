@@ -52,6 +52,7 @@ class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
         self.label_8.setText(self._time_remaining_desc)
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update)
+        self.destroyed.connect(self.update_timer.stop)
 
     def show(self):
         if not self.update_timer.isActive():
@@ -139,5 +140,3 @@ class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
         return False
-    
-  

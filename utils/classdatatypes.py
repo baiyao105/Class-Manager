@@ -256,13 +256,13 @@ class ClassDataObj(Base):
 
         @name.setter
         def name(self, val):
-            if len(val) >= 50:
-                Base.log(
-                    "E",
-                    f"更改名字失败：不是谁名字有{len(val)}个字啊？？？？",
-                    "Student.name.setter",
-                )
-                raise ClassDataObj.OpreationError(f'请求更改的名字"{val}"过长')
+            # if len(val) >= 50:
+                # Base.log(
+                    # "E",
+                    # f"更改名字失败：不是谁名字有{len(val)}个字啊？？？？",
+                    # "Student.name.setter",
+                # )
+                # raise ClassDataObj.OpreationError(f'请求更改的名字"{val}"过长')
             self._name = val
 
         @name.deleter
@@ -282,9 +282,9 @@ class ClassDataObj(Base):
                 f"正在尝试更改学号为{self._name}的学生的学号：由{self._num}更改为{val}",
                 "Student.num.setter",
             )
-            if abs(val) > 1024:
-                Base.log("E", "更改学号失败：学号过大了，不合理", "Student.name.setter")
-                raise ClassDataObj.OpreationError(f"请求更改的学号{val}过大了, 无法设置")
+            # if abs(val) > 1024:
+                # Base.log("E", "更改学号失败：学号过大了，不合理", "Student.name.setter")
+                # raise ClassDataObj.OpreationError(f"请求更改的学号{val}过大了, 无法设置")
             self._num = val
             Base.log("D", "更改完成！", "Student.name.setter")
 

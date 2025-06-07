@@ -2,6 +2,7 @@
 基础窗口类
 """
 import sys
+import traceback
 from .MyMainWindow import MyMainWindow
 from .MyWidget import MyWidget
 from .Qt import *
@@ -24,7 +25,16 @@ def handle_fatal_qt_error(msg: str):
     # widget.closeEvent(QCloseEvent(), do_tip=False)
     # widget.destroy()
     Base.log("F", "程序退出", "MainThread")
-    sys.exit(0)
+    sys.exit(1)
+
+class MyApplication(QApplication):
+    def notify(self, receive: WidgetType, event: QEvent) -> bool:
+        """重写notify函数，捕获所有异常"""
+        try:
+            return super().notify(receive, event)
+        except Exception as e:
+            Base.log_exc("捕获到错误", "MyApplication.notify", "E", e)
+            raise e from e
 
 
 def qt_messagehandler(

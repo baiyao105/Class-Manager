@@ -2,6 +2,7 @@
 列表视图
 """
 from typing import List, Any, Union
+from concurrent.futures import ThreadPoolExecutor
 from utils import Thread, Base, ClassObj as ClassWindow, steprange
 from utils.settings import SettingsInfo
 from widgets.basic import *
@@ -16,6 +17,8 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
     item_update = Signal(QListWidgetItem, QColor)
 
     command_update = Signal(list)
+
+    anim_executor = ThreadPoolExecutor(max_workers=64)
 
     def setupui(self, form: MyWidget):
         "设置UI"
@@ -198,9 +201,10 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         index = 0
         default_color_start = QColor(232, 255, 244)
         default_color_end = QColor(255, 255, 255)
-        default_step = int(25 / SettingsInfo.current.animation_speed)
-        default_interval = 10
+        default_step = int(10 / SettingsInfo.current.animation_speed)
+        default_interval = 33
         self.listWidget.clear()
+        self.widget_items.clear()
 
         try:
             for item in self.data:
@@ -232,28 +236,29 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         except BaseException as unused:  # pylint: disable=broad-exception-caught
             Base.log_exc("初始化项目时发生错误", "ListView.init_items")
         index = 0
-        items = self.widget_items
+        length = len(self.data)
+
         try:
             for string, _callable, flash_args in self.data:
-                widget_item = items[index]
+                widget_item = QListWidgetItem(string)
+                self.widget_items.append(widget_item)
                 self.listWidget.addItem(widget_item)
                 index += 1
 
-                if SettingsInfo.current.animation_speed <= 114514:
+                if SettingsInfo.current.animation_speed <= 114514 and length <= 1000:    # 项目数量大于1000就不显示动画了
 
-                    Thread(
-                        target=lambda widget_item=widget_item, flash=flash_args, index=index: (
+                    def _animation(widget_item=widget_item, flash=flash_args, index=index):
                             self.insert_flash(
                                 widget_item, flash[0], flash[1], flash[2], flash[3]
                             ),
                             self._set_anim_finished(index - 1),
-                        ),
-                        name="insert_flash",
-                    ).start()
-                    time.sleep(0.01 / SettingsInfo.current.animation_speed)
+                    self.anim_executor.submit(_animation)
+                    time.sleep(0.01 * ((1000 - length) / 1000) / SettingsInfo.current.animation_speed)
 
                 else:
                     widget_item.setBackground(QBrush(flash_args[1]))
+                    self._set_anim_finished(index - 1)
+
         except BaseException as unused:  # pylint: disable=broad-exception-caught
             Base.log_exc("初始化项目时发生错误", "ListView.init_items")
 
@@ -265,7 +270,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
                 loop.quit()
                 timer.stop()
         timer.timeout.connect(_check_if_finished)
-        timer.start(33)
+        timer.start(100)
         loop.exec()
         Base.log(
             "D",
@@ -389,13 +394,18 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
     def addData(self, item: Tuple[str, Callable]):
         self.data.append(item)
         self.str_list.append(item[0])
-        self.listWidget.addItem(QListWidgetItem(item[0]))
+        listwidget_item = QListWidgetItem(item[0])
+        self.listWidget.addItem(listwidget_item)
+        self.widget_items.append(listwidget_item)
 
     def addItem(self, item: QListWidgetItem):
         if not self.ready:
             Base.log("E", "ListView未准备好", "ListView.addItem")
             return
         self.listWidget.addItem(item)
+        self.str_list.append(item.text())
+        self.data.append((item.text(), None))
+        self.widget_items.append(item)
 
     def setData(self, data: List[Tuple[str, Callable]]):
         self.data = data
@@ -411,6 +421,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.str_list[index] = text
         item = self.listWidget.item(index)
         item.setText(text)
+        self.data[index][0] = text
 
     def getText(self, index: int):
         if not self.ready:
@@ -433,6 +444,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             return
         self.str_list.pop(index)
         item = self.listWidget.takeItem(index)
+        self.widget_items.pop(index)
         self.data.pop(index)
         return item
 

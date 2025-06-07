@@ -7,11 +7,12 @@ import sys
 import math
 import shutil
 import sqlite3
-from threading import Lock
+from threading import RLock
 
 from utils.functions.prompts import question_yes_no
 from utils.classdatatypes import *  # pylint: disable=unused-wildcard-import, wildcard-import
 from utils.classobjects import gen_uuid
+from utils.algorithm import Mutex
 from utils.default import DEFAULT_CLASS_KEY
 
 # 数据加载器
@@ -561,7 +562,7 @@ class Chunk:
     loading_info: Dict[str, Any] = {}
     "加载信息, 字典里面是啥自己开盲盒吧（懒得写了）"
 
-    save_task_mutex: Lock = Lock()
+    save_task_mutex: Mutex = Mutex()
     "保存任务互斥锁"
 
 
@@ -662,7 +663,7 @@ class Chunk:
                     result = conn.execute(
                         f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?", (uuid,)
                     ).fetchone()
-                except sqlite3.OperationalError:
+                except sqlite3.Error:
 
                     Base.log(
                         "W",
