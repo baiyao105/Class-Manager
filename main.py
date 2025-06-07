@@ -1156,6 +1156,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """
         编辑快捷命令按钮，如果已经处于编辑状态则退出编辑状态
         """
+        self.refresh_quick_command_btns(True)
         if not hasattr(self, "fast_command_edit_state"):
             self.fast_command_edit_state = False
         self.fast_command_edit_state = not self.fast_command_edit_state
@@ -1228,7 +1229,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         pickle.dump(
             self.command_key_list,
             open(
-                os.getcwd() + os.sep + f"chunks/{self.current_user}/quick_commands.pkl",
+                os.path.abspath(f"chunks/{self.current_user}/quick_commands.pkl"),
                 "wb",
             ),
             pickle.HIGHEST_PROTOCOL,
@@ -1338,7 +1339,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             if len(lately_used_commands) >= 3
             else lambda: None
         )
-        super().update()
+
 
     ###########################################################################
     #                        功能实现：工具设置                                #
@@ -1347,9 +1348,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def save_settings(self):
         """保存当前的全局设置对象到设置存档文件"""
         Base.log("I", "保存设置到文件", "MainWindow.save_settings")
-        os.makedirs(os.getcwd() + os.sep + f"chunks/{self.current_user}", exist_ok=True)
+        os.makedirs(os.path.abspath(f"chunks/{self.current_user})"), exist_ok=True)
         settings.save_to(
-            os.getcwd() + os.sep + f"chunks/{self.current_user}/settings.dat"
+            os.path.abspath(f"chunks/{self.current_user}/settings.dat")
         )
 
     @Slot()
@@ -1366,7 +1367,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """加载设置存档文件到全局设置对象后应用在主窗口"""
         Base.log("I", "从文件中加载设置", "MainWindow.load_settings")
         settings.load_from(
-            os.getcwd() + os.sep + f"chunks/{self.current_user}/settings.dat"
+            os.path.abspath(f"chunks/{self.current_user}/settings.dat")
         )
         self.set_settings(**settings.get_dict())
 
@@ -1951,7 +1952,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 + "\n\n"
                 "是否查看解决方案？",
                 lambda: (
-                    os.startfile("https://www.bilibili.com/video/BV1kW411m7VP/"),
+                    os.startfile("https://www.bilibili.com/video/BV1GJ411x7h7/"),
                     self.information("114514", "愚人节快乐"),
                 ),
             )
@@ -2095,7 +2096,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def config_data(
         self,
-        path: str = os.getcwd() + os.sep + f"chunks/{default_user}/",
+        path: str = os.path.abspath(f"chunks/{default_user}/"),
         silent: bool = False,
         strict=False,
         reset_missing=False,
@@ -2569,7 +2570,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.save_data()
             self.show_tip("提示", "历史记录正在加载中，请稍等", duration=2000)
             self.config_data(
-                os.getcwd() + os.sep + f"chunks/{self.current_user}",
+                os.path.abspath(f"chunks/{self.current_user}"),
                 load_full_histories=True,
                 reset_current=False,
                 strict=True,
@@ -2957,7 +2958,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.log("I", f"按钮被点击，本次执行类型：{style}", "MainWindow.dont_click")
 
         if style == 1:
-            os.startfile("https://www.bilibili.com/video/BV1kW411m7VP/")
+            os.startfile("https://www.bilibili.com/video/BV1GJ411x7h7/")
 
         elif style == 2:
             for _ in range(1145):
@@ -3132,6 +3133,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "刷新窗口"
         Base.log("I", "刷新窗口", "MainWindow.refresh_window")
         self.updator_thread.terminate()
+        self.updator_thread.deleteLater()
         self.updator_thread = UpdateThread(self, self)
         self.updator_thread.start()
 
@@ -3822,12 +3824,12 @@ def main():
     # 登录模块写在这里，用户名存在user里面就行
     user = "default"
     class_key = DEFAULT_CLASS_KEY
-    app = QApplication(sys.argv)
+    app = MyApplication(sys.argv)
 
     Base.log("I", "程序启动", "MainThread")
 
     widget = ClassWindow(app, *sys.argv, current_user=user, class_key=class_key)
-    # 其实MainWindow也只是做了个接口，整个程序还没做完（因为还有分班和添加/删除学生）
+    # 其实ClassWindow也只是做了个接口，整个程序还没做完（因为还有分班和添加/删除学生）
     ClassWindow.main_instance = widget
 
     try:
@@ -3845,6 +3847,5 @@ def main():
 
 if __name__ == "__main__":
     return_code = main()
-    
     sys.exit(return_code)
-    
+

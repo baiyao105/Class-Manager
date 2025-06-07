@@ -54,6 +54,8 @@ def wait_until(
     timer.timeout.connect(_check_if_done)
     timer.start(check_interval)
     loop.exec()
+    timer.stop()
+    timer.deleteLater()
     if timeout_handling == "raise" and not result:
         raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} /{timeout} ms)")
     return result

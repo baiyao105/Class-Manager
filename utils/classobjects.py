@@ -254,7 +254,7 @@ class ClassObj(OrigClassObj):
 
     @staticmethod
     def load_data(
-        path: str = os.getcwd() + os.sep + f"chunks/{default_user}/",
+        path: str = os.path.abspath(f"chunks/{default_user}/"),
         silent: bool = False,
         strict: bool = True,
         method: Literal["pickle", "sqlite", "auto"] = "sqlite",
@@ -511,7 +511,7 @@ class ClassObj(OrigClassObj):
 
     def config_data(
         self,
-        path: str = os.getcwd() + os.sep + f"chunks/{default_user}/",
+        path: str = os.path.abspath(f"chunks/{default_user}/"),
         silent: bool = False,
         strict=False,
         reset_missing=False,
@@ -726,7 +726,7 @@ class ClassObj(OrigClassObj):
         weekday_record: Dict[str, List[DayRecord]],
         current_day_attendance: Dict[str, AttendanceInfo],
         *,
-        path: str = os.getcwd() + os.sep + f"chunks/{default_user}/",
+        path: str = os.path.abspath(f"chunks/{default_user}/"),
         mode: Literal["pickle", "sqlite"] = "sqlite",
     ):
         """
@@ -871,7 +871,7 @@ class ClassObj(OrigClassObj):
 
     @staticmethod
     def reset_data(
-        path: str = os.getcwd() + os.sep + f"chunks/{default_user}/",
+        path: str = os.path.abspath(f"chunks/{default_user}/"),
         mode: Literal["pickle", "sqlite"] = "sqlite",
     ):
         """

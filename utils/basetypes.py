@@ -28,7 +28,7 @@ def gen_uuid(length: int = 32) -> str:
     "生成一个长32位的uuid"
     return "".join([str(random.choice("0123456789abcdef")) for _ in range(length)])
 
-os.makedirs(os.getcwd() + "/log", exist_ok=True)
+os.makedirs(os.path.abspath("log"), exist_ok=True)
 
 if not os.path.isdir("log"):
     os.mkdir("log")
