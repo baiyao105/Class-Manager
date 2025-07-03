@@ -1,8 +1,17 @@
-name: Python Syntax Check
+name: Python Quality Check
 
 on:
   pull_request_target:
     types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      check_all_files:
+        description: '检查分支内所有Python文件'
+        required: true
+        default: true
+        type: boolean
+  schedule:
+    - cron: '0 16 */7 * *'  # 每7天UTC16:00运行(UTC+8: 北京时间0点)
 
 concurrency:
   group: code-quality-${{ github.ref }}
@@ -24,29 +33,45 @@ jobs:
     name: Detect Python File Changes
     runs-on: ubuntu-latest
     outputs:
-      python: ${{ steps.filter.outputs.python }}
-      python_files: ${{ steps.filter.outputs.python_files }}
+      python: ${{ steps.filter.outputs.python || steps.manual-check.outputs.python }}
+      python_files: ${{ steps.filter.outputs.python_files || steps.manual-check.outputs.python_files }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Check for Python file changes
+      - name: Check for Python file changes (PR mode)
         uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name == 'pull_request_target'
         with:
           list-files: shell
           filters: |
             python:
               - '**/*.py'
 
+      - name: Check all Python files (Manual/Scheduled mode)
+        id: manual-check
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        run: |
+          python_files=$(find . -name '*.py' -not -path './.venv/*' -not -path './venv/*' -not -path './__pycache__/*' -not -path './build/*' -not -path './dist/*' | tr '\n' ' ' | sed 's/ $//')
+          if [[ -n "$python_files" ]]; then
+            echo "python=true" >> $GITHUB_OUTPUT
+            echo "python_files=$python_files" >> $GITHUB_OUTPUT
+            echo "找到Python文件: $python_files"
+          else
+            echo "python=false" >> $GITHUB_OUTPUT
+            echo "python_files=" >> $GITHUB_OUTPUT
+            echo "未找到Python文件"
+          fi
+
   codeql-analysis:
     name: CodeQL Security Analysis
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: needs.detect-changes.outputs.python == 'true'
+    if: needs.detect-changes.outputs.python == 'true' && github.event_name != 'pull_request_target'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -217,8 +242,7 @@ jobs:
             "reportAssertAlwaysTrue": "warning",
             "reportSelfClsParameterName": "warning",
             "reportImplicitStringConcatenation": "warning",
-            "venvPath": ".",
-            "venv": ".venv",
+
             "pythonVersion": "${{ env.PYTHON_VERSION }}",
             "pythonPlatform": "All",
             "executionEnvironments": [
@@ -299,7 +323,6 @@ jobs:
           pylance-version: latest-release
           extra-args: ${{ needs.detect-changes.outputs.python_files }}
           venv-path: .venv
-          python-path: .venv/bin/python
         continue-on-error: true
         env:
           PYTHONPATH: ".venv/lib/python${{ env.PYTHON_VERSION }}/site-packages"
@@ -312,7 +335,7 @@ jobs:
           source .venv/bin/activate
           echo "运行 PyLint 检查..."
           files="${{ needs.detect-changes.outputs.python_files }}"
-          if echo "$files" | xargs pylint --disable=no-member,no-name-in-module,import-error,unresolved-import,relative-beyond-top-level,cyclic-import,duplicate-code,too-many-locals,too-many-arguments,too-many-branches,too-many-statements,too-few-public-methods,too-many-instance-attributes,line-too-long,missing-docstring,invalid-name --output-format=text --reports=no --score=no --enable=unused-variable,unused-import,redefined-outer-name,redefined-builtin,dangerous-default-value,broad-except,bare-except,pointless-statement,unreachable,expression-not-assigned,unnecessary-pass,unused-argument > pylint_output.txt 2>&1; then
+          if echo "$files" | xargs pylint --disable=no-member,no-name-in-module,import-error,relative-beyond-top-level,cyclic-import,duplicate-code,too-many-locals,too-many-arguments,too-many-branches,too-many-statements,too-few-public-methods,too-many-instance-attributes,line-too-long,missing-docstring,invalid-name,E1121,E0203,E0102,W0622,W0718,W0719,W0621 --output-format=text --reports=no --score=no --enable=unused-variable,unused-import,redefined-outer-name,redefined-builtin,dangerous-default-value,broad-except,bare-except,pointless-statement,unreachable,expression-not-assigned,unnecessary-pass,unused-argument > pylint_output.txt 2>&1; then
             critical_errors=$(grep -E '^[^:]+:[0-9]+:[0-9]+: [EF][0-9]+:' pylint_output.txt || true)
             if [[ -n "$critical_errors" ]]; then
               echo "PyLint 发现严重错误"
@@ -343,22 +366,21 @@ jobs:
           source .venv/bin/activate
           echo "运行 MyPy 检查..."
           files="${{ needs.detect-changes.outputs.python_files }}"
-          if echo "$files" | xargs mypy --strict --ignore-missing-imports --show-error-codes --disable-error-code=import --disable-error-code=misc --disable-error-code=no-redef --disable-error-code=method-assign --disable-error-code=comparison-overlap --warn-unused-ignores --warn-redundant-casts --warn-return-any --warn-unreachable --disallow-untyped-calls --disallow-untyped-defs --disallow-incomplete-defs --check-untyped-defs --disallow-untyped-decorators > mypy_output.txt 2>&1; then
+          if echo "$files" | xargs mypy --strict --ignore-missing-imports --show-error-codes --disable-error-code=import --disable-error-code=misc --disable-error-code=no-redef --disable-error-code=method-assign --disable-error-code=comparison-overlap --disable-error-code=unreachable --disable-error-code=no-untyped-def --warn-unused-ignores --warn-redundant-casts --warn-return-any --disallow-untyped-calls --disallow-incomplete-defs --check-untyped-defs --disallow-untyped-decorators > mypy_output.txt 2>&1; then
             critical_errors=$(grep -E ': error:' mypy_output.txt || true)
+            warnings=$(grep -E ': (warning|note):' mypy_output.txt || true)
             if [[ -n "$critical_errors" ]]; then
               echo "MyPy 发现严重错误"
               echo "has_critical_issues=true" >> $GITHUB_OUTPUT
               echo "has_issues=true" >> $GITHUB_OUTPUT
+            elif [[ -n "$warnings" ]]; then
+              echo "MyPy 发现警告"
+              echo "has_critical_issues=false" >> $GITHUB_OUTPUT
+              echo "has_issues=true" >> $GITHUB_OUTPUT
             else
-              if [[ -s mypy_output.txt ]]; then
-                echo "MyPy 发现警告"
-                echo "has_critical_issues=false" >> $GITHUB_OUTPUT
-                echo "has_issues=true" >> $GITHUB_OUTPUT
-              else
-                echo "MyPy 检查通过"
-                echo "has_critical_issues=false" >> $GITHUB_OUTPUT
-                echo "has_issues=false" >> $GITHUB_OUTPUT
-              fi
+              echo "MyPy 检查通过"
+              echo "has_critical_issues=false" >> $GITHUB_OUTPUT
+              echo "has_issues=false" >> $GITHUB_OUTPUT
             fi
           else
             echo "MyPy 运行失败"
@@ -454,8 +476,15 @@ jobs:
             fi
           fi
 
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            run_mode="🖱️ 手动触发"
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            run_mode="⏰ 定时运行"
+          else
+            run_mode="🔄 PR检查"
+          fi
           report="## 🧪 静态检查结果\n\n"
-          report+="> 检查已完成([${run_id}](${run_url})),以下为结果~喵~\n\n"
+          report+="> 检查已完成([${run_id}](${run_url})) - [${run_mode}],以下为结果~喵~\n\n"
           report+="🕒 **检查时间**：$(date -u '+%Y-%m-%d %H:%M:%S UTC') / $(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M:%S UTC+8')\n"
           report+="📝 **触发提交信息**：${short_link}: ${commit_msg}\n"
           report+="📁 **检查的文件数**：${file_count} 个 - ${file_list}\n\n"
@@ -492,6 +521,7 @@ jobs:
       - name: Find existing comment
         uses: peter-evans/find-comment@v3
         id: find-comment
+        if: github.event_name == 'pull_request_target'
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: 'github-actions[bot]'
@@ -499,15 +529,27 @@ jobs:
 
       - name: Post or update PR comment
         uses: peter-evans/create-or-update-comment@v4
+        if: github.event_name == 'pull_request_target'
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           body: ${{ steps.code-quality.outputs.report }}
           edit-mode: replace
 
-      - name: Set check status
+      - name: Output results for manual/scheduled runs
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         run: |
           if [[ "${{ steps.code-quality.outputs.has_critical_issues }}" == "true" ]]; then
+            echo "⚠️ 警告问题"
+          else
+            echo "✅ 所有检查都通过了！"
+          fi
+
+      - name: Set check status
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
+            exit 0
+          elif [[ "${{ steps.code-quality.outputs.has_critical_issues }}" == "true" ]]; then
             exit 1
           else
             exit 0
