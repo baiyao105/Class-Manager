@@ -69,6 +69,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_buttons)
         self.update_timer.start(100)
+        self.destroyed.connect(self.update_timer.stop)
         self.current_template: Optional[ScoreModificationTemplate] = None
         for index, rule in enumerate(self.homework_rules.values()):
             self.subject_list[index] = rule

@@ -272,6 +272,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         timer.timeout.connect(_check_if_finished)
         timer.start(100)
         loop.exec()
+        timer.stop()
         Base.log(
             "D",
             f"初始化项目完成，len(anim_result) = {len(self.anim_result)}",
@@ -421,13 +422,13 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.str_list[index] = text
         item = self.listWidget.item(index)
         item.setText(text)
-        self.data[index][0] = text
+        self.data[index] = (text, self.data[index][1])
 
     def getText(self, index: int):
         if not self.ready:
             Base.log("E", "ListView未准备好", "ListView.getText")
             return
-        return self.str_list[index]
+        return self.data[index][0]
 
     def getItem(self, index: int) -> QListWidgetItem:
         return self.listWidget.item(index)
@@ -436,7 +437,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         return self.data[index][1]
 
     def setCallable(self, index: int, func: Callable):
-        self.data[index] = (self.str_list[index], func)
+        self.data[index] = (self.data[index][0], func)
 
     def delete(self, index: int) -> QListWidgetItem:
         if not self.ready:

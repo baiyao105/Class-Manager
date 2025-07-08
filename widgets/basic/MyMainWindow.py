@@ -35,6 +35,7 @@ class MyMainWindow(QMainWindow):
         self.clear_time_timer.timeout.connect(self.clear_close_count)
         self.clear_time_timer.start(30000)
 
+
     @Slot()
     def clear_close_count(self):
         self.close_count = 0

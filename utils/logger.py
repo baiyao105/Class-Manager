@@ -153,7 +153,7 @@ class Color:
         return f"\033[38;2;{r};{g};{b}m" if log_settings.draw_color else ""
 
 
-class Logger:
+class                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Logger:
     "日志记录器"
 
     log_file: Optional[TextIO] = (

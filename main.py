@@ -28,7 +28,8 @@ import requests
 import numpy as np
 import customtkinter  # pylint: disable=unused-import
 import dill as pickle  # pylint: disable=shadowed-import
-import pyqtgraph as pg
+
+
 from qfluentwidgets.common import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.components import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.window import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -42,7 +43,11 @@ from widgets.ui.pyside6 import (
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
 
 from utils.basetypes import logger, SysMemTracer # pylint: disable=wrong-import-position
-from utils.consts import debug, enable_memory_tracing
+from utils.consts import debug, enable_memory_tracing, qt_version
+
+os.environ["PYQTGRAPH_QT_LIB"] = qt_version
+import pyqtgraph as pg
+
 sys_mem_tracer = SysMemTracer(record_data=True)
 
 if enable_memory_tracing:
@@ -170,14 +175,17 @@ def exception_handler(
         + traceback.format_exception(exc_type, exc_val, exc_tb)
         + ["\n"]
     )
-    logger.bind(
-        file=file_basename,
-        full_file=file_path,
-        source="exception_handler",
-        lineno=110,
-        source_with_lineno="exception_handler:110",
-    ).exception("Uncaught exception occurred", exc_info=exc_val)
-    Base.log_exc("捕获到异常", "exception_handler", exc=exc_val)
+    from utils.consts import log_style
+    if log_style == "new":
+        logger.bind(
+            file=file_basename,
+            full_file=file_path,
+            source="exception_handler",
+            lineno=110,
+            source_with_lineno="exception_handler:110",
+        ).exception("Uncaught exception occurred", exc_info=exc_val)
+    else:
+        Base.log_exc("捕获到异常", "exception_handler", exc=exc_val)
     pagesize = 20
     pagemaxchars = 1000
     total = int(np.ceil(len(exc_info) / pagesize))
@@ -784,64 +792,35 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.stu_buttons: Dict[int, ObjectButton] = {}
             self.grp_buttons: Dict[str, ObjectButton] = {}
         self.client_version = CLIENT_VERSION
-        "客户端版本号"
         self.client_version_code = CLIENT_VERSION_CODE
-        "客户端版本号"
         self.opacity = 0.88
-        "窗口透明度"
         self.score_up_color_mixin_begin = (0xCA, 0xFF, 0xCA)
-        "加分动画颜色渐变开始颜色"
         self.score_up_color_mixin_end = (0x33, 0xCF, 0x6C)
-        "加分动画颜色渐变结束颜色"
         self.score_up_color_mixin_start = 2
-        "加分动画颜色渐变开始值（分）"
         self.score_up_color_mixin_step = 15
-        "加分动画颜色渐变开始值（分）"
         self.score_up_flash_framelength_base = 300
-        "加分动画基础持续时间（毫秒）"
         self.score_up_flash_framelength_step = 100
-        "加分动画每多加一分增加动画时间（毫秒）"
         self.score_up_flash_framelength_max = 2000
-        "加分动画基础持续时间（毫秒）"
 
         self.score_down_color_mixin_begin = (0xFC, 0xB5, 0xB5)
-        "扣分动画颜色渐变开始颜色"
         self.score_down_color_mixin_end = (0xA9, 0x00, 0x00)
-        "扣分动画颜色渐变结束颜色"
         self.score_down_color_mixin_start = 2
-        "扣分动画颜色渐变开始值（分）"
         self.score_down_color_mixin_step = 15
-        "扣分动画颜色渐变总步长（分）"
         self.score_down_flash_framelength_base = 300
-        "扣分动画基础持续时间（毫秒）"
         self.score_down_flash_framelength_step = 100
-        "扣分动画每多扣一分增加动画时间（毫秒）"
         self.score_down_flash_framelength_max = 2000
-        "扣分动画最长持续时间（毫秒）"
         self.log_keep_linecount = 100
-        "日志窗口保留行数"
         self.log_update_interval = 0.1
-        "日志窗口更新间隔（秒）"
         self.auto_save_enabled = False
-        "是否启用自动保存"
         self.auto_save_interval = 120
-        "自动保存间隔（秒）"
         self.auto_save_path: Literal["folder", "user"] = "folder"
-        "自动保存路径"
         self.auto_backup_scheme: Literal["none", "only_data", "all"] = "only_data"
-        "自动备份方案"
         self.animation_speed = 1.0
-        "动画速度"
         self.subwindow_x_offset = 0
-        "子窗口x偏移量"
         self.subwindow_y_offset = 0
-        "子窗口y偏移量"
         self.use_animate_background = False
-        "是否使用动态背景"
         self.max_framerate = 60
-        "动态背景最大帧率"
         self.saving = False
-        "正在保存"
 
     ###########################################################################
     #                            用户提示类                                    #
@@ -1841,13 +1820,13 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     flash_executor = ThreadPoolExecutor(max_workers=128, thread_name_prefix="Animation")
 
     def insert_action_history_info_while_alive(self):
-        """插入操作线程"""
+        """插入操作记录的线程"""
         while self.is_running:
             try:
                 text, command, insert_fade, fade_step = self.insert_queue.get()
                 Base.log(
                     "I",
-                    f"插入操作：名称{repr(text)}， 命令{repr(command)}",
+                    f"插入操作记录：名称{repr(text)}， 命令{repr(command)}",
                     "MainWindow.insert_action",
                 )
                 item = QListWidgetItem(text)
@@ -1943,7 +1922,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         lt = time.localtime()
         if (lt.tm_mon, lt.tm_mday) == (4, 1):
             e = ClassObj.ObserverError(
-                f"数据加d载失败，详情请查看日志[{random.randint(114514, 1919810)}]"
+                f"数据加载失败，详情请查看日志[{random.randint(114514, 1919810)}]"
             )
             self.question_if_exec(
                 "警告",
@@ -2914,7 +2893,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 + (
                     CLIENT_UPDATE_LOG[CLIENT_VERSION_CODE].strip()
                     if CLIENT_VERSION_CODE in CLIENT_UPDATE_LOG
-                    else "貌似没写更新日志\n这种一般都是例行维护\n"
+                    else "貌似没写更新日志...\n（这种一般都是例行维护）\n\n\n"
                 )
                 + (
                     '\n\n在顶边栏的"其他"中可以再次查看更新日志。'
@@ -3004,7 +2983,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 x = int(math.sin(math.radians(i)) * 30 * i / 360 * 4)
                 y = int(math.cos(math.radians(i)) * 30 * i / 360 * 4)
                 self.move(orig_x + int(x), orig_y + int(y))
-                time.sleep(0.03)
+                time.sleep(0.01)
                 QCoreApplication.processEvents()
             self.move(200, 100)
 
@@ -3013,14 +2992,14 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             for obj in self.findChildren(QWidget):
                 orig_pos[obj] = obj.geometry().topLeft()
 
-            for i in range(100):
+            for i in range(200):
                 for obj in self.findChildren(QWidget):
                     obj.move(
                         random.randint(0, self.width() // 2),
                         random.randint(0, self.height() // 2),
                     )
                 QCoreApplication.processEvents()
-                time.sleep(0.05)
+                time.sleep(0.01)
 
             for obj in self.findChildren(QWidget):
                 try:
@@ -3824,8 +3803,7 @@ def main():
     # 登录模块写在这里，用户名存在user里面就行
     user = "default"
     class_key = DEFAULT_CLASS_KEY
-    app = MyApplication(sys.argv)
-
+    app = QApplication(sys.argv)
     Base.log("I", "程序启动", "MainThread")
 
     widget = ClassWindow(app, *sys.argv, current_user=user, class_key=class_key)
@@ -3846,6 +3824,8 @@ def main():
 
 
 if __name__ == "__main__":
-    return_code = main()
-    sys.exit(return_code)
+    t = time.time()
+    for i in range(10000):
+        Base.log("I", "114514")
+    print(time.time() - t)
 

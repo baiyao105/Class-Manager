@@ -35,7 +35,7 @@ class DebugWidget(Ui_Form, MyWidget):
         self.pushButton_4.clicked.connect(self.send_command_in_thread)
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update)
-        self.update_timer.start(60)
+        self.update_timer.start(100)
         self.textbroser_last = DebugWidget.last_line
         # self.textBrowser.setWordWrapMode(QTextOption.WrapMode.NoWrap)
         self.setWindowModality(Qt.WindowModality.NonModal)
@@ -123,6 +123,7 @@ for i in range(100):
         self.comboBox.setCurrentIndex(0)
         if self.command_history:
             self.textEdit.setText(self.command_history[self.history_index])
+        self.destroyed.connect(self.update_timer.stop)
         self.update()
 
     def show(self):
@@ -263,9 +264,10 @@ for i in range(100):
                 loop.quit()
                 timer.stop()
         timer.timeout.connect(_check_if_finished)
-        timer.start(33)
+        timer.start(50)
         Thread(target=_send).start()
         loop.exec()
+        timer.stop()
         self.command_history.append(cmd)
         self.history_index = len(self.command_history) - 1
         self.pushButton.setEnabled(True)

@@ -70,6 +70,8 @@ class GroupWidget(Ui_Form, MyWidget):
         self.last_value: List[int] = []
         self.stu_selector: Optional[StudentSelectorWidget] = None
         self.tmp_selector: Optional[SelectTemplateWidget] = None
+        self.destroyed.connect(self.stu_list_update_timer.stop)
+        self.destroyed.connect(self.update_timer.stop)
 
     def show(self, readonly=False):
         Base.log("I", f"小组信息窗口显示：选中{self.group}", "GroupWindowInstance")

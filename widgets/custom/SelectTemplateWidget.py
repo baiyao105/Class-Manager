@@ -137,10 +137,11 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         loop = QEventLoop()
         timer = QTimer()
         def _check_if_finished():
-            if all(self.select_finished):
+            if self.select_finished:
                 loop.quit()
                 timer.stop()
         timer.timeout.connect(_check_if_finished)
-        timer.start(33)
+        timer.start(50)
         loop.exec()
+        timer.stop()
         return self.result

@@ -100,8 +100,9 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
                 loop.quit()
                 timer.stop()
         timer.timeout.connect(_check_if_finished)
-        timer.start(33)
+        timer.start(50)
         loop.exec()
+        timer.stop()
         Base.log(
             "I",
             f"多选窗口执行结束，结果：{repr(self.select_result)}",

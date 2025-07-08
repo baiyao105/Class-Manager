@@ -70,12 +70,13 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
         self.main_window = main_window
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_window)
-        self.update_timer.start(40)
+        self.update_timer.start(100)
         self.read_data_thread = Thread(target=self.read_data)
         self.last_length = 0
         self.pushButton.clicked.connect(lambda: play_sound("audio/sounds/boom.mp3"))
         self.pushButton_2.clicked.connect(lambda: play_sound("audio/sounds/gl.mp3"))
         self.pushButton_3.clicked.connect(self.call_my_army)
+        self.destroyed.connect(self.update_timer.stop)
         self.read_data_thread.start()
 
     def read_data(self):
