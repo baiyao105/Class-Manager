@@ -1861,7 +1861,7 @@ class ClassObj(OrigClassObj):
 
         :param exc_info: 错误信息
         """
-        Base.log_exc("自动保存失败", "class_window.auto_save", "W", exc=exc_info[1])
+        Base.log_exc("自动保存失败", "ClassObj.auto_save", "W", exc=exc_info[1])
 
     def auto_save(self, timeout: int = 60):
         """
@@ -1877,11 +1877,11 @@ class ClassObj(OrigClassObj):
                         return
                     time.sleep(0.1)
                 self.auto_saving = True
-                Base.log("I", f"自动保存到{self.save_path}", "class_window.auto_save")
+                Base.log("I", f"自动保存到{self.save_path}", "ClassObj.auto_save")
 
                 try:
                     self.save_data(self.save_path)
-                    Base.log("I", "自动保存完成", "class_window.auto_save")
+                    Base.log("I", "自动保存完成", "ClassObj.auto_save")
 
                 except (
                     Exception
@@ -1894,7 +1894,7 @@ class ClassObj(OrigClassObj):
         except (
             Exception
         ) as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
-            Base.log_exc("自动保存因错误而停止", "class_window.auto_save", "W")
+            Base.log_exc("自动保存因错误而停止", "ClassObj.auto_save", "E")
 
     def find_with_uuid(
         self,

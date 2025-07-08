@@ -62,6 +62,28 @@ _UT = TypeVar("_UT")
 
 
 
+class DataProperty(property):
+    "数据属性，用于ClassDataType的属性"
+
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
+        super().__init__(fget, fset, fdel, doc)
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return super().__get__(instance, owner)
+
+    def __set__(self, instance, value):
+        if instance is None:
+            return
+        ClassDataObj.has_unsaved_changes = True
+        ClassDataObj.has_unprocessed_data = True
+        return super().__set__(instance, value)
+
+    def __delete__(self, instance):
+        if instance is None:
+            return
+        return super().__delete__(instance)
     
 
 
@@ -90,6 +112,12 @@ class ClassDataObj(Base):
 
     archive_uuid: Optional[str] = None
     "归档uuid，每重置一次存档就换新的"
+
+    has_unsaved_changes = False
+    "是否有未保存的更改"
+
+    has_unprocessed_data = False
+    "是否有未处理的数据"
 
     class OpreationError(Exception):
         "修改出现错误。"
@@ -168,7 +196,7 @@ class ClassDataObj(Base):
             self._highest_score: float = highest_score
             self._lowest_score: float = lowest_score
             self._total_score: float = total_score or score
-            self.last_reset = last_reset
+            self._last_reset = last_reset
             "分数上次重置的时间"
             self._highest_score_cause_time = highest_score_cause_time
             self._lowest_score_cause_time = lowest_score_cause_time
@@ -182,8 +210,19 @@ class ClassDataObj(Base):
             "上次重置的信息"
             self.archive_uuid = ClassDataObj.archive_uuid
             "归档uuid"
+        
+        @DataProperty
+        def last_reset(self) -> Optional[float]:
+            "上次重置的时间"
+            return self._last_reset
 
-        @property
+        @last_reset.setter
+        def last_reset(self, value):
+            self._last_reset = value
+        
+
+
+        @DataProperty
         def last_reset_info(self):
             "上次重置的信息"
             return (
@@ -196,7 +235,7 @@ class ClassDataObj(Base):
         def last_reset_info(self, value):
             self._last_reset_info = value
 
-        @property
+        @DataProperty
         def highest_score(self):
             "最高分"
             return float(self._highest_score)
@@ -206,7 +245,7 @@ class ClassDataObj(Base):
             # Base.log("D", f"{self.name} 更改最高分：{self._highest_score} -> {value}")
             self._highest_score = self.score_dtype(value)
 
-        @property
+        @DataProperty
         def lowest_score(self):
             "最低分"
             return float(self._lowest_score)
@@ -215,7 +254,7 @@ class ClassDataObj(Base):
         def lowest_score(self, value):
             self._lowest_score = self.score_dtype(value)
 
-        @property
+        @DataProperty
         def highest_score_cause_time(self):
             "最高分对应时间"
             return self._highest_score_cause_time
@@ -224,7 +263,7 @@ class ClassDataObj(Base):
         def highest_score_cause_time(self, value):
             self._highest_score_cause_time = value
 
-        @property
+        @DataProperty
         def lowest_score_cause_time(self):
             "最低分对应时间"
             return self._lowest_score_cause_time
@@ -249,7 +288,7 @@ class ClassDataObj(Base):
                 + f"belongs_to_group={repr(self.belongs_to_group)})"
             )
 
-        @property
+        @DataProperty
         def name(self):
             "学生的名字。"
             return self._name
@@ -270,7 +309,7 @@ class ClassDataObj(Base):
             Base.log("E", "错误：用户尝试删除学生名", "Student.num.deleter")
             raise ClassDataObj.OpreationError("不允许删除学生的名字")
 
-        @property
+        @DataProperty
         def num(self):
             "学生的学号。"
             return self._num
@@ -293,7 +332,7 @@ class ClassDataObj(Base):
             Base.log("E", "错误：用户尝试删除学号（？？？？）", "Student.name.deleter")
             raise ClassDataObj.OpreationError("不允许删除学生的学号")
 
-        @property
+        @DataProperty
         def score(self):
             "学生的分数，操作时仅保留1位小数。"
             return float(self._score)
@@ -312,7 +351,7 @@ class ClassDataObj(Base):
             Base.log("E", "错误：用户尝试删除分数（？？？？）", "Student.score.deleter")
             raise ClassDataObj.OpreationError("不允许直接删除学生的分数")
 
-        @property
+        @DataProperty
         def belongs_to(self):
             "学生归属班级。"
             return self._belongs_to
@@ -331,7 +370,7 @@ class ClassDataObj(Base):
             )
             raise ClassDataObj.OpreationError("不允许直接删除学生的班级")
 
-        @property
+        @DataProperty
         def total_score(self):
             "学生总分数。"
             return (

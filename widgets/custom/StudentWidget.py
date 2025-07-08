@@ -57,6 +57,7 @@ class StudentWidget(Ui_Form, MyWidget):
         "成就详情窗口"
         self.template_selector: Optional[SelectTemplateWidget] = None
         "模板选择窗口"
+        self.destroyed.connect(self.update_timer.stop)
         if readonly:
             self.pushButton_3.setEnabled(False)
 

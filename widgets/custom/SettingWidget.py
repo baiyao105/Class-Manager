@@ -34,6 +34,7 @@ class SettingWidget(Ui_Form, MyWidget):
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update)
         self.update_timer.start(66)
+        self.destroyed.connect(self.update_timer.stop)
 
     def reset_settings(self):
         if question_yes_no(self, "警告", "确认重置设置？", False, "warning"):

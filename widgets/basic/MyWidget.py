@@ -26,7 +26,6 @@ class MyWidget(QWidget):
         :param master: 父窗口，默认会浮在父窗口上面
         """
         super().__init__()
-
         self.is_running = True
         self.master = master
         if self.master is None:
@@ -157,7 +156,7 @@ class MyWidget(QWidget):
             )
 
             self.closeanimation_1.start()
-            close_anim_loop_1 = QEventLoop()
+            close_anim_loop_1 = QEventLoop(self)
             self.closeanimation_1.finished.connect(close_anim_loop_1.quit)
             close_anim_loop_1.exec()
             # 防止他们在窗口还在执行动画就又按了一次关闭按钮
@@ -176,7 +175,7 @@ class MyWidget(QWidget):
             )
             self.closeanimation_2.start()
     
-            close_anim_loop_2 = QEventLoop()
+            close_anim_loop_2 = QEventLoop(self)
             self.closeanimation_2.finished.connect(close_anim_loop_2.quit)
             close_anim_loop_2.exec()
 

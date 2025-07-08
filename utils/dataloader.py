@@ -619,6 +619,8 @@ class Chunk:
         :raise FileNotFoundError: 历史记录不存在
         """
         failures = []
+        start_time = time.time()
+        start_obj = DataObject.loaded_objects
         
 
         def _load_object(
@@ -626,6 +628,7 @@ class Chunk:
             data_type: ClassDataType,
             history_uuid: UUIDKind[History] = history_uuid,
         ) -> _DT:
+            DataObject.loaded_objects += 1
             _id = (history_uuid, data_type.chunk_type_name, uuid)
             if uuid is None:
                 if "noticed_uuid_is_none" not in runtime_flags:
@@ -777,7 +780,9 @@ class Chunk:
         )
         history.uuid = history_uuid
         history.archive_uuid = history_uuid
-        Base.log("I", f"历史记录{history_uuid}加载完成，警告数量：{len(failures)}")
+        total_time = time.time() - start_time
+        total_obj = DataObject.loaded_objects - start_obj
+        Base.log("I", f"历史记录{history_uuid}加载完成，总数据处理数：{total_obj}, 警告数量：{len(failures)}, 耗时：{total_time:.3f}s, 平均速度：{total_obj/max(total_time, 0.001):.3f}个/秒")
         return history
 
     def del_history(self, history_uuid: str) -> bool:
