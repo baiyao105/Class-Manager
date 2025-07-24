@@ -4,8 +4,9 @@
 
 import random
 from typing import Optional, Literal, List, Union
-
-from widgets.basic.Qt import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 
 
 

@@ -5,7 +5,9 @@
 import cv2
 import time
 from typing import Callable, Optional, Literal
-from widgets.basic.Qt import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
 

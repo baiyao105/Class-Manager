@@ -6,7 +6,7 @@ from utils import Thread, Base, ClassObj as ClassWindow, steprange
 from utils.settings import SettingsInfo
 from widgets.basic import MyWidget
 from widgets.ui.py import LoadingScreen
-from widgets.basic.Qt import QTimer
+from PySide6.QtCore import QTimer
 
 __all__ = ["LoadingScreenWidget"]
 

@@ -22,7 +22,12 @@ from typing import *  # pylint: disable=wildcard-import, unused-wildcard-import
 import pickle as pickle_orig
 import pickle  # pylint: disable=reimported
 import dill as pickle  # pylint: disable=shadowed-import
-from widgets.basic.Qt import *  # pylint: disable=wildcard-import, unused-wildcard-import
+# from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 
 
 from utils.basetypes import Object, Base
@@ -50,11 +55,7 @@ from utils.classdatatypes import (
 from utils.algorithm.datatypes import Stack, Thread, Mutex
 from utils.algorithm.keyorder import OrderedKeyList
 from utils.algorithm.numeric import inf
-from utils.functions.sounds import (
-    stop_music,
-    play_sound,
-    play_music,
-)  # pylint: disable=unused-import
+
 from utils.functions.numbers import addrof
 from utils.dataloader import (
     Chunk,

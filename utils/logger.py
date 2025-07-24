@@ -19,7 +19,15 @@ import utils.consts as consts
 from utils.consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
 from utils.system import SystemLogger
 from utils.functions.excinfo import format_exc_like_java
-from utils.functions.numbers import get_time
+def get_time():
+    "获得当前时间"
+    lt = time.localtime()
+    return (
+        f"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} "
+        + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
+        + f".{int((time.time()%1)*1000):03}"
+    )
+
 
 
 __all__ = ["LoggerSettings", "log_settings", "Logger", "Color"]

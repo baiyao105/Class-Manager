@@ -3,8 +3,10 @@
 """
 from typing import Optional
 from utils.logger import Logger
-from .Qt import *
-from utils import question_yes_no
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from utils.functions.prompts import question_yes_no
 
 __all__ = ["MyMainWindow"]
 

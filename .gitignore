@@ -138,6 +138,7 @@ dmypy.json
 cython_debug/
 
 # 测试文件
+/socket_main.py
 /boom/
 
 # 存档/备份文件
