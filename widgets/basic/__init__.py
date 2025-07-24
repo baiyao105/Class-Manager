@@ -2,12 +2,13 @@
 基础窗口类
 """
 import sys
-import traceback
 from .MyMainWindow import MyMainWindow
 from .MyWidget import MyWidget
-from .Qt import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 from .widgets import *
-from utils import Base
+from utils.logger import Logger as Base
 
 
 WidgetType = Union[

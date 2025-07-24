@@ -10,7 +10,9 @@ from typing import Union, Any
 from utils.settings import SettingsInfo
 from utils.basetypes import Base
 
-from .Qt import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 from widgets.basic.MyMainWindow import MyMainWindow
 
 

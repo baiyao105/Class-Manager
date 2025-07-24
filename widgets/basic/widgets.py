@@ -3,7 +3,9 @@ import time
 from typing import Union, Tuple, Optional, Callable
 from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar
 
-from .Qt import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 from utils.classdatatypes import Student, Group
 from utils.functions.sounds import play_sound
 

@@ -32,7 +32,8 @@ import dill as pickle  # pylint: disable=shadowed-import
 from utils.basetypes import Base, Object
 from utils.consts import inf, debug, runtime_flags
 from utils.algorithm import SupportsKeyOrdering, OrderedKeyList, Stack
-from utils.functions import send_notice as _send_notice, utc
+from utils.functions.prompts import send_notice as _send_notice
+from utils.functions.numbers import utc
 from utils.events.event import EventSignal, EventType
 
 

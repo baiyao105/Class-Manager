@@ -4,8 +4,9 @@
 """
 
 from typing import Optional
-from utils import (
-    ClassObj, 
+from utils.classobjects import ClassObj
+
+from utils.update_check import (
     CLIENT_VERSION, 
     CLIENT_VERSION_CODE, 
     CORE_VERSION, 

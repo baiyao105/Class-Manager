@@ -9,6 +9,7 @@ import sys
 import time
 import math
 import enum
+import locale
 import random
 import pickle
 import signal
@@ -40,6 +41,7 @@ from widgets.ui.pyside6 import (
     NoticeViewer
 )
 
+locale.setlocale(locale.LC_CTYPE, 'chinese') # 防止诡异的编码错误
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
 
 from utils.basetypes import logger, SysMemTracer # pylint: disable=wrong-import-position
@@ -1508,12 +1510,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self.background_pixmap = self.current_video_frame
     
         else:
-            if not os.path.exists("./img/main/background.jpg"):
-                # 为了防止更新的时候给原有的background.jpg覆盖了
-                shutil_copy(
-                    "./img/main/default/background.jpg", 
-                    "./img/main/background.jpg"
-                )
+
                 
         
             if not self.background_pixmap:
@@ -1523,6 +1520,12 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             if time.time() - self.lastest_pixmap_update_time >= 1:
                 self.background_pixmap = time.time()
                 self.background_pixmap = QPixmap("./img/main/background.jpg")
+                if not os.path.exists("./img/main/background.jpg"):
+                    # 为了防止更新的时候给原有的background.jpg覆盖了
+                    shutil_copy(
+                        "./img/main/default/background.jpg", 
+                        "./img/main/background.jpg"
+                    )
 
         t3 = time.time()
 
@@ -3824,8 +3827,7 @@ def main():
 
 
 if __name__ == "__main__":
-    t = time.time()
-    for i in range(10000):
-        Base.log("I", "114514")
-    print(time.time() - t)
+    return_code = main()
+    sys.exit(return_code)
+
 
