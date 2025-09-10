@@ -1,0 +1,68 @@
+[dependency-groups]
+dev = [
+  "memory_profiler>=0.61.0",
+  "mypy>=1.17.1",
+  "pre-commit>=4.3.0",
+  "pylint>=3.3.8",
+  "pyright>=1.1.405",
+  "ruff>=0.12.12"
+]
+
+[project]
+dependencies = [
+  "loguru ~= 0.7.3",
+  "numpy ~= 2.3.3",
+  "psutil ~= 7.0.0",
+  "pyaudio ~= 0.2.14",
+  "pygame ~= 2.6.1",
+  "pyqtgraph ~= 0.13.7",
+  "pyside6 ~= 6.9.2",
+  "pyside6-fluent-widgets ~= 1.8.7",
+  "pysidesix-frameless-window ~= 0.7.3",
+  "requests ~= 2.32.5",
+  "typing-extensions ~= 4.15.0"
+]
+description = "Classman"
+name = "Class-Manager"
+readme = "README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = [
+  "ARG002",
+  "E501",
+  "F841",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915"
+]
+select = [
+  "ARG",
+  "ASYNC",
+  "B",
+  "C4",
+  "C90",
+  "DTZ",
+  "E",
+  "F",
+  "I",
+  "N",
+  "PIE",
+  "PL",
+  "PTH",
+  "RET",
+  "RUF",
+  "SIM",
+  "TRY",
+  "UP",
+  "W"
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*" = ["E501"]
+"__init__.py" = ["F401"]
