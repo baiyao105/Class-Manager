@@ -7,6 +7,12 @@ dev = [
   "pyright>=1.1.405",
   "ruff>=0.12.12"
 ]
+test = [
+  "pytest >= 8.4.2",
+  "pytest-asyncio >= 1.1.0",
+  "pytest-cov >= 7.0.0",
+  "pytest-mock >= 3.15.0"
+]
 
 [project]
 dependencies = [
@@ -20,7 +26,10 @@ dependencies = [
   "pyside6-fluent-widgets ~= 1.8.7",
   "pysidesix-frameless-window ~= 0.7.3",
   "requests ~= 2.32.5",
-  "typing-extensions ~= 4.15.0"
+  "typing-extensions ~= 4.15.0",
+  "pydantic ~= 2.11.7",
+  "sqlmodel ~= 0.0.24",
+  "dependency-injector ~= 4.48.1"
 ]
 description = "Classman"
 name = "Class-Manager"
