@@ -1,0 +1,19 @@
+{
+  "students": [
+    {
+      "name": "张三",
+      "student_number": "2024010001",
+      "class_id": 1,
+      "email": "zhangsan@example.com",
+      "phone": "13800138000"
+    }
+  ],
+  "classes": [
+    {
+      "name": "计算机科学与技术1班",
+      "teacher_name": "李老师",
+      "description": "优秀的班级"
+    }
+  ],
+  "created_at": "2025-09-15 03:56:05"
+}
