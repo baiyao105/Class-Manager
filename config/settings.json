@@ -1,0 +1,59 @@
+{
+  "app_name": "Class Manager",
+  "app_version": "2.0.0",
+  "debug": false,
+  "current_user": "default_user",
+  "ui": {
+    "opacity": 0.82,
+    "animation_speed": 1.0,
+    "max_framerate": 60,
+    "use_animate_background": false,
+    "subwindow_x_offset": 0,
+    "subwindow_y_offset": 0,
+    "score_up_color_begin": [
+      202,
+      255,
+      202
+    ],
+    "score_up_color_end": [
+      51,
+      207,
+      108
+    ],
+    "score_down_color_begin": [
+      252,
+      181,
+      181
+    ],
+    "score_down_color_end": [
+      169,
+      0,
+      0
+    ],
+    "flash_duration_base": 300,
+    "flash_duration_step": 100,
+    "flash_duration_max": 2000
+  },
+  "log": {
+    "log_file_path": "class_manager.log",
+    "log_format": "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {module}:{function}:{line} - {message}",
+    "log_keep_linecount": 1000,
+    "log_update_interval": 0.5,
+    "log_level": "INFO"
+  },
+  "database": {
+    "database_url": "sqlite:///./class_manager.db",
+    "database_echo": false,
+    "pool_size": 5,
+    "max_overflow": 10
+  },
+  "backup": {
+    "auto_save_enabled": true,
+    "auto_save_interval": 300,
+    "auto_save_path": "user",
+    "auto_backup_scheme": "only_data",
+    "backup_keep_count": 10
+  },
+  "data_dir": "D:\\Users\\Nell_baiyao\\system\\Downloads\\Prowaxw\\Class-Manager\\data",
+  "config_dir": "D:\\Users\\Nell_baiyao\\system\\Downloads\\Prowaxw\\Class-Manager\\config"
+}
