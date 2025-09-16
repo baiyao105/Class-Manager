@@ -1,18 +1,24 @@
-"""学生数据模型
+"""子库学生数据模型
 
 定义学生相关的数据模型和业务逻辑
 """
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+from uuid import UUID
 
 from pydantic import field_validator, model_validator
 from sqlmodel import Field, Relationship, SQLModel
 
 from config.constants import StudentConstants
 
-from .base import ArchiveMixin, BaseModel, OrderMixin
+from .base import ArchiveMixin, OrderMixin, SubDBModel
+
+if TYPE_CHECKING:
+    from .class_ import Classroom, Group
+    from .score_record import ScoreRecord
+    from .tag import StudentTagLink
 
 
 class StudentStatus(str, Enum):
@@ -23,8 +29,8 @@ class StudentStatus(str, Enum):
     GRADUATED = StudentConstants.STATUS_GRADUATED
 
 
-class Student(BaseModel, ArchiveMixin, OrderMixin, table=True):
-    """学生数据模型
+class Student(SubDBModel, ArchiveMixin, OrderMixin, table=True):
+    """子库学生表 - 存储学生业务数据
 
     核心字段：
     - 基本信息：姓名、学号、所属班级
@@ -33,24 +39,32 @@ class Student(BaseModel, ArchiveMixin, OrderMixin, table=True):
     - 统计信息：总分、排名相关
     """
 
-    __tablename__ = "cm_students"
+    __tablename__ = "students"
+
+    # 主键
+    id: Optional[int] = Field(default=None, primary_key=True)
 
     # 基本信息
-    id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(description="学生姓名", max_length=50, nullable=False)
     student_number: int = Field(description="学号", nullable=False, index=True)
 
+    # 关联总库
+    registry_uuid: UUID = Field(description="总库班级索引UUID")
+
     # 班级关联
-    class_id: Optional[int] = Field(default=None, foreign_key="cm_classes.id", description="所属班级ID")
+    classroom_id: Optional[int] = Field(default=None, foreign_key="classrooms.id", description="所属班级ID")
 
     # 小组关联
-    group_id: Optional[int] = Field(default=None, foreign_key="cm_groups.id", description="所属小组ID")
+    group_id: Optional[int] = Field(default=None, foreign_key="groups.id", description="所属小组ID")
 
     # 分数信息
     current_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="当前分数")
+    base_score: float = Field(default=100.0, description="基础积分")
     total_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="总分(包含历史分数)")
     highest_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="历史最高分")
     lowest_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="历史最低分")
+    total_earned: float = Field(default=0.0, description="累计获得积分")
+    total_deducted: float = Field(default=0.0, description="累计扣除积分")
 
     # 分数变化时间记录
     highest_score_time: Optional[datetime] = Field(default=None, description="最高分达成时间")
@@ -59,25 +73,29 @@ class Student(BaseModel, ArchiveMixin, OrderMixin, table=True):
     # 重置相关
     last_reset_time: Optional[datetime] = Field(default=None, description="上次重置时间")
 
+    # 统计信息
+    score_rank: Optional[int] = Field(default=None, description="积分排名")
+    last_score_update: Optional[datetime] = Field(default=None, description="最后积分更新时间")
+
     # 状态信息
     status: StudentStatus = Field(default=StudentStatus.ACTIVE, description="学生状态")
 
     # 关系字段
-    class_: Optional["Class"] = Relationship(back_populates="students", sa_relationship_kwargs={"lazy": "select"})
+    classroom: Optional["Classroom"] = Relationship(
+        back_populates="students", sa_relationship_kwargs={"lazy": "select"}
+    )
     group: Optional["Group"] = Relationship(
         back_populates="members", sa_relationship_kwargs={"lazy": "select", "foreign_keys": "[Student.group_id]"}
     )
-    # score_modifications: List["ScoreModification"] = Relationship(
-    #     back_populates="student",
-    #     sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
-    # )
+    score_records: list["ScoreRecord"] = Relationship(
+        back_populates="student", sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
+    )
     achievements: list["Achievement"] = Relationship(
         back_populates="student", sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
     )
-    # attendance_records: List["AttendanceRecord"] = Relationship(
-    #     back_populates="student",
-    #     sa_relationship_kwargs={"lazy": "select"}
-    # )
+    tag_links: list["StudentTagLink"] = Relationship(
+        back_populates="student", sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
+    )
 
     # 验证器
     @field_validator("name")
@@ -199,11 +217,11 @@ class Student(BaseModel, ArchiveMixin, OrderMixin, table=True):
         Returns:
             排名(1开始), 如果没有班级则返回None
         """
-        if not self.class_:
+        if not self.classroom:
             return None
 
         # 获取班级中所有活跃学生, 按分数降序排列
-        active_students = [s for s in self.class_.students if s.status == StudentStatus.ACTIVE and not s.is_deleted]
+        active_students = [s for s in self.classroom.students if s.status == StudentStatus.ACTIVE and not s.is_deleted]
         active_students.sort(key=lambda s: s.current_score, reverse=True)
 
         try:
@@ -215,13 +233,18 @@ class Student(BaseModel, ArchiveMixin, OrderMixin, table=True):
         """获取分数历史摘要"""
         return {
             "current_score": self.current_score,
+            "base_score": self.base_score,
             "total_score": self.total_score,
+            "total_earned": self.total_earned,
+            "total_deducted": self.total_deducted,
             "highest_score": self.highest_score,
             "lowest_score": self.lowest_score,
             "highest_score_time": self.highest_score_time,
             "lowest_score_time": self.lowest_score_time,
             "last_reset_time": self.last_reset_time,
-            "modification_count": len(self.score_modifications) if self.score_modifications else 0,
+            "score_rank": self.score_rank,
+            "last_score_update": self.last_score_update,
+            "score_record_count": len(self.score_records) if self.score_records else 0,
             "achievement_count": len(self.achievements) if self.achievements else 0,
         }
 
@@ -241,9 +264,11 @@ class StudentCreate(SQLModel):
 
     name: str = Field(description="学生姓名", max_length=50)
     student_number: int = Field(description="学号")
-    class_id: Optional[int] = Field(default=None, description="所属班级ID")
+    registry_uuid: UUID = Field(description="总库班级索引UUID")
+    classroom_id: Optional[int] = Field(default=None, description="所属班级ID")
     group_id: Optional[int] = Field(default=None, description="所属小组ID")
     current_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="初始分数")
+    base_score: float = Field(default=100.0, description="基础积分")
 
 
 class StudentUpdate(SQLModel):
@@ -251,9 +276,10 @@ class StudentUpdate(SQLModel):
 
     name: Optional[str] = Field(default=None, description="学生姓名", max_length=50)
     student_number: Optional[int] = Field(default=None, description="学号")
-    class_id: Optional[int] = Field(default=None, description="所属班级ID")
+    classroom_id: Optional[int] = Field(default=None, description="所属班级ID")
     group_id: Optional[int] = Field(default=None, description="所属小组ID")
     status: Optional[StudentStatus] = Field(default=None, description="学生状态")
+    base_score: Optional[float] = Field(default=None, description="基础积分")
 
 
 class StudentRead(SQLModel):
@@ -263,12 +289,18 @@ class StudentRead(SQLModel):
     uuid: str
     name: str
     student_number: int
+    registry_uuid: UUID
     current_score: float
+    base_score: float
     total_score: float
+    total_earned: float
+    total_deducted: float
     highest_score: float
     lowest_score: float
+    score_rank: Optional[int]
+    last_score_update: Optional[datetime]
     status: StudentStatus
-    class_id: Optional[int]
+    classroom_id: Optional[int]
     group_id: Optional[int]
     created_at: datetime
     updated_at: Optional[datetime]

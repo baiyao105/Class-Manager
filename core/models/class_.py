@@ -1,18 +1,19 @@
-"""班级数据模型
+"""子库班级数据模型
 
-定义班级相关的数据模型和业务逻辑
+定义子库班级相关的数据模型和业务逻辑
 """
 
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
+from uuid import UUID
 
 from pydantic import field_validator
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Column, Field, Relationship, SQLModel, Text
 
 from config.constants import ClassConstants
 
-from .base import ArchiveMixin, BaseModel, OrderMixin
+from .base import ArchiveMixin, OrderMixin, SubDBModel
 
 
 class ClassType(str, Enum):
@@ -23,19 +24,24 @@ class ClassType(str, Enum):
     SPECIAL = ClassConstants.TYPE_SPECIAL
 
 
-class Class(BaseModel, ArchiveMixin, OrderMixin, table=True):
-    """班级数据模型
+class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
+    """子库班级表 - 存储班级业务数据
 
     核心字段：
+    - 关联信息：总库班级索引UUID
     - 基本信息：班级名称、班主任、班级类型
+    - 积分设置：基础积分、积分规则
     - 统计信息：学生数量、总分、平均分
     - 管理信息：创建时间、状态等
     """
 
-    __tablename__ = "cm_classes"
+    __tablename__ = "classrooms"
 
-    # 基本信息
+    # 主键
     id: Optional[int] = Field(default=None, primary_key=True)
+
+    # 关联总库
+    registry_uuid: UUID = Field(description="总库班级索引UUID")
     name: str = Field(description="班级名称", max_length=100, nullable=False, index=True)
     description: Optional[str] = Field(default=None, description="班级描述", max_length=500)
 
@@ -44,7 +50,7 @@ class Class(BaseModel, ArchiveMixin, OrderMixin, table=True):
     teacher_contact: Optional[str] = Field(default=None, description="班主任联系方式", max_length=100)
 
     # 班级类型和状态
-    class_type: ClassType = Field(default=ClassType.REGULAR, description="班级类型")
+    class_type: str = Field(max_length=50, description="班级类型")
     is_active: bool = Field(default=True, description="是否活跃")
 
     # 学期信息
@@ -54,12 +60,20 @@ class Class(BaseModel, ArchiveMixin, OrderMixin, table=True):
     # 班级设置
     max_students: int = Field(default=ClassConstants.MAX_CLASS_SIZE, description="最大学生数量")
 
+    # 积分设置
+    base_score: float = Field(default=100.0, description="基础积分")
+    score_rules: Optional[str] = Field(default=None, sa_column=Column(Text), description="积分规则JSON")
+
+    # 状态信息
+    start_date: Optional[datetime] = Field(default=None, description="开始日期")
+    end_date: Optional[datetime] = Field(default=None, description="结束日期")
+
     # 关系字段
     students: list["Student"] = Relationship(
-        back_populates="class_", sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
+        back_populates="classroom", sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
     )
     groups: list["Group"] = Relationship(
-        back_populates="class_", sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
+        back_populates="classroom", sa_relationship_kwargs={"lazy": "select", "cascade": "all, delete-orphan"}
     )
     # attendance_infos: List["AttendanceInfo"] = Relationship(
     #     back_populates="class_",
@@ -318,27 +332,29 @@ class Class(BaseModel, ArchiveMixin, OrderMixin, table=True):
         return f"{self.name} ({self.academic_year}学年第{self.semester}学期)"
 
 
-class Group(BaseModel, ArchiveMixin, OrderMixin, table=True):
-    """小组数据模型"""
+class Group(SubDBModel, ArchiveMixin, OrderMixin, table=True):
+    """子库小组数据模型"""
 
-    __tablename__ = "cm_groups"
+    __tablename__ = "groups"
+
+    # 主键
+    id: Optional[int] = Field(default=None, primary_key=True)
 
     # 基本信息
-    id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(description="小组名称", max_length=50, nullable=False)
     description: Optional[str] = Field(default=None, description="小组描述", max_length=200)
 
     # 班级关联
-    class_id: int = Field(foreign_key="cm_classes.id", description="所属班级ID")
+    classroom_id: int = Field(foreign_key="classrooms.id", description="所属班级ID")
 
     # 组长
-    leader_id: Optional[int] = Field(default=None, foreign_key="cm_students.id", description="组长ID")
+    leader_id: Optional[int] = Field(default=None, foreign_key="students.id", description="组长ID")
 
     # 小组设置
     max_members: int = Field(default=8, description="最大成员数量")
 
     # 关系字段
-    class_: "Class" = Relationship(back_populates="groups", sa_relationship_kwargs={"lazy": "select"})
+    classroom: "Classroom" = Relationship(back_populates="groups", sa_relationship_kwargs={"lazy": "select"})
     leader: Optional["Student"] = Relationship(
         sa_relationship_kwargs={"lazy": "select", "foreign_keys": "[Group.leader_id]"}
     )
@@ -428,45 +444,53 @@ class Group(BaseModel, ArchiveMixin, OrderMixin, table=True):
 
 
 # 数据传输对象
-class ClassCreate(SQLModel):
-    """创建班级的数据模型"""
+class ClassroomCreate(SQLModel):
+    """创建子库班级的数据模型"""
 
+    registry_uuid: UUID = Field(description="总库班级索引UUID")
     name: str = Field(description="班级名称", max_length=100)
     description: Optional[str] = Field(default=None, description="班级描述", max_length=500)
     teacher_name: str = Field(description="班主任姓名", max_length=50)
     teacher_contact: Optional[str] = Field(default=None, description="班主任联系方式", max_length=100)
-    class_type: ClassType = Field(default=ClassType.REGULAR, description="班级类型")
+    class_type: str = Field(max_length=50, description="班级类型")
     academic_year: str = Field(default="2024-2025", description="学年", max_length=20)
     semester: int = Field(default=1, description="学期")
     max_students: int = Field(default=ClassConstants.MAX_CLASS_SIZE, description="最大学生数量")
+    base_score: float = Field(default=100.0, description="基础积分")
+    score_rules: Optional[str] = Field(default=None, description="积分规则JSON")
 
 
-class ClassUpdate(SQLModel):
-    """更新班级的数据模型"""
+class ClassroomUpdate(SQLModel):
+    """更新子库班级的数据模型"""
 
     name: Optional[str] = Field(default=None, description="班级名称", max_length=100)
     description: Optional[str] = Field(default=None, description="班级描述", max_length=500)
     teacher_name: Optional[str] = Field(default=None, description="班主任姓名", max_length=50)
     teacher_contact: Optional[str] = Field(default=None, description="班主任联系方式", max_length=100)
-    class_type: Optional[ClassType] = Field(default=None, description="班级类型")
+    class_type: Optional[str] = Field(default=None, max_length=50, description="班级类型")
     is_active: Optional[bool] = Field(default=None, description="是否活跃")
     max_students: Optional[int] = Field(default=None, description="最大学生数量")
+    base_score: Optional[float] = Field(default=None, description="基础积分")
+    score_rules: Optional[str] = Field(default=None, description="积分规则JSON")
 
 
-class ClassRead(SQLModel):
-    """读取班级的数据模型"""
+class ClassroomRead(SQLModel):
+    """读取子库班级的数据模型"""
 
     id: int
     uuid: str
+    registry_uuid: UUID
     name: str
     description: Optional[str]
     teacher_name: str
     teacher_contact: Optional[str]
-    class_type: ClassType
+    class_type: str
     is_active: bool
     academic_year: str
     semester: int
     max_students: int
+    base_score: float
+    score_rules: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
 
@@ -479,7 +503,7 @@ class GroupCreate(SQLModel):
 
     name: str = Field(description="小组名称", max_length=50)
     description: Optional[str] = Field(default=None, description="小组描述", max_length=200)
-    class_id: int = Field(description="所属班级ID")
+    classroom_id: int = Field(description="所属班级ID")
     leader_id: Optional[int] = Field(default=None, description="组长ID")
     max_members: int = Field(default=8, description="最大成员数量")
 
@@ -500,7 +524,7 @@ class GroupRead(SQLModel):
     uuid: str
     name: str
     description: Optional[str]
-    class_id: int
+    classroom_id: int
     leader_id: Optional[int]
     max_members: int
     created_at: datetime

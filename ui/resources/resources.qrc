@@ -1,0 +1,14 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <!-- 图标资源 -->
+        <!-- <file>icons/app_icon.png</file> -->
+        <!-- <file>icons/menu_icon.svg</file> -->
+
+        <!-- 样式资源 -->
+        <!-- <file>styles/main.qss</file> -->
+
+        <!-- 其他资源文件 -->
+        <!-- <file>data/config.json</file> -->
+    </qresource>
+</RCC>
