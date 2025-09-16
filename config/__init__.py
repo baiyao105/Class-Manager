@@ -1,13 +1,13 @@
 """配置模块
 
-提供应用程序的配置管理功能，包括：
+提供应用程序的配置管理功能, 包括：
 - 应用设置管理
 - 常量定义
 - 数据库配置
 """
 
-from .settings import AppSettings, get_settings
 from .constants import *
+from .settings import AppSettings, get_settings
 
 __all__ = [
     "AppSettings",

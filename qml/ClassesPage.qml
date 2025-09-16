@@ -5,16 +5,16 @@ import RinUI
 
 ScrollView {
     id: classesPage
-    
+
     Column {
         width: parent.width
         spacing: 24
         anchors.margins: 24
-        
+
         // 页面标题和操作
         Row {
             width: parent.width
-            
+
             Column {
                 Text {
                     text: "班级管理"
@@ -22,16 +22,16 @@ ScrollView {
                     font.bold: true
                     color: "#111827"
                 }
-                
+
                 Text {
                     text: "管理所有班级信息和设置"
                     font.pixelSize: 16
                     color: "#6b7280"
                 }
             }
-            
+
             Item { Layout.fillWidth: true }
-            
+
             Button {
                 text: "创建班级"
                 highlighted: true
@@ -40,7 +40,7 @@ ScrollView {
                 onClicked: addClassDialog.open()
             }
         }
-        
+
         // 班级统计概览
         Rectangle {
             width: parent.width
@@ -49,21 +49,21 @@ ScrollView {
             radius: 12
             border.color: "#e5e7eb"
             border.width: 1
-            
+
             Row {
                 anchors.fill: parent
                 anchors.margins: 20
                 spacing: 40
-                
+
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    
+
                     Text {
                         text: "总班级数"
                         font.pixelSize: 14
                         color: "#6b7280"
                     }
-                    
+
                     Text {
                         text: controller.classes.length.toString()
                         font.pixelSize: 24
@@ -71,16 +71,16 @@ ScrollView {
                         color: "#2563eb"
                     }
                 }
-                
+
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    
+
                     Text {
                         text: "总学生数"
                         font.pixelSize: 14
                         color: "#6b7280"
                     }
-                    
+
                     Text {
                         text: controller.classes.reduce((sum, cls) => sum + cls.studentCount, 0).toString()
                         font.pixelSize: 24
@@ -88,18 +88,18 @@ ScrollView {
                         color: "#059669"
                     }
                 }
-                
+
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    
+
                     Text {
                         text: "平均班级人数"
                         font.pixelSize: 14
                         color: "#6b7280"
                     }
-                    
+
                     Text {
-                        text: controller.classes.length > 0 ? 
+                        text: controller.classes.length > 0 ?
                               (controller.classes.reduce((sum, cls) => sum + cls.studentCount, 0) / controller.classes.length).toFixed(1) : "0"
                         font.pixelSize: 24
                         font.bold: true
@@ -108,17 +108,17 @@ ScrollView {
                 }
             }
         }
-        
+
         // 班级卡片网格
         GridLayout {
             width: parent.width
             columns: 3
             columnSpacing: 16
             rowSpacing: 16
-            
+
             Repeater {
                 model: controller.classes
-                
+
                 delegate: Rectangle {
                     Layout.preferredWidth: (parent.width - 32) / 3
                     Layout.preferredHeight: 280
@@ -126,28 +126,28 @@ ScrollView {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     // 悬停效果
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
-                        
+
                         onEntered: parent.border.color = "#2563eb"
                         onExited: parent.border.color = "#e5e7eb"
                     }
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 16
-                        
+
                         // 班级头部信息
                         Row {
                             width: parent.width
-                            
+
                             Column {
                                 width: parent.width - 60
-                                
+
                                 Text {
                                     text: modelData.name
                                     font.pixelSize: 20
@@ -156,7 +156,7 @@ ScrollView {
                                     elide: Text.ElideRight
                                     width: parent.width
                                 }
-                                
+
                                 Text {
                                     text: "班主任：" + modelData.teacherName
                                     font.pixelSize: 14
@@ -165,13 +165,13 @@ ScrollView {
                                     width: parent.width
                                 }
                             }
-                            
+
                             Rectangle {
                                 width: 40
                                 height: 40
                                 radius: 20
                                 color: modelData.isActive ? "#dcfce7" : "#fef3c7"
-                                
+
                                 Text {
                                     text: modelData.isActive ? "✓" : "⏸"
                                     anchors.centerIn: parent
@@ -180,29 +180,29 @@ ScrollView {
                                 }
                             }
                         }
-                        
+
                         // 分隔线
                         Rectangle {
                             width: parent.width
                             height: 1
                             color: "#e5e7eb"
                         }
-                        
+
                         // 统计信息
                         Column {
                             width: parent.width
                             spacing: 12
-                            
+
                             Row {
                                 width: parent.width
-                                
+
                                 Text {
                                     text: "学生数量"
                                     font.pixelSize: 14
                                     color: "#6b7280"
                                     width: parent.width / 2
                                 }
-                                
+
                                 Text {
                                     text: modelData.studentCount + "人"
                                     font.pixelSize: 14
@@ -212,17 +212,17 @@ ScrollView {
                                     width: parent.width / 2
                                 }
                             }
-                            
+
                             Row {
                                 width: parent.width
-                                
+
                                 Text {
                                     text: "平均分数"
                                     font.pixelSize: 14
                                     color: "#6b7280"
                                     width: parent.width / 2
                                 }
-                                
+
                                 Text {
                                     text: modelData.averageScore.toFixed(1) + "分"
                                     font.pixelSize: 14
@@ -232,22 +232,22 @@ ScrollView {
                                     width: parent.width / 2
                                 }
                             }
-                            
+
                             Row {
                                 width: parent.width
-                                
+
                                 Text {
                                     text: "班级排名"
                                     font.pixelSize: 14
                                     color: "#6b7280"
                                     width: parent.width / 2
                                 }
-                                
+
                                 Text {
                                     text: "第" + (index + 1) + "名"
                                     font.pixelSize: 14
                                     font.bold: true
-                                    color: index === 0 ? "#fbbf24" : 
+                                    color: index === 0 ? "#fbbf24" :
                                            index === 1 ? "#9ca3af" :
                                            index === 2 ? "#cd7f32" : "#6b7280"
                                     horizontalAlignment: Text.AlignRight
@@ -255,12 +255,12 @@ ScrollView {
                                 }
                             }
                         }
-                        
+
                         // 操作按钮
                         Row {
                             width: parent.width
                             spacing: 8
-                            
+
                             Button {
                                 text: "查看详情"
                                 flat: true
@@ -269,7 +269,7 @@ ScrollView {
                                     console.log("查看班级详情:", modelData.name)
                                 }
                             }
-                            
+
                             Button {
                                 text: "管理学生"
                                 highlighted: true
@@ -279,12 +279,12 @@ ScrollView {
                                 }
                             }
                         }
-                        
+
                         // 更多操作
                         Row {
                             width: parent.width
                             spacing: 8
-                            
+
                             Button {
                                 text: "编辑"
                                 flat: true
@@ -297,7 +297,7 @@ ScrollView {
                                     editClassDialog.open()
                                 }
                             }
-                            
+
                             Button {
                                 text: modelData.isActive ? "停用" : "启用"
                                 flat: true
@@ -308,7 +308,7 @@ ScrollView {
                                     console.log(modelData.isActive ? "停用班级:" : "启用班级:", modelData.name)
                                 }
                             }
-                            
+
                             Button {
                                 text: "删除"
                                 flat: true
@@ -327,7 +327,7 @@ ScrollView {
             }
         }
     }
-    
+
     // 添加班级对话框
     Dialog {
         id: addClassDialog
@@ -336,16 +336,16 @@ ScrollView {
         anchors.centerIn: parent
         width: 400
         height: 300
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             TextField {
                 id: classNameField
                 width: parent.width
                 placeholderText: "班级名称"
-                
+
                 background: Rectangle {
                     color: "#f9fafb"
                     radius: 8
@@ -353,12 +353,12 @@ ScrollView {
                     border.width: 1
                 }
             }
-            
+
             TextField {
                 id: teacherNameField
                 width: parent.width
                 placeholderText: "班主任姓名"
-                
+
                 background: Rectangle {
                     color: "#f9fafb"
                     radius: 8
@@ -366,12 +366,12 @@ ScrollView {
                     border.width: 1
                 }
             }
-            
+
             TextField {
                 id: teacherContactField
                 width: parent.width
                 placeholderText: "班主任联系方式 (可选)"
-                
+
                 background: Rectangle {
                     color: "#f9fafb"
                     radius: 8
@@ -379,7 +379,7 @@ ScrollView {
                     border.width: 1
                 }
             }
-            
+
             ComboBox {
                 id: classTypeCombo
                 width: parent.width
@@ -387,9 +387,9 @@ ScrollView {
                 currentIndex: 0
             }
         }
-        
+
         standardButtons: Dialog.Ok | Dialog.Cancel
-        
+
         onAccepted: {
             if (classNameField.text && teacherNameField.text) {
                 controller.addClass(classNameField.text, teacherNameField.text)
@@ -400,7 +400,7 @@ ScrollView {
             }
         }
     }
-    
+
     // 编辑班级对话框
     Dialog {
         id: editClassDialog
@@ -409,21 +409,21 @@ ScrollView {
         anchors.centerIn: parent
         width: 400
         height: 300
-        
+
         property int classId: 0
         property string className: ""
         property string teacherName: ""
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             TextField {
                 id: editClassNameField
                 width: parent.width
                 text: editClassDialog.className
                 placeholderText: "班级名称"
-                
+
                 background: Rectangle {
                     color: "#f9fafb"
                     radius: 8
@@ -431,13 +431,13 @@ ScrollView {
                     border.width: 1
                 }
             }
-            
+
             TextField {
                 id: editTeacherNameField
                 width: parent.width
                 text: editClassDialog.teacherName
                 placeholderText: "班主任姓名"
-                
+
                 background: Rectangle {
                     color: "#f9fafb"
                     radius: 8
@@ -446,9 +446,9 @@ ScrollView {
                 }
             }
         }
-        
+
         standardButtons: Dialog.Ok | Dialog.Cancel
-        
+
         onAccepted: {
             if (editClassNameField.text && editTeacherNameField.text) {
                 console.log("更新班级:", editClassDialog.classId, editClassNameField.text, editTeacherNameField.text)
@@ -456,7 +456,7 @@ ScrollView {
             }
         }
     }
-    
+
     // 删除班级确认对话框
     Dialog {
         id: deleteClassDialog
@@ -465,20 +465,20 @@ ScrollView {
         anchors.centerIn: parent
         width: 350
         height: 200
-        
+
         property int classId: 0
         property string className: ""
-        
+
         Text {
             anchors.centerIn: parent
-            text: "确定要删除班级 \"" + deleteClassDialog.className + "\" 吗？\n此操作将同时删除班级内的所有学生数据，且不可撤销。"
+            text: "确定要删除班级 \"" + deleteClassDialog.className + "\" 吗？\n此操作将同时删除班级内的所有学生数据, 且不可撤销。"
             horizontalAlignment: Text.AlignHCenter
             color: "#374151"
             wrapMode: Text.WordWrap
         }
-        
+
         standardButtons: Dialog.Yes | Dialog.No
-        
+
         onAccepted: {
             controller.deleteClass(deleteClassDialog.classId)
         }
