@@ -16,42 +16,109 @@ test = [
 
 [project]
 dependencies = [
+  "dependency-injector ~= 4.48.1",
   "loguru ~= 0.7.3",
   "numpy ~= 2.3.3",
   "psutil ~= 7.0.0",
   "pyaudio ~= 0.2.14",
+  "pydantic ~= 2.11.7",
   "pygame ~= 2.6.1",
   "pyqtgraph ~= 0.13.7",
   "pyside6 ~= 6.9.2",
   "pyside6-fluent-widgets ~= 1.8.7",
   "pysidesix-frameless-window ~= 0.7.3",
   "requests ~= 2.32.5",
-  "typing-extensions ~= 4.15.0",
-  "pydantic ~= 2.11.7",
+  "rinui",
   "sqlmodel ~= 0.0.24",
-  "dependency-injector ~= 4.48.1"
+  "typing-extensions ~= 4.15.0"
 ]
 description = "Classman"
 name = "Class-Manager"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 version = "0.1.0"
 
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101", "B601"]
+
+[tool.black]
+extend-exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+)
+'''
+include = '\.pyi?$'
+line-length = 120
+target-version = "py39"
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+python_version = "3.9"
+strict_equality = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  "PySide6.*",
+  "RinUI.*"
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --strict-markers --strict-config"
+filterwarnings = [
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore::UserWarning"
+]
+markers = [
+  "gui: marks tests as GUI tests",
+  "integration: marks tests as integration tests",
+  "unit: marks tests as unit tests",
+  'slow: marks tests as slow (deselect with "-m not slow")'
+]
+minversion = "7.0"
+python_classes = ["Test*"]
+python_files = ["*_test.py", "test_*.py"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+
 [tool.ruff]
-line-length = 100
-target-version = "py311"
+line-length = 120
+target-version = "py39"
 
 [tool.ruff.lint]
 ignore = [
   "ARG002",
-  "E501",
+  "B008",
+  "C901",
   "F841",
   "PLR0912",
   "PLR0913",
   "PLR0915"
 ]
 select = [
-  "ARG",
   "ASYNC",
   "B",
   "C4",
@@ -73,5 +140,5 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/migrations/*" = ["E501"]
 "__init__.py" = ["F401"]
+"tests/*" = ["B011"]
