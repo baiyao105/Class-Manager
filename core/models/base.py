@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
 
 
@@ -53,6 +53,18 @@ class SoftDeleteMixin(SQLModel):
         """恢复"""
         self.is_deleted = False
         self.deleted_at = None
+
+
+class MasterDBModel(UUIDMixin, TimestampMixin, SQLModel):
+    """总库模型基类 - 用于班级索引和统计缓存"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubDBModel(UUIDMixin, TimestampMixin, SoftDeleteMixin, SQLModel):
+    """子库模型基类 - 用于班级业务数据"""
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BaseModel(TimestampMixin, UUIDMixin, SoftDeleteMixin, SQLModel):

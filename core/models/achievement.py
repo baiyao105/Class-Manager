@@ -243,7 +243,7 @@ class Achievement(BaseModel, ArchiveMixin, table=True):
 
     # 关联信息
     template_id: int = Field(foreign_key="cm_achievement_templates.id", description="成就模板ID")
-    student_id: int = Field(foreign_key="cm_students.id", description="学生ID")
+    student_id: int = Field(foreign_key="students.id", description="学生ID")
 
     # 获得信息
     achieved_at: datetime = Field(default_factory=datetime.utcnow, description="获得时间")

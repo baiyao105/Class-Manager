@@ -50,11 +50,14 @@ class ClassManagerController(QObject):
 
     def _init_services(self):
         """初始化服务层"""
-        session_gen = db_manager.get_session()
-        self._session = next(session_gen)
-        self._class_service = ClassService(self._session)
-        self._student_service = StudentService(self._session)
-        self._achievement_service = AchievementService(self._session)
+        # 获取总库会话
+        master_session_gen = db_manager.get_master_session()
+        self._master_session = next(master_session_gen)
+
+        # 初始化服务（传入数据库管理器以支持混合架构）
+        self._class_service = ClassService(db_manager)
+        self._student_service = StudentService(db_manager)
+        self._achievement_service = AchievementService(db_manager)
 
     def _load_data(self):
         """加载数据"""
@@ -100,15 +103,18 @@ class ClassManagerController(QObject):
         }
 
     def _class_to_dict(self, class_obj) -> dict:
-        """将班级对象转换为字典"""
+        """将班级注册对象转换为字典"""
         return {
             "id": class_obj.id,
             "name": class_obj.name,
             "description": class_obj.description or "",
-            "is_active": class_obj.is_active,
-            "teacher_name": class_obj.teacher_name or "",  # 添加教师姓名
-            "student_count": len(class_obj.students) if class_obj.students else 0,
+            "is_active": not class_obj.is_deleted,  # 使用is_deleted字段
+            "class_type": class_obj.class_type or "REGULAR",
+            "grade": class_obj.grade or "",
+            "school_year": class_obj.school_year or "",
+            "student_count": class_obj.student_count,  # 直接使用student_count字段
             "created_at": class_obj.created_at.isoformat() if class_obj.created_at else "",
+            "class_uuid": class_obj.class_uuid,
         }
 
     def _achievement_to_dict(self, achievement) -> dict:
@@ -158,50 +164,78 @@ class ClassManagerController(QObject):
         print("刷新统计数据")
         self.statsChanged.emit()
 
-    @Slot(str, str, str)
-    def addStudent(self, name, studentNumber, className):
+    @Slot(str, str, int)
+    def addStudent(self, name, studentNumber, registryId):
         """添加学生"""
-        new_student = {
-            "id": len(self._students) + 1,
-            "name": name,
-            "studentNumber": studentNumber,
-            "className": className,
-            "currentScore": 0.0,
-            "rank": len(self._students) + 1,
-            "status": "活跃",
-        }
-        self._students.append(new_student)
-        self.studentsChanged.emit()
+        try:
+            # 通过registry_id获取班级信息
+            registry = self._class_service.get_class_by_id(registryId)
+            if not registry:
+                print(f"❌ 班级不存在: {registryId}")
+                return
+
+            # 创建学生
+            student = self._student_service.create_student(
+                name=name,
+                student_number=studentNumber,
+                registry_id=registryId,
+                classroom_id=1,  # 默认classroom_id
+            )
+
+            if student:
+                # 重新加载学生数据
+                self._students = [self._student_to_dict(s) for s in self._student_service.get_all_students()]
+                self.studentsChanged.emit()
+                print(f"✅ 学生添加成功: {name}")
+            else:
+                print(f"❌ 学生添加失败: {name}")
+        except Exception as e:
+            print(f"❌ 添加学生时出错: {e}")
         print(f"添加学生: {name} ({studentNumber})")
 
     @Slot(str, str)
-    def addClass(self, name, teacherName):
+    def addClass(self, name, description=""):
         """添加班级"""
-        new_class = {
-            "id": len(self._classes) + 1,
-            "name": name,
-            "teacherName": teacherName,
-            "studentCount": 0,
-            "averageScore": 0.0,
-            "isActive": True,
-        }
-        self._classes.append(new_class)
-        self.classesChanged.emit()
-        print(f"添加班级: {name} (班主任: {teacherName})")
+        try:
+            registry = self._class_service.create_class(
+                name=name, description=description, class_type="REGULAR", grade="", school_year=""
+            )
+
+            if registry:
+                # 重新加载班级数据
+                self._classes = [self._class_to_dict(c) for c in self._class_service.get_all_classes()]
+                self.classesChanged.emit()
+                print(f"✅ 班级添加成功: {name}")
+            else:
+                print(f"❌ 班级添加失败: {name}")
+        except Exception as e:
+            print(f"❌ 添加班级时出错: {e}")
 
     @Slot(int)
     def deleteStudent(self, studentId):
-        """删除学生"""
-        self._students = [s for s in self._students if s["id"] != studentId]
-        self.studentsChanged.emit()
-        print(f"删除学生ID: {studentId}")
+        """删除学生（需要班级UUID）"""
+        try:
+            # 注意：这里需要知道学生所在的班级UUID
+            # 在实际使用中，可能需要从UI传递更多参数
+            print(f"⚠️ 删除学生功能需要班级UUID参数，学生ID: {studentId}")
+            # TODO: 实现跨班级学生查找和删除
+        except Exception as e:
+            print(f"❌ 删除学生时出错: {e}")
 
     @Slot(int)
-    def deleteClass(self, classId):
+    def deleteClass(self, registryId):
         """删除班级"""
-        self._classes = [c for c in self._classes if c["id"] != classId]
-        self.classesChanged.emit()
-        print(f"删除班级ID: {classId}")
+        try:
+            success = self._class_service.delete_class(registryId)
+            if success:
+                # 重新加载班级数据
+                self._classes = [self._class_to_dict(c) for c in self._class_service.get_all_classes()]
+                self.classesChanged.emit()
+                print(f"✅ 班级删除成功，ID: {registryId}")
+            else:
+                print(f"❌ 班级删除失败，ID: {registryId}")
+        except Exception as e:
+            print(f"❌ 删除班级时出错: {e}")
 
     @Slot()
     def exportData(self):
@@ -245,7 +279,7 @@ def main():
         print(f"⚠️ 设置QML上下文属性失败: {e}")
 
     # 加载QML文件
-    main_window.load("qml/main.qml")
+    main_window.load("ui/qml/main.qml")
 
     # 设置窗口属性
     main_window.setTitle(f"{APP_NAME} v{APP_VERSION}")

@@ -9,6 +9,7 @@
 """
 
 from .data_ops import *
+from .db_manager import DatabaseManager, create_sample_class, init_database_system
 from .file_ops import *
 from .logger import get_logger, setup_logger
 from .time_ops import *
@@ -18,8 +19,12 @@ __version__ = "1.0.0"
 __author__ = "Class Manager Team"
 
 __all__ = [
+    # 数据库管理
+    "DatabaseManager",
+    "create_sample_class",
     # 日志工具
     "get_logger",
+    "init_database_system",
     "setup_logger",
     # 其他工具会在各自模块中定义
 ]
