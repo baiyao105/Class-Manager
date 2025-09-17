@@ -143,7 +143,7 @@ def cinttype(dtype: CIntegerType, name: Optional[str] = None):
         def __pos__(self):
             return cinttype(self._dtype, self._tpname)(+self._data.value)
 
-        def __round__(self, ndigits=None):
+        def __round__(self, ndigits = None):
             return cinttype(self._dtype, self._tpname)(round(self._data.value, ndigits))
 
         def __add__(self, other: Any):

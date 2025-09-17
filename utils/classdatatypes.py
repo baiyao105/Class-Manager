@@ -34,7 +34,7 @@ from utils.consts import inf, debug, runtime_flags
 from utils.algorithm import SupportsKeyOrdering, OrderedKeyList, Stack
 from utils.functions.prompts import send_notice as _send_notice
 from utils.functions.numbers import utc
-from utils.events.event import EventSignal, EventType
+from utils.events.event import EventType
 
 
 def send_notice(
@@ -425,12 +425,14 @@ class ClassDataObj(Base):
             Dict[int, "ScoreModification"],
             Optional[Dict[int, "Achievement"]],
         ]:
-            """重置学生分数和成就。
-                这个操作会更新学生的last_reset_info属性，以记录重置前的分数和成就。
+            """
+            重置学生分数和成就。
+            这个操作会更新学生的last_reset_info属性，以记录重置前的分数和成就。
 
             :param reset_achievments: 是否重置成就
             :return: Tuple[当前分数, 历史最高分, 历史最低分,
-            Dict[分数变动时间utc*1000, 分数变动记录], Dict[成就达成时间utc*1000, 成就]"""
+            Dict[分数变动时间utc*1000, 分数变动记录], Dict[成就达成时间utc*1000, 成就]
+            """
             self.last_reset_info = copy.deepcopy(self)
             score, highest, lowest, history = self.reset_score()
             achievements = None

@@ -4,6 +4,9 @@ ____，启动！
 
 # -*- coding: utf-8 -*-
 # 奇怪的癖好：把import语句的顺序按长短排列（？
+
+
+
 import os
 import sys
 import time
@@ -17,17 +20,30 @@ import warnings
 import traceback
 import threading
 import functools
+import pyqtgraph as pg
 from queue import Queue
-from typing import Optional, Union, List, Tuple, Dict, Callable, Literal, Type
+from typing import Optional, Union, List, Tuple, Dict, Callable, Literal, Type, Any
 from shutil import copytree, rmtree, copy as shutil_copy
 from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
-from typing import Mapping, Any, Iterable
+
+from utils.consts import (
+    enable_memory_tracing, 
+    qt_version,
+    app_style,
+    app_stylesheet,
+    nl,
+    runtime_flags,
+    log_style
+)
+
+os.environ["PYQTGRAPH_QT_LIB"] = qt_version         # 必须在导入pyqtgraph之前设置
+locale.setlocale(locale.LC_CTYPE, "zh_CN.UTF-8")        # 防止诡异的编码错误
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
 
 import psutil
 import requests
 import numpy as np
-import customtkinter  # pylint: disable=unused-import
 import dill as pickle  # pylint: disable=shadowed-import
 
 
@@ -41,14 +57,11 @@ from widgets.ui.pyside6 import (
     NoticeViewer
 )
 
-locale.setlocale(locale.LC_CTYPE, 'chinese') # 防止诡异的编码错误
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
+
 
 from utils.basetypes import logger, SysMemTracer # pylint: disable=wrong-import-position
-from utils.consts import debug, enable_memory_tracing, qt_version
 
-os.environ["PYQTGRAPH_QT_LIB"] = qt_version
-import pyqtgraph as pg
+
 
 sys_mem_tracer = SysMemTracer(record_data=True)
 
@@ -59,63 +72,44 @@ from utils.classobjects import (  # pylint: disable=unused-import, disable=wrong
     sys as base_sys,
     Class,
     Student,
-    Achievement,
-    AchievementTemplate,
     ScoreModification,
     ScoreModificationTemplate,
-    StrippedStudent,
     AttendanceInfo,
     DayRecord,
-    ClassStatusObserver,
-    AchievementStatusObserver,
     Group,
-    HomeworkRule,
-    dummy_student,
-    History,
-    Stack,
     Base,
     ClassObj,
-    DEFAULT_CLASSES,
-    DEFAULT_ACHIEVEMENTS,
-    DEFAULT_SCORE_TEMPLATES,
-    default_user
-)
-
-
-from utils.functions import steprange, play_sound, play_music, stop_music
-from utils.classobjects import (
+    default_user,
     CORE_VERSION,
     CORE_VERSION_CODE,
     VERSION_INFO,
     CLIENT_UPDATE_LOG,
     DEFAULT_CLASS_KEY
 )
-from utils.classobjects import Chunk, UserDataBase
-from utils.consts import (
-    app_style,
-    app_stylesheet,
-    nl,
-    enable_memory_tracing,
-    runtime_flags
+
+from widgets import *
+from utils.functions import (
+    steprange, 
+    play_sound, 
+    play_music, 
+    stop_music, 
+    question_yes_no as question_yes_no_orig, 
+    question_chooose,
+    wait_until
 )
-
-
-from widgets.basic.widgets import ObjectButton, ProgressAnimatedListWidgetItem, SideNotice
-from utils.functions import question_yes_no as question_yes_no_orig, question_chooose
-from utils.functions import format_exc_like_java
+from utils.classobjects import Chunk, UserDataBase
 from utils.settings import SettingsInfo
-from utils.system import output_list
 from utils.basetypes import DataObject
 from utils.algorithm import Thread
+
 import utils.functions.prompts as PromptUtils
+
 from widgets.custom.NoiseDetectorWidget import HAS_PYAUDIO
-from widgets import *
-from utils.functions import wait_until
+
 try:
     from utils.login import login
 except ImportError:
     from utils.bak.login import login
-
     warnings.warn(
         "没有自定义登录模块，将使用默认，"
         "如果需要自定义登录模块请创建/修改utils/login.py"
@@ -139,7 +133,6 @@ if not enable_memory_tracing:
     def profile(precision=4):  # NOSONAR; pylint: disable=unused-argument
         def decorator(func):
             return func
-
         return decorator
 
 else:
@@ -177,7 +170,6 @@ def exception_handler(
         + traceback.format_exception(exc_type, exc_val, exc_tb)
         + ["\n"]
     )
-    from utils.consts import log_style
     if log_style == "new":
         logger.bind(
             file=file_basename,
