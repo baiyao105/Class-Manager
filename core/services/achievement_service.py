@@ -424,3 +424,25 @@ class AchievementService:
         end_date = datetime(year + 1, 1, 1) if month == 12 else datetime(year, month + 1, 1)
 
         return self.get_achievements_by_date_range(start_date, end_date, registry_uuid)
+
+    def get_achievement_stats(self) -> dict[str, Any]:
+        """获取成就统计信息 - 临时方法
+        
+        Returns:
+            包含成就统计信息的字典
+        """
+        try:
+            return {
+                "total_achievements": 0,
+                "recent_achievements": 0,
+                "achievement_points": 0,
+                "achievement_types": {},
+            }
+        except Exception as e:
+            print(f"获取成就统计失败: {e}")
+            return {
+                "total_achievements": 0,
+                "recent_achievements": 0,
+                "achievement_points": 0,
+                "achievement_types": {},
+            }

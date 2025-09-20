@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>主区域 Demo</title>
+<style>
+  :root{
+    --bg:#f3f6fb;
+    --surface: rgba(255,255,255,0.65);
+    --aero: rgba(255,255,255,0.22);
+    --glass: rgba(255,255,255,0.12);
+    --accent: #0078d4; /* fluent blue */
+    --muted: #5b6b75;
+    --radius:14px;
+    --gap:12px;
+    --shadow: 0 6px 20px rgba(3,12,30,0.12);
+  }
+  /* Reset & font */
+  *{box-sizing:border-box;font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#eaf2ff 0,#f5f8fb 60%);color:#102027}
+  /* Container fits the "main area only" */
+  .container{
+    width:calc(100% - 64px);
+    max-width:1200px;
+    margin:28px auto;
+    padding:18px;
+    border-radius:18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,250,0.8));
+    box-shadow: var(--shadow);
+    position:relative;
+    backdrop-filter: blur(6px) saturate(120%);
+  }
+
+  /* top capsule segmented control */
+  .segmented{
+    display:inline-flex;
+    background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,250,0.5));
+    border-radius:999px;
+    padding:4px;
+    gap:4px;
+    box-shadow: 0 2px 6px rgba(16,32,64,0.06);
+    border:1px solid rgba(3,12,30,0.04);
+  }
+  .segmented button{
+    border:0;background:transparent;padding:8px 18px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--muted)
+  }
+  .segmented button.active{
+    background:linear-gradient(180deg, rgba(0,120,212,0.16), rgba(0,120,212,0.08));
+    color:var(--accent);
+    box-shadow: 0 6px 18px rgba(0,120,212,0.08);
+  }
+
+  /* layout grid: middle + bottom */
+  .layout{display:grid;grid-template-rows:auto 1fr 96px;gap:16px;margin-top:16px}
+  .middle{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+  /* left main area (cards) */
+  .work{
+    padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(248,251,255,0.55));
+    border:1px solid rgba(3,12,30,0.03);min-height:420px;box-shadow:0 4px 14px rgba(3,12,30,0.04);
+  }
+
+  /* student / group grid */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+    gap:12px;
+  }
+  .card{
+    padding:12px;border-radius:12px;background:linear-gradient(180deg,#ffffff,#fbfdff);
+    border:1px solid rgba(16,32,48,0.04);box-shadow:0 8px 18px rgba(14,30,60,0.04);cursor:pointer;transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:hover{transform:translateY(-6px);box-shadow:0 14px 30px rgba(14,30,60,0.08)}
+  .card .title{font-weight:700;margin-bottom:8px}
+  .card .meta{font-size:13px;color:var(--muted)}
+  .card .badge{display:inline-block;margin-top:8px;padding:6px 8px;border-radius:999px;background:linear-gradient(90deg, rgba(0,120,212,0.08), rgba(0,120,212,0.04));color:var(--accent);font-weight:600;font-size:13px}
+
+  /* right panel = 卡片2（快速查看班级信息） */
+  .side{
+    padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.85), rgba(250,250,250,0.8));
+    border:1px solid rgba(3,12,30,0.03);min-height:240px;
+  }
+  .tabs{display:flex;gap:8px;margin-bottom:12px}
+  .tabs button{flex:1;padding:8px;border-radius:8px;border:0;background:transparent;cursor:pointer;color:var(--muted);font-weight:700}
+  .tabs button.active{background:linear-gradient(180deg, rgba(0,120,212,0.08), rgba(0,120,212,0.03));color:var(--accent)}
+  .side .card-mini{padding:10px;border-radius:10px;background:linear-gradient(180deg, #fff, #fbfdff);border:1px solid rgba(16,32,48,0.03);}
+
+  /* bottom toolbar area (split) */
+  .bottom{
+    display:flex;gap:12px;align-items:center;justify-content:space-between;
+  }
+  .toolbar{
+    display:flex;gap:8px;align-items:center;flex:1;padding:8px;border-radius:12px;background:linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01));border:1px solid rgba(3,12,30,0.02);
+    min-height:64px;
+  }
+  .tool-btn{padding:10px 12px;border-radius:10px;background:transparent;border:1px dashed rgba(3,12,30,0.04);cursor:pointer;font-weight:600}
+  .tool-btn:hover{border-style:solid}
+  .tool-actions{display:flex;gap:8px;align-items:center}
+  .tool-input{display:flex;gap:8px;align-items:center;margin-left:12px}
+  .tool-input input{padding:8px;border-radius:8px;border:1px solid rgba(16,32,48,0.06);min-width:180px}
+
+  /* debug / status area on bottom right of toolbar */
+  .status{width:320px;padding:10px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,250,0.85));border:1px solid rgba(3,12,30,0.03);}
+
+  /* modal */
+  .modal-backdrop{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(6,12,20,0.35)}
+  .modal{width:360px;padding:16px;border-radius:14px;background:#fff;border:1px solid rgba(16,32,48,0.06);box-shadow:0 16px 40px rgba(3,12,30,0.18)}
+  .modal h3{margin:0 0 8px 0}
+  .muted{color:var(--muted);font-size:13px}
+
+  /* responsive */
+  @media (max-width:980px){
+    .container{width:92%}
+    .middle{grid-template-columns:1fr}
+    .side{order:2}
+  }
+</style>
+</head>
+<body>
+  <div class="container" role="main" aria-label="Fluent main area demo">
+    <!-- top segmented -->
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="segmented" role="tablist" aria-label="视图切换">
+        <button id="btn-student" class="active" aria-pressed="true">学生视图</button>
+        <button id="btn-group" aria-pressed="false">小组视图</button>
+      </div>
+
+      <!-- 可放置额外说明 -->
+      <div style="color:var(--muted);font-weight:600">主区域demo</div>
+    </div>
+
+    <div class="layout">
+      <!-- middle: main + side -->
+      <div class="middle">
+        <section class="work" id="work">
+          <!-- optional small toolbar inside work -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="font-weight:800;font-size:16px">学生 / 小组 列表</div>
+            <div id="view-hint" class="muted">当前：学生视图</div>
+          </div>
+
+          <!-- cards grid -->
+          <div id="grid" class="grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="side" id="side">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-weight:800">快速班级信息</div>
+            <div class="muted" style="font-size:13px">及时概览</div>
+          </div>
+
+          <div class="tabs" role="tablist" id="side-tabs">
+            <button data-tab="tab1" class="active">Tab1</button>
+            <button data-tab="tab2">Tab2</button>
+            <button data-tab="tab3">更多</button>
+          </div>
+
+          <div id="side-panels">
+            <div data-panel="tab1" class="card-mini">
+              <div style="font-weight:700">班级 A · 10 人</div>
+              <div class="muted" style="margin-top:6px">平均学分： 12.6</div>
+              <div style="margin-top:8px;display:flex;gap:8px">
+                <button class="tool-btn" onclick="alert('进入班级详情')">查看</button>
+                <button class="tool-btn" onclick="alert('导出班级报告')">导出</button>
+              </div>
+            </div>
+
+            <div data-panel="tab2" class="card-mini" style="display:none">
+              <div style="font-weight:700">成绩分布</div>
+              <div class="muted" style="margin-top:6px">A: 3 / B: 4 / C: 3</div>
+            </div>
+
+            <div data-panel="tab3" class="card-mini" style="display:none">
+              <div style="font-weight:700">其他信息</div>
+              <div class="muted" style="margin-top:6px">自定义备注 / 快捷设置</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- bottom area -->
+      <div class="bottom">
+        <div class="toolbar" id="toolbar">
+          <div class="tool-actions" id="tool-actions">
+            <!-- dynamic toolbar buttons live here -->
+            <button class="tool-btn" data-action="take-attendance" onclick="log('点了：点名')">点名</button>
+            <button class="tool-btn" data-action="message" onclick="log('点了：群发消息')">群发</button>
+            <button class="tool-btn" data-action="grade" onclick="log('点了：批量评分')">批量评分</button>
+          </div>
+
+          <div class="tool-input" style="margin-left:auto">
+            <input id="new-tool" placeholder="输入快捷按钮名字（如：考勤）" />
+            <button class="tool-btn" onclick="addTool()">添加</button>
+          </div>
+        </div>
+
+        <div class="status" id="status">
+          <div style="font-weight:700;margin-bottom:6px">卡片预览 · 快速操作</div>
+          <div id="status-content" class="muted">选中项会显示在这里</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- modal for card detail -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h3 id="modal-title">详情</h3>
+      <div id="modal-body" class="muted">内容</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;gap:8px">
+        <button class="tool-btn" onclick="closeModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* sample data */
+  const students = Array.from({length:18}).map((_,i)=>({
+    id: 100 + i,
+    name: `学生 ${i+1}`,
+    credits: (Math.floor(Math.random()*30)+10),
+    class: 'A'
+  }));
+
+  const groups = [
+    {id:'G1', name:'小组 1', members:4, avg:12.5},
+    {id:'G2', name:'小组 2', members:5, avg:14.2},
+    {id:'G3', name:'小组 3', members:3, avg:11.3},
+  ];
+
+  let currentView = 'student'; // or 'group'
+
+  const gridEl = document.getElementById('grid');
+  const viewHint = document.getElementById('view-hint');
+  const btnStudent = document.getElementById('btn-student');
+  const btnGroup = document.getElementById('btn-group');
+  const statusContent = document.getElementById('status-content');
+  const modal = document.getElementById('modal');
+  const modalBody = document.getElementById('modal-body');
+
+  function render(){
+    gridEl.innerHTML = '';
+    if(currentView === 'student'){
+      viewHint.textContent = '当前：学生视图';
+      students.forEach(s=>{
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.innerHTML = `
+          <div class="title">${s.name}</div>
+          <div class="meta">学号：${s.id}</div>
+          <div class="meta">学分：<strong>${s.credits}</strong></div>
+          <div style="margin-top:8px"><span class="badge">班级 ${s.class}</span></div>
+        `;
+        c.onclick = ()=> { openStudent(s) };
+        gridEl.appendChild(c);
+      });
+    } else {
+      viewHint.textContent = '当前：小组视图';
+      groups.forEach(g=>{
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.innerHTML = `
+          <div class="title">${g.name}</div>
+          <div class="meta">成员：${g.members}</div>
+          <div class="meta">平均学分：<strong>${g.avg}</strong></div>
+          <div style="margin-top:8px"><span class="badge">小组 ID ${g.id}</span></div>
+        `;
+        c.onclick = ()=> { openGroup(g) };
+        gridEl.appendChild(c);
+      });
+    }
+  }
+
+  function openStudent(s){
+    statusContent.textContent = `已选：${s.name}（学号 ${s.id}） · 学分 ${s.credits}`;
+    modalBody.innerHTML = `<div style="font-weight:700">${s.name}</div>
+      <div class="muted">学号：${s.id}</div>
+      <div class="muted">学分：${s.credits}</div>
+      <div class="muted">班级：${s.class}</div>
+      <div style="margin-top:10px"><button class="tool-btn" onclick="log('给 ${s.name} 发送消息')">发消息</button>
+      <button class="tool-btn" style="margin-left:8px" onclick="log('查看 ${s.name} 成绩')">查看成绩</button></div>`;
+    showModal();
+  }
+
+  function openGroup(g){
+    statusContent.textContent = `已选：${g.name} · 成员 ${g.members}`;
+    modalBody.innerHTML = `<div style="font-weight:700">${g.name}</div>
+      <div class="muted">成员数：${g.members}</div>
+      <div class="muted">平均学分：${g.avg}</div>
+      <div style="margin-top:10px"><button class="tool-btn" onclick="log('查看 ${g.name} 成员')">成员列表</button>
+      <button class="tool-btn" style="margin-left:8px" onclick="log('导出 ${g.name} 报表')">导出报表</button></div>`;
+    showModal();
+  }
+
+  function showModal(){ modal.style.display = 'flex'; }
+  function closeModal(){ modal.style.display = 'none'; }
+
+  // segmented control
+  btnStudent.addEventListener('click', ()=>{
+    currentView = 'student';
+    btnStudent.classList.add('active'); btnStudent.setAttribute('aria-pressed','true');
+    btnGroup.classList.remove('active'); btnGroup.setAttribute('aria-pressed','false');
+    render();
+  });
+  btnGroup.addEventListener('click', ()=>{
+    currentView = 'group';
+    btnGroup.classList.add('active'); btnGroup.setAttribute('aria-pressed','true');
+    btnStudent.classList.remove('active'); btnStudent.setAttribute('aria-pressed','false');
+    render();
+  });
+
+  // side tabs
+  document.querySelectorAll('#side-tabs button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('#side-tabs button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      const tab = b.dataset.tab;
+      document.querySelectorAll('#side-panels [data-panel]').forEach(p=>{
+        p.style.display = p.dataset.panel === tab ? '' : 'none';
+      });
+    });
+  });
+
+  // toolbar: add custom button
+  function addTool(){
+    const input = document.getElementById('new-tool');
+    const text = input.value.trim();
+    if(!text) return;
+    const btn = document.createElement('button');
+    btn.className = 'tool-btn';
+    btn.textContent = text;
+    btn.onclick = ()=> log(`工具：${text} 被点击`);
+    document.getElementById('tool-actions').appendChild(btn);
+    input.value = '';
+    log(`已添加工具：${text}`);
+  }
+
+  // simple logging to status area
+  function log(msg){
+    const now = new Date().toLocaleTimeString();
+    statusContent.textContent = `[${now}] ${msg}`;
+  }
+
+  // initial render
+  render();
+
+  // close modal on backdrop click
+  modal.addEventListener('click', (e)=>{
+    if(e.target === modal) closeModal();
+  });
+
+  // keyboard shortcuts: T to toggle view (just for demo)
+  window.addEventListener('keydown', (e)=>{
+    if(e.key.toLowerCase() === 't'){
+      if(currentView === 'student') btnGroup.click();
+      else btnStudent.click();
+    }
+  });
+</script>
+</body>
+</html>
