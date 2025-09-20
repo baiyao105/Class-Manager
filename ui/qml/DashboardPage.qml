@@ -1,188 +1,424 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 2.15
 import RinUI
+import "./components"
 
-ScrollView {
+FluentPage {
     id: dashboardPage
+    horizontalPadding: 24
+    verticalPadding: 24
 
-    Column {
+    // 欢迎横幅
+    Item {
+        id: headerItem
         width: parent.width
-        spacing: 24
-        anchors.margins: 24
+        height: 120
 
-        // 页面标题
-        Row {
-            width: parent.width
+        Rectangle {
+            anchors.fill: parent
+            radius: 12
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: "#3b82f6" }
+                GradientStop { position: 1.0; color: "#1d4ed8" }
+            }
 
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 24
+                spacing: 20
+
+                Column {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Text {
+                        text: qsTr("欢迎使用班级管理系统")
+                        font.pixelSize: 24
+                        font.bold: true
+                        color: "white"
+                    }
+
+                    Text {
+                        text: qsTr("高效管理您的班级和学生信息")
+                        font.pixelSize: 14
+                        color: "#e0e7ff"
+                    }
+                }
+
+                // 快速操作按钮
+                Row {
+                    spacing: 12
+
+                    Button {
+                        text: qsTr("添加学生")
+                        icon.name: "ic_fluent_person_add_20_regular"
+                        onClicked: {
+                            // 切换到学生管理页面
+                            window.currentPageIndex = 1
+                        }
+                    }
+
+                    Button {
+                        text: qsTr("创建班级")
+                        icon.name: "ic_fluent_building_add_20_regular"
+                        onClicked: {
+                            // 切换到班级管理页面
+                            window.currentPageIndex = 2
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 统计卡片网格
+    GridLayout {
+        width: parent.width
+        columns: 4
+        columnSpacing: 16
+        rowSpacing: 16
+
+        // 学生总数卡片
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 120
+            color: "white"
+            radius: 8
+            border.color: "#e5e7eb"
+            border.width: 1
+            
             Column {
+                anchors.centerIn: parent
+                spacing: 8
+
                 Text {
-                    text: "仪表板"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: controller ? controller.totalStudents : "0"
                     font.pixelSize: 32
                     font.bold: true
-                    color: "#111827"
+                    color: "#0078d4"  // Fluent Blue
                 }
 
                 Text {
-                    text: "班级管理系统概览"
-                    font.pixelSize: 16
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTr("学生总数")
+                    font.pixelSize: 14
+                    color: "#605e5c"  // Fluent Neutral
+                }
+            }
+        }
+
+        // 班级总数卡片
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 120
+            color: "white"
+            radius: 8
+            border.color: "#e5e7eb"
+            border.width: 1
+            
+            Column {
+                anchors.centerIn: parent
+                spacing: 8
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: controller ? controller.totalClasses : "0"
+                    font.pixelSize: 32
+                    font.bold: true
+                    color: "#107c10"  // Fluent Green
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTr("班级总数")
+                    font.pixelSize: 14
+                    color: "#605e5c"  // Fluent Neutral
+                }
+            }
+        }
+
+        // 活跃班级卡片
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 120
+            color: "white"
+            radius: 8
+            border.color: "#e5e7eb"
+            border.width: 1
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 8
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: controller ? controller.activeClasses : "0"
+                    font.pixelSize: 32
+                    font.bold: true
+                    color: "#f59e0b"
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTr("活跃班级")
+                    font.pixelSize: 14
                     color: "#6b7280"
                 }
             }
         }
 
-        // 统计卡片
-        GridLayout {
-            width: parent.width
-            columns: 4
-            columnSpacing: 16
-            rowSpacing: 16
+        // 系统状态卡片
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 120
+            radius: 8
+            color: "white"
+            border.color: "#e5e7eb"
+            border.width: 1
 
-            StatCard {
-                title: "学生总数"
-                valueText: controller.stats.totalStudents.toString()
-                subtitle: "活跃学生"
-                themeColor: "#2563eb"
-                icon: "👥"
-            }
+            Column {
+                anchors.centerIn: parent
+                spacing: 8
 
-            StatCard {
-                title: "班级数量"
-                valueText: controller.stats.totalClasses.toString()
-                subtitle: "活跃班级"
-                themeColor: "#10b981"
-                icon: "🏫"
-            }
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 12
+                    height: 12
+                    radius: 6
+                    color: "#10b981"
+                }
 
-            StatCard {
-                title: "成就获得"
-                valueText: controller.stats.totalAchievements.toString()
-                subtitle: "本月新增"
-                themeColor: "#f59e0b"
-                icon: "🏆"
-            }
-
-            StatCard {
-                title: "平均分数"
-                valueText: controller.stats.averageScore.toFixed(1)
-                subtitle: "全校平均"
-                themeColor: "#3b82f6"
-                icon: "📊"
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTr("系统正常")
+                    font.pixelSize: 14
+                    color: "#6b7280"
+                }
             }
         }
+    }
 
-        // 图表和排名区域
-        Row {
-            width: parent.width
+    // 快速链接区域
+    Rectangle {
+        width: parent.width
+        height: 200
+        radius: 8
+        color: "white"
+        border.color: "#e5e7eb"
+        border.width: 1
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 20
             spacing: 16
 
-            // 分数趋势图表
-            Rectangle {
-                width: parent.width * 0.65
-                height: 350
-                color: "#ffffff"
-                radius: 12
-                border.color: "#e5e7eb"
-                border.width: 1
+            Text {
+                text: qsTr("快速操作")
+                font.pixelSize: 18
+                font.bold: true
+                color: "#1f2937"
+            }
 
-                Column {
-                    anchors.fill: parent
-                    anchors.margins: 20
+            GridLayout {
+                width: parent.width
+                columns: 3
+                columnSpacing: 16
+                rowSpacing: 12
+
+                // 学生管理快捷方式
+                Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    text: qsTr("学生管理")
+                    icon.name: "ic_fluent_people_20_regular"
+                    onClicked: window.currentPageIndex = 1
+                }
+
+                // 班级管理快捷方式
+                Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    text: qsTr("班级管理")
+                    icon.name: "ic_fluent_building_20_regular"
+                    onClicked: window.currentPageIndex = 2
+                }
+
+                // 数据分析快捷方式
+                Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    text: qsTr("数据分析")
+                    icon.name: "ic_fluent_data_bar_vertical_20_regular"
+                    onClicked: window.currentPageIndex = 3
+                }
+            }
+        }
+    }
+
+    // 主内容区域
+    mainContent: [
+        ContentSection {
+            sectionTitle: "数据概览"
+            sectionSubtitle: "实时统计数据和趋势分析"
+            
+            content: [
+                Row {
+                    width: parent.width
                     spacing: 16
-
-                    Text {
-                        text: "分数趋势"
-                        font.pixelSize: 18
-                        font.bold: true
-                        color: "#111827"
-                    }
-
-                    // 简单的趋势图表示
+                    
+                    // 成绩趋势图表
                     Rectangle {
-                        width: parent.width
-                        height: 250
-                        color: "#f9fafb"
-                        radius: 8
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "📈 分数趋势图表\n(集成图表库后显示)"
-                            font.pixelSize: 14
-                            color: "#6b7280"
-                            horizontalAlignment: Text.AlignHCenter
+                        width: (parent.width - 16) / 2
+                        height: 300
+                        color: "#ffffff"
+                        radius: 12
+                        border.color: "#e5e7eb"
+                        border.width: 1
+                        
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 20
+                            spacing: 16
+                            
+                            Text {
+                                text: "成绩趋势"
+                                font.pixelSize: 16
+                                font.weight: Font.Medium
+                                color: "#111827"
+                            }
+                            
+                            Rectangle {
+                                width: parent.width
+                                height: parent.height - 40
+                                color: "#f8fafc"
+                                radius: 8
+                                
+                                Text {
+                                    text: "📈 图表区域"
+                                    font.pixelSize: 24
+                                    color: "#6b7280"
+                                    anchors.centerIn: parent
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 班级排名
+                    Rectangle {
+                        width: (parent.width - 16) / 2
+                        height: 300
+                        color: "#ffffff"
+                        radius: 12
+                        border.color: "#e5e7eb"
+                        border.width: 1
+                        
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 20
+                            spacing: 16
+                            
+                            Text {
+                                text: "班级排名"
+                                font.pixelSize: 16
+                                font.weight: Font.Medium
+                                color: "#111827"
+                            }
+                            
+                            Column {
+                                width: parent.width
+                                spacing: 8
+                                
+                                Repeater {
+                                    model: 5
+                                    
+                                    Rectangle {
+                                        width: parent.width
+                                        height: 40
+                                        color: "#f8fafc"
+                                        radius: 8
+                                        
+                                        Row {
+                                            anchors.fill: parent
+                                            anchors.margins: 12
+                                            spacing: 12
+                                            
+                                            Text {
+                                                text: "#" + (index + 1)
+                                                font.weight: Font.Medium
+                                                color: "#3b82f6"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                            
+                                            Text {
+                                                text: "高三" + (index + 1) + "班"
+                                                color: "#111827"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                            
+                                            Item { Layout.fillWidth: true }
+                                            
+                                            Text {
+                                                text: (85.5 - index * 2.1).toFixed(1)
+                                                font.weight: Font.Medium
+                                                color: "#10b981"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-            }
-
-            // 班级排名
-            Rectangle {
-                width: parent.width * 0.35 - 16
-                height: 350
-                color: "#ffffff"
-                radius: 12
-                border.color: "#e5e7eb"
-                border.width: 1
-
-                Column {
-                    anchors.fill: parent
-                    anchors.margins: 20
-                    spacing: 16
-
-                    Text {
-                        text: "班级排名"
-                        font.pixelSize: 18
-                        font.bold: true
-                        color: "#111827"
-                    }
-
-                    ListView {
-                        width: parent.width
-                        height: 250
-                        model: controller.classes
-
-                        delegate: Rectangle {
-                            width: parent.width
-                            height: 60
-                            color: index % 2 === 0 ? "#f9fafb" : "transparent"
-                            radius: 6
-
+            ]
+        },
+        
+        ContentSection {
+            sectionTitle: "最近活动"
+            sectionSubtitle: "系统最新动态和重要通知"
+            
+            content: [
+                Rectangle {
+                    width: parent.width
+                    height: 200
+                    color: "#ffffff"
+                    radius: 12
+                    border.color: "#e5e7eb"
+                    border.width: 1
+                    
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: 20
+                        spacing: 12
+                        
+                        Repeater {
+                            model: 4
+                            
                             Row {
-                                anchors.fill: parent
-                                anchors.margins: 12
+                                width: parent.width
                                 spacing: 12
-
-                                // 排名
+                                
                                 Rectangle {
-                                    width: 24
-                                    height: 24
-                                    radius: 12
-                                    color: index === 0 ? "#fbbf24" :
-                                           index === 1 ? "#9ca3af" :
-                                           index === 2 ? "#cd7f32" : "#e5e7eb"
+                                    width: 8
+                                    height: 8
+                                    radius: 4
+                                    color: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"][index]
                                     anchors.verticalCenter: parent.verticalCenter
-
-                                    Text {
-                                        text: (index + 1).toString()
-                                        anchors.centerIn: parent
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                        color: index < 3 ? "white" : "#374151"
-                                    }
                                 }
-
+                                
                                 Column {
-                                    anchors.verticalCenter: parent.verticalCenter
-
+                                    spacing: 2
+                                    
                                     Text {
-                                        text: modelData.name
+                                        text: ["新增学生张三", "高三1班成绩录入完成", "系统备份成功", "用户权限更新"][index]
                                         font.pixelSize: 14
-                                        font.bold: true
                                         color: "#111827"
                                     }
-
+                                    
                                     Text {
-                                        text: modelData.studentCount + "人 · 平均" + modelData.averageScore.toFixed(1) + "分"
+                                        text: ["2分钟前", "15分钟前", "1小时前", "3小时前"][index]
                                         font.pixelSize: 12
                                         color: "#6b7280"
                                     }
@@ -191,65 +427,11 @@ ScrollView {
                         }
                     }
                 }
-            }
+            ]
         }
+    ]
 
-        // 快速操作
-        Rectangle {
-            width: parent.width
-            height: 120
-            color: "#ffffff"
-            radius: 12
-            border.color: "#e5e7eb"
-            border.width: 1
-
-            Column {
-                anchors.fill: parent
-                anchors.margins: 20
-                spacing: 16
-
-                Text {
-                    text: "快速操作"
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: "#111827"
-                }
-
-                Row {
-                    spacing: 12
-
-                    Button {
-                        text: "添加学生"
-                        highlighted: true
-                        icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"
-                        onClicked: addStudentDialog.open()
-                    }
-
-                    Button {
-                        text: "创建班级"
-                        icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E"
-                        onClicked: addClassDialog.open()
-                    }
-
-                    Button {
-                        text: "分数统计"
-                        flat: true
-                        icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'/%3E%3C/svg%3E"
-                        onClicked: controller.refreshStats()
-                    }
-
-                    Button {
-                        text: "导出数据"
-                        flat: true
-                        icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z'/%3E%3C/svg%3E"
-                        onClicked: controller.exportData()
-                    }
-                }
-            }
-        }
-    }
-
-    // 添加学生对话框
+    // 对话框定义
     Dialog {
         id: addStudentDialog
         title: "添加学生"
@@ -257,48 +439,30 @@ ScrollView {
         anchors.centerIn: parent
         width: 400
         height: 300
-
+        
         Column {
             anchors.fill: parent
             spacing: 16
-
+            
             TextField {
-                id: studentNameField
                 width: parent.width
                 placeholderText: "学生姓名"
             }
-
+            
             TextField {
-                id: studentNumberField
                 width: parent.width
                 placeholderText: "学号"
             }
-
+            
             ComboBox {
-                id: classComboBox
                 width: parent.width
-                model: controller.classes.map(c => c.name)
-                displayText: "选择班级"
+                model: ["高一1班", "高一2班", "高二1班", "高二2班", "高三1班", "高三2班"]
             }
         }
-
+        
         standardButtons: Dialog.Ok | Dialog.Cancel
-
-        onAccepted: {
-            if (studentNameField.text && studentNumberField.text && classComboBox.currentIndex >= 0) {
-                controller.addStudent(
-                    studentNameField.text,
-                    studentNumberField.text,
-                    controller.classes[classComboBox.currentIndex].name
-                )
-                studentNameField.clear()
-                studentNumberField.clear()
-                classComboBox.currentIndex = -1
-            }
-        }
     }
-
-    // 添加班级对话框
+    
     Dialog {
         id: addClassDialog
         title: "创建班级"
@@ -306,26 +470,26 @@ ScrollView {
         anchors.centerIn: parent
         width: 400
         height: 250
-
+        
         Column {
             anchors.fill: parent
             spacing: 16
-
+            
             TextField {
                 id: classNameField
                 width: parent.width
                 placeholderText: "班级名称"
             }
-
+            
             TextField {
                 id: teacherNameField
                 width: parent.width
                 placeholderText: "班主任姓名"
             }
         }
-
+        
         standardButtons: Dialog.Ok | Dialog.Cancel
-
+        
         onAccepted: {
             if (classNameField.text && teacherNameField.text) {
                 controller.addClass(classNameField.text, teacherNameField.text)
@@ -333,5 +497,34 @@ ScrollView {
                 teacherNameField.clear()
             }
         }
+    }
+    
+    Dialog {
+        id: importScoresDialog
+        title: "导入成绩"
+        modal: true
+        anchors.centerIn: parent
+        width: 500
+        height: 300
+        
+        Column {
+            anchors.fill: parent
+            spacing: 16
+            
+            Text {
+                text: "选择要导入的成绩文件"
+                font.pixelSize: 14
+                color: "#374151"
+            }
+            
+            Button {
+                text: "选择文件"
+                onClicked: {
+                    // 文件选择逻辑
+                }
+            }
+        }
+        
+        standardButtons: Dialog.Ok | Dialog.Cancel
     }
 }

@@ -68,18 +68,19 @@ class ClassManagerController(QObject):
             achievement_stats = self._achievement_service.get_achievement_stats()
 
             self._stats = {
-                "total_students": student_stats["total_students"],
-                "total_classes": class_stats["total_classes"],
-                "total_achievements": achievement_stats["total_achievements"],
-                "avg_score": achievement_stats["avg_points_per_achievement"],
+                "total_students": student_stats.get("total_students", 0),
+                "total_classes": class_stats.get("total_classes", 0),
+                "total_achievements": achievement_stats.get("total_achievements", 0),
+                "avg_score": achievement_stats.get("avg_points_per_achievement", 0),
             }
 
             # 加载列表数据
             self._students = [self._student_to_dict(s) for s in self._student_service.get_all_students()]
             self._classes = [self._class_to_dict(c) for c in self._class_service.get_all_classes()]
-            self._achievements = [
-                self._achievement_to_dict(a) for a in self._achievement_service.get_all_achievements()
-            ]
+            self._achievements = []
+            # self._achievements = [
+            #     self._achievement_to_dict(a) for a in self._achievement_service.get_all_achievements()
+            # ]
 
             # 发出信号
             self.statsChanged.emit()
@@ -106,15 +107,15 @@ class ClassManagerController(QObject):
         """将班级注册对象转换为字典"""
         return {
             "id": class_obj.id,
-            "name": class_obj.name,
+            "name": class_obj.class_name,  # 使用class_name字段
             "description": class_obj.description or "",
-            "is_active": not class_obj.is_deleted,  # 使用is_deleted字段
+            "is_active": class_obj.is_active,  # DataRegistry使用is_active字段，不是is_deleted
             "class_type": class_obj.class_type or "REGULAR",
             "grade": class_obj.grade or "",
             "school_year": class_obj.school_year or "",
             "student_count": class_obj.student_count,  # 直接使用student_count字段
             "created_at": class_obj.created_at.isoformat() if class_obj.created_at else "",
-            "class_uuid": class_obj.class_uuid,
+            "class_uuid": class_obj.uuid,  # DataRegistry使用uuid字段，不是class_uuid
         }
 
     def _achievement_to_dict(self, achievement) -> dict:

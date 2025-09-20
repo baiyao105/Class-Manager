@@ -233,6 +233,32 @@ class ClassService:
         """
         return self.class_repository.get_classroom_details(class_id)
 
+    def get_class_stats(self) -> dict[str, Any]:
+        """获取班级统计信息
+        
+        Returns:
+            包含班级统计信息的字典
+        """
+        try:
+            all_classes = self.get_all_classes()
+            total_classes = len(all_classes)
+            
+            # 计算其他统计信息
+            active_classes = sum(1 for cls in all_classes if cls.is_active)
+            
+            return {
+                "total_classes": total_classes,
+                "active_classes": active_classes,
+                "inactive_classes": total_classes - active_classes,
+            }
+        except Exception as e:
+            print(f"获取班级统计失败: {e}")
+            return {
+                "total_classes": 0,
+                "active_classes": 0,
+                "inactive_classes": 0,
+            }
+
     def get_class_statistics(self, class_id: str) -> dict[str, Any]:
         """获取班级统计信息
 

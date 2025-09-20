@@ -386,3 +386,49 @@ class StudentService:
                 "last_sync_at": datetime.utcnow(),
             },
         )
+
+    def get_student_stats(self) -> dict[str, Any]:
+        """获取学生统计信息 - 临时方法
+        
+        Returns:
+            包含学生统计信息的字典
+        """
+        try:
+            # 获取所有活跃学生
+            active_students = self.get_active_students()
+            total_students = len(active_students)
+            
+            # 计算平均分
+            if active_students:
+                total_score = sum(student.current_score for student in active_students)
+                avg_score = total_score / total_students
+            else:
+                avg_score = 0.0
+            
+            return {
+                "total_students": total_students,
+                "active_students": total_students,
+                "average_score": avg_score,
+                "total_achievements": 0,  # 临时数据
+            }
+        except Exception as e:
+            print(f"获取学生统计失败: {e}")
+            return {
+                "total_students": 0,
+                "active_students": 0,
+                "average_score": 0.0,
+                "total_achievements": 0,
+            }
+
+    def get_all_students(self, include_inactive: bool = False) -> list[Student]:
+        """获取所有学生
+        
+        Args:
+            include_inactive: 是否包含非活跃学生
+            
+        Returns:
+            学生列表
+        """
+        if include_inactive:
+            return self.student_repository.get_all()
+        return self.get_active_students()

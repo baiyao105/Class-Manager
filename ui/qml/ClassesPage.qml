@@ -1,326 +1,557 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 2.15
 import RinUI
+import "./components"
 
-ScrollView {
+FluentPage {
     id: classesPage
+    horizontalPadding: 0
+    verticalPadding: 0
 
-    Column {
-        width: parent.width
-        spacing: 24
-        anchors.margins: 24
+    // 主容器 - 参考HTML的container样式
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 28
+        radius: 18
+        color: "#ffffff"
+        border.width: 1
+        border.color: "#e9ecef"
 
-        // 页面标题和操作
-        Row {
-            width: parent.width
+        Column {
+            anchors.fill: parent
+            anchors.margins: 18
+            spacing: 16
 
-            Column {
-                Text {
-                    text: "班级管理"
-                    font.pixelSize: 32
-                    font.bold: true
-                    color: "#111827"
-                }
-
-                Text {
-                    text: "管理所有班级信息和设置"
-                    font.pixelSize: 16
-                    color: "#6b7280"
-                }
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Button {
-                text: "创建班级"
-                highlighted: true
-                icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/%3E%3C/svg%3E"
-                anchors.verticalCenter: parent.verticalCenter
-                onClicked: addClassDialog.open()
-            }
-        }
-
-        // 班级统计概览
-        Rectangle {
-            width: parent.width
-            height: 100
-            color: "#ffffff"
-            radius: 12
-            border.color: "#e5e7eb"
-            border.width: 1
-
+            // 顶部分段控制器
             Row {
-                anchors.fill: parent
-                anchors.margins: 20
-                spacing: 40
+                width: parent.width
+                spacing: 16
 
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Text {
-                        text: "总班级数"
-                        font.pixelSize: 14
-                        color: "#6b7280"
-                    }
-
-                    Text {
-                        text: controller.classes.length.toString()
-                        font.pixelSize: 24
-                        font.bold: true
-                        color: "#2563eb"
-                    }
-                }
-
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Text {
-                        text: "总学生数"
-                        font.pixelSize: 14
-                        color: "#6b7280"
-                    }
-
-                    Text {
-                        text: controller.classes.reduce((sum, cls) => sum + cls.studentCount, 0).toString()
-                        font.pixelSize: 24
-                        font.bold: true
-                        color: "#059669"
-                    }
-                }
-
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Text {
-                        text: "平均班级人数"
-                        font.pixelSize: 14
-                        color: "#6b7280"
-                    }
-
-                    Text {
-                        text: controller.classes.length > 0 ?
-                              (controller.classes.reduce((sum, cls) => sum + cls.studentCount, 0) / controller.classes.length).toFixed(1) : "0"
-                        font.pixelSize: 24
-                        font.bold: true
-                        color: "#f59e0b"
-                    }
-                }
-            }
-        }
-
-        // 班级卡片网格
-        GridLayout {
-            width: parent.width
-            columns: 3
-            columnSpacing: 16
-            rowSpacing: 16
-
-            Repeater {
-                model: controller.classes
-
-                delegate: Rectangle {
-                    Layout.preferredWidth: (parent.width - 32) / 3
-                    Layout.preferredHeight: 280
-                    color: "#ffffff"
-                    radius: 12
-                    border.color: "#e5e7eb"
+                Rectangle {
+                    id: segmentedControl
+                    height: 40
+                    width: 200
+                    radius: 20
+                    color: "#f8f9fa"
+                    border.color: "#e9ecef"
                     border.width: 1
 
-                    // 悬停效果
-                    MouseArea {
+                    Row {
                         anchors.fill: parent
-                        hoverEnabled: true
+                        anchors.margins: 4
+                        spacing: 4
 
-                        onEntered: parent.border.color = "#2563eb"
-                        onExited: parent.border.color = "#e5e7eb"
+                        Button {
+                            id: studentViewBtn
+                            width: 92
+                            height: 32
+                            text: "学生视图"
+                            flat: true
+                            checkable: true
+                            checked: true
+                            
+                            background: Rectangle {
+                                radius: 16
+                                color: parent.checked ? "#0078d4" : "transparent"
+                                opacity: parent.checked ? 0.16 : 0
+                            }
+                            
+                            contentItem: Text {
+                                text: parent.text
+                                font.weight: Font.DemiBold
+                                color: parent.checked ? "#0078d4" : "#6c757d"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            
+                            onClicked: {
+                                checked = true
+                                groupViewBtn.checked = false
+                                currentView = "student"
+                                refreshView()
+                            }
+                        }
+
+                        Button {
+                            id: groupViewBtn
+                            width: 92
+                            height: 32
+                            text: "班级视图"
+                            flat: true
+                            checkable: true
+                            
+                            background: Rectangle {
+                                radius: 16
+                                color: parent.checked ? "#0078d4" : "transparent"
+                                opacity: parent.checked ? 0.16 : 0
+                            }
+                            
+                            contentItem: Text {
+                                text: parent.text
+                                font.weight: Font.DemiBold
+                                color: parent.checked ? "#0078d4" : "#6c757d"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            
+                            onClicked: {
+                                checked = true
+                                studentViewBtn.checked = false
+                                currentView = "class"
+                                refreshView()
+                            }
+                        }
                     }
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "演示班级"
+                    color: "#6c757d"
+                    font.weight: Font.DemiBold
+                }
+            }
+
+            // 主要布局区域
+            Row {
+                width: parent.width
+                height: parent.height - 120
+                spacing: 16
+
+                // 左侧主工作区
+                Rectangle {
+                    id: workArea
+                    width: parent.width - 336
+                    height: parent.height
+                    radius: 12
+                    color: "#fbfcfd"
+                    border.color: "#e9ecef"
+                    border.width: 1
 
                     Column {
                         anchors.fill: parent
-                        anchors.margins: 20
-                        spacing: 16
+                        anchors.margins: 12
+                        spacing: 12
 
-                        // 班级头部信息
+                        // 工作区标题
                         Row {
                             width: parent.width
+                            
+                            Text {
+                                text: currentView === "student" ? "学生列表" : "班级列表"
+                                font.pixelSize: 16
+                                font.weight: Font.Bold
+                                color: "#212529"
+                            }
+                            
+                            Text {
+                                anchors.right: parent.right
+                                text: currentView === "student" ? "当前：学生视图" : "当前：班级视图"
+                                font.pixelSize: 13
+                                color: "#6c757d"
+                            }
+                        }
 
-                            Column {
-                                width: parent.width - 60
+                        // 卡片网格
+                        ScrollView {
+                            width: parent.width
+                            height: parent.height - 40
+                            clip: true
 
-                                Text {
-                                    text: modelData.name
-                                    font.pixelSize: 20
-                                    font.bold: true
-                                    color: "#111827"
-                                    elide: Text.ElideRight
-                                    width: parent.width
+                            GridLayout {
+                                id: cardGrid
+                                width: workArea.width - 24
+                                columns: Math.floor(width / 200)
+                                columnSpacing: 12
+                                rowSpacing: 12
+
+                                Repeater {
+                                    id: cardRepeater
+                                    model: currentView === "student" ? studentModel : classModel
+
+                                    Rectangle {
+                                        Layout.preferredWidth: 180
+                                        Layout.preferredHeight: 140
+                                        radius: 12
+                                        color: "#ffffff"
+                                        border.color: "#e9ecef"
+                                        border.width: 1
+
+                                        // 悬停效果
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onEntered: {
+                                                parent.border.color = "#0078d4"
+                                                parent.y -= 6
+                                            }
+                                            onExited: {
+                                                parent.border.color = "#e9ecef"
+                                                parent.y += 6
+                                            }
+                                            onClicked: openDetailModal(modelData)
+                                        }
+
+                                        Column {
+                                            anchors.fill: parent
+                                            anchors.margins: 12
+                                            spacing: 8
+
+                                            Text {
+                                                text: modelData.name || "未知"
+                                                font.weight: Font.Bold
+                                                color: "#212529"
+                                                elide: Text.ElideRight
+                                                width: parent.width
+                                            }
+
+                                            Text {
+                                                text: currentView === "student" ? 
+                                                      ("学号：" + (modelData.id || "")) :
+                                                      ("成员：" + (modelData.studentCount || 0))
+                                                font.pixelSize: 13
+                                                color: "#6c757d"
+                                            }
+
+                                            Text {
+                                                text: currentView === "student" ? 
+                                                      ("学分：" + (modelData.credits || 0)) :
+                                                      ("平均分：" + (modelData.avgScore || 0))
+                                                font.pixelSize: 13
+                                                color: "#6c757d"
+                                            }
+
+                                            Rectangle {
+                                                width: parent.width
+                                                height: 24
+                                                radius: 12
+                                                color: "#e3f2fd"
+                                                
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: currentView === "student" ? 
+                                                          ("班级 " + (modelData.className || "A")) :
+                                                          ("ID " + (modelData.id || ""))
+                                                    color: "#0078d4"
+                                                    font.weight: Font.DemiBold
+                                                    font.pixelSize: 13
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
+                            }
+                        }
+                    }
+                }
 
-                                Text {
-                                    text: "班主任：" + modelData.teacherName
-                                    font.pixelSize: 14
-                                    color: "#6b7280"
-                                    elide: Text.ElideRight
-                                    width: parent.width
+                // 右侧信息面板
+                Rectangle {
+                    id: sidePanel
+                    width: 320
+                    height: parent.height
+                    radius: 12
+                    color: "#ffffff"
+                    border.color: "#e9ecef"
+                    border.width: 1
+
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 12
+
+                        Row {
+                            width: parent.width
+                            
+                            Text {
+                                text: "快速班级信息"
+                                font.weight: Font.Bold
+                                color: "#212529"
+                            }
+                            
+                            Text {
+                                anchors.right: parent.right
+                                text: "及时概览"
+                                font.pixelSize: 13
+                                color: "#6c757d"
+                            }
+                        }
+
+                        // 标签页
+                        Row {
+                            width: parent.width
+                            spacing: 8
+
+                            Button {
+                                id: tab1Btn
+                                text: "概览"
+                                flat: true
+                                checkable: true
+                                checked: true
+                                width: (parent.width - 16) / 3
+                                
+                                background: Rectangle {
+                                    radius: 8
+                                    color: parent.checked ? "#e3f2fd" : "transparent"
+                                }
+                                
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: parent.checked ? "#0078d4" : "#6c757d"
+                                    font.weight: Font.Bold
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                
+                                onClicked: {
+                                    checked = true
+                                    tab2Btn.checked = false
+                                    tab3Btn.checked = false
+                                    currentTab = 1
                                 }
                             }
 
-                            Rectangle {
-                                width: 40
-                                height: 40
-                                radius: 20
-                                color: modelData.isActive ? "#dcfce7" : "#fef3c7"
+                            Button {
+                                id: tab2Btn
+                                text: "成绩"
+                                flat: true
+                                checkable: true
+                                width: (parent.width - 16) / 3
+                                
+                                background: Rectangle {
+                                    radius: 8
+                                    color: parent.checked ? "#e3f2fd" : "transparent"
+                                }
+                                
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: parent.checked ? "#0078d4" : "#6c757d"
+                                    font.weight: Font.Bold
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                
+                                onClicked: {
+                                    checked = true
+                                    tab1Btn.checked = false
+                                    tab3Btn.checked = false
+                                    currentTab = 2
+                                }
+                            }
 
-                                Text {
-                                    text: modelData.isActive ? "✓" : "⏸"
-                                    anchors.centerIn: parent
-                                    font.pixelSize: 18
-                                    color: modelData.isActive ? "#166534" : "#92400e"
+                            Button {
+                                id: tab3Btn
+                                text: "更多"
+                                flat: true
+                                checkable: true
+                                width: (parent.width - 16) / 3
+                                
+                                background: Rectangle {
+                                    radius: 8
+                                    color: parent.checked ? "#e3f2fd" : "transparent"
+                                }
+                                
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: parent.checked ? "#0078d4" : "#6c757d"
+                                    font.weight: Font.Bold
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                
+                                onClicked: {
+                                    checked = true
+                                    tab1Btn.checked = false
+                                    tab2Btn.checked = false
+                                    currentTab = 3
                                 }
                             }
                         }
 
-                        // 分隔线
+                        // 标签页内容
                         Rectangle {
                             width: parent.width
-                            height: 1
-                            color: "#e5e7eb"
-                        }
+                            height: 160
+                            radius: 10
+                            color: "#fbfcfd"
+                            border.color: "#e9ecef"
+                            border.width: 1
 
-                        // 统计信息
-                        Column {
-                            width: parent.width
-                            spacing: 12
-
-                            Row {
-                                width: parent.width
+                            Column {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 8
+                                visible: currentTab === 1
 
                                 Text {
-                                    text: "学生数量"
-                                    font.pixelSize: 14
-                                    color: "#6b7280"
-                                    width: parent.width / 2
+                                    text: "班级 A · 10 人"
+                                    font.weight: Font.Bold
+                                    color: "#212529"
                                 }
 
                                 Text {
-                                    text: modelData.studentCount + "人"
-                                    font.pixelSize: 14
-                                    font.bold: true
-                                    color: "#111827"
-                                    horizontalAlignment: Text.AlignRight
-                                    width: parent.width / 2
+                                    text: "平均学分：12.6"
+                                    font.pixelSize: 13
+                                    color: "#6c757d"
+                                }
+
+                                Row {
+                                    spacing: 8
+                                    
+                                    Button {
+                                        text: "查看"
+                                        flat: true
+                                        font.pixelSize: 12
+                                        onClicked: console.log("查看班级详情")
+                                    }
+                                    
+                                    Button {
+                                        text: "导出"
+                                        flat: true
+                                        font.pixelSize: 12
+                                        onClicked: console.log("导出班级报告")
+                                    }
                                 }
                             }
 
-                            Row {
-                                width: parent.width
+                            Column {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 8
+                                visible: currentTab === 2
 
                                 Text {
-                                    text: "平均分数"
-                                    font.pixelSize: 14
-                                    color: "#6b7280"
-                                    width: parent.width / 2
+                                    text: "成绩分布"
+                                    font.weight: Font.Bold
+                                    color: "#212529"
                                 }
 
                                 Text {
-                                    text: modelData.averageScore.toFixed(1) + "分"
-                                    font.pixelSize: 14
-                                    font.bold: true
-                                    color: "#059669"
-                                    horizontalAlignment: Text.AlignRight
-                                    width: parent.width / 2
+                                    text: "A: 3 / B: 4 / C: 3"
+                                    font.pixelSize: 13
+                                    color: "#6c757d"
                                 }
                             }
 
-                            Row {
-                                width: parent.width
+                            Column {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 8
+                                visible: currentTab === 3
 
                                 Text {
-                                    text: "班级排名"
-                                    font.pixelSize: 14
-                                    color: "#6b7280"
-                                    width: parent.width / 2
+                                    text: "其他信息"
+                                    font.weight: Font.Bold
+                                    color: "#212529"
                                 }
 
                                 Text {
-                                    text: "第" + (index + 1) + "名"
-                                    font.pixelSize: 14
-                                    font.bold: true
-                                    color: index === 0 ? "#fbbf24" :
-                                           index === 1 ? "#9ca3af" :
-                                           index === 2 ? "#cd7f32" : "#6b7280"
-                                    horizontalAlignment: Text.AlignRight
-                                    width: parent.width / 2
-                                }
-                            }
-                        }
-
-                        // 操作按钮
-                        Row {
-                            width: parent.width
-                            spacing: 8
-
-                            Button {
-                                text: "查看详情"
-                                flat: true
-                                width: (parent.width - 8) / 2
-                                onClicked: {
-                                    console.log("查看班级详情:", modelData.name)
-                                }
-                            }
-
-                            Button {
-                                text: "管理学生"
-                                highlighted: true
-                                width: (parent.width - 8) / 2
-                                onClicked: {
-                                    console.log("管理班级学生:", modelData.name)
+                                    text: "自定义备注 / 快捷设置"
+                                    font.pixelSize: 13
+                                    color: "#6c757d"
                                 }
                             }
                         }
+                    }
+                }
+            }
 
-                        // 更多操作
-                        Row {
+            // 底部工具栏区域
+            Row {
+                width: parent.width
+                height: 64
+                spacing: 12
+
+                // 左侧工具栏
+                Rectangle {
+                    width: parent.width - 332
+                    height: 64
+                    radius: 12
+                    color: "#f8f9fa"
+                    border.color: "#e9ecef"
+                    border.width: 1
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+
+                        Button {
+                            text: "点名"
+                            flat: true
+                            font.weight: Font.DemiBold
+                            onClicked: console.log("点名功能")
+                        }
+
+                        Button {
+                            text: "群发"
+                            flat: true
+                            font.weight: Font.DemiBold
+                            onClicked: console.log("群发消息")
+                        }
+
+                        Button {
+                            text: "批量评分"
+                            flat: true
+                            font.weight: Font.DemiBold
+                            onClicked: console.log("批量评分")
+                        }
+                    }
+
+                    Row {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+
+                        TextField {
+                            id: toolInput
+                            width: 180
+                            placeholderText: "输入快捷按钮名字"
+                            font.pixelSize: 12
+                        }
+
+                        Button {
+                            text: "添加"
+                            flat: true
+                            font.weight: Font.DemiBold
+                            onClicked: {
+                                if (toolInput.text.trim()) {
+                                    console.log("添加工具：" + toolInput.text)
+                                    toolInput.clear()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 右侧状态区域
+                Rectangle {
+                    width: 320
+                    height: 64
+                    radius: 12
+                    color: "#ffffff"
+                    border.color: "#e9ecef"
+                    border.width: 1
+
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 4
+
+                        Text {
+                            text: "卡片预览 · 快速操作"
+                            font.weight: Font.Bold
+                            color: "#212529"
+                            font.pixelSize: 12
+                        }
+
+                        Text {
+                            id: statusText
+                            text: "选中项会显示在这里"
+                            font.pixelSize: 11
+                            color: "#6c757d"
+                            elide: Text.ElideRight
                             width: parent.width
-                            spacing: 8
-
-                            Button {
-                                text: "编辑"
-                                flat: true
-                                width: (parent.width - 16) / 3
-                                font.pixelSize: 12
-                                onClicked: {
-                                    editClassDialog.classId = modelData.id
-                                    editClassDialog.className = modelData.name
-                                    editClassDialog.teacherName = modelData.teacherName
-                                    editClassDialog.open()
-                                }
-                            }
-
-                            Button {
-                                text: modelData.isActive ? "停用" : "启用"
-                                flat: true
-                                width: (parent.width - 16) / 3
-                                font.pixelSize: 12
-                                palette.buttonText: modelData.isActive ? "#dc2626" : "#059669"
-                                onClicked: {
-                                    console.log(modelData.isActive ? "停用班级:" : "启用班级:", modelData.name)
-                                }
-                            }
-
-                            Button {
-                                text: "删除"
-                                flat: true
-                                width: (parent.width - 16) / 3
-                                font.pixelSize: 12
-                                palette.buttonText: "#dc2626"
-                                onClicked: {
-                                    deleteClassDialog.classId = modelData.id
-                                    deleteClassDialog.className = modelData.name
-                                    deleteClassDialog.open()
-                                }
-                            }
                         }
                     }
                 }
@@ -328,159 +559,123 @@ ScrollView {
         }
     }
 
-    // 添加班级对话框
+    // 详情模态框
     Dialog {
-        id: addClassDialog
-        title: "创建班级"
+        id: detailModal
         modal: true
         anchors.centerIn: parent
-        width: 400
+        width: 360
         height: 300
+        
+        property var itemData: null
+
+        background: Rectangle {
+            radius: 14
+            color: "#ffffff"
+            border.color: "#e9ecef"
+            border.width: 1
+        }
 
         Column {
             anchors.fill: parent
-            spacing: 16
+            anchors.margins: 16
+            spacing: 12
 
-            TextField {
-                id: classNameField
+            Text {
+                text: "详情"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: "#212529"
+            }
+
+            Column {
                 width: parent.width
-                placeholderText: "班级名称"
+                spacing: 8
 
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: classNameField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
+                Text {
+                    text: detailModal.itemData ? detailModal.itemData.name : ""
+                    font.weight: Font.Bold
+                    color: "#212529"
+                }
+
+                Text {
+                    text: currentView === "student" ? 
+                          ("学号：" + (detailModal.itemData ? detailModal.itemData.id : "")) :
+                          ("成员数：" + (detailModal.itemData ? detailModal.itemData.studentCount : ""))
+                    font.pixelSize: 13
+                    color: "#6c757d"
+                }
+
+                Text {
+                    text: currentView === "student" ? 
+                          ("学分：" + (detailModal.itemData ? detailModal.itemData.credits : "")) :
+                          ("平均分：" + (detailModal.itemData ? detailModal.itemData.avgScore : ""))
+                    font.pixelSize: 13
+                    color: "#6c757d"
                 }
             }
 
-            TextField {
-                id: teacherNameField
-                width: parent.width
-                placeholderText: "班主任姓名"
-
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: teacherNameField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
+            Row {
+                spacing: 8
+                
+                Button {
+                    text: currentView === "student" ? "发消息" : "成员列表"
+                    flat: true
+                    onClicked: {
+                        console.log(currentView === "student" ? "发送消息" : "查看成员列表")
+                        detailModal.close()
+                    }
+                }
+                
+                Button {
+                    text: currentView === "student" ? "查看成绩" : "导出报表"
+                    flat: true
+                    onClicked: {
+                        console.log(currentView === "student" ? "查看成绩" : "导出报表")
+                        detailModal.close()
+                    }
                 }
             }
 
-            TextField {
-                id: teacherContactField
-                width: parent.width
-                placeholderText: "班主任联系方式 (可选)"
-
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: teacherContactField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
-                }
-            }
-
-            ComboBox {
-                id: classTypeCombo
-                width: parent.width
-                model: ["普通班", "荣誉班", "特殊班"]
-                currentIndex: 0
-            }
-        }
-
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        onAccepted: {
-            if (classNameField.text && teacherNameField.text) {
-                controller.addClass(classNameField.text, teacherNameField.text)
-                classNameField.clear()
-                teacherNameField.clear()
-                teacherContactField.clear()
-                classTypeCombo.currentIndex = 0
+            Button {
+                text: "关闭"
+                anchors.right: parent.right
+                flat: true
+                onClicked: detailModal.close()
             }
         }
     }
 
-    // 编辑班级对话框
-    Dialog {
-        id: editClassDialog
-        title: "编辑班级"
-        modal: true
-        anchors.centerIn: parent
-        width: 400
-        height: 300
+    // 数据模型和状态
+    property string currentView: "student"
+    property int currentTab: 1
 
-        property int classId: 0
-        property string className: ""
-        property string teacherName: ""
+    property var studentModel: [
+        {name: "学生 1", id: "100", credits: 25, className: "A"},
+        {name: "学生 2", id: "101", credits: 28, className: "A"},
+        {name: "学生 3", id: "102", credits: 22, className: "B"},
+        {name: "学生 4", id: "103", credits: 30, className: "A"},
+        {name: "学生 5", id: "104", credits: 26, className: "B"},
+        {name: "学生 6", id: "105", credits: 24, className: "A"}
+    ]
 
-        Column {
-            anchors.fill: parent
-            spacing: 16
+    property var classModel: [
+        {name: "班级 1", id: "G1", studentCount: 4, avgScore: 12.5},
+        {name: "班级 2", id: "G2", studentCount: 5, avgScore: 14.2},
+        {name: "班级 3", id: "G3", studentCount: 3, avgScore: 11.3}
+    ]
 
-            TextField {
-                id: editClassNameField
-                width: parent.width
-                text: editClassDialog.className
-                placeholderText: "班级名称"
-
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: editClassNameField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
-                }
-            }
-
-            TextField {
-                id: editTeacherNameField
-                width: parent.width
-                text: editClassDialog.teacherName
-                placeholderText: "班主任姓名"
-
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: editTeacherNameField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
-                }
-            }
-        }
-
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        onAccepted: {
-            if (editClassNameField.text && editTeacherNameField.text) {
-                console.log("更新班级:", editClassDialog.classId, editClassNameField.text, editTeacherNameField.text)
-                // 这里应该调用controller的更新方法
-            }
-        }
+    function refreshView() {
+        // 刷新视图逻辑
+        console.log("切换到：" + currentView + " 视图")
     }
 
-    // 删除班级确认对话框
-    Dialog {
-        id: deleteClassDialog
-        title: "确认删除"
-        modal: true
-        anchors.centerIn: parent
-        width: 350
-        height: 200
-
-        property int classId: 0
-        property string className: ""
-
-        Text {
-            anchors.centerIn: parent
-            text: "确定要删除班级 \"" + deleteClassDialog.className + "\" 吗？\n此操作将同时删除班级内的所有学生数据, 且不可撤销。"
-            horizontalAlignment: Text.AlignHCenter
-            color: "#374151"
-            wrapMode: Text.WordWrap
-        }
-
-        standardButtons: Dialog.Yes | Dialog.No
-
-        onAccepted: {
-            controller.deleteClass(deleteClassDialog.classId)
-        }
+    function openDetailModal(data) {
+        detailModal.itemData = data
+        statusText.text = "已选：" + data.name + 
+                         (currentView === "student" ? 
+                          ("（学号 " + data.id + "）· 学分 " + data.credits) :
+                          (" · 成员 " + data.studentCount))
+        detailModal.open()
     }
 }

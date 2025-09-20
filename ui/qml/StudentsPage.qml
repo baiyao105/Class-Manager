@@ -1,292 +1,244 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 2.15
 import RinUI
+import "./components"
 
-ScrollView {
+FluentPage {
     id: studentsPage
-
-    Column {
+    title: qsTr("学生管理")
+    horizontalPadding: 24
+    verticalPadding: 24
+    
+    // 页面头部工具栏
+    contentHeader: Item {
         width: parent.width
-        spacing: 24
-        anchors.margins: 24
+        height: 80
 
-        // 页面标题和操作
-        Row {
-            width: parent.width
-
-            Column {
-                Text {
-                    text: "学生管理"
-                    font.pixelSize: 32
-                    font.bold: true
-                    color: "#111827"
-                }
-
-                Text {
-                    text: "管理所有学生信息和成绩"
-                    font.pixelSize: 16
-                    color: "#6b7280"
-                }
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Button {
-                text: "添加学生"
-                highlighted: true
-                icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/%3E%3C/svg%3E"
-                anchors.verticalCenter: parent.verticalCenter
-                onClicked: addStudentDialog.open()
-            }
-        }
-
-        // 搜索和筛选
         Rectangle {
-            width: parent.width
-            height: 80
-            color: "#ffffff"
-            radius: 12
+            anchors.fill: parent
+            color: "white"
+            radius: 8
             border.color: "#e5e7eb"
             border.width: 1
 
-            Row {
+            RowLayout {
                 anchors.fill: parent
-                anchors.margins: 20
+                anchors.margins: 16
                 spacing: 16
 
+                // 搜索框
                 TextField {
                     id: searchField
-                    width: 300
-                    placeholderText: "搜索学生姓名或学号..."
-                    anchors.verticalCenter: parent.verticalCenter
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("搜索学生姓名、学号...")
+                    leftPadding: 40
 
-                    background: Rectangle {
-                        color: "#f9fafb"
-                        radius: 8
-                        border.color: searchField.activeFocus ? "#2563eb" : "#d1d5db"
-                        border.width: 1
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+                        color: "transparent"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "\ue721"  // 使用Fluent图标字体
+                            font.family: "Segoe Fluent Icons"
+                            font.pixelSize: 14
+                            color: "#6b7280"
+                        }
+                    }
+
+                    onTextChanged: {
+                        if (controller) {
+                            controller.filterStudents(text)
+                        }
                     }
                 }
 
-                ComboBox {
-                    id: classFilter
-                    width: 150
-                    model: ["全部班级"].concat(controller.classes.map(c => c.name))
-                    anchors.verticalCenter: parent.verticalCenter
+                // 添加学生按钮
+                Button {
+                    text: qsTr("添加学生")
+                    icon.name: "ic_fluent_person_add_20_regular"
+                    onClicked: addStudentDialog.open()
                 }
 
-                ComboBox {
-                    id: statusFilter
-                    width: 120
-                    model: ["全部状态", "活跃", "非活跃"]
-                    anchors.verticalCenter: parent.verticalCenter
+                // 批量操作按钮
+                Button {
+                    text: qsTr("批量操作")
+                    icon.name: "ic_fluent_select_all_on_20_regular"
+                    enabled: false  // 当选中学生时启用
+                }
+            }
+        }
+    }
+                    }
+                }
+            }
+
+            // 添加学生按钮
+            Button {
+                text: qsTr("添加学生")
+                icon.name: "ic_fluent_person_add_20_regular"
+                onClicked: addStudentDialog.open()
+            }
+
+            // 批量导入按钮
+            Button {
+                text: qsTr("批量导入")
+                icon.name: "ic_fluent_document_arrow_up_20_regular"
+                onClicked: importDialog.open()
+            }
+        }
+    }
+
+    // 学生列表
+    ListView {
+        id: studentsList
+        width: parent.width
+        height: parent.height - 100
+        spacing: 12
+        model: controller ? controller.students : []
+
+        delegate: Rectangle {
+            width: studentsList.width
+            height: 120
+            radius: 8
+            color: "white"
+            border.color: "#e5e7eb"
+            border.width: 1
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: parent.color = "#f9fafb"
+                onExited: parent.color = "white"
+                onClicked: {
+                    // 显示学生详情
+                    studentDetailDialog.student = modelData
+                    studentDetailDialog.open()
+                }
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 16
+
+                // 学生头像
+                Rectangle {
+                    Layout.preferredWidth: 60
+                    Layout.preferredHeight: 60
+                    radius: 30
+                    color: "#f3f4f6"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData && modelData.name ? modelData.name.charAt(0) : "?"
+                        font.pixelSize: 24
+                        font.bold: true
+                        color: "#6b7280"
+                    }
+                }
+
+                // 学生信息
+                Column {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Text {
+                        text: modelData ? modelData.name : "未知学生"
+                        font.pixelSize: 16
+                        font.bold: true
+                        color: "#1f2937"
+                    }
+
+                    Text {
+                        text: qsTr("学号: ") + (modelData ? modelData.student_id : "")
+                        font.pixelSize: 14
+                        color: "#6b7280"
+                    }
+
+                    Text {
+                        text: qsTr("班级: ") + (modelData ? modelData.class_name : "未分配")
+                        font.pixelSize: 14
+                        color: "#6b7280"
+                    }
+                }
+
+                // 状态标签
+                Rectangle {
+                    Layout.preferredWidth: 60
+                    Layout.preferredHeight: 24
+                    radius: 12
+                    color: modelData && modelData.is_active ? "#dcfce7" : "#fee2e2"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData && modelData.is_active ? qsTr("活跃") : qsTr("非活跃")
+                        font.pixelSize: 12
+                        color: modelData && modelData.is_active ? "#16a34a" : "#dc2626"
+                    }
+                }
+
+                // 操作按钮
+                Row {
+                    spacing: 8
+
+                    Button {
+                        width: 32
+                        height: 32
+                        text: "✏️"
+                        onClicked: {
+                            editStudentDialog.student = modelData
+                            editStudentDialog.open()
+                        }
+                    }
+
+                    Button {
+                        width: 32
+                        height: 32
+                        text: "🗑️"
+                        onClicked: {
+                            deleteConfirmDialog.student = modelData
+                            deleteConfirmDialog.open()
+                        }
+                    }
+                }
+            }
+        }
+
+        // 空状态
+        Rectangle {
+            visible: studentsList.count === 0
+            anchors.centerIn: parent
+            width: 300
+            height: 200
+            color: "transparent"
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 16
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "📚"
+                    font.pixelSize: 48
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTr("暂无学生数据")
+                    font.pixelSize: 18
+                    color: "#6b7280"
                 }
 
                 Button {
-                    text: "搜索"
-                    anchors.verticalCenter: parent.verticalCenter
-                    onClicked: {
-                        // 实现搜索逻辑
-                        console.log("搜索:", searchField.text)
-                    }
-                }
-            }
-        }
-
-        // 学生列表
-        Rectangle {
-            width: parent.width
-            height: 500
-            color: "#ffffff"
-            radius: 12
-            border.color: "#e5e7eb"
-            border.width: 1
-
-            Column {
-                anchors.fill: parent
-
-                // 表头
-                Rectangle {
-                    width: parent.width
-                    height: 50
-                    color: "#f9fafb"
-                    radius: 12
-
-                    Row {
-                        anchors.fill: parent
-                        anchors.margins: 16
-
-                        Text {
-                            text: "姓名"
-                            width: 100
-                            font.bold: true
-                            color: "#374151"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "学号"
-                            width: 100
-                            font.bold: true
-                            color: "#374151"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "班级"
-                            width: 120
-                            font.bold: true
-                            color: "#374151"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "当前分数"
-                            width: 100
-                            font.bold: true
-                            color: "#374151"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "排名"
-                            width: 80
-                            font.bold: true
-                            color: "#374151"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "状态"
-                            width: 80
-                            font.bold: true
-                            color: "#374151"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "操作"
-                            width: 150
-                            font.bold: true
-                            color: "#374151"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
-
-                // 学生列表
-                ListView {
-                    width: parent.width
-                    height: parent.height - 50
-                    model: controller.students
-
-                    delegate: Rectangle {
-                        width: parent.width
-                        height: 60
-                        color: index % 2 === 0 ? "#ffffff" : "#f9fafb"
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-
-                            onEntered: parent.color = "#e0f2fe"
-                            onExited: parent.color = index % 2 === 0 ? "#ffffff" : "#f9fafb"
-                        }
-
-                        Row {
-                            anchors.fill: parent
-                            anchors.margins: 16
-
-                            Text {
-                                text: modelData.name
-                                width: 100
-                                color: "#111827"
-                                font.weight: Font.Medium
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Text {
-                                text: modelData.studentNumber
-                                width: 100
-                                color: "#6b7280"
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Text {
-                                text: modelData.className
-                                width: 120
-                                color: "#6b7280"
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Text {
-                                text: modelData.currentScore.toFixed(1)
-                                width: 100
-                                color: "#059669"
-                                font.bold: true
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Rectangle {
-                                width: 30
-                                height: 20
-                                radius: 10
-                                color: modelData.rank <= 3 ? "#fbbf24" : "#e5e7eb"
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                Text {
-                                    text: modelData.rank.toString()
-                                    anchors.centerIn: parent
-                                    font.pixelSize: 12
-                                    font.bold: true
-                                    color: modelData.rank <= 3 ? "white" : "#374151"
-                                }
-                            }
-
-                            Rectangle {
-                                width: 60
-                                height: 24
-                                radius: 12
-                                color: modelData.status === "活跃" ? "#dcfce7" : "#fef3c7"
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                Text {
-                                    text: modelData.status
-                                    anchors.centerIn: parent
-                                    font.pixelSize: 11
-                                    color: modelData.status === "活跃" ? "#166534" : "#92400e"
-                                }
-                            }
-
-                            Row {
-                                width: 150
-                                spacing: 8
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                Button {
-                                    text: "编辑"
-                                    flat: true
-                                    font.pixelSize: 12
-                                    onClicked: {
-                                        console.log("编辑学生:", modelData.name)
-                                    }
-                                }
-
-                                Button {
-                                    text: "删除"
-                                    flat: true
-                                    font.pixelSize: 12
-                                    palette.buttonText: "#dc2626"
-                                    onClicked: {
-                                        deleteConfirmDialog.studentId = modelData.id
-                                        deleteConfirmDialog.studentName = modelData.name
-                                        deleteConfirmDialog.open()
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTr("添加第一个学生")
+                    onClicked: addStudentDialog.open()
                 }
             }
         }
@@ -295,104 +247,84 @@ ScrollView {
     // 添加学生对话框
     Dialog {
         id: addStudentDialog
-        title: "添加学生"
+        title: qsTr("添加学生")
+        width: 400
+        height: 300
         modal: true
         anchors.centerIn: parent
-        width: 400
-        height: 350
 
         Column {
             anchors.fill: parent
+            anchors.margins: 20
             spacing: 16
 
             TextField {
-                id: studentNameField
+                id: nameField
                 width: parent.width
-                placeholderText: "学生姓名"
-
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: studentNameField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
-                }
+                placeholderText: qsTr("学生姓名")
             }
 
             TextField {
-                id: studentNumberField
+                id: studentIdField
                 width: parent.width
-                placeholderText: "学号"
-
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: studentNumberField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
-                }
+                placeholderText: qsTr("学号")
             }
 
             ComboBox {
                 id: classComboBox
                 width: parent.width
-                model: controller.classes.map(c => c.name)
-                displayText: currentIndex >= 0 ? currentText : "选择班级"
+                model: controller ? controller.classes : []
+                textRole: "name"
+                displayText: qsTr("选择班级")
             }
 
-            TextField {
-                id: initialScoreField
-                width: parent.width
-                placeholderText: "初始分数 (可选, 默认0)"
-                validator: DoubleValidator { bottom: -999; top: 999 }
+            Row {
+                anchors.right: parent.right
+                spacing: 12
 
-                background: Rectangle {
-                    color: "#f9fafb"
-                    radius: 8
-                    border.color: initialScoreField.activeFocus ? "#2563eb" : "#d1d5db"
-                    border.width: 1
+                Button {
+                    text: qsTr("取消")
+                    onClicked: addStudentDialog.close()
                 }
-            }
-        }
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        onAccepted: {
-            if (studentNameField.text && studentNumberField.text && classComboBox.currentIndex >= 0) {
-                controller.addStudent(
-                    studentNameField.text,
-                    studentNumberField.text,
-                    controller.classes[classComboBox.currentIndex].name
-                )
-                studentNameField.clear()
-                studentNumberField.clear()
-                initialScoreField.clear()
-                classComboBox.currentIndex = -1
+                Button {
+                    text: qsTr("添加")
+                    onClicked: {
+                        if (controller) {
+                            controller.addStudent(nameField.text, studentIdField.text, classComboBox.currentValue)
+                        }
+                        addStudentDialog.close()
+                    }
+                }
             }
         }
     }
 
-    // 删除确认对话框
+    // 其他对话框占位符
+    Dialog {
+        id: editStudentDialog
+        property var student
+        title: qsTr("编辑学生")
+        // 编辑学生的具体实现
+    }
+
+    Dialog {
+        id: studentDetailDialog
+        property var student
+        title: qsTr("学生详情")
+        // 学生详情的具体实现
+    }
+
     Dialog {
         id: deleteConfirmDialog
-        title: "确认删除"
-        modal: true
-        anchors.centerIn: parent
-        width: 350
-        height: 200
+        property var student
+        title: qsTr("确认删除")
+        // 删除确认的具体实现
+    }
 
-        property int studentId: 0
-        property string studentName: ""
-
-        Text {
-            anchors.centerIn: parent
-            text: "确定要删除学生 \"" + deleteConfirmDialog.studentName + "\" 吗？\n此操作不可撤销。"
-            horizontalAlignment: Text.AlignHCenter
-            color: "#374151"
-        }
-
-        standardButtons: Dialog.Yes | Dialog.No
-
-        onAccepted: {
-            controller.deleteStudent(deleteConfirmDialog.studentId)
-        }
+    Dialog {
+        id: importDialog
+        title: qsTr("批量导入")
+        // 批量导入的具体实现
     }
 }
