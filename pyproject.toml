@@ -1,11 +1,11 @@
 [dependency-groups]
 dev = [
   "memory_profiler>=0.61.0",
-  "mypy>=1.17.1",
+  "mypy>=1.18.2",
   "pre-commit>=4.3.0",
   "pylint>=3.3.8",
   "pyright>=1.1.405",
-  "ruff>=0.12.12"
+  "ruff>=0.13.2"
 ]
 test = [
   "pytest >= 8.4.2",
@@ -16,21 +16,20 @@ test = [
 
 [project]
 dependencies = [
-  "dependency-injector ~= 4.48.1",
+  "dependency-injector ~= 4.48.2",
   "loguru ~= 0.7.3",
   "numpy ~= 2.3.3",
-  "psutil ~= 7.0.0",
+  "psutil ~= 7.1.0",
   "pyaudio ~= 0.2.14",
-  "pydantic ~= 2.11.7",
+  "pydantic ~= 2.11.9",
   "pydantic-settings ~= 2.10.1",
   "pygame ~= 2.6.1",
   "pyqtgraph ~= 0.13.7",
-  "pyside6 ~= 6.9.2",
-  "pyside6-fluent-widgets ~= 1.8.7",
+  "pyside6 ~= 6.9.3",
   "pysidesix-frameless-window ~= 0.7.3",
   "requests ~= 2.32.5",
   "rinui",
-  "sqlmodel ~= 0.0.24",
+  "sqlmodel ~= 0.0.25",
   "typing-extensions ~= 4.15.0"
 ]
 description = "Classman"
