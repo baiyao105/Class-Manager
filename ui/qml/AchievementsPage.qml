@@ -7,20 +7,20 @@ FluentPage {
     id: achievementsPage
     title: "成就系统"
     subtitle: "管理成就模板和学生成就记录"
-    
+
     // 顶部分段控制器
     segmentedItems: [
         { text: "成就概览", value: "overview" },
         { text: "成就模板", value: "templates" },
         { text: "学生成就", value: "student_achievements" }
     ]
-    
+
     property string currentSegment: "overview"
-    
+
     onSegmentChanged: {
         currentSegment = value
     }
-    
+
     // 状态卡片数据
     statusCards: [
         {
@@ -52,7 +52,7 @@ FluentPage {
             icon: "👥"
         }
     ]
-    
+
     // 快速操作
     quickActions: [
         {
@@ -71,7 +71,7 @@ FluentPage {
             onClicked: function() { exportReport() }
         }
     ]
-    
+
     // 主内容区域
     mainContent: [
         // 成就概览
@@ -79,14 +79,14 @@ FluentPage {
             width: parent.width
             spacing: 24
             visible: currentSegment === "overview"
-            
+
             // 功能卡片
             GridLayout {
                 width: parent.width
                 columns: 3
                 columnSpacing: 16
                 rowSpacing: 16
-                
+
                 // 成就模板管理
                 Rectangle {
                     Layout.preferredWidth: (parent.width - 32) / 3
@@ -95,31 +95,31 @@ FluentPage {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 16
-                        
+
                         Row {
                             width: parent.width
                             spacing: 12
-                            
+
                             Text {
                                 text: "🏆"
                                 font.pixelSize: 32
                             }
-                            
+
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
-                                
+
                                 Text {
                                     text: "成就模板"
                                     font.pixelSize: 18
                                     font.bold: true
                                     color: "#111827"
                                 }
-                                
+
                                 Text {
                                     text: "管理成就规则和条件"
                                     font.pixelSize: 14
@@ -127,7 +127,7 @@ FluentPage {
                                 }
                             }
                         }
-                        
+
                         Text {
                             text: "创建和编辑成就模板，设置触发条件和奖励规则。支持分数、考勤、行为等多种成就类型。"
                             font.pixelSize: 12
@@ -135,7 +135,7 @@ FluentPage {
                             wrapMode: Text.WordWrap
                             width: parent.width
                         }
-                        
+
                         Button {
                             text: "管理模板"
                             highlighted: true
@@ -146,7 +146,7 @@ FluentPage {
                         }
                     }
                 }
-                
+
                 // 学生成就查看
                 Rectangle {
                     Layout.preferredWidth: (parent.width - 32) / 3
@@ -155,31 +155,31 @@ FluentPage {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 16
-                        
+
                         Row {
                             width: parent.width
                             spacing: 12
-                            
+
                             Text {
                                 text: "⭐"
                                 font.pixelSize: 32
                             }
-                            
+
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
-                                
+
                                 Text {
                                     text: "学生成就"
                                     font.pixelSize: 18
                                     font.bold: true
                                     color: "#111827"
                                 }
-                                
+
                                 Text {
                                     text: "查看学生获得的成就"
                                     font.pixelSize: 14
@@ -187,7 +187,7 @@ FluentPage {
                                 }
                             }
                         }
-                        
+
                         Text {
                             text: "浏览所有学生的成就记录，查看成就获得时间、条件和详细信息。"
                             font.pixelSize: 12
@@ -195,7 +195,7 @@ FluentPage {
                             wrapMode: Text.WordWrap
                             width: parent.width
                         }
-                        
+
                         Button {
                             text: "查看成就"
                             width: parent.width
@@ -205,7 +205,7 @@ FluentPage {
                         }
                     }
                 }
-                
+
                 // 成就统计分析
                 Rectangle {
                     Layout.preferredWidth: (parent.width - 32) / 3
@@ -214,31 +214,31 @@ FluentPage {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 16
-                        
+
                         Row {
                             width: parent.width
                             spacing: 12
-                            
+
                             Text {
                                 text: "📊"
                                 font.pixelSize: 32
                             }
-                            
+
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
-                                
+
                                 Text {
                                     text: "成就统计"
                                     font.pixelSize: 18
                                     font.bold: true
                                     color: "#111827"
                                 }
-                                
+
                                 Text {
                                     text: "成就获得情况统计"
                                     font.pixelSize: 14
@@ -246,7 +246,7 @@ FluentPage {
                                 }
                             }
                         }
-                        
+
                         Text {
                             text: "分析成就获得趋势，查看最受欢迎的成就类型和学生参与度统计。"
                             font.pixelSize: 12
@@ -254,7 +254,7 @@ FluentPage {
                             wrapMode: Text.WordWrap
                             width: parent.width
                         }
-                        
+
                         Button {
                             text: "查看统计"
                             flat: true
@@ -266,7 +266,7 @@ FluentPage {
                     }
                 }
             }
-            
+
             // 最近获得的成就
             Rectangle {
                 width: parent.width
@@ -275,24 +275,24 @@ FluentPage {
                 radius: 12
                 border.color: "#e5e7eb"
                 border.width: 1
-                
+
                 Column {
                     anchors.fill: parent
                     anchors.margins: 20
                     spacing: 16
-                    
+
                     Row {
                         width: parent.width
-                        
+
                         Text {
                             text: "最近获得的成就"
                             font.pixelSize: 18
                             font.bold: true
                             color: "#111827"
                         }
-                        
+
                         Item { Layout.fillWidth: true }
-                        
+
                         Button {
                             text: "查看全部"
                             flat: true
@@ -301,11 +301,11 @@ FluentPage {
                             }
                         }
                     }
-                    
+
                     ListView {
                         width: parent.width
                         height: 240
-                        
+
                         model: [
                             { student: "张三", achievement: "学霸", time: "2024-01-15 14:30", level: "gold" },
                             { student: "李四", achievement: "全勤之星", time: "2024-01-15 09:00", level: "silver" },
@@ -313,18 +313,18 @@ FluentPage {
                             { student: "赵六", achievement: "进步之星", time: "2024-01-14 11:20", level: "silver" },
                             { student: "钱七", achievement: "初来乍到", time: "2024-01-13 08:15", level: "bronze" }
                         ]
-                        
+
                         delegate: Rectangle {
                             width: parent.width
                             height: 60
                             color: index % 2 === 0 ? "#f9fafb" : "transparent"
                             radius: 6
-                            
+
                             Row {
                                 anchors.fill: parent
                                 anchors.margins: 12
                                 spacing: 16
-                                
+
                                 // 成就等级图标
                                 Rectangle {
                                     width: 36
@@ -334,7 +334,7 @@ FluentPage {
                                            modelData.level === "silver" ? "#9ca3af" :
                                            "#cd7f32"
                                     anchors.verticalCenter: parent.verticalCenter
-                                    
+
                                     Text {
                                         text: modelData.level === "gold" ? "🥇" :
                                               modelData.level === "silver" ? "🥈" : "🥉"
@@ -342,27 +342,27 @@ FluentPage {
                                         font.pixelSize: 16
                                     }
                                 }
-                                
+
                                 Column {
                                     anchors.verticalCenter: parent.verticalCenter
                                     spacing: 4
-                                    
+
                                     Text {
                                         text: modelData.student + " 获得了 " + modelData.achievement
                                         font.pixelSize: 14
                                         font.bold: true
                                         color: "#111827"
                                     }
-                                    
+
                                     Text {
                                         text: modelData.time
                                         font.pixelSize: 12
                                         color: "#6b7280"
                                     }
                                 }
-                                
+
                                 Item { Layout.fillWidth: true }
-                                
+
                                 Button {
                                     text: "详情"
                                     flat: true
@@ -378,7 +378,7 @@ FluentPage {
                 }
             }
         },
-        
+
         // 成就模板管理
         Rectangle {
             width: parent.width
@@ -388,19 +388,19 @@ FluentPage {
             border.color: "#e5e7eb"
             border.width: 1
             visible: currentSegment === "templates"
-            
+
             Column {
                 anchors.fill: parent
                 anchors.margins: 20
                 spacing: 16
-                
+
                 Text {
                     text: "成就模板管理"
                     font.pixelSize: 18
                     font.bold: true
                     color: "#111827"
                 }
-                
+
                 Text {
                     text: "成就模板管理功能正在开发中..."
                     font.pixelSize: 14
@@ -408,7 +408,7 @@ FluentPage {
                 }
             }
         },
-        
+
         // 学生成就查看
         Rectangle {
             width: parent.width
@@ -418,19 +418,19 @@ FluentPage {
             border.color: "#e5e7eb"
             border.width: 1
             visible: currentSegment === "student_achievements"
-            
+
             Column {
                 anchors.fill: parent
                 anchors.margins: 20
                 spacing: 16
-                
+
                 Text {
                     text: "学生成就记录"
                     font.pixelSize: 18
                     font.bold: true
                     color: "#111827"
                 }
-                
+
                 Text {
                     text: "学生成就查看功能正在开发中..."
                     font.pixelSize: 14
@@ -439,7 +439,7 @@ FluentPage {
             }
         }
     ]
-    
+
     // 创建成就模板对话框
     Dialog {
         id: createTemplateDialog
@@ -448,30 +448,30 @@ FluentPage {
         anchors.centerIn: parent
         width: 500
         height: 400
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             TextField {
                 width: parent.width
                 placeholderText: "成就名称"
             }
-            
+
             TextField {
                 width: parent.width
                 placeholderText: "成就描述"
             }
-            
+
             ComboBox {
                 width: parent.width
                 model: ["学习成就", "行为成就", "考勤成就", "特殊成就"]
             }
         }
-        
+
         standardButtons: Dialog.Ok | Dialog.Cancel
     }
-    
+
     // 批量导入成就对话框
     Dialog {
         id: importAchievementsDialog
@@ -480,17 +480,17 @@ FluentPage {
         anchors.centerIn: parent
         width: 400
         height: 300
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             Text {
                 text: "选择要导入的成就数据文件"
                 font.pixelSize: 14
                 color: "#374151"
             }
-            
+
             Button {
                 text: "选择文件"
                 width: parent.width
@@ -499,10 +499,10 @@ FluentPage {
                 }
             }
         }
-        
+
         standardButtons: Dialog.Ok | Dialog.Cancel
     }
-    
+
     // 导出报告函数
     function exportReport() {
         console.log("导出成就报告")

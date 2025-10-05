@@ -38,14 +38,14 @@ FluentPage {
                     // 页面标题
                     Column {
                         Layout.fillWidth: true
-                        
+
                         Text {
                             text: "学生管理"
                             font.pixelSize: 20
                             font.weight: Font.DemiBold
                             color: "#1e293b"
                         }
-                        
+
                         Text {
                             text: "管理学生信息，支持批量操作"
                             font.pixelSize: 14
@@ -305,14 +305,14 @@ FluentPage {
                                                             width: 50
                                                             height: 20
                                                             radius: 10
-                                                            color: modelData.status === "在读" ? "#dcfce7" : 
+                                                            color: modelData.status === "在读" ? "#dcfce7" :
                                                                    modelData.status === "休学" ? "#fef3c7" : "#f3f4f6"
 
                                                             Text {
                                                                 text: modelData.status
                                                                 anchors.centerIn: parent
                                                                 font.pixelSize: 10
-                                                                color: modelData.status === "在读" ? "#166534" : 
+                                                                color: modelData.status === "在读" ? "#166534" :
                                                                        modelData.status === "休学" ? "#92400e" : "#374151"
                                                             }
                                                         }

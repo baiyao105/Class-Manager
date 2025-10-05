@@ -10,10 +10,6 @@ from PySide6.QtCore import Property, QObject, QSize, Signal, Slot
 from PySide6.QtQml import qmlRegisterType
 from PySide6.QtWidgets import QApplication
 
-# 添加项目根目录到Python路径
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
-
 from config import get_settings
 from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION
 from core.database import db_manager

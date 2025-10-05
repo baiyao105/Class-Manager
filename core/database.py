@@ -201,7 +201,7 @@ class DatabaseManager:
             with next(self.get_master_session()) as session:
                 from .models.master import DataRegistry
                 from sqlmodel import select
-                
+
                 query = select(DataRegistry).where(DataRegistry.is_active == True)
                 result = session.exec(query)
                 return result.all()
@@ -210,7 +210,7 @@ class DatabaseManager:
 
     def get_active_students(self, registry_uuid=None) -> list:
         """获取活跃学生 - 临时方法
-        
+
         Returns:
             空列表（暂时移除统计功能）
         """

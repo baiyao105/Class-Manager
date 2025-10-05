@@ -6,7 +6,7 @@ import RinUI
 // FluentPage - 统一的页面容器组件
 ScrollView {
     id: fluentPage
-    
+
     // 页面属性
     property string pageTitle: ""
     property string pageSubtitle: ""
@@ -16,20 +16,20 @@ ScrollView {
     property alias statusCards: statusCardsGrid.children
     property alias mainContent: mainContentArea.children
     property alias bottomActions: bottomActionsRow.children
-    
+
     // 页面配置
     property bool showQuickActions: true
     property bool showStatusCards: true
     property bool showBottomActions: false
     property int statusCardsColumns: 4
     property color backgroundColor: "#f8fafc"
-    
+
     // 内容区域
     Rectangle {
         width: parent.width
         height: Math.max(parent.height, contentColumn.height + 48)
         color: backgroundColor
-        
+
         Column {
             id: contentColumn
             width: parent.width - 48
@@ -37,23 +37,23 @@ ScrollView {
             anchors.top: parent.top
             anchors.topMargin: 24
             spacing: 24
-            
+
             // 页面头部
             Rectangle {
                 width: parent.width
                 height: Math.max(headerContent.height, 80)
                 color: "transparent"
-                
+
                 Row {
                     id: headerContent
                     width: parent.width
                     spacing: 16
-                    
+
                     // 标题区域
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 4
-                        
+
                         Text {
                             text: pageTitle
                             font.pixelSize: 32
@@ -61,7 +61,7 @@ ScrollView {
                             color: "#111827"
                             visible: pageTitle !== ""
                         }
-                        
+
                         Text {
                             text: pageSubtitle
                             font.pixelSize: 16
@@ -69,13 +69,13 @@ ScrollView {
                             visible: pageSubtitle !== ""
                         }
                     }
-                    
+
                     // 弹性空间
-                    Item { 
-                        Layout.fillWidth: true 
+                    Item {
+                        Layout.fillWidth: true
                         width: parent.width - headerContent.width - headerActionsRow.width - 32
                     }
-                    
+
                     // 头部操作按钮
                     Row {
                         id: headerActionsRow
@@ -84,7 +84,7 @@ ScrollView {
                     }
                 }
             }
-            
+
             // 状态卡片区域
             GridLayout {
                 id: statusCardsGrid
@@ -94,7 +94,7 @@ ScrollView {
                 rowSpacing: 16
                 visible: showStatusCards && children.length > 0
             }
-            
+
             // 快速操作区域
             Rectangle {
                 width: parent.width
@@ -104,26 +104,26 @@ ScrollView {
                 border.color: "#e5e7eb"
                 border.width: 1
                 visible: showQuickActions && quickActionsRow.children.length > 0
-                
+
                 Row {
                     id: quickActionsContent
                     anchors.centerIn: parent
                     spacing: 24
-                    
+
                     Row {
                         id: quickActionsRow
                         spacing: 16
                     }
                 }
             }
-            
+
             // 主内容区域
             Column {
                 id: mainContentArea
                 width: parent.width
                 spacing: 24
             }
-            
+
             // 底部操作区域
             Rectangle {
                 width: parent.width
@@ -133,12 +133,12 @@ ScrollView {
                 border.color: "#e5e7eb"
                 border.width: 1
                 visible: showBottomActions && bottomActionsRow.children.length > 0
-                
+
                 Row {
                     id: bottomActionsContent
                     anchors.centerIn: parent
                     spacing: 16
-                    
+
                     Row {
                         id: bottomActionsRow
                         spacing: 12
@@ -147,20 +147,20 @@ ScrollView {
             }
         }
     }
-    
+
     // 页面动画效果
     Behavior on opacity {
         NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
     }
-    
+
     // 页面生命周期方法
     signal pageActivated()
     signal pageDeactivated()
-    
+
     function refreshPage() {
         // 刷新页面数据的方法，子页面可以重写
     }
-    
+
     function resetPage() {
         // 重置页面状态的方法，子页面可以重写
     }

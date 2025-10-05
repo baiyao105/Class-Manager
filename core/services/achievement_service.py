@@ -427,7 +427,7 @@ class AchievementService:
 
     def get_achievement_stats(self) -> dict[str, Any]:
         """获取成就统计信息 - 临时方法
-        
+
         Returns:
             包含成就统计信息的字典
         """

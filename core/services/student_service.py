@@ -389,7 +389,7 @@ class StudentService:
 
     def get_student_stats(self) -> dict[str, Any]:
         """获取学生统计信息 - 临时方法
-        
+
         Returns:
             包含学生统计信息的字典
         """
@@ -397,14 +397,14 @@ class StudentService:
             # 获取所有活跃学生
             active_students = self.get_active_students()
             total_students = len(active_students)
-            
+
             # 计算平均分
             if active_students:
                 total_score = sum(student.current_score for student in active_students)
                 avg_score = total_score / total_students
             else:
                 avg_score = 0.0
-            
+
             return {
                 "total_students": total_students,
                 "active_students": total_students,
@@ -422,10 +422,10 @@ class StudentService:
 
     def get_all_students(self, include_inactive: bool = False) -> list[Student]:
         """获取所有学生
-        
+
         Args:
             include_inactive: 是否包含非活跃学生
-            
+
         Returns:
             学生列表
         """

@@ -6,11 +6,11 @@ import "../components"
 FluentPage {
     id: scoreManagementPage
     title: "成绩管理"
-    
+
     // 页面状态
     property int currentView: 0 // 0: 成绩列表, 1: 统计分析, 2: 导入导出
     property var selectedScore: null
-    
+
     // 顶部分段控制器
     header: Rectangle {
         width: parent.width
@@ -18,14 +18,14 @@ FluentPage {
         color: "#ffffff"
         border.color: "#e5e7eb"
         border.width: 1
-        
+
         Row {
             anchors.centerIn: parent
             spacing: 2
-            
+
             Repeater {
                 model: ["成绩列表", "统计分析", "导入导出"]
-                
+
                 Rectangle {
                     width: 120
                     height: 36
@@ -33,7 +33,7 @@ FluentPage {
                     color: currentView === index ? "#0078d4" : "transparent"
                     border.color: currentView === index ? "#0078d4" : "#d1d5db"
                     border.width: 1
-                    
+
                     Text {
                         anchors.centerIn: parent
                         text: modelData
@@ -41,7 +41,7 @@ FluentPage {
                         font.pixelSize: 14
                         font.weight: Font.Medium
                     }
-                    
+
                     MouseArea {
                         anchors.fill: parent
                         onClicked: currentView = index
@@ -51,17 +51,17 @@ FluentPage {
             }
         }
     }
-    
+
     // 主内容区域
     content: StackLayout {
         currentIndex: currentView
-        
+
         // 成绩列表视图
         Item {
             RowLayout {
                 anchors.fill: parent
                 spacing: 16
-                
+
                 // 左侧筛选面板
                 Rectangle {
                     Layout.preferredWidth: 280
@@ -70,100 +70,100 @@ FluentPage {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 20
-                        
+
                         Text {
                             text: "筛选条件"
                             font.pixelSize: 16
                             font.weight: Font.Bold
                             color: "#111827"
                         }
-                        
+
                         // 班级筛选
                         Column {
                             width: parent.width
                             spacing: 8
-                            
+
                             Text {
                                 text: "班级"
                                 font.pixelSize: 14
                                 color: "#374151"
                             }
-                            
+
                             ComboBox {
                                 width: parent.width
                                 model: ["全部班级", "高一(1)班", "高一(2)班", "高一(3)班"]
                                 currentIndex: 0
                             }
                         }
-                        
+
                         // 科目筛选
                         Column {
                             width: parent.width
                             spacing: 8
-                            
+
                             Text {
                                 text: "科目"
                                 font.pixelSize: 14
                                 color: "#374151"
                             }
-                            
+
                             ComboBox {
                                 width: parent.width
                                 model: ["全部科目", "语文", "数学", "英语", "物理", "化学"]
                                 currentIndex: 0
                             }
                         }
-                        
+
                         // 考试类型筛选
                         Column {
                             width: parent.width
                             spacing: 8
-                            
+
                             Text {
                                 text: "考试类型"
                                 font.pixelSize: 14
                                 color: "#374151"
                             }
-                            
+
                             ComboBox {
                                 width: parent.width
                                 model: ["全部类型", "平时成绩", "作业成绩", "考试成绩", "课堂表现"]
                                 currentIndex: 0
                             }
                         }
-                        
+
                         // 分数范围
                         Column {
                             width: parent.width
                             spacing: 8
-                            
+
                             Text {
                                 text: "分数范围"
                                 font.pixelSize: 14
                                 color: "#374151"
                             }
-                            
+
                             Row {
                                 spacing: 8
-                                
+
                                 SpinBox {
                                     width: 80
                                     from: 0
                                     to: 100
                                     value: 0
                                 }
-                                
+
                                 Text {
                                     text: "至"
                                     anchors.verticalCenter: parent.verticalCenter
                                     color: "#6b7280"
                                 }
-                                
+
                                 SpinBox {
                                     width: 80
                                     from: 0
@@ -172,24 +172,24 @@ FluentPage {
                                 }
                             }
                         }
-                        
+
                         // 搜索框
                         Column {
                             width: parent.width
                             spacing: 8
-                            
+
                             Text {
                                 text: "搜索学生"
                                 font.pixelSize: 14
                                 color: "#374151"
                             }
-                            
+
                             TextField {
                                 width: parent.width
                                 placeholderText: "输入学生姓名..."
                             }
                         }
-                        
+
                         // 重置按钮
                         Button {
                             width: parent.width
@@ -198,7 +198,7 @@ FluentPage {
                         }
                     }
                 }
-                
+
                 // 中间成绩列表
                 Rectangle {
                     Layout.fillWidth: true
@@ -207,17 +207,17 @@ FluentPage {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 16
-                        
+
                         // 工具栏
                         Row {
                             width: parent.width
                             spacing: 12
-                            
+
                             Text {
                                 text: "成绩记录"
                                 font.pixelSize: 18
@@ -225,26 +225,26 @@ FluentPage {
                                 color: "#111827"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
-                            
+
                             Item { Layout.fillWidth: true }
-                            
+
                             Button {
                                 text: "添加成绩"
                                 highlighted: true
                                 onClicked: addScoreDialog.open()
                             }
-                            
+
                             Button {
                                 text: "批量导入"
                                 onClicked: importScoresDialog.open()
                             }
-                            
+
                             Button {
                                 text: "导出数据"
                                 onClicked: exportScoresDialog.open()
                             }
                         }
-                        
+
                         // 成绩表格
                         Rectangle {
                             width: parent.width
@@ -253,22 +253,22 @@ FluentPage {
                             radius: 8
                             border.color: "#e5e7eb"
                             border.width: 1
-                            
+
                             Column {
                                 anchors.fill: parent
-                                
+
                                 // 表头
                                 Rectangle {
                                     width: parent.width
                                     height: 50
                                     color: "#ffffff"
                                     radius: 8
-                                    
+
                                     Row {
                                         anchors.fill: parent
                                         anchors.margins: 16
                                         spacing: 16
-                                        
+
                                         Text {
                                             text: "学生"
                                             font.pixelSize: 14
@@ -276,7 +276,7 @@ FluentPage {
                                             color: "#374151"
                                             width: 100
                                         }
-                                        
+
                                         Text {
                                             text: "班级"
                                             font.pixelSize: 14
@@ -284,7 +284,7 @@ FluentPage {
                                             color: "#374151"
                                             width: 100
                                         }
-                                        
+
                                         Text {
                                             text: "科目"
                                             font.pixelSize: 14
@@ -292,7 +292,7 @@ FluentPage {
                                             color: "#374151"
                                             width: 80
                                         }
-                                        
+
                                         Text {
                                             text: "类型"
                                             font.pixelSize: 14
@@ -300,7 +300,7 @@ FluentPage {
                                             color: "#374151"
                                             width: 100
                                         }
-                                        
+
                                         Text {
                                             text: "分数"
                                             font.pixelSize: 14
@@ -308,7 +308,7 @@ FluentPage {
                                             color: "#374151"
                                             width: 80
                                         }
-                                        
+
                                         Text {
                                             text: "等级"
                                             font.pixelSize: 14
@@ -316,7 +316,7 @@ FluentPage {
                                             color: "#374151"
                                             width: 60
                                         }
-                                        
+
                                         Text {
                                             text: "日期"
                                             font.pixelSize: 14
@@ -324,7 +324,7 @@ FluentPage {
                                             color: "#374151"
                                             width: 100
                                         }
-                                        
+
                                         Text {
                                             text: "操作"
                                             font.pixelSize: 14
@@ -334,19 +334,19 @@ FluentPage {
                                         }
                                     }
                                 }
-                                
+
                                 // 成绩列表
                                 ListView {
                                     width: parent.width
                                     height: parent.height - 50
                                     model: controller ? controller.scores : []
                                     spacing: 1
-                                    
+
                                     delegate: Rectangle {
                                         width: parent.width
                                         height: 60
                                         color: index % 2 === 0 ? "#ffffff" : "#f8fafc"
-                                        
+
                                         MouseArea {
                                             anchors.fill: parent
                                             hoverEnabled: true
@@ -357,12 +357,12 @@ FluentPage {
                                                 scoreDetailModal.open()
                                             }
                                         }
-                                        
+
                                         Row {
                                             anchors.fill: parent
                                             anchors.margins: 16
                                             spacing: 16
-                                            
+
                                             Text {
                                                 text: modelData.studentName || "张三"
                                                 font.pixelSize: 14
@@ -370,7 +370,7 @@ FluentPage {
                                                 width: 100
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Text {
                                                 text: modelData.className || "高一(1)班"
                                                 font.pixelSize: 14
@@ -378,7 +378,7 @@ FluentPage {
                                                 width: 100
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Text {
                                                 text: modelData.subject || "数学"
                                                 font.pixelSize: 14
@@ -386,7 +386,7 @@ FluentPage {
                                                 width: 80
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Text {
                                                 text: modelData.examType || "考试成绩"
                                                 font.pixelSize: 14
@@ -394,7 +394,7 @@ FluentPage {
                                                 width: 100
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Text {
                                                 text: (modelData.score || 85).toString()
                                                 font.pixelSize: 16
@@ -405,7 +405,7 @@ FluentPage {
                                                 width: 80
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Rectangle {
                                                 width: 40
                                                 height: 24
@@ -414,7 +414,7 @@ FluentPage {
                                                        (modelData.score || 85) >= 80 ? "#dbeafe" :
                                                        (modelData.score || 85) >= 60 ? "#fef3c7" : "#fee2e2"
                                                 anchors.verticalCenter: parent.verticalCenter
-                                                
+
                                                 Text {
                                                     text: (modelData.score || 85) >= 90 ? "优" :
                                                           (modelData.score || 85) >= 80 ? "良" :
@@ -427,7 +427,7 @@ FluentPage {
                                                            (modelData.score || 85) >= 60 ? "#92400e" : "#dc2626"
                                                 }
                                             }
-                                            
+
                                             Text {
                                                 text: "2024-01-15"
                                                 font.pixelSize: 14
@@ -435,11 +435,11 @@ FluentPage {
                                                 width: 100
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Row {
                                                 spacing: 8
                                                 anchors.verticalCenter: parent.verticalCenter
-                                                
+
                                                 Button {
                                                     text: "编辑"
                                                     flat: true
@@ -449,7 +449,7 @@ FluentPage {
                                                         editScoreDialog.open()
                                                     }
                                                 }
-                                                
+
                                                 Button {
                                                     text: "删除"
                                                     flat: true
@@ -468,7 +468,7 @@ FluentPage {
                         }
                     }
                 }
-                
+
                 // 右侧信息面板
                 Rectangle {
                     Layout.preferredWidth: 300
@@ -477,24 +477,24 @@ FluentPage {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 20
-                        
+
                         Text {
                             text: "成绩统计"
                             font.pixelSize: 16
                             font.weight: Font.Bold
                             color: "#111827"
                         }
-                        
+
                         // 统计卡片
                         Column {
                             width: parent.width
                             spacing: 12
-                            
+
                             StatCard {
                                 width: parent.width
                                 title: "总记录数"
@@ -503,7 +503,7 @@ FluentPage {
                                 iconText: "📊"
                                 color: "#3b82f6"
                             }
-                            
+
                             StatCard {
                                 width: parent.width
                                 title: "平均分"
@@ -512,7 +512,7 @@ FluentPage {
                                 iconText: "📈"
                                 color: "#10b981"
                             }
-                            
+
                             StatCard {
                                 width: parent.width
                                 title: "优秀率"
@@ -521,7 +521,7 @@ FluentPage {
                                 iconText: "🏆"
                                 color: "#f59e0b"
                             }
-                            
+
                             StatCard {
                                 width: parent.width
                                 title: "及格率"
@@ -531,42 +531,42 @@ FluentPage {
                                 color: "#8b5cf6"
                             }
                         }
-                        
+
                         Rectangle {
                             width: parent.width
                             height: 1
                             color: "#e5e7eb"
                         }
-                        
+
                         Text {
                             text: "快速操作"
                             font.pixelSize: 16
                             font.weight: Font.Bold
                             color: "#111827"
                         }
-                        
+
                         Column {
                             width: parent.width
                             spacing: 8
-                            
+
                             Button {
                                 width: parent.width
                                 text: "📝 录入成绩"
                                 onClicked: addScoreDialog.open()
                             }
-                            
+
                             Button {
                                 width: parent.width
                                 text: "📊 生成报表"
                                 onClicked: generateReportDialog.open()
                             }
-                            
+
                             Button {
                                 width: parent.width
                                 text: "📤 导出Excel"
                                 onClicked: exportScoresDialog.open()
                             }
-                            
+
                             Button {
                                 width: parent.width
                                 text: "🔄 刷新数据"
@@ -577,7 +577,7 @@ FluentPage {
                 }
             }
         }
-        
+
         // 统计分析视图
         Item {
             Rectangle {
@@ -586,17 +586,17 @@ FluentPage {
                 radius: 12
                 border.color: "#e5e7eb"
                 border.width: 1
-                
+
                 Column {
                     anchors.centerIn: parent
                     spacing: 16
-                    
+
                     Text {
                         text: "📊"
                         font.pixelSize: 64
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
-                    
+
                     Text {
                         text: "统计分析功能"
                         font.pixelSize: 18
@@ -604,7 +604,7 @@ FluentPage {
                         color: "#111827"
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
-                    
+
                     Text {
                         text: "成绩趋势图表、班级对比分析等功能正在开发中..."
                         color: "#6b7280"
@@ -613,7 +613,7 @@ FluentPage {
                 }
             }
         }
-        
+
         // 导入导出视图
         Item {
             Rectangle {
@@ -622,17 +622,17 @@ FluentPage {
                 radius: 12
                 border.color: "#e5e7eb"
                 border.width: 1
-                
+
                 Column {
                     anchors.centerIn: parent
                     spacing: 16
-                    
+
                     Text {
                         text: "📁"
                         font.pixelSize: 64
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
-                    
+
                     Text {
                         text: "数据导入导出"
                         font.pixelSize: 18
@@ -640,7 +640,7 @@ FluentPage {
                         color: "#111827"
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
-                    
+
                     Text {
                         text: "批量导入Excel文件、导出成绩报表等功能正在开发中..."
                         color: "#6b7280"
@@ -650,7 +650,7 @@ FluentPage {
             }
         }
     }
-    
+
     // 成绩详情模态框
     Dialog {
         id: scoreDetailModal
@@ -659,18 +659,18 @@ FluentPage {
         height: 400
         anchors.centerIn: parent
         modal: true
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             Text {
                 text: "学生信息"
                 font.pixelSize: 16
                 font.weight: Font.Bold
                 color: "#111827"
             }
-            
+
             Rectangle {
                 width: parent.width
                 height: 200
@@ -678,46 +678,46 @@ FluentPage {
                 radius: 8
                 border.color: "#e5e7eb"
                 border.width: 1
-                
+
                 Column {
                     anchors.fill: parent
                     anchors.margins: 16
                     spacing: 12
-                    
+
                     Row {
                         spacing: 16
                         Text { text: "姓名:"; width: 80; color: "#374151" }
                         Text { text: selectedScore ? selectedScore.studentName || "张三" : "张三"; color: "#111827" }
                     }
-                    
+
                     Row {
                         spacing: 16
                         Text { text: "班级:"; width: 80; color: "#374151" }
                         Text { text: selectedScore ? selectedScore.className || "高一(1)班" : "高一(1)班"; color: "#111827" }
                     }
-                    
+
                     Row {
                         spacing: 16
                         Text { text: "科目:"; width: 80; color: "#374151" }
                         Text { text: selectedScore ? selectedScore.subject || "数学" : "数学"; color: "#111827" }
                     }
-                    
+
                     Row {
                         spacing: 16
                         Text { text: "类型:"; width: 80; color: "#374151" }
                         Text { text: selectedScore ? selectedScore.examType || "考试成绩" : "考试成绩"; color: "#111827" }
                     }
-                    
+
                     Row {
                         spacing: 16
                         Text { text: "分数:"; width: 80; color: "#374151" }
-                        Text { 
+                        Text {
                             text: selectedScore ? (selectedScore.score || 85).toString() : "85"
                             color: "#111827"
                             font.weight: Font.Bold
                         }
                     }
-                    
+
                     Row {
                         spacing: 16
                         Text { text: "日期:"; width: 80; color: "#374151" }
@@ -726,10 +726,10 @@ FluentPage {
                 }
             }
         }
-        
+
         standardButtons: Dialog.Close
     }
-    
+
     // 添加成绩对话框
     Dialog {
         id: addScoreDialog
@@ -1082,7 +1082,7 @@ FluentPage {
 
         standardButtons: Dialog.Ok | Dialog.Cancel
     }
-    
+
     // 刷新数据函数
     function refreshScores() {
         if (controller) {
