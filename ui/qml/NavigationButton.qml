@@ -4,16 +4,16 @@ import RinUI 1.0
 
 Item {
     id: navButton
-    
+
     property string icon: ""
     property bool isSelected: false
     property bool collapsed: false
     property alias text: buttonText.text
     signal clicked()
-    
+
     width: parent.width
     height: collapsed ? 50 : 48
-    
+
     Rectangle {
         id: background
         anchors.fill: parent
@@ -23,16 +23,16 @@ Item {
             return "transparent"
         }
         radius: 8
-        
+
         Behavior on color {
             ColorAnimation { duration: 150 }
         }
     }
-    
+
     Row {
         spacing: collapsed ? 0 : 12
         anchors.centerIn: parent
-        
+
         // 图标
         Text {
             id: iconText
@@ -44,12 +44,12 @@ Item {
                 return "#94a3b8"
             }
             anchors.verticalCenter: parent.verticalCenter
-            
+
             Behavior on color {
                 ColorAnimation { duration: 150 }
             }
         }
-        
+
         // 文本（仅在展开时显示）
         Text {
             id: buttonText
@@ -62,13 +62,13 @@ Item {
             }
             anchors.verticalCenter: parent.verticalCenter
             visible: !collapsed && text !== ""
-            
+
             Behavior on color {
                 ColorAnimation { duration: 150 }
             }
         }
     }
-    
+
     // 鼠标交互
     MouseArea {
         id: mouseArea
@@ -76,7 +76,7 @@ Item {
         hoverEnabled: true
         onClicked: navButton.clicked()
     }
-    
+
     // 选中指示器
     Rectangle {
         visible: isSelected && !collapsed
@@ -87,12 +87,12 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: 4
         anchors.verticalCenter: parent.verticalCenter
-        
+
         Behavior on opacity {
             NumberAnimation { duration: 150 }
         }
     }
-    
+
     // 工具提示（仅在折叠时显示）
     ToolTip {
         visible: collapsed && mouseArea.containsMouse && buttonText.text !== ""

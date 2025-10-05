@@ -87,7 +87,7 @@ FluentPage {
             radius: 8
             border.color: "#e5e7eb"
             border.width: 1
-            
+
             Column {
                 anchors.centerIn: parent
                 spacing: 8
@@ -117,7 +117,7 @@ FluentPage {
             radius: 8
             border.color: "#e5e7eb"
             border.width: 1
-            
+
             Column {
                 anchors.centerIn: parent
                 spacing: 8
@@ -262,12 +262,12 @@ FluentPage {
         ContentSection {
             sectionTitle: "数据概览"
             sectionSubtitle: "实时统计数据和趋势分析"
-            
+
             content: [
                 Row {
                     width: parent.width
                     spacing: 16
-                    
+
                     // 成绩趋势图表
                     Rectangle {
                         width: (parent.width - 16) / 2
@@ -276,25 +276,25 @@ FluentPage {
                         radius: 12
                         border.color: "#e5e7eb"
                         border.width: 1
-                        
+
                         Column {
                             anchors.fill: parent
                             anchors.margins: 20
                             spacing: 16
-                            
+
                             Text {
                                 text: "成绩趋势"
                                 font.pixelSize: 16
                                 font.weight: Font.Medium
                                 color: "#111827"
                             }
-                            
+
                             Rectangle {
                                 width: parent.width
                                 height: parent.height - 40
                                 color: "#f8fafc"
                                 radius: 8
-                                
+
                                 Text {
                                     text: "📈 图表区域"
                                     font.pixelSize: 24
@@ -304,7 +304,7 @@ FluentPage {
                             }
                         }
                     }
-                    
+
                     // 班级排名
                     Rectangle {
                         width: (parent.width - 16) / 2
@@ -313,52 +313,52 @@ FluentPage {
                         radius: 12
                         border.color: "#e5e7eb"
                         border.width: 1
-                        
+
                         Column {
                             anchors.fill: parent
                             anchors.margins: 20
                             spacing: 16
-                            
+
                             Text {
                                 text: "班级排名"
                                 font.pixelSize: 16
                                 font.weight: Font.Medium
                                 color: "#111827"
                             }
-                            
+
                             Column {
                                 width: parent.width
                                 spacing: 8
-                                
+
                                 Repeater {
                                     model: 5
-                                    
+
                                     Rectangle {
                                         width: parent.width
                                         height: 40
                                         color: "#f8fafc"
                                         radius: 8
-                                        
+
                                         Row {
                                             anchors.fill: parent
                                             anchors.margins: 12
                                             spacing: 12
-                                            
+
                                             Text {
                                                 text: "#" + (index + 1)
                                                 font.weight: Font.Medium
                                                 color: "#3b82f6"
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Text {
                                                 text: "高三" + (index + 1) + "班"
                                                 color: "#111827"
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
-                                            
+
                                             Item { Layout.fillWidth: true }
-                                            
+
                                             Text {
                                                 text: (85.5 - index * 2.1).toFixed(1)
                                                 font.weight: Font.Medium
@@ -374,11 +374,11 @@ FluentPage {
                 }
             ]
         },
-        
+
         ContentSection {
             sectionTitle: "最近活动"
             sectionSubtitle: "系统最新动态和重要通知"
-            
+
             content: [
                 Rectangle {
                     width: parent.width
@@ -387,19 +387,19 @@ FluentPage {
                     radius: 12
                     border.color: "#e5e7eb"
                     border.width: 1
-                    
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 12
-                        
+
                         Repeater {
                             model: 4
-                            
+
                             Row {
                                 width: parent.width
                                 spacing: 12
-                                
+
                                 Rectangle {
                                     width: 8
                                     height: 8
@@ -407,16 +407,16 @@ FluentPage {
                                     color: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"][index]
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
-                                
+
                                 Column {
                                     spacing: 2
-                                    
+
                                     Text {
                                         text: ["新增学生张三", "高三1班成绩录入完成", "系统备份成功", "用户权限更新"][index]
                                         font.pixelSize: 14
                                         color: "#111827"
                                     }
-                                    
+
                                     Text {
                                         text: ["2分钟前", "15分钟前", "1小时前", "3小时前"][index]
                                         font.pixelSize: 12
@@ -439,30 +439,30 @@ FluentPage {
         anchors.centerIn: parent
         width: 400
         height: 300
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             TextField {
                 width: parent.width
                 placeholderText: "学生姓名"
             }
-            
+
             TextField {
                 width: parent.width
                 placeholderText: "学号"
             }
-            
+
             ComboBox {
                 width: parent.width
                 model: ["高一1班", "高一2班", "高二1班", "高二2班", "高三1班", "高三2班"]
             }
         }
-        
+
         standardButtons: Dialog.Ok | Dialog.Cancel
     }
-    
+
     Dialog {
         id: addClassDialog
         title: "创建班级"
@@ -470,26 +470,26 @@ FluentPage {
         anchors.centerIn: parent
         width: 400
         height: 250
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             TextField {
                 id: classNameField
                 width: parent.width
                 placeholderText: "班级名称"
             }
-            
+
             TextField {
                 id: teacherNameField
                 width: parent.width
                 placeholderText: "班主任姓名"
             }
         }
-        
+
         standardButtons: Dialog.Ok | Dialog.Cancel
-        
+
         onAccepted: {
             if (classNameField.text && teacherNameField.text) {
                 controller.addClass(classNameField.text, teacherNameField.text)
@@ -498,7 +498,7 @@ FluentPage {
             }
         }
     }
-    
+
     Dialog {
         id: importScoresDialog
         title: "导入成绩"
@@ -506,17 +506,17 @@ FluentPage {
         anchors.centerIn: parent
         width: 500
         height: 300
-        
+
         Column {
             anchors.fill: parent
             spacing: 16
-            
+
             Text {
                 text: "选择要导入的成绩文件"
                 font.pixelSize: 14
                 color: "#374151"
             }
-            
+
             Button {
                 text: "选择文件"
                 onClicked: {
@@ -524,7 +524,7 @@ FluentPage {
                 }
             }
         }
-        
+
         standardButtons: Dialog.Ok | Dialog.Cancel
     }
 }

@@ -9,7 +9,7 @@ FluentPage {
     title: qsTr("学生管理")
     horizontalPadding: 24
     verticalPadding: 24
-    
+
     // 页面头部工具栏
     contentHeader: Item {
         width: parent.width

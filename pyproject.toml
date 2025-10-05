@@ -85,6 +85,36 @@ module = [
   "RinUI.*"
 ]
 
+[tool.pyright]
+exclude = [
+  "**/.venv",
+  "**/__pycache__",
+  "**/node_modules",
+  "**/venv",
+  "build",
+  "dist"
+]
+ignore = [
+  "PySide6.*",
+  "RinUI.*",
+  "pyaudio.*",
+  "pygame.*"
+]
+include = ["tests"]
+pythonVersion = "3.11"
+reportAttributeAccessIssue = "warning"
+reportMissingImports = "none"
+reportMissingTypeStubs = "none"
+reportPrivateUsage = "warning"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "warning"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportUnusedImport = "warning"
+typeCheckingMode = "strict"
+
 [tool.pytest.ini_options]
 addopts = "-ra -q --strict-markers --strict-config"
 filterwarnings = [

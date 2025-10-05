@@ -16,7 +16,7 @@ FluentWindow {
     navigationItems: [
         {
             title: qsTr("班级管理"),
-            page: Qt.resolvedUrl("ClassesPage.qml"),
+            page: Qt.resolvedUrl("ClassPage.qml"),
             icon: "ic_fluent_building_20_regular"
         },
         {
