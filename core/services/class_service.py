@@ -4,7 +4,7 @@
 """
 
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 from ..models.class_ import Classroom
 from ..models.master import DataRegistry
@@ -28,12 +28,12 @@ class ClassService:
     def create_class(
         self,
         name: str,
-        description: Optional[str] = None,
-        teacher_name: Optional[str] = None,
-        teacher_contact: Optional[str] = None,
+        description: str | None = None,
+        teacher_name: str | None = None,
+        teacher_contact: str | None = None,
         class_type: str = "regular",
-        grade: Optional[str] = None,
-        school_year: Optional[str] = None,
+        grade: str | None = None,
+        school_year: str | None = None,
     ) -> DataRegistry:
         """创建新班级
 
@@ -76,7 +76,7 @@ class ClassService:
         # 通过Repository创建班级
         return self.class_repository.create(class_data)
 
-    def get_class_by_id(self, class_id: str) -> Optional[DataRegistry]:
+    def get_class_by_id(self, class_id: str) -> DataRegistry | None:
         """根据ID获取班级
 
         Args:
@@ -87,7 +87,7 @@ class ClassService:
         """
         return self.class_repository.get_by_id(class_id)
 
-    def get_class_by_name(self, name: str) -> Optional[DataRegistry]:
+    def get_class_by_name(self, name: str) -> DataRegistry | None:
         """根据名称获取班级
 
         Args:
@@ -125,15 +125,15 @@ class ClassService:
     def update_class(
         self,
         class_id: str,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        teacher_name: Optional[str] = None,
-        teacher_contact: Optional[str] = None,
-        class_type: Optional[str] = None,
-        grade: Optional[str] = None,
-        school_year: Optional[str] = None,
-        is_active: Optional[bool] = None,
-    ) -> Optional[DataRegistry]:
+        name: str | None = None,
+        description: str | None = None,
+        teacher_name: str | None = None,
+        teacher_contact: str | None = None,
+        class_type: str | None = None,
+        grade: str | None = None,
+        school_year: str | None = None,
+        is_active: bool | None = None,
+    ) -> DataRegistry | None:
         """更新班级信息
 
         Args:
@@ -222,7 +222,7 @@ class ClassService:
         result = self.class_repository.update(class_id, {"is_active": False})
         return result is not None
 
-    def get_class_details(self, class_id: str) -> Optional[Classroom]:
+    def get_class_details(self, class_id: str) -> Classroom | None:
         """获取班级详细信息（从子库）
 
         Args:

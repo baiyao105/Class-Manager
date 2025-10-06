@@ -7,9 +7,10 @@ import logging
 import threading
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from queue import Empty, Queue
-from typing import Any, Callable, Optional
+from typing import Any
 
 from .event_types import Event, EventType
 
@@ -21,7 +22,7 @@ class EventSubscriber:
     """
 
     def __init__(
-        self, handler: Callable, priority: int = 0, async_handler: bool = False, filter_func: Optional[Callable] = None
+        self, handler: Callable, priority: int = 0, async_handler: bool = False, filter_func: Callable | None = None
     ):
         """初始化订阅者
 
@@ -124,7 +125,7 @@ class EventBus:
         handler: Callable,
         priority: int = 0,
         async_handler: bool = False,
-        filter_func: Optional[Callable] = None,
+        filter_func: Callable | None = None,
     ) -> str:
         """订阅事件
 
@@ -158,7 +159,7 @@ class EventBus:
         return str(subscriber.subscriber_id)
 
     def subscribe_all(
-        self, handler: Callable, priority: int = 0, async_handler: bool = False, filter_func: Optional[Callable] = None
+        self, handler: Callable, priority: int = 0, async_handler: bool = False, filter_func: Callable | None = None
     ) -> str:
         """订阅所有事件
 
@@ -407,7 +408,7 @@ event_bus = EventBus()
 
 # 装饰器函数
 def event_handler(
-    event_type: EventType, priority: int = 0, async_handler: bool = False, filter_func: Optional[Callable] = None
+    event_type: EventType, priority: int = 0, async_handler: bool = False, filter_func: Callable | None = None
 ):
     """事件处理器装饰器
 
@@ -425,7 +426,7 @@ def event_handler(
     return decorator
 
 
-def global_event_handler(priority: int = 0, async_handler: bool = False, filter_func: Optional[Callable] = None):
+def global_event_handler(priority: int = 0, async_handler: bool = False, filter_func: Callable | None = None):
     """全局事件处理器装饰器
 
     Args:

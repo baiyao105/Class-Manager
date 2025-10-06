@@ -38,16 +38,16 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     __tablename__ = "classrooms"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 关联总库
     registry_uuid: UUID = Field(description="总库班级索引UUID")
     name: str = Field(description="班级名称", max_length=100, nullable=False, index=True)
-    description: Optional[str] = Field(default=None, description="班级描述", max_length=500)
+    description: str | None = Field(default=None, description="班级描述", max_length=500)
 
     # 班主任信息
     teacher_name: str = Field(description="班主任姓名", max_length=50, nullable=False)
-    teacher_contact: Optional[str] = Field(default=None, description="班主任联系方式", max_length=100)
+    teacher_contact: str | None = Field(default=None, description="班主任联系方式", max_length=100)
 
     # 班级类型和状态
     class_type: str = Field(max_length=50, description="班级类型")
@@ -62,11 +62,11 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
 
     # 积分设置
     base_score: float = Field(default=100.0, description="基础积分")
-    score_rules: Optional[str] = Field(default=None, sa_column=Column(Text), description="积分规则JSON")
+    score_rules: str | None = Field(default=None, sa_column=Column(Text), description="积分规则JSON")
 
     # 状态信息
-    start_date: Optional[datetime] = Field(default=None, description="开始日期")
-    end_date: Optional[datetime] = Field(default=None, description="结束日期")
+    start_date: datetime | None = Field(default=None, description="开始日期")
+    end_date: datetime | None = Field(default=None, description="结束日期")
 
     # 关系字段
     students: list["Student"] = Relationship(
@@ -338,17 +338,17 @@ class Group(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     __tablename__ = "groups"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 基本信息
     name: str = Field(description="小组名称", max_length=50, nullable=False)
-    description: Optional[str] = Field(default=None, description="小组描述", max_length=200)
+    description: str | None = Field(default=None, description="小组描述", max_length=200)
 
     # 班级关联
     classroom_id: int = Field(foreign_key="classrooms.id", description="所属班级ID")
 
     # 组长
-    leader_id: Optional[int] = Field(default=None, foreign_key="students.id", description="组长ID")
+    leader_id: int | None = Field(default=None, foreign_key="students.id", description="组长ID")
 
     # 小组设置
     max_members: int = Field(default=8, description="最大成员数量")
@@ -449,29 +449,29 @@ class ClassroomCreate(SQLModel):
 
     registry_uuid: UUID = Field(description="总库班级索引UUID")
     name: str = Field(description="班级名称", max_length=100)
-    description: Optional[str] = Field(default=None, description="班级描述", max_length=500)
+    description: str | None = Field(default=None, description="班级描述", max_length=500)
     teacher_name: str = Field(description="班主任姓名", max_length=50)
-    teacher_contact: Optional[str] = Field(default=None, description="班主任联系方式", max_length=100)
+    teacher_contact: str | None = Field(default=None, description="班主任联系方式", max_length=100)
     class_type: str = Field(max_length=50, description="班级类型")
     academic_year: str = Field(default="2024-2025", description="学年", max_length=20)
     semester: int = Field(default=1, description="学期")
     max_students: int = Field(default=ClassConstants.MAX_CLASS_SIZE, description="最大学生数量")
     base_score: float = Field(default=100.0, description="基础积分")
-    score_rules: Optional[str] = Field(default=None, description="积分规则JSON")
+    score_rules: str | None = Field(default=None, description="积分规则JSON")
 
 
 class ClassroomUpdate(SQLModel):
     """更新子库班级的数据模型"""
 
-    name: Optional[str] = Field(default=None, description="班级名称", max_length=100)
-    description: Optional[str] = Field(default=None, description="班级描述", max_length=500)
-    teacher_name: Optional[str] = Field(default=None, description="班主任姓名", max_length=50)
-    teacher_contact: Optional[str] = Field(default=None, description="班主任联系方式", max_length=100)
-    class_type: Optional[str] = Field(default=None, max_length=50, description="班级类型")
-    is_active: Optional[bool] = Field(default=None, description="是否活跃")
-    max_students: Optional[int] = Field(default=None, description="最大学生数量")
-    base_score: Optional[float] = Field(default=None, description="基础积分")
-    score_rules: Optional[str] = Field(default=None, description="积分规则JSON")
+    name: str | None = Field(default=None, description="班级名称", max_length=100)
+    description: str | None = Field(default=None, description="班级描述", max_length=500)
+    teacher_name: str | None = Field(default=None, description="班主任姓名", max_length=50)
+    teacher_contact: str | None = Field(default=None, description="班主任联系方式", max_length=100)
+    class_type: str | None = Field(default=None, max_length=50, description="班级类型")
+    is_active: bool | None = Field(default=None, description="是否活跃")
+    max_students: int | None = Field(default=None, description="最大学生数量")
+    base_score: float | None = Field(default=None, description="基础积分")
+    score_rules: str | None = Field(default=None, description="积分规则JSON")
 
 
 class ClassroomRead(SQLModel):
@@ -481,18 +481,18 @@ class ClassroomRead(SQLModel):
     uuid: str
     registry_uuid: UUID
     name: str
-    description: Optional[str]
+    description: str | None
     teacher_name: str
-    teacher_contact: Optional[str]
+    teacher_contact: str | None
     class_type: str
     is_active: bool
     academic_year: str
     semester: int
     max_students: int
     base_score: float
-    score_rules: Optional[str]
+    score_rules: str | None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -502,19 +502,19 @@ class GroupCreate(SQLModel):
     """创建小组的数据模型"""
 
     name: str = Field(description="小组名称", max_length=50)
-    description: Optional[str] = Field(default=None, description="小组描述", max_length=200)
+    description: str | None = Field(default=None, description="小组描述", max_length=200)
     classroom_id: int = Field(description="所属班级ID")
-    leader_id: Optional[int] = Field(default=None, description="组长ID")
+    leader_id: int | None = Field(default=None, description="组长ID")
     max_members: int = Field(default=8, description="最大成员数量")
 
 
 class GroupUpdate(SQLModel):
     """更新小组的数据模型"""
 
-    name: Optional[str] = Field(default=None, description="小组名称", max_length=50)
-    description: Optional[str] = Field(default=None, description="小组描述", max_length=200)
-    leader_id: Optional[int] = Field(default=None, description="组长ID")
-    max_members: Optional[int] = Field(default=None, description="最大成员数量")
+    name: str | None = Field(default=None, description="小组名称", max_length=50)
+    description: str | None = Field(default=None, description="小组描述", max_length=200)
+    leader_id: int | None = Field(default=None, description="组长ID")
+    max_members: int | None = Field(default=None, description="最大成员数量")
 
 
 class GroupRead(SQLModel):
@@ -523,12 +523,12 @@ class GroupRead(SQLModel):
     id: int
     uuid: str
     name: str
-    description: Optional[str]
+    description: str | None
     classroom_id: int
-    leader_id: Optional[int]
+    leader_id: int | None
     max_members: int
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
 
     class Config:
         from_attributes = True

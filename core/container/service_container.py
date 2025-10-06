@@ -6,9 +6,10 @@
 import inspect
 import logging
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, TypeVar
 
 from .exceptions import (
     CircularDependencyException,
@@ -37,12 +38,12 @@ class ServiceDescriptor:
 
     name: str
     service_type: type
-    implementation: Union[type, Callable, Any]
+    implementation: type | Callable | Any
     lifetime: ServiceLifetime
     dependencies: list[str]
-    factory: Optional[Callable] = None
-    instance: Optional[Any] = None
-    created_at: Optional[float] = None
+    factory: Callable | None = None
+    instance: Any | None = None
+    created_at: float | None = None
     access_count: int = 0
 
 
@@ -87,7 +88,7 @@ class ServiceContainer:
         self._stats = {"services_registered": 0, "services_resolved": 0, "resolution_errors": 0}
 
     def register_singleton(
-        self, name: str, implementation: Union[type, Callable, Any], service_type: Optional[type] = None
+        self, name: str, implementation: type | Callable | Any, service_type: type | None = None
     ) -> "ServiceContainer":
         """注册单例服务
 
@@ -102,7 +103,7 @@ class ServiceContainer:
         return self._register_service(name, implementation, ServiceLifetime.SINGLETON, service_type)
 
     def register_transient(
-        self, name: str, implementation: Union[type, Callable, Any], service_type: Optional[type] = None
+        self, name: str, implementation: type | Callable | Any, service_type: type | None = None
     ) -> "ServiceContainer":
         """注册瞬态服务
 
@@ -117,7 +118,7 @@ class ServiceContainer:
         return self._register_service(name, implementation, ServiceLifetime.TRANSIENT, service_type)
 
     def register_scoped(
-        self, name: str, implementation: Union[type, Callable, Any], service_type: Optional[type] = None
+        self, name: str, implementation: type | Callable | Any, service_type: type | None = None
     ) -> "ServiceContainer":
         """注册作用域服务
 
@@ -135,7 +136,7 @@ class ServiceContainer:
         self,
         name: str,
         factory: Callable,
-        service_type: Optional[type] = None,
+        service_type: type | None = None,
         lifetime: ServiceLifetime = ServiceLifetime.TRANSIENT,
     ) -> "ServiceContainer":
         """注册工厂方法
@@ -171,7 +172,7 @@ class ServiceContainer:
         except Exception as e:
             raise ServiceRegistrationException(name, str(e))
 
-    def register_instance(self, name: str, instance: Any, service_type: Optional[type] = None) -> "ServiceContainer":
+    def register_instance(self, name: str, instance: Any, service_type: type | None = None) -> "ServiceContainer":
         """注册实例
 
         Args:
@@ -205,9 +206,9 @@ class ServiceContainer:
     def _register_service(
         self,
         name: str,
-        implementation: Union[type, Callable, Any],
+        implementation: type | Callable | Any,
         lifetime: ServiceLifetime,
-        service_type: Optional[type] = None,
+        service_type: type | None = None,
     ) -> "ServiceContainer":
         """内部服务注册方法
 
@@ -245,7 +246,7 @@ class ServiceContainer:
         except Exception as e:
             raise ServiceRegistrationException(name, str(e))
 
-    def resolve(self, name: str, scope_id: Optional[str] = None) -> Any:
+    def resolve(self, name: str, scope_id: str | None = None) -> Any:
         """解析服务
 
         Args:
@@ -258,7 +259,7 @@ class ServiceContainer:
         with self._resolution_lock:
             return self._resolve_service(name, scope_id)
 
-    def resolve_type(self, service_type: type[T], scope_id: Optional[str] = None) -> T:
+    def resolve_type(self, service_type: type[T], scope_id: str | None = None) -> T:
         """根据类型解析服务
 
         Args:
@@ -275,7 +276,7 @@ class ServiceContainer:
 
         raise ServiceNotFoundException(service_type.__name__)
 
-    def _resolve_service(self, name: str, scope_id: Optional[str] = None) -> Any:
+    def _resolve_service(self, name: str, scope_id: str | None = None) -> Any:
         """内部服务解析方法
 
         Args:
@@ -419,7 +420,7 @@ class ServiceContainer:
         # 调用工厂方法
         return factory(**resolved_deps)
 
-    def _analyze_dependencies(self, implementation: Union[type, Callable]) -> list[str]:
+    def _analyze_dependencies(self, implementation: type | Callable) -> list[str]:
         """分析依赖关系
 
         Args:
@@ -461,7 +462,7 @@ class ServiceContainer:
         """
         return name in self._services
 
-    def get_service_info(self, name: str) -> Optional[dict[str, Any]]:
+    def get_service_info(self, name: str) -> dict[str, Any] | None:
         """获取服务信息
 
         Args:

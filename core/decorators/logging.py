@@ -5,9 +5,9 @@
 
 import logging
 import time
+from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
-from typing import Callable, Optional
 
 from ..events.event_bus import event_bus
 from ..events.event_types import Event, EventFactory, EventType
@@ -19,7 +19,7 @@ def log_calls(
     include_kwargs: bool = True,
     include_result: bool = False,
     max_arg_length: int = 200,
-    logger_name: Optional[str] = None,
+    logger_name: str | None = None,
 ):
     """函数调用日志装饰器
 
@@ -107,10 +107,10 @@ def log_calls(
 
 
 def audit_log(
-    action: Optional[str] = None,
-    resource_type: Optional[str] = None,
-    user_getter: Optional[Callable] = None,
-    resource_id_getter: Optional[Callable] = None,
+    action: str | None = None,
+    resource_type: str | None = None,
+    user_getter: Callable | None = None,
+    resource_id_getter: Callable | None = None,
     include_changes: bool = True,
     publish_event: bool = True,
 ):

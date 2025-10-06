@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from sqlmodel import Session, SQLModel, select
 
@@ -32,7 +32,7 @@ class BaseRepository(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def get_by_id(self, entity_id: str) -> Optional[T]:
+    def get_by_id(self, entity_id: str) -> T | None:
         """根据ID获取实体
 
         Args:
@@ -43,7 +43,7 @@ class BaseRepository(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def update(self, entity_id: str, update_data: dict[str, Any]) -> Optional[T]:
+    def update(self, entity_id: str, update_data: dict[str, Any]) -> T | None:
         """更新实体
 
         Args:

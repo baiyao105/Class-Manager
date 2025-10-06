@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from pydantic import field_validator
 from sqlmodel import Column, Field, Relationship, Text
@@ -42,11 +42,11 @@ class Tag(SubDBModel, table=True):
     __tablename__ = "tags"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 关联总库基本信息
     name: str = Field(max_length=50, description="标签名称")
-    description: Optional[str] = Field(default=None, max_length=200, description="标签描述")
+    description: str | None = Field(default=None, max_length=200, description="标签描述")
 
     # 标签属性
     tag_type: TagType = Field(description="标签类型")
@@ -67,7 +67,7 @@ class Tag(SubDBModel, table=True):
     sort_order: int = Field(default=0, description="排序权重")
 
     # 元数据
-    metadata_json: Optional[str] = Field(default=None, sa_column=Column(Text), description="元数据JSON")
+    metadata_json: str | None = Field(default=None, sa_column=Column(Text), description="元数据JSON")
 
     @field_validator("name")
     @classmethod
@@ -94,22 +94,22 @@ class StudentTagLink(SubDBModel, table=True):
     __tablename__ = "student_tag_links"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 关联字段
     student_id: int = Field(foreign_key="students.id", description="学生ID")
     tag_id: int = Field(foreign_key="tags.id", description="标签ID")
 
     # 标签详情
-    reason: Optional[str] = Field(default=None, max_length=200, description="添加原因")
+    reason: str | None = Field(default=None, max_length=200, description="添加原因")
     score_applied: float = Field(default=0.0, description="已应用的积分")
 
     # 时效性
-    expires_at: Optional[datetime] = Field(default=None, description="过期时间")
+    expires_at: datetime | None = Field(default=None, description="过期时间")
     is_permanent: bool = Field(default=True, description="是否永久有效")
 
     # 操作记录
-    added_by: Optional[str] = Field(default=None, max_length=50, description="添加人")
+    added_by: str | None = Field(default=None, max_length=50, description="添加人")
 
     # 关系
     student: "Student" = Relationship(back_populates="tag_links")

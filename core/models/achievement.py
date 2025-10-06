@@ -5,7 +5,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import field_validator
 from sqlmodel import Column, Field, Relationship, SQLModel, Text
@@ -51,7 +51,7 @@ class AchievementTemplate(BaseModel, ArchiveMixin, OrderMixin, table=True):
     __tablename__ = "cm_achievement_templates"
 
     # 基本信息
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     key: str = Field(description="成就唯一标识", max_length=50, nullable=False, unique=True, index=True)
     name: str = Field(description="成就名称", max_length=100, nullable=False)
     description: str = Field(description="成就描述", max_length=500, nullable=False)
@@ -67,15 +67,15 @@ class AchievementTemplate(BaseModel, ArchiveMixin, OrderMixin, table=True):
     # 成就设置
     is_active: bool = Field(default=True, description="是否启用")
     is_repeatable: bool = Field(default=False, description="是否可重复获得")
-    max_count: Optional[int] = Field(default=None, description="最大获得次数(None表示无限制)")
+    max_count: int | None = Field(default=None, description="最大获得次数(None表示无限制)")
 
     # 奖励设置
     reward_score: float = Field(default=0.0, description="奖励分数")
-    reward_description: Optional[str] = Field(default=None, description="奖励描述", max_length=200)
+    reward_description: str | None = Field(default=None, description="奖励描述", max_length=200)
 
     # 显示设置
-    icon_name: Optional[str] = Field(default=None, description="图标名称", max_length=50)
-    color_hex: Optional[str] = Field(default=None, description="颜色(十六进制)", max_length=7)
+    icon_name: str | None = Field(default=None, description="图标名称", max_length=50)
+    color_hex: str | None = Field(default=None, description="颜色(十六进制)", max_length=7)
 
     # 关系字段
     achievements: list["Achievement"] = Relationship(
@@ -145,7 +145,7 @@ class AchievementTemplate(BaseModel, ArchiveMixin, OrderMixin, table=True):
         return v
 
     # 业务方法
-    def check_condition(self, student: "Student", context: Optional[dict[str, Any]] = None) -> bool:
+    def check_condition(self, student: "Student", context: dict[str, Any] | None = None) -> bool:
         """检查成就条件是否满足
 
         Args:
@@ -239,7 +239,7 @@ class Achievement(BaseModel, ArchiveMixin, table=True):
     __tablename__ = "cm_achievements"
 
     # 基本信息
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 关联信息
     template_id: int = Field(foreign_key="cm_achievement_templates.id", description="成就模板ID")
@@ -248,10 +248,10 @@ class Achievement(BaseModel, ArchiveMixin, table=True):
     # 获得信息
     achieved_at: datetime = Field(default_factory=datetime.utcnow, description="获得时间")
     achieved_score: float = Field(description="获得时的分数")
-    achieved_rank: Optional[int] = Field(default=None, description="获得时的排名")
+    achieved_rank: int | None = Field(default=None, description="获得时的排名")
 
     # 额外信息
-    notes: Optional[str] = Field(default=None, description="备注信息", max_length=200)
+    notes: str | None = Field(default=None, description="备注信息", max_length=200)
 
     # 关系字段
     template: AchievementTemplate = Relationship(
@@ -311,7 +311,7 @@ class ScoreModificationTemplate(BaseModel, ArchiveMixin, OrderMixin, table=True)
     __tablename__ = "cm_score_modification_templates"
 
     # 基本信息
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     key: str = Field(description="模板唯一标识", max_length=50, nullable=False, unique=True, index=True)
     name: str = Field(description="模板名称", max_length=100, nullable=False)
     description: str = Field(description="模板描述", max_length=500, nullable=False)
@@ -321,7 +321,7 @@ class ScoreModificationTemplate(BaseModel, ArchiveMixin, OrderMixin, table=True)
 
     # 分类和标签
     category: str = Field(description="分类", max_length=50, default="general")
-    tags: Optional[str] = Field(default=None, description="标签(逗号分隔)", max_length=200)
+    tags: str | None = Field(default=None, description="标签(逗号分隔)", max_length=200)
 
     # 模板设置
     is_active: bool = Field(default=True, description="是否启用")
@@ -329,8 +329,8 @@ class ScoreModificationTemplate(BaseModel, ArchiveMixin, OrderMixin, table=True)
     can_be_replaced: bool = Field(default=True, description="是否可以被替换")
 
     # 显示设置
-    color_hex: Optional[str] = Field(default=None, description="颜色(十六进制)", max_length=7)
-    icon_name: Optional[str] = Field(default=None, description="图标名称", max_length=50)
+    color_hex: str | None = Field(default=None, description="颜色(十六进制)", max_length=7)
+    icon_name: str | None = Field(default=None, description="图标名称", max_length=50)
 
     # 关系字段
     # score_modifications: List["ScoreModification"] = Relationship(
@@ -380,7 +380,7 @@ class ScoreModificationTemplate(BaseModel, ArchiveMixin, OrderMixin, table=True)
 
     # 业务方法
     def create_modification(
-        self, student: "Student", custom_score: Optional[float] = None, notes: Optional[str] = None
+        self, student: "Student", custom_score: float | None = None, notes: str | None = None
     ) -> "ScoreModification":
         """创建分数修改记录
 
@@ -441,29 +441,29 @@ class AchievementTemplateCreate(SQLModel):
     trigger_type: TriggerType = Field(default=TriggerType.IMMEDIATE, description="触发类型")
     condition_expression: str = Field(description="条件表达式")
     is_repeatable: bool = Field(default=False, description="是否可重复获得")
-    max_count: Optional[int] = Field(default=None, description="最大获得次数")
+    max_count: int | None = Field(default=None, description="最大获得次数")
     reward_score: float = Field(default=0.0, description="奖励分数")
-    reward_description: Optional[str] = Field(default=None, description="奖励描述", max_length=200)
-    icon_name: Optional[str] = Field(default=None, description="图标名称", max_length=50)
-    color_hex: Optional[str] = Field(default=None, description="颜色", max_length=7)
+    reward_description: str | None = Field(default=None, description="奖励描述", max_length=200)
+    icon_name: str | None = Field(default=None, description="图标名称", max_length=50)
+    color_hex: str | None = Field(default=None, description="颜色", max_length=7)
 
 
 class AchievementTemplateUpdate(SQLModel):
     """更新成就模板的数据模型"""
 
-    name: Optional[str] = Field(default=None, description="成就名称", max_length=100)
-    description: Optional[str] = Field(default=None, description="成就描述", max_length=500)
-    achievement_type: Optional[AchievementType] = Field(default=None, description="成就类型")
-    level: Optional[AchievementLevel] = Field(default=None, description="成就等级")
-    trigger_type: Optional[TriggerType] = Field(default=None, description="触发类型")
-    condition_expression: Optional[str] = Field(default=None, description="条件表达式")
-    is_active: Optional[bool] = Field(default=None, description="是否启用")
-    is_repeatable: Optional[bool] = Field(default=None, description="是否可重复获得")
-    max_count: Optional[int] = Field(default=None, description="最大获得次数")
-    reward_score: Optional[float] = Field(default=None, description="奖励分数")
-    reward_description: Optional[str] = Field(default=None, description="奖励描述", max_length=200)
-    icon_name: Optional[str] = Field(default=None, description="图标名称", max_length=50)
-    color_hex: Optional[str] = Field(default=None, description="颜色", max_length=7)
+    name: str | None = Field(default=None, description="成就名称", max_length=100)
+    description: str | None = Field(default=None, description="成就描述", max_length=500)
+    achievement_type: AchievementType | None = Field(default=None, description="成就类型")
+    level: AchievementLevel | None = Field(default=None, description="成就等级")
+    trigger_type: TriggerType | None = Field(default=None, description="触发类型")
+    condition_expression: str | None = Field(default=None, description="条件表达式")
+    is_active: bool | None = Field(default=None, description="是否启用")
+    is_repeatable: bool | None = Field(default=None, description="是否可重复获得")
+    max_count: int | None = Field(default=None, description="最大获得次数")
+    reward_score: float | None = Field(default=None, description="奖励分数")
+    reward_description: str | None = Field(default=None, description="奖励描述", max_length=200)
+    icon_name: str | None = Field(default=None, description="图标名称", max_length=50)
+    color_hex: str | None = Field(default=None, description="颜色", max_length=7)
 
 
 class AchievementTemplateRead(SQLModel):
@@ -480,13 +480,13 @@ class AchievementTemplateRead(SQLModel):
     condition_expression: str
     is_active: bool
     is_repeatable: bool
-    max_count: Optional[int]
+    max_count: int | None
     reward_score: float
-    reward_description: Optional[str]
-    icon_name: Optional[str]
-    color_hex: Optional[str]
+    reward_description: str | None
+    icon_name: str | None
+    color_hex: str | None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -501,8 +501,8 @@ class AchievementRead(SQLModel):
     student_id: int
     achieved_at: datetime
     achieved_score: float
-    achieved_rank: Optional[int]
-    notes: Optional[str]
+    achieved_rank: int | None
+    notes: str | None
     created_at: datetime
 
     class Config:
@@ -517,26 +517,26 @@ class ScoreModificationTemplateCreate(SQLModel):
     description: str = Field(description="模板描述", max_length=500)
     score_change: float = Field(description="分数变化量")
     category: str = Field(default="general", description="分类", max_length=50)
-    tags: Optional[str] = Field(default=None, description="标签", max_length=200)
+    tags: str | None = Field(default=None, description="标签", max_length=200)
     is_visible: bool = Field(default=True, description="是否显示")
     can_be_replaced: bool = Field(default=True, description="是否可替换")
-    color_hex: Optional[str] = Field(default=None, description="颜色", max_length=7)
-    icon_name: Optional[str] = Field(default=None, description="图标名称", max_length=50)
+    color_hex: str | None = Field(default=None, description="颜色", max_length=7)
+    icon_name: str | None = Field(default=None, description="图标名称", max_length=50)
 
 
 class ScoreModificationTemplateUpdate(SQLModel):
     """更新分数修改模板的数据模型"""
 
-    name: Optional[str] = Field(default=None, description="模板名称", max_length=100)
-    description: Optional[str] = Field(default=None, description="模板描述", max_length=500)
-    score_change: Optional[float] = Field(default=None, description="分数变化量")
-    category: Optional[str] = Field(default=None, description="分类", max_length=50)
-    tags: Optional[str] = Field(default=None, description="标签", max_length=200)
-    is_active: Optional[bool] = Field(default=None, description="是否启用")
-    is_visible: Optional[bool] = Field(default=None, description="是否显示")
-    can_be_replaced: Optional[bool] = Field(default=None, description="是否可替换")
-    color_hex: Optional[str] = Field(default=None, description="颜色", max_length=7)
-    icon_name: Optional[str] = Field(default=None, description="图标名称", max_length=50)
+    name: str | None = Field(default=None, description="模板名称", max_length=100)
+    description: str | None = Field(default=None, description="模板描述", max_length=500)
+    score_change: float | None = Field(default=None, description="分数变化量")
+    category: str | None = Field(default=None, description="分类", max_length=50)
+    tags: str | None = Field(default=None, description="标签", max_length=200)
+    is_active: bool | None = Field(default=None, description="是否启用")
+    is_visible: bool | None = Field(default=None, description="是否显示")
+    can_be_replaced: bool | None = Field(default=None, description="是否可替换")
+    color_hex: str | None = Field(default=None, description="颜色", max_length=7)
+    icon_name: str | None = Field(default=None, description="图标名称", max_length=50)
 
 
 class ScoreModificationTemplateRead(SQLModel):
@@ -549,14 +549,14 @@ class ScoreModificationTemplateRead(SQLModel):
     description: str
     score_change: float
     category: str
-    tags: Optional[str]
+    tags: str | None
     is_active: bool
     is_visible: bool
     can_be_replaced: bool
-    color_hex: Optional[str]
-    icon_name: Optional[str]
+    color_hex: str | None
+    icon_name: str | None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
 
     class Config:
         from_attributes = True

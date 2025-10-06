@@ -1,20 +1,11 @@
-"""时间工具模块
-
-提供各种时间处理相关的工具函数。
-"""
-
 from datetime import date, datetime, timedelta
-from typing import Optional, Union
 
-from .logger import get_logger
-
-logger = get_logger("time_ops")
+from loguru import logger
 
 
 class TimeFormatter:
     """时间格式化器"""
 
-    # 常用时间格式
     FORMAT_DATETIME = "%Y-%m-%d %H:%M:%S"
     FORMAT_DATE = "%Y-%m-%d"
     FORMAT_TIME = "%H:%M:%S"
@@ -24,7 +15,7 @@ class TimeFormatter:
     FORMAT_CHINESE_DATETIME = "%Y年%m月%d日 %H时%M分%S秒"
 
     @staticmethod
-    def now(format_str: Optional[str] = None) -> str:
+    def now(format_str: str | None = None) -> str:
         """获取当前时间字符串
 
         Args:
@@ -39,7 +30,7 @@ class TimeFormatter:
         return datetime.now().strftime(format_str)
 
     @staticmethod
-    def today(format_str: Optional[str] = None) -> str:
+    def today(format_str: str | None = None) -> str:
         """获取今天日期字符串
 
         Args:
@@ -71,7 +62,7 @@ class TimeFormatter:
             return ""
 
     @staticmethod
-    def parse_datetime(time_str: str, format_str: str = FORMAT_DATETIME) -> Optional[datetime]:
+    def parse_datetime(time_str: str, format_str: str = FORMAT_DATETIME) -> datetime | None:
         """解析时间字符串
 
         Args:
@@ -88,8 +79,8 @@ class TimeFormatter:
             return None
 
     @staticmethod
-    def auto_parse_datetime(time_str: str) -> Optional[datetime]:
-        """自动解析时间字符串(尝试多种格式)
+    def auto_parse_datetime(time_str: str) -> datetime | None:
+        """自动解析时间字符串
 
         Args:
             time_str: 时间字符串
@@ -155,7 +146,7 @@ class TimeFormatter:
         return dt.isoformat()
 
     @staticmethod
-    def from_iso_string(iso_str: str) -> Optional[datetime]:
+    def from_iso_string(iso_str: str) -> datetime | None:
         """从ISO格式字符串解析datetime
 
         Args:
@@ -279,44 +270,6 @@ class TimeCalculator:
         return dt1.date() == dt2.date()
 
     @staticmethod
-    def is_weekend(dt: datetime) -> bool:
-        """检查是否为周末
-
-        Args:
-            dt: datetime对象
-
-        Returns:
-            是否为周末
-        """
-        return dt.weekday() >= 5  # 5=Saturday, 6=Sunday
-
-    @staticmethod
-    def get_week_start(dt: datetime) -> datetime:
-        """获取本周开始时间(周一)
-
-        Args:
-            dt: datetime对象
-
-        Returns:
-            本周开始时间
-        """
-        days_since_monday = dt.weekday()
-        return dt - timedelta(days=days_since_monday)
-
-    @staticmethod
-    def get_week_end(dt: datetime) -> datetime:
-        """获取本周结束时间(周日)
-
-        Args:
-            dt: datetime对象
-
-        Returns:
-            本周结束时间
-        """
-        days_until_sunday = 6 - dt.weekday()
-        return dt + timedelta(days=days_until_sunday)
-
-    @staticmethod
     def get_month_start(dt: datetime) -> datetime:
         """获取本月开始时间
 
@@ -338,42 +291,12 @@ class TimeCalculator:
         Returns:
             本月结束时间
         """
-        # 下个月第一天减去一天
         if dt.month == 12:
             next_month = dt.replace(year=dt.year + 1, month=1, day=1)
         else:
             next_month = dt.replace(month=dt.month + 1, day=1)
 
         return next_month - timedelta(days=1)
-
-    @staticmethod
-    def age_in_years(birth_date: Union[datetime, date], reference_date: Optional[Union[datetime, date]] = None) -> int:
-        """计算年龄
-
-        Args:
-            birth_date: 出生日期
-            reference_date: 参考日期(默认为今天)
-
-        Returns:
-            年龄
-        """
-        if reference_date is None:
-            reference_date = date.today()
-
-        if isinstance(birth_date, datetime):
-            birth_date = birth_date.date()
-        if isinstance(reference_date, datetime):
-            reference_date = reference_date.date()
-
-        age = reference_date.year - birth_date.year
-
-        # 检查是否还没到生日
-        if reference_date.month < birth_date.month or (
-            reference_date.month == birth_date.month and reference_date.day < birth_date.day
-        ):
-            age -= 1
-
-        return max(0, age)
 
 
 class TimeRange:
@@ -450,18 +373,17 @@ class TimeRange:
         return f"TimeRange({self.start} - {self.end})"
 
 
-# 便捷函数
-def now(format_str: Optional[str] = None) -> str:
+def now(format_str: str | None = None) -> str:
     """获取当前时间字符串"""
     return TimeFormatter.now(format_str)
 
 
-def today(format_str: Optional[str] = None) -> str:
+def today(format_str: str | None = None) -> str:
     """获取今天日期字符串"""
     return TimeFormatter.today(format_str)
 
 
-def parse_datetime(time_str: str, format_str: Optional[str] = None) -> Optional[datetime]:
+def parse_datetime(time_str: str, format_str: str | None = None) -> datetime | None:
     """解析时间字符串"""
     if format_str:
         return TimeFormatter.parse_datetime(time_str, format_str)
@@ -483,17 +405,10 @@ def hours_between(dt1: datetime, dt2: datetime) -> float:
     return TimeCalculator.hours_between(dt1, dt2)
 
 
-def age_in_years(birth_date: Union[datetime, date]) -> int:
-    """计算年龄"""
-    return TimeCalculator.age_in_years(birth_date)
-
-
-# 导出的函数和类
 __all__ = [
     "TimeCalculator",
     "TimeFormatter",
     "TimeRange",
-    "age_in_years",
     "days_between",
     "format_datetime",
     "hours_between",

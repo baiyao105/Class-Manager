@@ -4,8 +4,9 @@
 """
 
 import inspect
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, TypeVar
 
 from .exceptions import ServiceNotFoundException
 from .service_container import ServiceLifetime, container
@@ -13,7 +14,7 @@ from .service_container import ServiceLifetime, container
 T = TypeVar("T")
 
 
-def singleton(name: Optional[str] = None, service_type: Optional[type] = None):
+def singleton(name: str | None = None, service_type: type | None = None):
     """单例服务装饰器
 
     Args:
@@ -29,7 +30,7 @@ def singleton(name: Optional[str] = None, service_type: Optional[type] = None):
     return decorator
 
 
-def transient(name: Optional[str] = None, service_type: Optional[type] = None):
+def transient(name: str | None = None, service_type: type | None = None):
     """瞬态服务装饰器
 
     Args:
@@ -45,7 +46,7 @@ def transient(name: Optional[str] = None, service_type: Optional[type] = None):
     return decorator
 
 
-def scoped(name: Optional[str] = None, service_type: Optional[type] = None):
+def scoped(name: str | None = None, service_type: type | None = None):
     """作用域服务装饰器
 
     Args:
@@ -62,9 +63,9 @@ def scoped(name: Optional[str] = None, service_type: Optional[type] = None):
 
 
 def service(
-    name: Optional[str] = None,
+    name: str | None = None,
     lifetime: ServiceLifetime = ServiceLifetime.SINGLETON,
-    service_type: Optional[type] = None,
+    service_type: type | None = None,
 ):
     """通用服务装饰器
 
@@ -89,7 +90,7 @@ def service(
     return decorator
 
 
-def factory(name: str, lifetime: ServiceLifetime = ServiceLifetime.TRANSIENT, service_type: Optional[type] = None):
+def factory(name: str, lifetime: ServiceLifetime = ServiceLifetime.TRANSIENT, service_type: type | None = None):
     """工厂方法装饰器
 
     Args:
@@ -249,7 +250,7 @@ class InjectableClass:
                 setattr(self, key, value)
 
 
-def resolve_service(name: str, scope_id: Optional[str] = None) -> Any:
+def resolve_service(name: str, scope_id: str | None = None) -> Any:
     """便捷的服务解析函数
 
     Args:
@@ -262,7 +263,7 @@ def resolve_service(name: str, scope_id: Optional[str] = None) -> Any:
     return container.resolve(name, scope_id)
 
 
-def resolve_service_type(service_type: type[T], scope_id: Optional[str] = None) -> T:
+def resolve_service_type(service_type: type[T], scope_id: str | None = None) -> T:
     """便捷的类型解析函数
 
     Args:
@@ -326,7 +327,7 @@ class ServiceScope:
 
 
 # 便捷函数
-def create_scope(scope_id: Optional[str] = None) -> ServiceScope:
+def create_scope(scope_id: str | None = None) -> ServiceScope:
     """创建服务作用域
 
     Args:

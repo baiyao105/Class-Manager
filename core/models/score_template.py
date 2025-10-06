@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from pydantic import field_validator
 from sqlmodel import Column, Field, Relationship, Text
@@ -42,11 +42,11 @@ class ScoreTemplate(SubDBModel, table=True):
     __tablename__ = "score_templates"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 基本信息
     name: str = Field(max_length=100, description="模板名称")
-    description: Optional[str] = Field(default=None, max_length=500, description="模板描述")
+    description: str | None = Field(default=None, max_length=500, description="模板描述")
 
     # 评分属性
     category: ScoreCategory = Field(description="评分类别")
@@ -54,21 +54,21 @@ class ScoreTemplate(SubDBModel, table=True):
 
     # 分值设置
     default_score: float = Field(description="默认分值")
-    min_score: Optional[float] = Field(default=None, description="最小分值")
-    max_score: Optional[float] = Field(default=None, description="最大分值")
+    min_score: float | None = Field(default=None, description="最小分值")
+    max_score: float | None = Field(default=None, description="最大分值")
 
     # 权重和倍数
     weight: float = Field(default=1.0, description="权重系数")
     multiplier: float = Field(default=1.0, description="倍数系数")
 
     # 使用限制
-    daily_limit: Optional[int] = Field(default=None, description="每日使用限制")
-    weekly_limit: Optional[int] = Field(default=None, description="每周使用限制")
-    monthly_limit: Optional[int] = Field(default=None, description="每月使用限制")
+    daily_limit: int | None = Field(default=None, description="每日使用限制")
+    weekly_limit: int | None = Field(default=None, description="每周使用限制")
+    monthly_limit: int | None = Field(default=None, description="每月使用限制")
 
     # 适用范围
-    applicable_grades: Optional[str] = Field(default=None, max_length=100, description="适用年级")
-    applicable_subjects: Optional[str] = Field(default=None, max_length=200, description="适用科目")
+    applicable_grades: str | None = Field(default=None, max_length=100, description="适用年级")
+    applicable_subjects: str | None = Field(default=None, max_length=200, description="适用科目")
 
     # 状态控制
     is_active: bool = Field(default=True, description="是否激活")
@@ -76,19 +76,19 @@ class ScoreTemplate(SubDBModel, table=True):
     requires_approval: bool = Field(default=False, description="是否需要审批")
 
     # 时效性
-    valid_from: Optional[datetime] = Field(default=None, description="生效开始时间")
-    valid_until: Optional[datetime] = Field(default=None, description="生效结束时间")
+    valid_from: datetime | None = Field(default=None, description="生效开始时间")
+    valid_until: datetime | None = Field(default=None, description="生效结束时间")
 
     # 使用统计
     usage_count: int = Field(default=0, description="使用次数")
-    last_used_at: Optional[datetime] = Field(default=None, description="最后使用时间")
+    last_used_at: datetime | None = Field(default=None, description="最后使用时间")
 
     # 排序和分组
     sort_order: int = Field(default=0, description="排序权重")
-    group_name: Optional[str] = Field(default=None, max_length=50, description="分组名称")
+    group_name: str | None = Field(default=None, max_length=50, description="分组名称")
 
     # 扩展配置
-    config_json: Optional[str] = Field(default=None, sa_column=Column(Text), description="配置JSON")
+    config_json: str | None = Field(default=None, sa_column=Column(Text), description="配置JSON")
 
     # 关系
     score_records: list["ScoreRecord"] = Relationship(back_populates="template")
@@ -121,7 +121,7 @@ class ScoreTemplate(SubDBModel, table=True):
             raise ValueError("权重和倍数不能超过10")
         return v
 
-    def calculate_final_score(self, base_score: Optional[float] = None) -> float:
+    def calculate_final_score(self, base_score: float | None = None) -> float:
         """计算最终分值"""
         score = base_score if base_score is not None else self.default_score
         final_score = score * self.weight * self.multiplier
@@ -134,7 +134,7 @@ class ScoreTemplate(SubDBModel, table=True):
 
         return round(final_score, 2)
 
-    def is_valid_at(self, check_time: Optional[datetime] = None) -> bool:
+    def is_valid_at(self, check_time: datetime | None = None) -> bool:
         """检查在指定时间是否有效"""
         if check_time is None:
             check_time = datetime.now()

@@ -6,7 +6,6 @@
 
 from collections.abc import Generator
 from pathlib import Path
-from typing import Optional
 
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -19,7 +18,7 @@ class DatabaseManager:
     管理总库（班级索引）和多个子库（班级数据）的连接
     """
 
-    def __init__(self, master_db_url: Optional[str] = None, data_dir: Optional[Path] = None):
+    def __init__(self, master_db_url: str | None = None, data_dir: Path | None = None):
         # 数据目录
         self.data_dir = data_dir or Path(__file__).parent.parent / "data"
         self.data_dir.mkdir(exist_ok=True)
@@ -199,10 +198,11 @@ class DatabaseManager:
         """获取活跃班级列表 - 临时方法"""
         try:
             with next(self.get_master_session()) as session:
-                from .models.master import DataRegistry
                 from sqlmodel import select
 
-                query = select(DataRegistry).where(DataRegistry.is_active == True)
+                from .models.master import DataRegistry
+
+                query = select(DataRegistry).where(DataRegistry.is_active)
                 result = session.exec(query)
                 return result.all()
         except Exception:

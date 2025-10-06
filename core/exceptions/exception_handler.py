@@ -5,8 +5,9 @@
 
 import logging
 import traceback
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Optional
+from typing import Any
 
 from .custom_exceptions import (
     AuthenticationException,
@@ -54,7 +55,7 @@ class ExceptionHandler:
         # 错误统计
         self._error_stats: dict[str, int] = {}
 
-    def handle_exception(self, exception: Exception, context: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def handle_exception(self, exception: Exception, context: dict[str, Any] | None = None) -> dict[str, Any]:
         """处理异常并返回标准化的错误信息
 
         Args:

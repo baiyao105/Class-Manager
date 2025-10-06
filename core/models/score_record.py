@@ -40,26 +40,26 @@ class ScoreRecord(SubDBModel, table=True):
     __tablename__ = "score_records"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 关联字段
     student_id: int = Field(foreign_key="students.id", description="学生ID")
-    template_id: Optional[int] = Field(default=None, foreign_key="score_templates.id", description="评分模板ID")
+    template_id: int | None = Field(default=None, foreign_key="score_templates.id", description="评分模板ID")
 
     # 评分信息
     score_value: float = Field(description="分值")
-    original_score: Optional[float] = Field(default=None, description="原始分值")
+    original_score: float | None = Field(default=None, description="原始分值")
     final_score: float = Field(description="最终分值")
 
     # 记录详情
     title: str = Field(max_length=200, description="评分标题")
-    description: Optional[str] = Field(default=None, max_length=1000, description="详细描述")
-    reason: Optional[str] = Field(default=None, max_length=500, description="评分原因")
+    description: str | None = Field(default=None, max_length=1000, description="详细描述")
+    reason: str | None = Field(default=None, max_length=500, description="评分原因")
 
     # 分类信息
     category: str = Field(max_length=50, description="评分类别")
-    subcategory: Optional[str] = Field(default=None, max_length=50, description="子类别")
-    tags: Optional[str] = Field(default=None, max_length=200, description="标签列表")
+    subcategory: str | None = Field(default=None, max_length=50, description="子类别")
+    tags: str | None = Field(default=None, max_length=200, description="标签列表")
 
     # 状态控制
     status: RecordStatus = Field(default=RecordStatus.PENDING, description="记录状态")
@@ -68,23 +68,23 @@ class ScoreRecord(SubDBModel, table=True):
     # 时间信息
     occurred_at: datetime = Field(description="发生时间")
     recorded_at: datetime = Field(default_factory=datetime.now, description="记录时间")
-    applied_at: Optional[datetime] = Field(default=None, description="应用时间")
+    applied_at: datetime | None = Field(default=None, description="应用时间")
 
     # 操作人员
     recorder: str = Field(max_length=50, description="记录人")
-    approver: Optional[str] = Field(default=None, max_length=50, description="审核人")
+    approver: str | None = Field(default=None, max_length=50, description="审核人")
 
     # 审核信息
-    approval_note: Optional[str] = Field(default=None, max_length=500, description="审核备注")
-    rejection_reason: Optional[str] = Field(default=None, max_length=500, description="拒绝原因")
+    approval_note: str | None = Field(default=None, max_length=500, description="审核备注")
+    rejection_reason: str | None = Field(default=None, max_length=500, description="拒绝原因")
 
     # 关联信息
-    related_record_id: Optional[int] = Field(default=None, description="关联记录ID")
-    batch_id: Optional[str] = Field(default=None, max_length=50, description="批次ID")
+    related_record_id: int | None = Field(default=None, description="关联记录ID")
+    batch_id: str | None = Field(default=None, max_length=50, description="批次ID")
 
     # 扩展数据
-    metadata_json: Optional[str] = Field(default=None, sa_column=Column(Text), description="元数据JSON")
-    attachments: Optional[str] = Field(default=None, sa_column=Column(Text), description="附件信息JSON")
+    metadata_json: str | None = Field(default=None, sa_column=Column(Text), description="元数据JSON")
+    attachments: str | None = Field(default=None, sa_column=Column(Text), description="附件信息JSON")
 
     # 统计字段
     view_count: int = Field(default=0, description="查看次数")
@@ -131,7 +131,7 @@ class ScoreRecord(SubDBModel, table=True):
         """检查是否可以应用"""
         return self.status == RecordStatus.APPROVED and self.applied_at is None
 
-    def approve(self, approver: str, note: Optional[str] = None) -> None:
+    def approve(self, approver: str, note: str | None = None) -> None:
         """审核通过"""
         if not self.can_be_approved():
             raise ValueError("当前状态不允许审核")
