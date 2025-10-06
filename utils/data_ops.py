@@ -1,24 +1,18 @@
-"""数据处理工具模块
-
-提供各种数据处理相关的工具函数。
-"""
-
 import hashlib
 import re
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any, Callable, Union
+from typing import Any
 
-from .logger import get_logger
-
-logger = get_logger("data_ops")
+from loguru import logger
 
 
 class DataProcessor:
     """数据处理器"""
 
     @staticmethod
-    def clean_string(text: str, remove_extra_spaces: bool = True, strip: bool = True) -> str:
+    def clean_string(text: str, remove_extra_spaces: bool = False, strip: bool = True) -> str:
         """清理字符串
 
         Args:
@@ -29,62 +23,16 @@ class DataProcessor:
         Returns:
             清理后的字符串
         """
-        if not isinstance(text, str):
-            text = str(text)
-
         if strip:
             text = text.strip()
-
         if remove_extra_spaces:
-            # 将多个连续空格替换为单个空格
             text = re.sub(r"\s+", " ", text)
 
         return text
 
     @staticmethod
-    def normalize_phone(phone: str) -> str:
-        """标准化手机号格式
-
-        Args:
-            phone: 手机号
-
-        Returns:
-            标准化后的手机号
-        """
-        if not phone:
-            return ""
-
-        # 移除所有非数字字符
-        phone = re.sub(r"\D", "", str(phone))
-
-        # 如果是11位且以1开头, 认为是中国大陆手机号
-        if len(phone) == 11 and phone.startswith("1"):
-            return phone
-
-        # 如果是13位且以86开头, 去掉国家代码
-        if len(phone) == 13 and phone.startswith("86"):
-            return phone[2:]
-
-        return phone
-
-    @staticmethod
-    def normalize_email(email: str) -> str:
-        """标准化邮箱格式
-
-        Args:
-            email: 邮箱地址
-
-        Returns:
-            标准化后的邮箱
-        """
-        if not email:
-            return ""
-
-        return str(email).strip().lower()
-
-    @staticmethod
-    def safe_divide(numerator: Union[int, float], denominator: Union[int, float], default: float = 0.0) -> float:
-        """安全除法
+    def safe_divide(numerator: int | float, denominator: int | float, default: float = 0.0) -> float:
+        """除法
 
         Args:
             numerator: 分子
@@ -102,8 +50,8 @@ class DataProcessor:
             return default
 
     @staticmethod
-    def round_decimal(value: Union[int, float, str], decimal_places: int = 2) -> float:
-        """精确四舍五入
+    def round_decimal(value: int | float | str, decimal_places: int = 2) -> float:
+        """四舍五入
 
         Args:
             value: 数值
@@ -120,7 +68,7 @@ class DataProcessor:
             return 0.0
 
     @staticmethod
-    def calculate_percentage(part: Union[int, float], total: Union[int, float], decimal_places: int = 2) -> float:
+    def calculate_percentage(part: int | float, total: int | float, decimal_places: int = 2) -> float:
         """计算百分比
 
         Args:
@@ -133,13 +81,13 @@ class DataProcessor:
         """
         if total == 0:
             return 0.0
-
         percentage = (float(part) / float(total)) * 100
+
         return DataProcessor.round_decimal(percentage, decimal_places)
 
     @staticmethod
     def generate_hash(data: str, algorithm: str = "md5") -> str:
-        """生成数据哈希值
+        """生成哈希值
 
         Args:
             data: 输入数据
@@ -206,7 +154,6 @@ class DataProcessor:
             分组后的数据
         """
         grouped = defaultdict(list)
-
         for item in data:
             if key in item:
                 grouped[item[key]].append(item)
@@ -231,10 +178,8 @@ class DataProcessor:
         """
         grouped = DataProcessor.group_by(data, group_key)
         result = []
-
         for group_value, group_data in grouped.items():
             agg_result = {group_key: group_value}
-
             for field, func in agg_funcs.items():
                 try:
                     values = [item.get(field) for item in group_data if item.get(field) is not None]
@@ -276,7 +221,7 @@ class DataProcessor:
                         match = False
                         break
                 elif isinstance(value, dict):
-                    # 支持范围过滤 {"min": 0, "max": 100}
+                    # 范围过滤 {"min": 0, "max": 100}
                     if "min" in value and item[key] < value["min"]:
                         match = False
                         break
@@ -318,7 +263,7 @@ class StatisticsCalculator:
     """统计计算器"""
 
     @staticmethod
-    def calculate_mean(values: list[Union[int, float]]) -> float:
+    def calculate_mean(values: list[int | float]) -> float:
         """计算平均值
 
         Args:
@@ -339,7 +284,7 @@ class StatisticsCalculator:
             return 0.0
 
     @staticmethod
-    def calculate_median(values: list[Union[int, float]]) -> float:
+    def calculate_median(values: list[int | float]) -> float:
         """计算中位数
 
         Args:
@@ -383,7 +328,7 @@ class StatisticsCalculator:
         return modes[0] if len(modes) == 1 else modes
 
     @staticmethod
-    def calculate_range(values: list[Union[int, float]]) -> float:
+    def calculate_range(values: list[int | float]) -> float:
         """计算极差
 
         Args:
@@ -404,7 +349,7 @@ class StatisticsCalculator:
             return 0.0
 
     @staticmethod
-    def calculate_variance(values: list[Union[int, float]]) -> float:
+    def calculate_variance(values: list[int | float]) -> float:
         """计算方差
 
         Args:
@@ -427,7 +372,7 @@ class StatisticsCalculator:
             return 0.0
 
     @staticmethod
-    def calculate_std_dev(values: list[Union[int, float]]) -> float:
+    def calculate_std_dev(values: list[int | float]) -> float:
         """计算标准差
 
         Args:
@@ -440,7 +385,7 @@ class StatisticsCalculator:
         return variance**0.5
 
     @staticmethod
-    def calculate_percentile(values: list[Union[int, float]], percentile: float) -> float:
+    def calculate_percentile(values: list[int | float], percentile: float) -> float:
         """计算百分位数
 
         Args:
@@ -457,19 +402,15 @@ class StatisticsCalculator:
             numeric_values = sorted([float(v) for v in values if v is not None])
             if not numeric_values:
                 return 0.0
-
             if percentile == 0:
                 return numeric_values[0]
             if percentile == 100:
                 return numeric_values[-1]
-
             index = (percentile / 100) * (len(numeric_values) - 1)
             lower_index = int(index)
             upper_index = min(lower_index + 1, len(numeric_values) - 1)
-
             if lower_index == upper_index:
                 return numeric_values[lower_index]
-
             # 线性插值
             weight = index - lower_index
             return numeric_values[lower_index] * (1 - weight) + numeric_values[upper_index] * weight
@@ -477,18 +418,17 @@ class StatisticsCalculator:
             return 0.0
 
 
-# 便捷函数
 def clean_string(text: str) -> str:
     """清理字符串"""
     return DataProcessor.clean_string(text)
 
 
-def safe_divide(numerator: Union[int, float], denominator: Union[int, float]) -> float:
+def safe_divide(numerator: int | float, denominator: int | float) -> float:
     """安全除法"""
     return DataProcessor.safe_divide(numerator, denominator)
 
 
-def calculate_percentage(part: Union[int, float], total: Union[int, float]) -> float:
+def calculate_percentage(part: int | float, total: int | float) -> float:
     """计算百分比"""
     return DataProcessor.calculate_percentage(part, total)
 
@@ -498,12 +438,12 @@ def group_by(data: list[dict[str, Any]], key: str) -> dict[Any, list[dict[str, A
     return DataProcessor.group_by(data, key)
 
 
-def calculate_mean(values: list[Union[int, float]]) -> float:
+def calculate_mean(values: list[int | float]) -> float:
     """计算平均值"""
     return StatisticsCalculator.calculate_mean(values)
 
 
-def calculate_median(values: list[Union[int, float]]) -> float:
+def calculate_median(values: list[int | float]) -> float:
     """计算中位数"""
     return StatisticsCalculator.calculate_median(values)
 

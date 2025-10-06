@@ -4,7 +4,7 @@
 """
 
 import time
-from typing import Any, Optional
+from typing import Any
 
 
 class ClassManagerException(Exception):
@@ -13,7 +13,7 @@ class ClassManagerException(Exception):
     所有自定义异常的基类，提供统一的异常处理接口
     """
 
-    def __init__(self, message: str, error_code: Optional[str] = None, details: Optional[dict[str, Any]] = None):
+    def __init__(self, message: str, error_code: str | None = None, details: dict[str, Any] | None = None):
         """初始化异常
 
         Args:
@@ -52,7 +52,7 @@ class DatabaseException(ClassManagerException):
     """
 
     def __init__(
-        self, message: str, error_code: str = "DB_ERROR", operation: Optional[str] = None, table: Optional[str] = None
+        self, message: str, error_code: str = "DB_ERROR", operation: str | None = None, table: str | None = None
     ):
         details = {}
         if operation:
@@ -73,8 +73,8 @@ class ValidationException(ClassManagerException):
         self,
         message: str,
         error_code: str = "VALIDATION_ERROR",
-        field: Optional[str] = None,
-        value: Optional[Any] = None,
+        field: str | None = None,
+        value: Any | None = None,
     ):
         details = {}
         if field:
@@ -91,7 +91,7 @@ class BusinessLogicException(ClassManagerException):
     用于业务规则违反或业务逻辑错误的情况
     """
 
-    def __init__(self, message: str, error_code: str = "BUSINESS_ERROR", context: Optional[dict[str, Any]] = None):
+    def __init__(self, message: str, error_code: str = "BUSINESS_ERROR", context: dict[str, Any] | None = None):
         super().__init__(message, error_code, context or {})
 
 
@@ -105,8 +105,8 @@ class ResourceNotFoundException(ClassManagerException):
         self,
         message: str,
         error_code: str = "RESOURCE_NOT_FOUND",
-        resource_type: Optional[str] = None,
-        resource_id: Optional[str] = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
     ):
         details = {}
         if resource_type:
@@ -134,7 +134,7 @@ class AuthorizationException(ClassManagerException):
     """
 
     def __init__(
-        self, message: str = "权限不足", error_code: str = "ACCESS_DENIED", required_permission: Optional[str] = None
+        self, message: str = "权限不足", error_code: str = "ACCESS_DENIED", required_permission: str | None = None
     ):
         details = {}
         if required_permission:
@@ -149,7 +149,7 @@ class ConfigurationException(ClassManagerException):
     用于配置文件错误或配置项缺失的情况
     """
 
-    def __init__(self, message: str, error_code: str = "CONFIG_ERROR", config_key: Optional[str] = None):
+    def __init__(self, message: str, error_code: str = "CONFIG_ERROR", config_key: str | None = None):
         details = {}
         if config_key:
             details["config_key"] = config_key
@@ -167,8 +167,8 @@ class ServiceException(ClassManagerException):
         self,
         message: str,
         error_code: str = "SERVICE_ERROR",
-        service_name: Optional[str] = None,
-        method_name: Optional[str] = None,
+        service_name: str | None = None,
+        method_name: str | None = None,
     ):
         details = {}
         if service_name:
@@ -189,8 +189,8 @@ class RepositoryException(ClassManagerException):
         self,
         message: str,
         error_code: str = "REPOSITORY_ERROR",
-        repository_name: Optional[str] = None,
-        operation: Optional[str] = None,
+        repository_name: str | None = None,
+        operation: str | None = None,
     ):
         details = {}
         if repository_name:
@@ -207,7 +207,7 @@ class EventException(ClassManagerException):
     用于事件发布、订阅或处理失败的情况
     """
 
-    def __init__(self, message: str, error_code: str = "EVENT_ERROR", event_type: Optional[str] = None):
+    def __init__(self, message: str, error_code: str = "EVENT_ERROR", event_type: str | None = None):
         details = {}
         if event_type:
             details["event_type"] = event_type
@@ -221,7 +221,7 @@ class DependencyInjectionException(ClassManagerException):
     用于依赖注入容器操作失败的情况
     """
 
-    def __init__(self, message: str, error_code: str = "DI_ERROR", service_name: Optional[str] = None):
+    def __init__(self, message: str, error_code: str = "DI_ERROR", service_name: str | None = None):
         details = {}
         if service_name:
             details["service_name"] = service_name

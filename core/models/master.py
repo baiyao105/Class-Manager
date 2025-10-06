@@ -1,7 +1,6 @@
 """总库数据模型 - 用于班级索引和统计缓存"""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlmodel import Column, Field, Text
@@ -15,21 +14,21 @@ class DataRegistry(MasterDBModel, table=True):
     __tablename__ = "data_registry"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 班级基本信息
     class_name: str = Field(max_length=100, description="班级名称")
     class_type: str = Field(max_length=50, description="班级类型")
-    grade: Optional[str] = Field(default=None, max_length=20, description="年级")
-    school_year: Optional[str] = Field(default=None, max_length=20, description="学年")
+    grade: str | None = Field(default=None, max_length=20, description="年级")
+    school_year: str | None = Field(default=None, max_length=20, description="学年")
 
     # 数据库连接信息
     db_path: str = Field(description="子库数据库路径")
-    db_name: Optional[str] = Field(default=None, max_length=100, description="数据库名称")
+    db_name: str | None = Field(default=None, max_length=100, description="数据库名称")
 
     # 状态信息
     is_active: bool = Field(default=True, description="是否激活")
-    last_sync_at: Optional[datetime] = Field(default=None, description="最后同步时间")
+    last_sync_at: datetime | None = Field(default=None, description="最后同步时间")
 
     # 统计信息缓存
     student_count: int = Field(default=0, description="学生总数")
@@ -38,8 +37,8 @@ class DataRegistry(MasterDBModel, table=True):
     avg_score: float = Field(default=0.0, description="平均积分")
 
     # 元数据
-    description: Optional[str] = Field(default=None, max_length=500, description="班级描述")
-    config_json: Optional[str] = Field(default=None, sa_column=Column(Text), description="配置JSON")
+    description: str | None = Field(default=None, max_length=500, description="班级描述")
+    config_json: str | None = Field(default=None, sa_column=Column(Text), description="配置JSON")
 
 
 class DataStatistics(MasterDBModel, table=True):
@@ -48,7 +47,7 @@ class DataStatistics(MasterDBModel, table=True):
     __tablename__ = "data_statistics"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 关联信息
     class_uuid: UUID = Field(foreign_key="data_registry.uuid", description="班级UUID")
@@ -64,7 +63,7 @@ class DataStatistics(MasterDBModel, table=True):
     period_type: str = Field(max_length=20, description="周期类型(daily/weekly/monthly)")
 
     # 元数据
-    metadata_json: Optional[str] = Field(default=None, sa_column=Column(Text), description="元数据JSON")
+    metadata_json: str | None = Field(default=None, sa_column=Column(Text), description="元数据JSON")
 
     class Config:
         # 复合索引

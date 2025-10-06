@@ -5,8 +5,9 @@
 
 import logging
 import traceback
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 from ..events.event_bus import event_bus
 from ..events.event_types import EventFactory
@@ -26,7 +27,7 @@ def handle_service_errors(
     return_error_info: bool = False,
     log_errors: bool = True,
     publish_events: bool = True,
-    service_name: Optional[str] = None,
+    service_name: str | None = None,
 ):
     """服务层错误处理装饰器
 
@@ -120,7 +121,7 @@ def handle_repository_errors(
     return_error_info: bool = False,
     log_errors: bool = True,
     publish_events: bool = True,
-    repository_name: Optional[str] = None,
+    repository_name: str | None = None,
 ):
     """仓储层错误处理装饰器
 
@@ -212,12 +213,12 @@ def handle_repository_errors(
 
 
 def handle_exceptions(
-    exception_types: Union[type[Exception], tuple] = Exception,
+    exception_types: type[Exception] | tuple = Exception,
     reraise: bool = True,
     return_error_info: bool = False,
     log_errors: bool = True,
     publish_events: bool = False,
-    context_name: Optional[str] = None,
+    context_name: str | None = None,
 ):
     """通用异常处理装饰器
 
@@ -280,7 +281,7 @@ def handle_exceptions(
     return decorator
 
 
-def safe_execute(default_return: Any = None, log_errors: bool = True, context_name: Optional[str] = None):
+def safe_execute(default_return: Any = None, log_errors: bool = True, context_name: str | None = None):
     """安全执行装饰器
 
     确保函数执行不会抛出异常，失败时返回默认值
@@ -316,7 +317,7 @@ def retry_on_failure(
     max_retries: int = 3,
     delay: float = 1.0,
     backoff_factor: float = 2.0,
-    exception_types: Union[type[Exception], tuple] = Exception,
+    exception_types: type[Exception] | tuple = Exception,
     log_retries: bool = True,
 ):
     """失败重试装饰器

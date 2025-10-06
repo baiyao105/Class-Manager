@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session, and_, func, select
@@ -48,7 +48,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         self.session.refresh(achievement)
         return achievement
 
-    def get_by_id(self, entity_id: str) -> Optional[Achievement]:
+    def get_by_id(self, entity_id: str) -> Achievement | None:
         """根据ID获取成就
 
         Args:
@@ -64,7 +64,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query)
         return result.first()
 
-    def update(self, entity_id: str, update_data: dict[str, Any]) -> Optional[Achievement]:
+    def update(self, entity_id: str, update_data: dict[str, Any]) -> Achievement | None:
         """更新成就信息
 
         Args:
@@ -98,7 +98,7 @@ class AchievementRepository(BaseRepository[Achievement]):
             return self.soft_delete(entity_id)
         return self.hard_delete(entity_id)
 
-    def get_by_student_id(self, student_id: int, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def get_by_student_id(self, student_id: int, registry_uuid: UUID | None = None) -> list[Achievement]:
         """根据学生ID获取成就列表
 
         Args:
@@ -120,7 +120,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query)
         return result.all()
 
-    def get_by_template_key(self, template_key: str, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def get_by_template_key(self, template_key: str, registry_uuid: UUID | None = None) -> list[Achievement]:
         """根据成就模板键获取成就列表
 
         Args:
@@ -141,7 +141,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query)
         return result.all()
 
-    def search_by_title(self, title: str, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def search_by_title(self, title: str, registry_uuid: UUID | None = None) -> list[Achievement]:
         """根据成就标题搜索
 
         Args:
@@ -162,7 +162,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query)
         return result.all()
 
-    def get_by_type(self, achievement_type: AchievementType, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def get_by_type(self, achievement_type: AchievementType, registry_uuid: UUID | None = None) -> list[Achievement]:
         """根据成就类型获取成就列表
 
         Args:
@@ -183,7 +183,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query)
         return result.all()
 
-    def get_by_level(self, level: AchievementLevel, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def get_by_level(self, level: AchievementLevel, registry_uuid: UUID | None = None) -> list[Achievement]:
         """根据成就等级获取成就列表
 
         Args:
@@ -205,7 +205,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         return result.all()
 
     def get_high_value_achievements(
-        self, min_points: float = 50.0, registry_uuid: Optional[UUID] = None
+        self, min_points: float = 50.0, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """获取高价值成就
 
@@ -228,7 +228,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query)
         return result.all()
 
-    def get_recent_achievements(self, limit: int = 10, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def get_recent_achievements(self, limit: int = 10, registry_uuid: UUID | None = None) -> list[Achievement]:
         """获取最近的成就
 
         Args:
@@ -250,7 +250,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         return result.all()
 
     def get_achievements_by_date_range(
-        self, start_date: datetime, end_date: datetime, registry_uuid: Optional[UUID] = None
+        self, start_date: datetime, end_date: datetime, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """根据日期范围获取成就
 
@@ -274,7 +274,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query)
         return result.all()
 
-    def get_student_points_total(self, student_id: int, registry_uuid: Optional[UUID] = None) -> float:
+    def get_student_points_total(self, student_id: int, registry_uuid: UUID | None = None) -> float:
         """获取学生总积分
 
         Args:
@@ -295,7 +295,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query).first()
         return float(result or 0.0)
 
-    def get_student_achievement_count(self, student_id: int, registry_uuid: Optional[UUID] = None) -> int:
+    def get_student_achievement_count(self, student_id: int, registry_uuid: UUID | None = None) -> int:
         """获取学生成就数量
 
         Args:
@@ -316,7 +316,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         result = self.session.exec(query).first()
         return int(result or 0)
 
-    def get_top_students_by_points(self, limit: int = 10, registry_uuid: Optional[UUID] = None) -> list[dict[str, Any]]:
+    def get_top_students_by_points(self, limit: int = 10, registry_uuid: UUID | None = None) -> list[dict[str, Any]]:
         """获取积分排行榜
 
         Args:
@@ -353,7 +353,7 @@ class AchievementRepository(BaseRepository[Achievement]):
             for row in result
         ]
 
-    def get_achievement_statistics(self, registry_uuid: Optional[UUID] = None) -> dict[str, Any]:
+    def get_achievement_statistics(self, registry_uuid: UUID | None = None) -> dict[str, Any]:
         """获取成就统计信息
 
         Args:
@@ -436,7 +436,7 @@ class AchievementRepository(BaseRepository[Achievement]):
 
         return achievements
 
-    def delete_student_achievements(self, student_id: int, registry_uuid: Optional[UUID] = None) -> int:
+    def delete_student_achievements(self, student_id: int, registry_uuid: UUID | None = None) -> int:
         """删除学生的所有成就
 
         Args:

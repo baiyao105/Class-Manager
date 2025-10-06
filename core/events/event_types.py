@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 
 class EventType(str, Enum):
@@ -98,14 +98,14 @@ class Event:
     priority: EventPriority = EventPriority.NORMAL
 
     # 可选信息
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
-    correlation_id: Optional[str] = None
+    user_id: str | None = None
+    session_id: str | None = None
+    correlation_id: str | None = None
 
     # 处理信息
     processed: bool = False
-    processed_at: Optional[datetime] = None
-    error_message: Optional[str] = None
+    processed_at: datetime | None = None
+    error_message: str | None = None
     retry_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -169,7 +169,7 @@ class Event:
 
         return event
 
-    def mark_processed(self, error_message: Optional[str] = None) -> None:
+    def mark_processed(self, error_message: str | None = None) -> None:
         """标记事件为已处理
 
         Args:
@@ -270,7 +270,7 @@ class EventFactory:
     def create_system_event(
         event_type: EventType,
         message: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         priority: EventPriority = EventPriority.NORMAL,
     ) -> Event:
         """创建系统相关事件

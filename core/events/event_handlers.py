@@ -4,7 +4,8 @@
 """
 
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from .event_bus import event_bus
 from .event_types import Event, EventType
@@ -86,7 +87,7 @@ class EventHandlerRegistry:
         self.logger.info(f"注销事件处理器: {name}")
         return True
 
-    def get_handler(self, name: str) -> Optional[Callable]:
+    def get_handler(self, name: str) -> Callable | None:
         """获取处理器
 
         Args:

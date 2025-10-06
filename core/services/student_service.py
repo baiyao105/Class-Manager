@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from ..models.student import Student, StudentStatus
@@ -33,8 +33,8 @@ class StudentService:
         name: str,
         student_number: int,
         registry_uuid: UUID,
-        classroom_id: Optional[int] = None,
-        group_id: Optional[int] = None,
+        classroom_id: int | None = None,
+        group_id: int | None = None,
         base_score: float = 100.0,
         status: StudentStatus = StudentStatus.ACTIVE,
     ) -> Student:
@@ -90,7 +90,7 @@ class StudentService:
 
         return student
 
-    def get_student_by_id(self, student_id: str) -> Optional[Student]:
+    def get_student_by_id(self, student_id: str) -> Student | None:
         """根据ID获取学生
 
         Args:
@@ -101,7 +101,7 @@ class StudentService:
         """
         return self.student_repository.get_by_id(student_id)
 
-    def get_student_by_number(self, student_number: int, registry_uuid: Optional[UUID] = None) -> Optional[Student]:
+    def get_student_by_number(self, student_number: int, registry_uuid: UUID | None = None) -> Student | None:
         """根据学号获取学生
 
         Args:
@@ -135,7 +135,7 @@ class StudentService:
         """
         return self.student_repository.get_by_classroom_id(classroom_id)
 
-    def search_students(self, query: str, registry_uuid: Optional[UUID] = None) -> list[Student]:
+    def search_students(self, query: str, registry_uuid: UUID | None = None) -> list[Student]:
         """搜索学生
 
         Args:
@@ -147,7 +147,7 @@ class StudentService:
         """
         return self.student_repository.search_by_name_or_number(query, registry_uuid)
 
-    def get_active_students(self, registry_uuid: Optional[UUID] = None) -> list[Student]:
+    def get_active_students(self, registry_uuid: UUID | None = None) -> list[Student]:
         """获取活跃学生
 
         Args:
@@ -161,13 +161,13 @@ class StudentService:
     def update_student(
         self,
         student_id: str,
-        name: Optional[str] = None,
-        student_number: Optional[int] = None,
-        classroom_id: Optional[int] = None,
-        group_id: Optional[int] = None,
-        status: Optional[StudentStatus] = None,
-        base_score: Optional[float] = None,
-    ) -> Optional[Student]:
+        name: str | None = None,
+        student_number: int | None = None,
+        classroom_id: int | None = None,
+        group_id: int | None = None,
+        status: StudentStatus | None = None,
+        base_score: float | None = None,
+    ) -> Student | None:
         """更新学生信息
 
         Args:
@@ -240,9 +240,7 @@ class StudentService:
 
         return success
 
-    def update_student_score(
-        self, student_id: str, score_change: float, reason: Optional[str] = None
-    ) -> Optional[Student]:
+    def update_student_score(self, student_id: str, score_change: float, reason: str | None = None) -> Student | None:
         """更新学生积分
 
         Args:
@@ -290,7 +288,7 @@ class StudentService:
         return self.student_repository.get_students_by_group(group_id)
 
     def get_students_by_score_range(
-        self, min_score: float, max_score: float, registry_uuid: Optional[UUID] = None
+        self, min_score: float, max_score: float, registry_uuid: UUID | None = None
     ) -> list[Student]:
         """根据分数范围获取学生
 
@@ -304,7 +302,7 @@ class StudentService:
         """
         return self.student_repository.get_students_by_score_range(min_score, max_score, registry_uuid)
 
-    def get_top_students(self, limit: int = 10, registry_uuid: Optional[UUID] = None) -> list[Student]:
+    def get_top_students(self, limit: int = 10, registry_uuid: UUID | None = None) -> list[Student]:
         """获取积分排名前N的学生
 
         Args:

@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from ..models.achievement import Achievement, AchievementLevel, AchievementType
@@ -37,7 +37,7 @@ class AchievementService:
         points: float = 10.0,
         achievement_type: AchievementType = AchievementType.BEHAVIOR,
         level: AchievementLevel = AchievementLevel.BRONZE,
-        template_key: Optional[str] = None,
+        template_key: str | None = None,
     ) -> Achievement:
         """创建新成就
 
@@ -85,7 +85,7 @@ class AchievementService:
 
         return achievement
 
-    def get_achievement_by_id(self, achievement_id: str) -> Optional[Achievement]:
+    def get_achievement_by_id(self, achievement_id: str) -> Achievement | None:
         """根据ID获取成就
 
         Args:
@@ -96,7 +96,7 @@ class AchievementService:
         """
         return self.achievement_repository.get_by_id(achievement_id)
 
-    def get_student_achievements(self, student_id: int, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def get_student_achievements(self, student_id: int, registry_uuid: UUID | None = None) -> list[Achievement]:
         """获取学生的所有成就
 
         Args:
@@ -108,9 +108,7 @@ class AchievementService:
         """
         return self.achievement_repository.get_by_student_id(student_id, registry_uuid)
 
-    def get_achievements_by_template(
-        self, template_key: str, registry_uuid: Optional[UUID] = None
-    ) -> list[Achievement]:
+    def get_achievements_by_template(self, template_key: str, registry_uuid: UUID | None = None) -> list[Achievement]:
         """根据模板键获取成就列表
 
         Args:
@@ -122,7 +120,7 @@ class AchievementService:
         """
         return self.achievement_repository.get_by_template_key(template_key, registry_uuid)
 
-    def search_achievements(self, title: str, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def search_achievements(self, title: str, registry_uuid: UUID | None = None) -> list[Achievement]:
         """搜索成就
 
         Args:
@@ -135,7 +133,7 @@ class AchievementService:
         return self.achievement_repository.search_by_title(title, registry_uuid)
 
     def get_achievements_by_type(
-        self, achievement_type: AchievementType, registry_uuid: Optional[UUID] = None
+        self, achievement_type: AchievementType, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """根据类型获取成就
 
@@ -149,7 +147,7 @@ class AchievementService:
         return self.achievement_repository.get_by_type(achievement_type, registry_uuid)
 
     def get_achievements_by_level(
-        self, level: AchievementLevel, registry_uuid: Optional[UUID] = None
+        self, level: AchievementLevel, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """根据等级获取成就
 
@@ -163,7 +161,7 @@ class AchievementService:
         return self.achievement_repository.get_by_level(level, registry_uuid)
 
     def get_high_value_achievements(
-        self, min_points: float = 50.0, registry_uuid: Optional[UUID] = None
+        self, min_points: float = 50.0, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """获取高价值成就
 
@@ -176,7 +174,7 @@ class AchievementService:
         """
         return self.achievement_repository.get_high_value_achievements(min_points, registry_uuid)
 
-    def get_recent_achievements(self, limit: int = 10, registry_uuid: Optional[UUID] = None) -> list[Achievement]:
+    def get_recent_achievements(self, limit: int = 10, registry_uuid: UUID | None = None) -> list[Achievement]:
         """获取最近的成就
 
         Args:
@@ -189,7 +187,7 @@ class AchievementService:
         return self.achievement_repository.get_recent_achievements(limit, registry_uuid)
 
     def get_achievements_by_date_range(
-        self, start_date: datetime, end_date: datetime, registry_uuid: Optional[UUID] = None
+        self, start_date: datetime, end_date: datetime, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """根据日期范围获取成就
 
@@ -206,12 +204,12 @@ class AchievementService:
     def update_achievement(
         self,
         achievement_id: str,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        points: Optional[float] = None,
-        achievement_type: Optional[AchievementType] = None,
-        level: Optional[AchievementLevel] = None,
-    ) -> Optional[Achievement]:
+        title: str | None = None,
+        description: str | None = None,
+        points: float | None = None,
+        achievement_type: AchievementType | None = None,
+        level: AchievementLevel | None = None,
+    ) -> Achievement | None:
         """更新成就信息
 
         Args:
@@ -267,7 +265,7 @@ class AchievementService:
 
         return success
 
-    def get_student_points_total(self, student_id: int, registry_uuid: Optional[UUID] = None) -> float:
+    def get_student_points_total(self, student_id: int, registry_uuid: UUID | None = None) -> float:
         """获取学生总积分
 
         Args:
@@ -279,7 +277,7 @@ class AchievementService:
         """
         return self.achievement_repository.get_student_points_total(student_id, registry_uuid)
 
-    def get_student_achievement_count(self, student_id: int, registry_uuid: Optional[UUID] = None) -> int:
+    def get_student_achievement_count(self, student_id: int, registry_uuid: UUID | None = None) -> int:
         """获取学生成就数量
 
         Args:
@@ -291,7 +289,7 @@ class AchievementService:
         """
         return self.achievement_repository.get_student_achievement_count(student_id, registry_uuid)
 
-    def get_leaderboard(self, limit: int = 10, registry_uuid: Optional[UUID] = None) -> list[dict[str, Any]]:
+    def get_leaderboard(self, limit: int = 10, registry_uuid: UUID | None = None) -> list[dict[str, Any]]:
         """获取积分排行榜
 
         Args:
@@ -303,7 +301,7 @@ class AchievementService:
         """
         return self.achievement_repository.get_top_students_by_points(limit, registry_uuid)
 
-    def get_achievement_statistics(self, registry_uuid: Optional[UUID] = None) -> dict[str, Any]:
+    def get_achievement_statistics(self, registry_uuid: UUID | None = None) -> dict[str, Any]:
         """获取成就统计信息
 
         Args:
@@ -348,7 +346,7 @@ class AchievementService:
 
         return achievements
 
-    def delete_student_achievements(self, student_id: int, registry_uuid: Optional[UUID] = None) -> int:
+    def delete_student_achievements(self, student_id: int, registry_uuid: UUID | None = None) -> int:
         """删除学生的所有成就
 
         Args:
@@ -361,7 +359,7 @@ class AchievementService:
         return self.achievement_repository.delete_student_achievements(student_id, registry_uuid)
 
     def get_daily_achievements(
-        self, date: Optional[datetime] = None, registry_uuid: Optional[UUID] = None
+        self, date: datetime | None = None, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """获取指定日期的成就
 
@@ -381,7 +379,7 @@ class AchievementService:
         return self.get_achievements_by_date_range(start_date, end_date, registry_uuid)
 
     def get_weekly_achievements(
-        self, week_start: Optional[datetime] = None, registry_uuid: Optional[UUID] = None
+        self, week_start: datetime | None = None, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """获取指定周的成就
 
@@ -402,7 +400,7 @@ class AchievementService:
         return self.get_achievements_by_date_range(start_date, end_date, registry_uuid)
 
     def get_monthly_achievements(
-        self, year: Optional[int] = None, month: Optional[int] = None, registry_uuid: Optional[UUID] = None
+        self, year: int | None = None, month: int | None = None, registry_uuid: UUID | None = None
     ) -> list[Achievement]:
         """获取指定月份的成就
 

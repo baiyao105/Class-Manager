@@ -5,8 +5,9 @@
 
 import inspect
 import logging
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Optional, Union, get_type_hints
+from typing import Any, get_type_hints
 
 from pydantic import BaseModel, ValidationError
 
@@ -14,7 +15,7 @@ from ..exceptions.custom_exceptions import ValidationException
 
 
 def validate_input(
-    schema: Optional[Union[type[BaseModel], dict[str, Any]]] = None, strict: bool = True, log_validation: bool = True
+    schema: type[BaseModel] | dict[str, Any] | None = None, strict: bool = True, log_validation: bool = True
 ):
     """输入验证装饰器
 
@@ -79,8 +80,8 @@ def validate_input(
 
 
 def validate_output(
-    schema: Optional[Union[type[BaseModel], dict[str, Any]]] = None,
-    return_type: Optional[type] = None,
+    schema: type[BaseModel] | dict[str, Any] | None = None,
+    return_type: type | None = None,
     log_validation: bool = True,
 ):
     """输出验证装饰器
@@ -149,9 +150,9 @@ def validate_output(
 
 
 def validate_permissions(
-    required_permissions: Union[str, list],
-    user_getter: Optional[Callable] = None,
-    permission_checker: Optional[Callable] = None,
+    required_permissions: str | list,
+    user_getter: Callable | None = None,
+    permission_checker: Callable | None = None,
 ):
     """权限验证装饰器
 
@@ -249,8 +250,8 @@ def validate_not_none(*param_names: str):
 
 def validate_range(
     param_name: str,
-    min_value: Optional[Union[int, float]] = None,
-    max_value: Optional[Union[int, float]] = None,
+    min_value: int | float | None = None,
+    max_value: int | float | None = None,
     inclusive: bool = True,
 ):
     """范围验证装饰器

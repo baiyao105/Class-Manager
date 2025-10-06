@@ -42,7 +42,7 @@ class Student(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     __tablename__ = "students"
 
     # 主键
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # 基本信息
     name: str = Field(description="学生姓名", max_length=50, nullable=False)
@@ -52,10 +52,10 @@ class Student(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     registry_uuid: UUID = Field(description="总库班级索引UUID")
 
     # 班级关联
-    classroom_id: Optional[int] = Field(default=None, foreign_key="classrooms.id", description="所属班级ID")
+    classroom_id: int | None = Field(default=None, foreign_key="classrooms.id", description="所属班级ID")
 
     # 小组关联
-    group_id: Optional[int] = Field(default=None, foreign_key="groups.id", description="所属小组ID")
+    group_id: int | None = Field(default=None, foreign_key="groups.id", description="所属小组ID")
 
     # 分数信息
     current_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="当前分数")
@@ -67,15 +67,15 @@ class Student(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     total_deducted: float = Field(default=0.0, description="累计扣除积分")
 
     # 分数变化时间记录
-    highest_score_time: Optional[datetime] = Field(default=None, description="最高分达成时间")
-    lowest_score_time: Optional[datetime] = Field(default=None, description="最低分产生时间")
+    highest_score_time: datetime | None = Field(default=None, description="最高分达成时间")
+    lowest_score_time: datetime | None = Field(default=None, description="最低分产生时间")
 
     # 重置相关
-    last_reset_time: Optional[datetime] = Field(default=None, description="上次重置时间")
+    last_reset_time: datetime | None = Field(default=None, description="上次重置时间")
 
     # 统计信息
-    score_rank: Optional[int] = Field(default=None, description="积分排名")
-    last_score_update: Optional[datetime] = Field(default=None, description="最后积分更新时间")
+    score_rank: int | None = Field(default=None, description="积分排名")
+    last_score_update: datetime | None = Field(default=None, description="最后积分更新时间")
 
     # 状态信息
     status: StudentStatus = Field(default=StudentStatus.ACTIVE, description="学生状态")
@@ -211,7 +211,7 @@ class Student(SubDBModel, ArchiveMixin, OrderMixin, table=True):
         self.update_timestamp()
         return snapshot
 
-    def get_rank_in_class(self) -> Optional[int]:
+    def get_rank_in_class(self) -> int | None:
         """获取在班级中的排名
 
         Returns:
@@ -265,8 +265,8 @@ class StudentCreate(SQLModel):
     name: str = Field(description="学生姓名", max_length=50)
     student_number: int = Field(description="学号")
     registry_uuid: UUID = Field(description="总库班级索引UUID")
-    classroom_id: Optional[int] = Field(default=None, description="所属班级ID")
-    group_id: Optional[int] = Field(default=None, description="所属小组ID")
+    classroom_id: int | None = Field(default=None, description="所属班级ID")
+    group_id: int | None = Field(default=None, description="所属小组ID")
     current_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="初始分数")
     base_score: float = Field(default=100.0, description="基础积分")
 
@@ -274,12 +274,12 @@ class StudentCreate(SQLModel):
 class StudentUpdate(SQLModel):
     """更新学生的数据模型"""
 
-    name: Optional[str] = Field(default=None, description="学生姓名", max_length=50)
-    student_number: Optional[int] = Field(default=None, description="学号")
-    classroom_id: Optional[int] = Field(default=None, description="所属班级ID")
-    group_id: Optional[int] = Field(default=None, description="所属小组ID")
-    status: Optional[StudentStatus] = Field(default=None, description="学生状态")
-    base_score: Optional[float] = Field(default=None, description="基础积分")
+    name: str | None = Field(default=None, description="学生姓名", max_length=50)
+    student_number: int | None = Field(default=None, description="学号")
+    classroom_id: int | None = Field(default=None, description="所属班级ID")
+    group_id: int | None = Field(default=None, description="所属小组ID")
+    status: StudentStatus | None = Field(default=None, description="学生状态")
+    base_score: float | None = Field(default=None, description="基础积分")
 
 
 class StudentRead(SQLModel):
@@ -297,13 +297,13 @@ class StudentRead(SQLModel):
     total_deducted: float
     highest_score: float
     lowest_score: float
-    score_rank: Optional[int]
-    last_score_update: Optional[datetime]
+    score_rank: int | None
+    last_score_update: datetime | None
     status: StudentStatus
-    classroom_id: Optional[int]
-    group_id: Optional[int]
+    classroom_id: int | None
+    group_id: int | None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
 
     class Config:
         from_attributes = True

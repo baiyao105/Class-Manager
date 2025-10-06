@@ -4,8 +4,10 @@
 """
 
 import sys
+import time
 from pathlib import Path
 
+from loguru import logger
 from PySide6.QtCore import Property, QObject, QSize, Signal, Slot
 from PySide6.QtQml import qmlRegisterType
 from PySide6.QtWidgets import QApplication
@@ -15,6 +17,17 @@ from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION
 from core.database import db_manager
 from core.services import AchievementService, ClassService, StudentService
 from RinUI import RinUIWindow
+
+log_dir = Path("logs")
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / f"{APP_NAME}_{time.strftime('%Y%m%d_%H%M%S')}.log"
+logger.add(
+    str(log_file),
+    retention=5,
+    encoding="utf-8",
+    backtrace=True,
+    diagnose=True,
+)
 
 
 class ClassManagerController(QObject):

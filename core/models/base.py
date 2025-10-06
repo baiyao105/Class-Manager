@@ -5,7 +5,6 @@
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
@@ -15,7 +14,7 @@ class TimestampMixin(SQLModel):
     """时间戳混入类"""
 
     created_at: datetime = Field(default_factory=datetime.utcnow, description="创建时间", nullable=False)
-    updated_at: Optional[datetime] = Field(default=None, description="更新时间", nullable=True)
+    updated_at: datetime | None = Field(default=None, description="更新时间", nullable=True)
 
     def update_timestamp(self):
         """更新时间戳"""
@@ -42,7 +41,7 @@ class SoftDeleteMixin(SQLModel):
     """软删除混入类"""
 
     is_deleted: bool = Field(default=False, description="是否已删除", nullable=False)
-    deleted_at: Optional[datetime] = Field(default=None, description="删除时间", nullable=True)
+    deleted_at: datetime | None = Field(default=None, description="删除时间", nullable=True)
 
     def soft_delete(self):
         """软删除"""
@@ -112,7 +111,7 @@ class BaseModel(TimestampMixin, UUIDMixin, SoftDeleteMixin, SQLModel):
 class ArchiveMixin(SQLModel):
     """归档混入类"""
 
-    archive_uuid: Optional[str] = Field(default=None, description="归档UUID, 用于数据重置时的版本管理", nullable=True)
+    archive_uuid: str | None = Field(default=None, description="归档UUID, 用于数据重置时的版本管理", nullable=True)
 
     def set_archive_uuid(self, archive_uuid: str):
         """设置归档UUID"""

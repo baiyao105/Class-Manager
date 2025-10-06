@@ -8,9 +8,10 @@ import json
 import logging
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from functools import wraps
 from threading import Lock
-from typing import Any, Callable, Optional
+from typing import Any
 
 # 性能统计存储
 performance_stats = defaultdict(list)
@@ -86,10 +87,10 @@ def monitor_performance(
 
 
 def cache_result(
-    ttl: Optional[float] = None,
+    ttl: float | None = None,
     max_size: int = 128,
-    key_func: Optional[Callable] = None,
-    ignore_args: Optional[list] = None,
+    key_func: Callable | None = None,
+    ignore_args: list | None = None,
 ):
     """结果缓存装饰器
 
@@ -157,7 +158,7 @@ def cache_result(
     return decorator
 
 
-def rate_limit(max_calls: int, time_window: float, per_user: bool = False, key_func: Optional[Callable] = None):
+def rate_limit(max_calls: int, time_window: float, per_user: bool = False, key_func: Callable | None = None):
     """限流装饰器
 
     Args:
@@ -280,7 +281,7 @@ def async_execute(executor=None):
 
 
 # 性能统计工具函数
-def get_performance_stats(func_name: Optional[str] = None) -> dict[str, Any]:
+def get_performance_stats(func_name: str | None = None) -> dict[str, Any]:
     """获取性能统计信息
 
     Args:
@@ -319,7 +320,7 @@ def get_performance_stats(func_name: Optional[str] = None) -> dict[str, Any]:
         }
 
 
-def clear_performance_stats(func_name: Optional[str] = None) -> None:
+def clear_performance_stats(func_name: str | None = None) -> None:
     """清除性能统计信息
 
     Args:
@@ -332,7 +333,7 @@ def clear_performance_stats(func_name: Optional[str] = None) -> None:
             performance_stats.clear()
 
 
-def clear_cache(func_name: Optional[str] = None) -> None:
+def clear_cache(func_name: str | None = None) -> None:
     """清除缓存
 
     Args:

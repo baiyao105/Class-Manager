@@ -3,7 +3,7 @@
 支持总库索引和子库数据的统一访问
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from sqlmodel import Session, select
 
@@ -74,7 +74,7 @@ class ClassRepository(BaseRepository[DataRegistry]):
 
         return registry
 
-    def get_by_id(self, entity_id: str) -> Optional[DataRegistry]:
+    def get_by_id(self, entity_id: str) -> DataRegistry | None:
         """根据ID获取班级索引
 
         Args:
@@ -90,7 +90,7 @@ class ClassRepository(BaseRepository[DataRegistry]):
         result = self.session.exec(query)
         return result.first()
 
-    def update(self, entity_id: str, update_data: dict[str, Any]) -> Optional[DataRegistry]:
+    def update(self, entity_id: str, update_data: dict[str, Any]) -> DataRegistry | None:
         """更新班级信息
 
         Args:
@@ -151,7 +151,7 @@ class ClassRepository(BaseRepository[DataRegistry]):
             return self.soft_delete(entity_id)
         return self.hard_delete(entity_id)
 
-    def get_by_name(self, name: str) -> Optional[DataRegistry]:
+    def get_by_name(self, name: str) -> DataRegistry | None:
         """根据班级名称获取班级
 
         Args:
@@ -196,7 +196,7 @@ class ClassRepository(BaseRepository[DataRegistry]):
         result = self.session.exec(query)
         return result.all()
 
-    def get_classroom_details(self, registry_id: str) -> Optional[Classroom]:
+    def get_classroom_details(self, registry_id: str) -> Classroom | None:
         """获取班级详细信息（从子库）
 
         Args:

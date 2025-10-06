@@ -1,18 +1,11 @@
-"""文件操作工具模块
-
-提供各种文件操作相关的工具函数。
-"""
-
 import csv
 import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
-from .logger import get_logger
-
-logger = get_logger("file_ops")
+from loguru import logger
 
 
 class FileOperationError(Exception):
@@ -23,7 +16,7 @@ class FileManager:
     """文件管理器"""
 
     @staticmethod
-    def ensure_dir(path: Union[str, Path]) -> Path:
+    def ensure_dir(path: str | Path) -> Path:
         """确保目录存在
 
         Args:
@@ -34,11 +27,10 @@ class FileManager:
         """
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"确保目录存在: {path}")
         return path
 
     @staticmethod
-    def safe_remove(path: Union[str, Path]) -> bool:
+    def safe_remove(path: str | Path) -> bool:
         """安全删除文件或目录
 
         Args:
@@ -64,7 +56,7 @@ class FileManager:
             return False
 
     @staticmethod
-    def copy_file(src: Union[str, Path], dst: Union[str, Path], overwrite: bool = False) -> bool:
+    def copy_file(src: str | Path, dst: str | Path, overwrite: bool = False) -> bool:
         """复制文件
 
         Args:
@@ -87,9 +79,7 @@ class FileManager:
                 logger.warning(f"目标文件已存在且不允许覆盖: {dst}")
                 return False
 
-            # 确保目标目录存在
             FileManager.ensure_dir(dst.parent)
-
             shutil.copy2(src, dst)
             logger.info(f"复制文件: {src} -> {dst}")
             return True
@@ -98,7 +88,7 @@ class FileManager:
             return False
 
     @staticmethod
-    def move_file(src: Union[str, Path], dst: Union[str, Path]) -> bool:
+    def move_file(src: str | Path, dst: str | Path) -> bool:
         """移动文件
 
         Args:
@@ -115,10 +105,7 @@ class FileManager:
             if not src.exists():
                 logger.error(f"源文件不存在: {src}")
                 return False
-
-            # 确保目标目录存在
             FileManager.ensure_dir(dst.parent)
-
             shutil.move(str(src), str(dst))
             logger.info(f"移动文件: {src} -> {dst}")
             return True
@@ -127,7 +114,7 @@ class FileManager:
             return False
 
     @staticmethod
-    def get_file_info(path: Union[str, Path]) -> Optional[dict[str, Any]]:
+    def get_file_info(path: str | Path) -> dict[str, Any] | None:
         """获取文件信息
 
         Args:
@@ -157,7 +144,7 @@ class FileManager:
             return None
 
     @staticmethod
-    def list_files(directory: Union[str, Path], pattern: str = "*", recursive: bool = False) -> list[Path]:
+    def list_files(directory: str | Path, pattern: str = "*", recursive: bool = False) -> list[Path]:
         """列出目录中的文件
 
         Args:
@@ -175,8 +162,6 @@ class FileManager:
                 return []
 
             files = list(directory.rglob(pattern)) if recursive else list(directory.glob(pattern))
-
-            # 只返回文件, 不包括目录
             files = [f for f in files if f.is_file()]
             logger.debug(f"找到 {len(files)} 个文件在 {directory}")
             return files
@@ -186,7 +171,7 @@ class FileManager:
 
     @staticmethod
     def get_file_size_human(size_bytes: int) -> str:
-        """将字节大小转换为人类可读格式
+        """将字节大小转换可读格式
 
         Args:
             size_bytes: 字节大小
@@ -197,15 +182,15 @@ class FileManager:
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if size_bytes < 1024.0:
                 return f"{size_bytes:.1f} {unit}"
-            size_bytes /= 1024.0
+            size_bytes //= 1024
         return f"{size_bytes:.1f} PB"
 
 
 class JsonFileHandler:
-    """JSON文件处理器"""
+    """JSON文件处理"""
 
     @staticmethod
-    def read_json(file_path: Union[str, Path], encoding: str = "utf-8") -> Optional[Any]:
+    def read_json(file_path: str | Path, encoding: str = "utf-8") -> Any | None:
         """读取JSON文件
 
         Args:
@@ -225,7 +210,7 @@ class JsonFileHandler:
             return None
 
     @staticmethod
-    def write_json(data: Any, file_path: Union[str, Path], encoding: str = "utf-8", indent: int = 2) -> bool:
+    def write_json(data: Any, file_path: str | Path, encoding: str = "utf-8", indent: int = 2) -> bool:
         """写入JSON文件
 
         Args:
@@ -251,10 +236,10 @@ class JsonFileHandler:
 
 
 class CsvFileHandler:
-    """CSV文件处理器"""
+    """CSV文件处理"""
 
     @staticmethod
-    def read_csv(file_path: Union[str, Path], encoding: str = "utf-8") -> Optional[list[dict[str, str]]]:
+    def read_csv(file_path: str | Path, encoding: str = "utf-8") -> list[dict[str, str]] | None:
         """读取CSV文件
 
         Args:
@@ -277,7 +262,7 @@ class CsvFileHandler:
             return None
 
     @staticmethod
-    def write_csv(data: list[dict[str, Any]], file_path: Union[str, Path], encoding: str = "utf-8") -> bool:
+    def write_csv(data: list[dict[str, Any]], file_path: str | Path, encoding: str = "utf-8") -> bool:
         """写入CSV文件
 
         Args:
@@ -312,7 +297,7 @@ class TextFileHandler:
     """文本文件处理器"""
 
     @staticmethod
-    def read_text(file_path: Union[str, Path], encoding: str = "utf-8") -> Optional[str]:
+    def read_text(file_path: str | Path, encoding: str = "utf-8") -> str | None:
         """读取文本文件
 
         Args:
@@ -332,7 +317,7 @@ class TextFileHandler:
             return None
 
     @staticmethod
-    def write_text(content: str, file_path: Union[str, Path], encoding: str = "utf-8") -> bool:
+    def write_text(content: str, file_path: str | Path, encoding: str = "utf-8") -> bool:
         """写入文本文件
 
         Args:
@@ -356,7 +341,7 @@ class TextFileHandler:
             return False
 
     @staticmethod
-    def read_lines(file_path: Union[str, Path], encoding: str = "utf-8") -> Optional[list[str]]:
+    def read_lines(file_path: str | Path, encoding: str = "utf-8") -> list[str] | None:
         """按行读取文本文件
 
         Args:
@@ -369,7 +354,6 @@ class TextFileHandler:
         try:
             with open(file_path, encoding=encoding) as f:
                 lines = f.readlines()
-            # 去除行尾换行符
             lines = [line.rstrip("\n\r") for line in lines]
             logger.debug(f"读取文本文件行: {file_path}, 行数: {len(lines)}")
             return lines
@@ -377,73 +361,47 @@ class TextFileHandler:
             logger.exception(f"读取文本文件行失败 {file_path}: {e}")
             return None
 
-    @staticmethod
-    def append_text(content: str, file_path: Union[str, Path], encoding: str = "utf-8") -> bool:
-        """追加文本到文件
 
-        Args:
-            content: 要追加的内容
-            file_path: 文件路径
-            encoding: 文件编码
-
-        Returns:
-            是否追加成功
-        """
-        try:
-            file_path = Path(file_path)
-            FileManager.ensure_dir(file_path.parent)
-
-            with open(file_path, "a", encoding=encoding) as f:
-                f.write(content)
-            logger.debug(f"追加文本到文件: {file_path}")
-            return True
-        except Exception as e:
-            logger.exception(f"追加文本失败 {file_path}: {e}")
-            return False
-
-
-# 便捷函数
-def ensure_dir(path: Union[str, Path]) -> Path:
+def ensure_dir(path: str | Path) -> Path:
     """确保目录存在"""
     return FileManager.ensure_dir(path)
 
 
-def safe_remove(path: Union[str, Path]) -> bool:
+def safe_remove(path: str | Path) -> bool:
     """安全删除文件或目录"""
     return FileManager.safe_remove(path)
 
 
-def read_json(file_path: Union[str, Path]) -> Optional[Any]:
+def read_json(file_path: str | Path) -> Any | None:
     """读取JSON文件"""
     return JsonFileHandler.read_json(file_path)
 
 
-def write_json(data: Any, file_path: Union[str, Path]) -> bool:
+def write_json(data: Any, file_path: str | Path) -> bool:
     """写入JSON文件"""
     return JsonFileHandler.write_json(data, file_path)
 
 
-def read_csv(file_path: Union[str, Path]) -> Optional[list[dict[str, str]]]:
+def read_csv(file_path: str | Path) -> list[dict[str, str]] | None:
     """读取CSV文件"""
     return CsvFileHandler.read_csv(file_path)
 
 
-def write_csv(data: list[dict[str, Any]], file_path: Union[str, Path]) -> bool:
+def write_csv(data: list[dict[str, Any]], file_path: str | Path) -> bool:
     """写入CSV文件"""
     return CsvFileHandler.write_csv(data, file_path)
 
 
-def read_text(file_path: Union[str, Path]) -> Optional[str]:
+def read_text(file_path: str | Path) -> str | None:
     """读取文本文件"""
     return TextFileHandler.read_text(file_path)
 
 
-def write_text(content: str, file_path: Union[str, Path]) -> bool:
+def write_text(content: str, file_path: str | Path) -> bool:
     """写入文本文件"""
     return TextFileHandler.write_text(content, file_path)
 
 
-# 导出的函数和类
 __all__ = [
     "CsvFileHandler",
     "FileManager",
