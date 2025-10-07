@@ -124,6 +124,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pylint" },
     { name = "pyright" },
+    { name = "pyside6-stubs" },
     { name = "ruff" },
 ]
 test = [
@@ -159,6 +160,7 @@ dev = [
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pylint", specifier = ">=3.3.8" },
     { name = "pyright", specifier = ">=1.1.405" },
+    { name = "pyside6-stubs", specifier = "~=6.7.3.0" },
     { name = "ruff", specifier = ">=0.13.2" },
 ]
 test = [
@@ -3632,6 +3634,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pyside6-stubs"
+version = "6.7.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mypy" },
+    { name = "pyside6" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/2b/d2a3fdb212475682b11e8b6330f2cada60dcbbaf151f73f86844b11d1db6/pyside6_stubs-6.7.3.0.tar.gz", hash = "sha256:db8def2bb9c74091bfa2a4df7610d3ea344ecd00ebd4283995eeb5fda8383603", size = 509931, upload-time = "2025-03-04T05:49:15.755Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/2e/3488fa3baca56ff494b9502424675f5b14b11e966eb74d5adaf1811cd651/pyside6_stubs-6.7.3.0-py3-none-any.whl", hash = "sha256:7a2ef0d7486939f240e745829f80887ec3eab280e52c9930d64b48b3de95042a", size = 550616, upload-time = "2025-03-04T05:49:13.154Z" },
+]
+
+[[package]]
 name = "pysidesix-frameless-window"
 version = "0.7.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3800,16 +3815,16 @@ wheels = [
 
 [[package]]
 name = "rinui"
-version = "0.1.7.3"
+version = "0.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "darkdetect" },
     { name = "pyside6" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/25/7a4988c140f7b49f7337b8ba4ae2302f1d9e9af54816feb150df34ea711b/rinui-0.1.7.3.tar.gz", hash = "sha256:e3caa7b3c1eb07df251b7f8eb9290c9b469e507fe93244c0efdc51348b99384f", size = 885001, upload-time = "2025-08-25T12:19:23.535Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/84/7a/63480e062c19d3e07ef2d5fe7d826f94d0aa47e09073dc67c4f9cb5a53ae/rinui-0.1.8.tar.gz", hash = "sha256:7a1e0f6b7d93147d19ef5ea8243ea798e4403b1d82939b12601a38206cadf966", size = 887347, upload-time = "2025-10-07T04:44:34.294Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3d/56/a250192ceb77d1eb4bf478e68dd5f759d1a888cafa2ad57f4a57008d81d3/rinui-0.1.7.3-py3-none-any.whl", hash = "sha256:54838466d0071cb53d7dc53989351734f548a95f54f61aa5a9f34f356309e7cc", size = 934672, upload-time = "2025-08-25T12:19:20.556Z" },
+    { url = "https://files.pythonhosted.org/packages/54/fe/005bd908b2dfb1b0ef89af220f9bbff68646cda7988c84049729fe3db76b/rinui-0.1.8-py3-none-any.whl", hash = "sha256:e854bc07b0ed9fa98be6e1c35f7b8f394e76360f312a598eafc83384300e1c4c", size = 937063, upload-time = "2025-10-07T04:44:32.409Z" },
 ]
 
 [[package]]
