@@ -41,12 +41,6 @@
     "log_update_interval": 0.5,
     "log_level": "INFO"
   },
-  "database": {
-    "database_url": "sqlite:///./class_manager.db",
-    "database_echo": false,
-    "pool_size": 5,
-    "max_overflow": 10
-  },
   "backup": {
     "auto_save_enabled": true,
     "auto_save_interval": 300,
