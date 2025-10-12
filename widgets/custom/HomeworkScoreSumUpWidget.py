@@ -66,7 +66,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
         self.subject_list: Dict[int, HomeworkRule] = {
             -1: HomeworkRule("error", "列表为空", "", {"列表为空": error_template})
         }
-        self.update_timer = QTimer()
+        self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_buttons)
         self.update_timer.start(100)
         self.destroyed.connect(self.update_timer.stop)

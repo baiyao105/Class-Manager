@@ -93,8 +93,8 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
         Base.log("I", "多选窗口开始执行", "MultiSelectWidget")
         self.allow_none = allow_none
         self.show()
-        loop = QEventLoop()
-        timer = QTimer()
+        loop = QEventLoop(self)
+        timer = QTimer(self)
         def _check_if_finished():
             if self.select_result is not None:
                 loop.quit()

@@ -39,7 +39,7 @@ class StudentWidget(Ui_Form, MyWidget):
         self.setLayout(self.mainLayout)
         self.main_window = main_window
         self.master_widget = master_widget
-        self.update_timer = QTimer()
+        self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update)
         self.update_timer.start(100)
         self.pushButton_3.clicked.connect(self.select_and_send)

@@ -41,7 +41,7 @@ class GroupWidget(Ui_Form, MyWidget):
         self.setWindowTitle("小组信息 - " + str(group.name))
         self.setLayout(self.mainLayout)
         self.first_load = True
-        self.update_timer = QTimer()
+        self.update_timer = QTimer(self)
         self.last_score = {}
         self.update_timer.timeout.connect(self.update_label)
         self.update_timer.start(100)
@@ -59,7 +59,7 @@ class GroupWidget(Ui_Form, MyWidget):
         )  # 不能在别的线程设置，我也不知道为什么
         self.update_stu_list()
         self.pushButton.clicked.connect(self.select_member_and_send)
-        self.stu_list_update_timer = QTimer()
+        self.stu_list_update_timer = QTimer(self)
         self.student_list_update.connect(self.update_stu_list)
         self.stu_list_update_timer.timeout.connect(self.student_list_update.emit)
         self.stu_list_update_timer.start(1000)

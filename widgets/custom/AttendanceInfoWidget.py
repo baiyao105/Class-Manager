@@ -69,7 +69,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
             self.stu_states[s.num] = "late_more"
         self.grid_button_signal.connect(self._grid_buttons)
         self.grid_buttons()
-        self.update_timer = QTimer()
+        self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_text)
         self.update_timer.start(100)
         self.radioButton.setChecked(True)

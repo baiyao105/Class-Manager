@@ -263,8 +263,8 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             Base.log_exc("初始化项目时发生错误", "ListView.init_items")
 
         Base.log("D", "等待动画结束", "ListView.init_items")
-        loop = QEventLoop()
-        timer = QTimer()
+        loop = QEventLoop(self)
+        timer = QTimer(self)
         def _check_if_finished():
             if all(self.anim_result):
                 loop.quit()
@@ -368,7 +368,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.startanimation_1 = self.create_animation(b"pos", 400, startpoint, endpoint)
 
         self.setGeometry(self.x(), self.y(), self.width(), 1)
-        wait_loop_1 = QEventLoop()
+        wait_loop_1 = QEventLoop(self)
         self.startanimation_1.finished.connect(wait_loop_1.quit)
         self.startanimation_1.start()
         wait_loop_1.exec()
@@ -387,7 +387,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.startanimation_2 = self.create_animation(
             b"size", 400, QSize(width, 1), QSize(width, height)
         )
-        wait_loop_2 = QEventLoop()
+        wait_loop_2 = QEventLoop(self)
         self.startanimation_2.finished.connect(wait_loop_2.quit)
         self.startanimation_2.start()
         wait_loop_2.exec()

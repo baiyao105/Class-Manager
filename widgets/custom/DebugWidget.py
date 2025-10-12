@@ -33,7 +33,7 @@ class DebugWidget(Ui_Form, MyWidget):
         self.master = master
         self.pushButton.clicked.connect(self.send_command)
         self.pushButton_4.clicked.connect(self.send_command_in_thread)
-        self.update_timer = QTimer()
+        self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update)
         self.update_timer.start(100)
         self.textbroser_last = DebugWidget.last_line
@@ -257,8 +257,8 @@ for i in range(100):
             finished = True
 
 
-        loop = QEventLoop()
-        timer = QTimer()
+        loop = QEventLoop(self)
+        timer = QTimer(self)
         def _check_if_finished():
             if finished:
                 loop.quit()

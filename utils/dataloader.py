@@ -7,7 +7,6 @@ import sys
 import math
 import shutil
 import sqlite3
-from threading import RLock
 
 from utils.functions.prompts import question_yes_no
 from utils.classdatatypes import *  # pylint: disable=unused-wildcard-import, wildcard-import

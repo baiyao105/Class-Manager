@@ -33,7 +33,7 @@ class MyMainWindow(QMainWindow):
             )
         )
         self.close_count = 0
-        self.clear_time_timer = QTimer()
+        self.clear_time_timer = QTimer(self)
         self.clear_time_timer.timeout.connect(self.clear_close_count)
         self.clear_time_timer.start(30000)
 

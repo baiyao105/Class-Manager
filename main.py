@@ -20,7 +20,6 @@ import warnings
 import traceback
 import threading
 import functools
-import pyqtgraph as pg
 from queue import Queue
 from typing import Optional, Union, List, Tuple, Dict, Callable, Literal, Type, Any
 from shutil import copytree, rmtree, copy as shutil_copy
@@ -38,7 +37,7 @@ from utils.consts import (
 )
 
 os.environ["PYQTGRAPH_QT_LIB"] = qt_version         # 必须在导入pyqtgraph之前设置
-locale.setlocale(locale.LC_CTYPE, "zh_CN.UTF-8")        # 防止诡异的编码错误
+# locale.setlocale(locale.LC_CTYPE, "zh_CN.UTF-8")        # 防止诡异的编码错误
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
 
 import psutil
@@ -46,7 +45,7 @@ import requests
 import numpy as np
 import dill as pickle  # pylint: disable=shadowed-import
 
-
+import pyqtgraph as pg
 from qfluentwidgets.common import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.components import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.window import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -119,147 +118,6 @@ except ImportError:
 ExceptionInfoType = Tuple[Type[BaseException], BaseException, TracebackType]
 """异常信息类型"""
 
-CLIENT_VERSION: str = VERSION_INFO["client_version"]
-"应用程序界面版本"
-CLIENT_VERSION_CODE: str = VERSION_INFO["client_version_code"]
-"应用程序界面版本编码"
-
-settings: SettingsInfo = SettingsInfo.current
-"全局设置对象"
-
-
-if not enable_memory_tracing:
-
-    def profile(precision=4):  # NOSONAR; pylint: disable=unused-argument
-        def decorator(func):
-            return func
-        return decorator
-
-else:
-    try:
-        from memory_profiler import profile
-    except ImportError:
-        warnings.warn(
-            "memory_profiler模块未安装, 相关性能分析功能将被禁用", RuntimeWarning
-        )
-
-        def profile(precision=4):  # NOSONAR; pylint: disable=unused-argument
-            def decorator(func):
-                return func
-
-            return decorator
-
-        Base.log("W", "memory_profiler模块未安装,相关性能分析功能将被禁用")
-
-
-def exception_handler(
-    exc_type: Optional[Type[BaseException]] = None,
-    exc_val: Optional[BaseException] = None,
-    exc_tb: Optional[TracebackType] = None,
-):
-    """
-    捕获未处理的异常并显示错误对话框
-
-    用作sys.excepthook的处理函数
-    """
-    file_basename = os.path.basename(__file__)
-    file_path = __file__.replace(os.getcwd(), "").lstrip("\\/")
-    # 绑定上下文信息
-    exc_info = (
-        ["捕获到异常！\n"]
-        + traceback.format_exception(exc_type, exc_val, exc_tb)
-        + ["\n"]
-    )
-    if log_style == "new":
-        logger.bind(
-            file=file_basename,
-            full_file=file_path,
-            source="exception_handler",
-            lineno=110,
-            source_with_lineno="exception_handler:110",
-        ).exception("Uncaught exception occurred", exc_info=exc_val)
-    else:
-        Base.log_exc("捕获到异常", "exception_handler", exc=exc_val)
-    pagesize = 20
-    pagemaxchars = 1000
-    total = int(np.ceil(len(exc_info) / pagesize))
-    index = 0
-    try:
-        parent = ClassWindow.main_instance
-        for i in range(total):
-            currenttext = exc_info[i * pagesize : (i + 1) * pagesize]
-            for j in range(math.ceil(len(currenttext) / pagemaxchars)):
-                index += 1
-                parent.critical(
-                    "错误",
-                    "".join(
-                        currenttext[j * pagemaxchars : (j + 1) * (pagemaxchars + 1)]
-                    )
-                    + f"\n\t\t\t(页码{index}/{total})",
-                )
-    except (NameError, RuntimeError):
-        parent = None
-        for i in range(total):
-            currenttext = exc_info[i * pagesize : (i + 1) * pagesize]
-            for j in range(math.ceil(len(currenttext) / pagemaxchars)):
-                index += 1
-                box = QMessageBox()
-                box.setWindowTitle("错误")
-                box.setText(
-                    "".join(
-                        currenttext[j * pagemaxchars : (j + 1) * (pagemaxchars + 1)]
-                    )
-                )
-                box.setInformativeText(f"(页码{index}/{total})")
-                box.setIcon(QMessageBox.Icon.Critical)
-                box.exec()
-
-
-sys.excepthook = exception_handler
-base_sys.excepthook = exception_handler
-threading.excepthook = exception_handler
-
-
-if sys.version_info < (3, 8):
-    warnings.warn(
-        f"建议使用Python3.8及以上的版本运行（当前为{sys.version_info.major}.{sys.version_info.minor}）"
-    )
-
-if sys.platform != "win32":
-    warnings.warn("本程序目前主要支持Windows操作系统，其他操作系统可能无法正常运行")
-
-
-
-HAS_CV2: bool = False
-"OpenCV库可用性标志"
-
-
-try:
-    import cv2
-
-    HAS_CV2 = True
-except ImportError:
-    pass
-
-
-def question_yes_no(
-    master: Optional[QWidget],
-    title: str,
-    text: str,
-    default: bool = True,
-    msg_type: Literal["question", "information", "warning", "critical"] = "question",
-    pixmap: Optional[QPixmap] = None,
-) -> bool:
-    "显示是/否对话框并返回用户选择"
-    Base.log(
-        "I",
-        f"询问框：{repr(title)} - {repr(text)}，"
-        f"default={repr(default)}，type={repr(msg_type)}，pixmap={repr(pixmap)}",
-    )
-    return question_yes_no_orig(master, title, text, default, msg_type, pixmap)
-
-
-
 class Command:
     """快捷命令"""
 
@@ -284,10 +142,122 @@ class Command:
         )
 
 
+CLIENT_VERSION: str = VERSION_INFO["client_version"]
+"应用程序界面版本"
+CLIENT_VERSION_CODE: str = VERSION_INFO["client_version_code"]
+"应用程序界面版本编码"
+
+settings: SettingsInfo = SettingsInfo.current
+"全局设置对象"
+
+show_exc_window_callback: Optional[Callable[[ExceptionInfoType], None]]
+"显示异常窗口的回调函数"
+
+HAS_CV2: bool = False
+"OpenCV库可用性标志"
+
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    pass
+
+
 command_list: List[Command] = []
 "快捷命令列表"
 lately_used_commands: List[Command] = []
 "最近使用命令列表"
+
+
+
+
+if not enable_memory_tracing:
+    def profile(precision=4):  # NOSONAR; pylint: disable=unused-argument
+        def decorator(func):
+            return func
+        return decorator
+else:
+
+    try:
+        from memory_profiler import profile
+    except ImportError:
+        warnings.warn("memory_profiler模块未安装, 相关性能分析功能将被禁用", RuntimeWarning)
+        Base.log("W", "memory_profiler模块未安装,相关性能分析功能将被禁用")
+
+        def profile(precision=4):  # NOSONAR; pylint: disable=unused-argument
+            def decorator(func):
+                return func
+            return decorator
+
+
+
+
+def exception_handler(
+    exc_type: Optional[Type[BaseException]] = None,
+    exc_val: Optional[BaseException] = None,
+    exc_tb: Optional[TracebackType] = None,
+):
+    """
+    捕获未处理的异常并显示错误对话框
+
+    用作sys.excepthook的处理函数
+    """
+    global show_exc_window_callback
+    file_basename = os.path.basename(__file__)
+    file_path = __file__.replace(os.getcwd(), "").lstrip("\\/")
+    # 绑定上下文信息
+    if log_style == "new":
+        logger.bind(
+            file=file_basename,
+            full_file=file_path,
+            source="exception_handler",
+            lineno=110,
+            source_with_lineno="exception_handler:110",
+        ).exception("Uncaught exception occurred", exc_info=exc_val)
+    else:
+        Base.log_exc("捕获到异常", "exception_handler", exc=exc_val)
+    
+    if show_exc_window_callback is not None:
+        show_exc_window_callback((exc_type, exc_val, exc_tb))
+    
+
+sys.excepthook = exception_handler
+base_sys.excepthook = exception_handler
+threading.excepthook = exception_handler
+
+
+if sys.version_info < (3, 8):
+    warnings.warn(
+        f"建议使用Python3.8及以上的版本运行（当前为{sys.version_info.major}.{sys.version_info.minor}）"
+    )
+
+if sys.platform != "win32":
+    warnings.warn("本程序目前主要支持Windows操作系统，其他操作系统可能无法正常运行")
+
+
+
+
+
+def question_yes_no(
+    master: Optional[QWidget],
+    title: str,
+    text: str,
+    default: bool = True,
+    msg_type: Literal["question", "information", "warning", "critical"] = "question",
+    pixmap: Optional[QPixmap] = None,
+) -> bool:
+    "显示是/否对话框并返回用户选择"
+    Base.log(
+        "I",
+        f"询问框：{repr(title)} - {repr(text)}，"
+        f"default={repr(default)}，type={repr(msg_type)}，pixmap={repr(pixmap)}",
+    )
+    return question_yes_no_orig(master, title, text, default, msg_type, pixmap)
+
+
+
+
+
 
 
 def as_command(
@@ -331,7 +301,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     ##### 信号 #####
 
-    log_update = Signal(str)
+    signal_log_update = Signal(str)
     """
     日志更新信号，用于更新日志窗口
     
@@ -340,44 +310,47 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     QObject: Cannot create children for a parent that is in a different thread.
     """
 
-    tip_update = Signal(tuple)
+    signal_tip_update = Signal(tuple)
     """提示更新信号，用于更新侧边提示栏"""
 
-    anim_group_state_changed = Signal(int)
+    signal_anim_group_state_changed = Signal(int)
     """动画组状态改变信号"""
 
-    button_update = Signal(ObjectButton, tuple)
+    signal_button_update = Signal(ObjectButton, tuple)
     """按钮状态更新信号，用于控制按钮闪烁效果（这个应该是吃性能最多的信号了）"""
 
-    show_info = Signal(tuple)
+    signal_show_info = Signal(tuple)
     """显示信息信号"""
 
-    show_warning = Signal(tuple)
+    signal_show_warning = Signal(tuple)
     """显示警告信号"""
 
-    show_error = Signal(tuple)
+    signal_show_error = Signal(tuple)
     """显示错误信号"""
 
-    show_question = Signal(tuple)
+    signal_show_question = Signal(tuple)
     """显示问题信号"""
 
-    log_window_refresh = Signal()
+    signal_log_window_refresh = Signal()
     """日志窗口刷新信号，用于刷新日志窗口"""
 
-    show_new_tip = Signal(SideNotice)
+    signal_show_new_tip = Signal(SideNotice)
     """显示新提示信号"""
 
-    stu_list_button_update = Signal()
+    signal_stu_list_update = Signal()
     """学生列表按钮更新信号"""
 
-    going_to_exit = Signal()
+    signal_exiting = Signal()
     "准备退出信号"
 
-    dont_click_button_clicked = Signal(int)
+    signal_dont_click_btn_clicked = Signal(int)
     "千万别点被点击了"
 
-    refresh_hint_widget_signal = Signal(int)
+    signal_refresh_hint_widget = Signal(int)
     "刷新提示(屏幕右上角的)文本信号"
+
+    signal_show_exc_window = Signal(Exception)
+    "显示异常窗口信号"
 
     ###########################################################################
     #                                初始化                                    #
@@ -600,7 +573,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
         self.achievement_obs.on_observer_overloaded = on_achievement_obs_overloaded
 
-        self.stu_list_button_update.connect(self._grid_buttons)
+        self.signal_stu_list_update.connect(self._grid_buttons)
         self.setup()
         self.achievement_obs.achievement_displayer = self.display_achievement
         self.is_running = True
@@ -639,7 +612,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.actionNew_Template.triggered.connect(
             self.new_template
         )  # 笑死唯一一个不是默认名字的action控件
-        self.show_new_tip.connect(lambda tip: tip.show())
+        self.signal_show_new_tip.connect(lambda tip: tip.show())
         self.selected_quick_command: List[Optional[Command]] = [
             [c for c in self.command_list if c.key == "new_template"][0],
             [c for c in self.command_list if c.key == "manage_templates"][0],
@@ -672,9 +645,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             Base.log("W", "未找到快速命令文件，重置为默认", "MainWindow.load_settings")
         self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.listWidget.doubleClicked.connect(self.click_opreation)
-        self.tip_update.connect(lambda args: self._show_tip(*args))
-        self.button_update.connect(self.btn_anim)
-        self.log_window_refresh.connect(self._refresh_logwindow)
+        self.signal_tip_update.connect(lambda args: self._show_tip(*args))
+        self.signal_button_update.connect(self.btn_anim)
+        self.signal_log_window_refresh.connect(self._refresh_logwindow)
         self.pushButton.clicked.connect(self.dont_click)
         self.listView_data: List[Callable] = []
         "ListView数据，用于存储主窗口侧边ListView里面的命令（对应里面的每一项）"
@@ -691,16 +664,16 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "在主窗口右侧ListWidget插入项的队列"
         self.logger_queue = Queue()
         "要插入到主窗口日志的队列"
-        self.log_update.connect(self.logwindow_add_newline)
-        self.log_update.emit("这里是日志")
-        self.show_info.connect(lambda args: self._information(*args))
-        self.show_warning.connect(lambda args: self._warning(*args))
-        self.show_error.connect(lambda args: self._critical(*args))
-        self.show_question.connect(lambda args: self._question_if_exec(*args))
-        self.going_to_exit.connect(self.on_exit)
-        self.dont_click_button_clicked.connect(self._dont_click)
-        self.refresh_hint_widget_signal.connect(self._refresh_hint_widget)
-        self.anim_group_state_changed.connect(self._anim_group_state_changed)
+        self.signal_log_update.connect(self.logwindow_add_newline)
+        self.signal_log_update.emit("这里是日志")
+        self.signal_show_info.connect(lambda args: self._information(*args))
+        self.signal_show_warning.connect(lambda args: self._warning(*args))
+        self.signal_show_error.connect(lambda args: self._critical(*args))
+        self.signal_show_question.connect(lambda args: self._question_if_exec(*args))
+        self.signal_exiting.connect(self.on_exit)
+        self.signal_dont_click_btn_clicked.connect(self._dont_click)
+        self.signal_refresh_hint_widget.connect(self._refresh_hint_widget)
+        self.signal_anim_group_state_changed.connect(self._anim_group_state_changed)
         self.tip_handler = self.TipHandler(self)
         "提示处理器"
         self.tip_handler.start()
@@ -711,11 +684,11 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.setWindowTitle(f"班寄管理 - {self.target_class.name}")
         self.terminal_locals = {}
         "终端的本地变量"
-        self.update_timer = QTimer()
+        self.update_timer = QTimer(self)
         "更新定时器"
         self.update_timer.timeout.connect(self.update)
         self.update_timer.start(100)
-        self.recent_command_update_timer = QTimer()
+        self.recent_command_update_timer = QTimer(self)
         "最近命令更新定时器"
         self.recent_command_update_timer.timeout.connect(
             self.update_recent_command_btns
@@ -778,47 +751,40 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def __repr__(self):  # 其实是因为直接继承ClassObjects的repr会导致无限递归
         return super(MyMainWindow, self).__repr__()
 
-    def init_display_data(self):
-        """ "初始化显示数据和存储数据"""
-        Base.log("I", "初始化本地显示数据", "MainWindow.init_display_data")
-        self.target_class: Class
-        if not self.stu_buttons:
-            self.stu_buttons: Dict[int, ObjectButton] = {}
-            self.grp_buttons: Dict[str, ObjectButton] = {}
-        self.client_version = CLIENT_VERSION
-        self.client_version_code = CLIENT_VERSION_CODE
-        self.opacity = 0.88
-        self.score_up_color_mixin_begin = (0xCA, 0xFF, 0xCA)
-        self.score_up_color_mixin_end = (0x33, 0xCF, 0x6C)
-        self.score_up_color_mixin_start = 2
-        self.score_up_color_mixin_step = 15
-        self.score_up_flash_framelength_base = 300
-        self.score_up_flash_framelength_step = 100
-        self.score_up_flash_framelength_max = 2000
-
-        self.score_down_color_mixin_begin = (0xFC, 0xB5, 0xB5)
-        self.score_down_color_mixin_end = (0xA9, 0x00, 0x00)
-        self.score_down_color_mixin_start = 2
-        self.score_down_color_mixin_step = 15
-        self.score_down_flash_framelength_base = 300
-        self.score_down_flash_framelength_step = 100
-        self.score_down_flash_framelength_max = 2000
-        self.log_keep_linecount = 100
-        self.log_update_interval = 0.1
-        self.auto_save_enabled = False
-        self.auto_save_interval = 120
-        self.auto_save_path: Literal["folder", "user"] = "folder"
-        self.auto_backup_scheme: Literal["none", "only_data", "all"] = "only_data"
-        self.animation_speed = 1.0
-        self.subwindow_x_offset = 0
-        self.subwindow_y_offset = 0
-        self.use_animate_background = False
-        self.max_framerate = 60
-        self.saving = False
 
     ###########################################################################
-    #                            用户提示类                                    #
+    #                     用户提示/通用界面类                                  #
     ###########################################################################
+
+
+    def list_view(
+        self,
+        data: List[Tuple[str, Callable]],
+        title: str,
+        master: Optional[Union[
+            QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
+        ]] = None,
+        commands: List[Tuple[str, Callable]] = None,
+        select_once_then_exit: bool = False,
+    ):
+        """显示一个列表框
+
+        :param data: 数据, 每个元素是一个元组，
+        第一个元素是显示的文本，第二个元素是一个函数，列表项点击后执行
+        :param title: 标题
+        :param master: 父窗口
+        :param commands: 命令，每个元素是一个元组，
+        第一个元素是显示的文本，第二个元素是一个函数，会以按钮形式显示在列表一边，点击后执行
+        """
+        self.lastest_listview = ListView(
+            main_window=self,
+            master_widget=master,
+            data=data,
+            title=title,
+            commands=commands,
+            select_once_then_exit=select_once_then_exit,
+        )
+        self.lastest_listview.show()
 
     def show_tip(
         self,
@@ -845,7 +811,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         :param closeable: 是否允许用户关闭通知
         :param click_command: 点击通知时的回调函数
         """
-        self.tip_update.emit(
+        self.signal_tip_update.emit(
             (
                 title,
                 content,
@@ -895,9 +861,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.tip_history.insert(0, obj)
         self.ListWidget.insertItem(
             0,
-            time.strftime(
-                f"%H:%M {obj.title} {obj.content}", time.localtime(obj.create_time)
-            ),
+            time.strftime("%H:%M ", time.localtime(obj.create_time)) + f"{obj.title} {obj.content}",
         )
         self.sidenotice_waiting_order.put(obj)
 
@@ -970,7 +934,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     f"正在将提示 {repr(current)} 放入第 {index} 个位置",
                     "MainWindow.TipHandler",
                 )
-                self._parent.show_new_tip.emit(current)
+                self._parent.signal_show_new_tip.emit(current)
             Base.log("I", "提示处理器线程结束", "MainWindow.TipHandler")
 
     def information(self, title: str, text: str, pixmap: Optional[QPixmap] = None):
@@ -981,7 +945,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         :param text: 对话框内容
         :param pixmap: 自定义图标
         """
-        self.show_info.emit((title, text, pixmap))
+        self.signal_show_info.emit((title, text, pixmap))
 
     def _information(self, title, text, pixmap):
         "显示信息框的接口"
@@ -1007,7 +971,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         :param title: 对话框标题
         :param text: 对话框内容
         :param pixmap: 自定义图标"""
-        self.show_warning.emit((title, text, pixmap))
+        self.signal_show_warning.emit((title, text, pixmap))
 
     def _warning(self, title, text, pixmap):
         "显示警告框的接口"
@@ -1034,7 +998,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         :param text: 对话框内容
         :param pixmap: 自定义图标
         """
-        self.show_error.emit((title, text, pixmap))
+        self.signal_show_error.emit((title, text, pixmap))
 
     def _critical(self, title, text, pixmap):
         "显示错误框的接口"
@@ -1064,7 +1028,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         :param command: 用户确认时执行的回调函数
         :param pixmap: 自定义图标
         """
-        self.show_question.emit((title, text, command, pixmap))
+        self.signal_show_question.emit((title, text, command, pixmap))
 
     def _question_if_exec(self, title, text, command, pixmap):
         "询问框的接口"
@@ -1084,6 +1048,18 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             command()
             return True
         return False
+    
+
+    def show_exception(self, e: Exception):
+        "显示异常"
+        self.signal_show_exc_window.emit(e)
+
+    def _show_exception(self, e: Exception):
+        "展示异常信息的接口"
+        Base.log("E", f"展示异常信息窗口：{e!r}", "MainWindow._show_exception")
+        self.exception_window = ExceptionHandler(self, self, e)
+        self.exception_window.run()
+
 
     ###########################################################################
     #                        功能实现：快捷命令                                #
@@ -1434,7 +1410,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             )
             self.exit_tip.show()
             self.exit_action_finished = False
-            self.going_to_exit.emit()
+            self.signal_exiting.emit()
             wait_until(lambda: self.exit_action_finished)
             self.hide()
             if enable_memory_tracing:
@@ -1616,7 +1592,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     def grid_buttons(self):
         """显示所有学生按钮（虽然不算真正意义上的grid）"""
-        self.stu_list_button_update.emit()
+        self.signal_stu_list_update.emit()
 
     def _grid_buttons(self):
         """grid_buttons的接口，不要用Thread调用!"""
@@ -1765,7 +1741,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def refresh_logwindow_while_alive(self):
         """更新日志窗口显示内容，同步最新日志信息"""
         while self.is_running:
-            self.log_window_refresh.emit()
+            self.signal_log_window_refresh.emit()
             time.sleep(self.log_update_interval)
 
     @Slot()
@@ -2392,8 +2368,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
         :param mode: 模式，按照范围划分
         """
-        self.refresh_hint_widget_signal.emit(mode)
+        self.signal_refresh_hint_widget.emit(mode)
 
+    @Slot(int)
     def _refresh_hint_widget(self, mode: int = 0):
         "刷新提示的接口"
         Base.log("I", f"刷新提示，当前模式：{mode}", "MainWindow.refresh_hints")
@@ -2700,34 +2677,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         )
         self.listview_history_class.show()
 
-    def list_view(
-        self,
-        data: List[Tuple[str, Callable]],
-        title: str,
-        master: Optional[Union[
-            QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
-        ]] = None,
-        commands: List[Tuple[str, Callable]] = None,
-        select_once_then_exit: bool = False,
-    ):
-        """显示一个列表框
 
-        :param data: 数据, 每个元素是一个元组，
-        第一个元素是显示的文本，第二个元素是一个函数，列表项点击后执行
-        :param title: 标题
-        :param master: 父窗口
-        :param commands: 命令，每个元素是一个元组，
-        第一个元素是显示的文本，第二个元素是一个函数，会以按钮形式显示在列表一边，点击后执行
-        """
-        self.lastest_listview = ListView(
-            main_window=self,
-            master_widget=master,
-            data=data,
-            title=title,
-            commands=commands,
-            select_once_then_exit=select_once_then_exit,
-        )
-        self.lastest_listview.show()
 
     @Slot()
     @as_command("stu_ranking", "学生排名")
@@ -2909,7 +2859,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         Base.log("I", "检测新版本", "MainWindow.detect_new_version")
         Thread(target=self.updator_thread.detect_new_version).start()
 
-    @Slot()
+    @Slot(int)
     def dont_click(self, style: Optional[int] = 0):
         "处理特殊按钮点击事件，触发随机彩蛋效果"
         if "tip_dont_click" not in runtime_flags:
@@ -2923,9 +2873,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                 msg_type="warning",
             )
             runtime_flags["tip_dont_click"] = True
-        self.dont_click_button_clicked.emit(style)
+        self.signal_dont_click_btn_clicked.emit(style)
 
-    @Slot()
+    @Slot(int)
     def _dont_click(self, style: int):
         "千万别点被点击时的接口"
         style = random.randint(1, 7) if style == 0 else style
@@ -2985,6 +2935,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         elif style == 7:
             orig_pos: Dict[QPoint, QWidget] = {}
             for obj in self.findChildren(QWidget):
+                obj: QWidget
                 orig_pos[obj] = obj.geometry().topLeft()
 
             for i in range(200):
@@ -3003,7 +2954,8 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                     pass
 
     def script_backup(self, mode: Literal["none", "all", "only_data"] = "only_data"):
-        """执行应用程序备份
+        """
+        执行应用程序备份
 
         :param mode: 备份模式
             "none": 不执行备份
@@ -3232,7 +3184,7 @@ class UpdateThread(QThread):
                 step = self.main_window.score_up_color_mixin_step
                 mixin_start = self.main_window.score_up_color_mixin_start
                 value = abs(int(stu.score) - int(self.lastest_score[stu.num]))
-                self.main_window.button_update.emit(
+                self.main_window.signal_button_update.emit(
                     self.main_window.stu_buttons[num],
                     (
                         (
@@ -3287,7 +3239,7 @@ class UpdateThread(QThread):
                 step = self.main_window.score_down_color_mixin_step
                 mixin_start = self.main_window.score_down_color_mixin_start
                 value = abs(stu.score - self.lastest_score[stu.num])
-                self.main_window.button_update.emit(
+                self.main_window.signal_button_update.emit(
                     self.main_window.stu_buttons[num],
                     (
                         (
@@ -3375,7 +3327,7 @@ class UpdateThread(QThread):
                 step = self.main_window.score_up_color_mixin_step
                 mixin_start = self.main_window.score_up_color_mixin_start
                 value = abs(int(grp.total_score) - int(self.lastest_grp_score[key]))
-                self.main_window.button_update.emit(
+                self.main_window.signal_button_update.emit(
                     self.main_window.grp_buttons[key],
                     (
                         (
@@ -3430,7 +3382,7 @@ class UpdateThread(QThread):
                 step = self.main_window.score_down_color_mixin_step
                 mixin_start = self.main_window.score_down_color_mixin_start
                 value = abs(grp.total_score - self.lastest_grp_score[key])
-                self.main_window.button_update.emit(
+                self.main_window.signal_button_update.emit(
                     self.main_window.grp_buttons[key],
                     (
                         (
@@ -3661,13 +3613,13 @@ class UpdateThread(QThread):
                     Thread(target=self.detect_new_version).start()
                     Thread(target=self.detect_update).start()
                     self.first_loop = False
-                self.main_window.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.START)
+                self.main_window.signal_anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.START)
                 time.sleep(0.5)
-                self.main_window.anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.CREATE_NEW)
+                self.main_window.signal_anim_group_state_changed.emit(ClassWindow.AnimationGroupStatement.CREATE_NEW)
 
 
-            except BaseException as unused:  # pylint: disable=broad-exception-caught
-                Base.log_exc("更新窗口事件时发生错误", "UpdateThread.run")
+            except BaseException as exc:  # pylint: disable=broad-exception-caught
+                exception_handler(exc.__class__, exc, exc.__traceback__)
 
 
 class TipViewerWindow(NoticeViewer.Ui_widget, MyWidget):

@@ -28,6 +28,7 @@ from .custom.SettingWidget import SettingWidget
 from .custom.StudentWidget import StudentWidget
 from .custom.WTFWidget import WTFWidget
 from .custom.LoadingScreen import LoadingScreenWidget
+from .custom.ExceptionHandler import ExceptionHandler
 
 from .basic import *
 

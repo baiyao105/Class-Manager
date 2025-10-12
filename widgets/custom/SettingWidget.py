@@ -31,7 +31,7 @@ class SettingWidget(Ui_Form, MyWidget):
         self.reset.clicked.connect(self.reset_settings)
         self.setWindowTitle("设置")
         self.init()
-        self.update_timer = QTimer()
+        self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update)
         self.update_timer.start(66)
         self.destroyed.connect(self.update_timer.stop)

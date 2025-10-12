@@ -134,8 +134,8 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
     def exec(self) -> Optional[Tuple[str, str, str, float]]:
         """阻塞调用，返回 (key, title, desc, mod)"""
         self.show()
-        loop = QEventLoop()
-        timer = QTimer()
+        loop = QEventLoop(self)
+        timer = QTimer(self)
         def _check_if_finished():
             if self.select_finished:
                 loop.quit()
