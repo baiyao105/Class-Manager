@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import (Literal, TYPE_CHECKING, Dict, Any)
+from typing import (Literal, TYPE_CHECKING, Dict, Any, Optional)
 from ..classdataobj import ClassDataObj
 from ..basetype import ClassDataType
 from utils.basetypes import Base
@@ -21,9 +21,6 @@ class Achievement(ClassDataType):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    dummy: "Achievement" = None
-    "空的成就实例"
-
     @staticmethod
     def new_dummy():
         "创建一个空的成就实例"
@@ -40,8 +37,8 @@ class Achievement(ClassDataType):
         self,
         template: AchievementTemplate,
         target: Student,
-        reach_time: str = None,
-        reach_time_key: int = None,
+        reach_time: Optional[str] = None,
+        reach_time_key: Optional[int] = None,
     ):
         """一个成就的实例。
 

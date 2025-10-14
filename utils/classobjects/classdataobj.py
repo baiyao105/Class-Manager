@@ -1,7 +1,7 @@
 from __future__ import annotations
 import uuid
-from typing import (Callable, TypeVar, TYPE_CHECKING)
-
+from uuid import UUID
+from typing import (TypeVar, TYPE_CHECKING, Optional, Type)
 from .basetype import ClassDataType, ClassDataTypeUUID
 from .objects import *
 
@@ -11,10 +11,12 @@ if TYPE_CHECKING:
     # （default依赖于objects，objects依赖于observers，observers又依赖于default）
     # 不过最后还是会导入的，放心
 
+
+
 default_user = "default"
 
 
-current_archive_uuid: ClassDataTypeUUID = uuid.uuid4()
+current_archive_uuid: Optional[UUID] = None
 "当前存档的UUID，全局的"
 
 UUIDType = TypeVar("UUIDType", bound=ClassDataType)
@@ -25,17 +27,22 @@ class ClassDataObj:
     class OpreationError(Exception): "操作错误。"
     class ObserverError(Exception): "侦测器错误。"
 
-    LoadUUID: Callable[[ClassDataTypeUUID[UUIDType]], UUIDType] = None
-    "以一个ClassDataTypeUUID加载数据类型。"
+    @staticmethod
+    def LoadUUID(uuid: ClassDataTypeUUID[UUIDType], type: Type[UUIDType]) -> UUIDType:
+        "以一个ClassDataTypeUUID加载数据类型。"
+        ...
+
 
     @staticmethod
-    def get_archive_uuid() -> ClassDataTypeUUID:
+    def get_archive_uuid():
         "获取当前存档的UUID。"
         global current_archive_uuid
+        if current_archive_uuid is None:
+            current_archive_uuid = uuid.uuid4()
         return current_archive_uuid
 
     @staticmethod
-    def set_archive_uuid(value: ClassDataTypeUUID):
+    def set_archive_uuid(value: UUID):
         "设置当前存档的UUID。"
         global current_archive_uuid
         current_archive_uuid = value

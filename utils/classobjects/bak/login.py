@@ -5,10 +5,11 @@ import base64
 import signal
 
 try:
-    from src.core import stderr_orig, stdout_orig, Base
+    from utils.basetypes import stderr_orig, stdout_orig, Base
 except ImportError as e:
     print(traceback.format_exc())
-    from core import stderr_orig, stdout_orig, Base
+    from basetypes import stderr_orig, stdout_orig, Base
+    
 
 
 

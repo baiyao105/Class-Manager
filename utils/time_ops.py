@@ -1,3 +1,4 @@
+from typing import Optional
 from datetime import date, datetime, timedelta
 
 from loguru import logger
@@ -15,7 +16,7 @@ class TimeFormatter:
     FORMAT_CHINESE_DATETIME = "%Y年%m月%d日 %H时%M分%S秒"
 
     @staticmethod
-    def now(format_str: str | None = None) -> str:
+    def now(format_str: Optional[str] = None) -> str:
         """获取当前时间字符串
 
         Args:
@@ -30,7 +31,7 @@ class TimeFormatter:
         return datetime.now().strftime(format_str)
 
     @staticmethod
-    def today(format_str: str | None = None) -> str:
+    def today(format_str: Optional[str] = None) -> str:
         """获取今天日期字符串
 
         Args:
@@ -62,7 +63,7 @@ class TimeFormatter:
             return ""
 
     @staticmethod
-    def parse_datetime(time_str: str, format_str: str = FORMAT_DATETIME) -> datetime | None:
+    def parse_datetime(time_str: str, format_str: str = FORMAT_DATETIME) -> Optional[datetime]:
         """解析时间字符串
 
         Args:
@@ -79,7 +80,7 @@ class TimeFormatter:
             return None
 
     @staticmethod
-    def auto_parse_datetime(time_str: str) -> datetime | None:
+    def auto_parse_datetime(time_str: str) -> Optional[datetime]:
         """自动解析时间字符串
 
         Args:
@@ -146,7 +147,7 @@ class TimeFormatter:
         return dt.isoformat()
 
     @staticmethod
-    def from_iso_string(iso_str: str) -> datetime | None:
+    def from_iso_string(iso_str: str) -> Optional[datetime]:
         """从ISO格式字符串解析datetime
 
         Args:
@@ -373,17 +374,17 @@ class TimeRange:
         return f"TimeRange({self.start} - {self.end})"
 
 
-def now(format_str: str | None = None) -> str:
+def now(format_str: Optional[str] = None) -> str:
     """获取当前时间字符串"""
     return TimeFormatter.now(format_str)
 
 
-def today(format_str: str | None = None) -> str:
+def today(format_str: Optional[str] = None) -> str:
     """获取今天日期字符串"""
     return TimeFormatter.today(format_str)
 
 
-def parse_datetime(time_str: str, format_str: str | None = None) -> datetime | None:
+def parse_datetime(time_str: str, format_str: Optional[str] = None) -> Optional[datetime]:
     """解析时间字符串"""
     if format_str:
         return TimeFormatter.parse_datetime(time_str, format_str)

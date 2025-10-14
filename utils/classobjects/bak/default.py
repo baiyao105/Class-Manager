@@ -1317,7 +1317,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         others=[
             lambda d: d.student.highest_score > d.student.score,
             # 达到最高分之后扣过分了
-            lambda d: len(d.student.history)
+            lambda d: len(d.student.history) > 0
             and (
                 d.class_obs.rank_non_dumplicate[0][1].score
                 - (d.student.score - list(d.student.history.values())[-1].mod)
@@ -1439,7 +1439,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         condition_info="一次加分15分",
         further_info="你真棒",
         others=[
-            lambda d: len(d.student.history.values())
+            lambda d: len(d.student.history.values()) > 0
             and list(d.student.history.values())[-1].mod >= 15
         ],
     ),

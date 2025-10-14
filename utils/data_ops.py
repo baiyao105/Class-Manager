@@ -1,5 +1,6 @@
 import hashlib
 import re
+from typing import Union, Dict, List, Tuple
 from collections import Counter, defaultdict
 from collections.abc import Callable
 from decimal import ROUND_HALF_UP, Decimal
@@ -31,7 +32,7 @@ class DataProcessor:
         return text
 
     @staticmethod
-    def safe_divide(numerator: int | float, denominator: int | float, default: float = 0.0) -> float:
+    def safe_divide(numerator: Union[int, float], denominator: Union[int, float], default: float = 0.0) -> float:
         """除法
 
         Args:
@@ -50,7 +51,7 @@ class DataProcessor:
             return default
 
     @staticmethod
-    def round_decimal(value: int | float | str, decimal_places: int = 2) -> float:
+    def round_decimal(value: Union[int, float, str], decimal_places: int = 2) -> float:
         """四舍五入
 
         Args:
@@ -68,7 +69,7 @@ class DataProcessor:
             return 0.0
 
     @staticmethod
-    def calculate_percentage(part: int | float, total: int | float, decimal_places: int = 2) -> float:
+    def calculate_percentage(part: Union[int, float], total: Union[int, float], decimal_places: int = 2) -> float:
         """计算百分比
 
         Args:
@@ -112,7 +113,7 @@ class DataProcessor:
             return ""
 
     @staticmethod
-    def flatten_dict(data: dict[str, Any], separator: str = ".", prefix: str = "") -> dict[str, Any]:
+    def flatten_dict(data: Dict[str, Any], separator: str = ".", prefix: str = "") -> Dict[str, Any]:
         """扁平化字典
 
         Args:
@@ -143,7 +144,7 @@ class DataProcessor:
         return result
 
     @staticmethod
-    def group_by(data: list[dict[str, Any]], key: str) -> dict[Any, list[dict[str, Any]]]:
+    def group_by(data: List[Dict[str, Any]], key: str) -> Dict[Any, List[Dict[str, Any]]]:
         """按指定键分组数据
 
         Args:
@@ -164,8 +165,8 @@ class DataProcessor:
 
     @staticmethod
     def aggregate_data(
-        data: list[dict[str, Any]], group_key: str, agg_funcs: dict[str, Callable]
-    ) -> list[dict[str, Any]]:
+        data: List[Dict[str, Any]], group_key: str, agg_funcs: Dict[str, Callable]
+    ) -> List[Dict[str, Any]]:
         """聚合数据
 
         Args:
@@ -196,7 +197,7 @@ class DataProcessor:
         return result
 
     @staticmethod
-    def filter_data(data: list[dict[str, Any]], filters: dict[str, Any]) -> list[dict[str, Any]]:
+    def filter_data(data: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """过滤数据
 
         Args:
@@ -239,7 +240,7 @@ class DataProcessor:
         return result
 
     @staticmethod
-    def sort_data(data: list[dict[str, Any]], sort_keys: list[tuple[str, bool]]) -> list[dict[str, Any]]:
+    def sort_data(data: List[Dict[str, Any]], sort_keys: List[Tuple[str, bool]]) -> List[Dict[str, Any]]:
         """排序数据
 
         Args:
@@ -263,7 +264,7 @@ class StatisticsCalculator:
     """统计计算器"""
 
     @staticmethod
-    def calculate_mean(values: list[int | float]) -> float:
+    def calculate_mean(values: List[Union[int, float]]) -> float:
         """计算平均值
 
         Args:
@@ -284,7 +285,7 @@ class StatisticsCalculator:
             return 0.0
 
     @staticmethod
-    def calculate_median(values: list[int | float]) -> float:
+    def calculate_median(values: List[Union[int, float]]) -> float:
         """计算中位数
 
         Args:
@@ -309,7 +310,7 @@ class StatisticsCalculator:
             return 0.0
 
     @staticmethod
-    def calculate_mode(values: list[Any]) -> Any:
+    def calculate_mode(values: List[Any]) -> Any:
         """计算众数
 
         Args:
@@ -328,7 +329,7 @@ class StatisticsCalculator:
         return modes[0] if len(modes) == 1 else modes
 
     @staticmethod
-    def calculate_range(values: list[int | float]) -> float:
+    def calculate_range(values: List[Union[int, float]]) -> float:
         """计算极差
 
         Args:
@@ -349,7 +350,7 @@ class StatisticsCalculator:
             return 0.0
 
     @staticmethod
-    def calculate_variance(values: list[int | float]) -> float:
+    def calculate_variance(values: List[Union[int, float]]) -> float:
         """计算方差
 
         Args:
@@ -372,7 +373,7 @@ class StatisticsCalculator:
             return 0.0
 
     @staticmethod
-    def calculate_std_dev(values: list[int | float]) -> float:
+    def calculate_std_dev(values: List[Union[int, float]]) -> float:
         """计算标准差
 
         Args:
@@ -385,7 +386,7 @@ class StatisticsCalculator:
         return variance**0.5
 
     @staticmethod
-    def calculate_percentile(values: list[int | float], percentile: float) -> float:
+    def calculate_percentile(values: List[Union[int, float]], percentile: float) -> float:
         """计算百分位数
 
         Args:
@@ -423,27 +424,27 @@ def clean_string(text: str) -> str:
     return DataProcessor.clean_string(text)
 
 
-def safe_divide(numerator: int | float, denominator: int | float) -> float:
+def safe_divide(numerator: Union[int, float], denominator: Union[int, float]) -> float:
     """安全除法"""
     return DataProcessor.safe_divide(numerator, denominator)
 
 
-def calculate_percentage(part: int | float, total: int | float) -> float:
+def calculate_percentage(part: Union[int, float], total: Union[int, float]) -> float:
     """计算百分比"""
     return DataProcessor.calculate_percentage(part, total)
 
 
-def group_by(data: list[dict[str, Any]], key: str) -> dict[Any, list[dict[str, Any]]]:
+def group_by(data: List[Dict[str, Any]], key: str) -> Dict[Any, List[Dict[str, Any]]]:
     """按指定键分组数据"""
     return DataProcessor.group_by(data, key)
 
 
-def calculate_mean(values: list[int | float]) -> float:
+def calculate_mean(values: List[Union[int, float]]) -> float:
     """计算平均值"""
     return StatisticsCalculator.calculate_mean(values)
 
 
-def calculate_median(values: list[int | float]) -> float:
+def calculate_median(values: List[Union[int, float]]) -> float:
     """计算中位数"""
     return StatisticsCalculator.calculate_median(values)
 

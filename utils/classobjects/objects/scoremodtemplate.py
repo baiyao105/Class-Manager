@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 import json
-from typing import Literal
+from typing import Literal, Dict, Any
 from ..basetype import ClassDataType
 from ..classdataobj import ClassDataObj
 from utils.algorithm import SupportsKeyOrdering
@@ -14,9 +14,6 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
 
         is_unrelated_data_type = True
         "是否是与其他班级数据类型无关联的数据类型"
-
-        dummy: ScoreModificationTemplate = None
-        "空的分数加减操作模板"
 
         @staticmethod
         def new_dummy():
@@ -80,22 +77,22 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
         @staticmethod
         def from_string(string: str):
             "将字符串转化为分数加减模板对象。"
-            string = json.loads(string)
-            if string["type"] != ScoreModificationTemplate.chunk_type_name:
+            data: Dict[str, Any] = json.loads(string)
+            if data["type"] != ScoreModificationTemplate.chunk_type_name:
                 raise TypeError(
-                    f"类型不匹配：{string['type']} != "
+                    f"类型不匹配：{data['type']} != "
                     f"{ScoreModificationTemplate.chunk_type_name}"
                 )
             obj = ScoreModificationTemplate(
-                key=string["key"],
-                modification=string["modification"],
-                title=string["title"],
-                description=string["description"],
-                cant_replace=string["cant_replace"],
-                is_visible=string["is_visible"],
+                key=data["key"],
+                modification=data["modification"],
+                title=data["title"],
+                description=data["description"],
+                cant_replace=data["cant_replace"],
+                is_visible=data["is_visible"],
             )
-            obj.uuid = string["uuid"]
-            obj.archive_uuid = string["archive_uuid"]
+            obj.uuid = data["uuid"]
+            obj.archive_uuid = data["archive_uuid"]
 
             return obj
 

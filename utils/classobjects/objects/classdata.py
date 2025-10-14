@@ -17,11 +17,12 @@ class ClassData(Object):
     def __init__(
         self,
         student: Student,
-        classes: Dict[str, Class] = None,
-        class_obs: ClassStatusObserver = None,
-        achievement_obs: AchievementStatusObserver = None,
+        classes: Dict[str, Class],
+        class_obs: ClassStatusObserver,
+        achievement_obs: AchievementStatusObserver,
     ):
-        """班级数据构造函数。
+        """
+        班级数据构造函数。
 
         :param student: 学生
         :param classes: 班级字典

@@ -2,21 +2,13 @@
 键值排序类所在文件
 """
 
+import sys
 import copy
 from abc import ABC
 from typing import Iterable, List, TypeVar, Union, Dict, Iterator, Tuple, Optional
 from collections import OrderedDict
 
-try:
-    from utils.logger import Logger
-except ImportError:
 
-    class Logger:
-        "覆写用的日志记录类"
-
-        def log(l, c, s):
-            "记录日志"
-            print(c)
 
 
 __all__ = ["SupportsKeyOrdering", "OrderedKeyList"]
@@ -175,11 +167,11 @@ class OrderedKeyList(list, Iterable[_Template]):
         if isinstance(objects, (dict, OrderedDict)):
             for k, v in objects.items():
                 if getattr(v, self.keyattr) != k:
-                    Logger.log(
+                    print(
                         "W",
                         f"模板在dict中的key（{k!r}）与模板本身的（{getattr(v, self.keyattr)!r}）不一致，"
                         "已自动修正为dict中的key",
-                        "OrderedKeyList.__init__",
+                        file=sys.stderr
                     )
                     setattr(v, self.keyattr, k)
                 self.append(v)
@@ -193,11 +185,10 @@ class OrderedKeyList(list, Iterable[_Template]):
                         raise ValueError(
                             f"模板的key（{getattr(v, self.keyattr)!r}）重复"
                         )
-                    Logger.log(
-                        "W",
+                    print(
                         f"模板的key（{getattr(v, self.keyattr)!r}）重复，"
                         f"补充为{getattr(v, self.keyattr)!r}{self.dumplicate_suffix}",
-                        "OrderedKeyList.__init__",
+                        file=sys.stderr,
                     )
                     setattr(
                         v,
@@ -260,6 +251,10 @@ class OrderedKeyList(list, Iterable[_Template]):
     def __reversed__(self) -> Iterator[_Template]:
         "返回列表的反向迭代器"
         return super().__reversed__()
+    
+    def __iter__(self) -> Iterator[_Template]:
+        "返回列表的迭代器"
+        return super().__iter__()
 
     def __contains__(self, item: _Template) -> bool:
         "判断列表中是否包含指定模板"
@@ -287,9 +282,6 @@ class OrderedKeyList(list, Iterable[_Template]):
         self[lh], self[rh] = self[rh], self[lh]
         return self
 
-    def __iter__(self) -> Iterator[_Template]:
-        "返回列表的迭代器"
-        return super().__iter__()
 
     def append(self, obj: _Template):
         "添加到列表"
