@@ -6,7 +6,6 @@ from typing import List, Union, Callable
 """
 
 
-
 def get_function_namespace(func) -> str:
     """
     获取函数的命名空间

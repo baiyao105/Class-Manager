@@ -18,9 +18,6 @@ class DayRecord(ClassDataType):
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
 
-        dummy: "DayRecord" = None
-        "空的每日记录对象"
-
         @staticmethod
         def new_dummy():
             "返回一个空的每日记录对象"
@@ -51,8 +48,6 @@ class DayRecord(ClassDataType):
 
         def to_string(self):
             "将每日记录对象转为字符串。"
-            if isinstance(self.target_class, dict):
-                self.target_class = self.target_class[self.target_class.keys()[0]]
             return json.dumps(
                 {
                     "type": self.chunk_type_name,
@@ -70,19 +65,19 @@ class DayRecord(ClassDataType):
             "从字符串加载每日记录对象。"
             from .classtype import Class
             from .attendanceinfo import AttendanceInfo
-            d = json.loads(string)
-            if d["type"] != DayRecord.chunk_type_name:
+            data = json.loads(string)
+            if data["type"] != DayRecord.chunk_type_name:
                 raise ValueError(
-                    f"类型不匹配：{d['type']} != {DayRecord.chunk_type_name}"
+                    f"类型不匹配：{data['type']} != {DayRecord.chunk_type_name}"
                 )
             obj = DayRecord(
-                target_class=ClassDataObj.LoadUUID(d["target_class"], Class),
-                weekday=d["weekday"],
-                create_utc=d["utc"],
-                attendance_info=ClassDataObj.LoadUUID(d["attendance_info"], AttendanceInfo),
+                target_class=ClassDataObj.LoadUUID(data["target_class"], Class),
+                weekday=data["weekday"],
+                create_utc=data["utc"],
+                attendance_info=ClassDataObj.LoadUUID(data["attendance_info"], AttendanceInfo),
             )
-            obj.uuid = d["uuid"]
-            obj.archive_uuid = d["archive_uuid"]
+            obj.uuid = data["uuid"]
+            obj.archive_uuid = data["archive_uuid"]
             return obj
 
         def inst_from_string(self, string: str):

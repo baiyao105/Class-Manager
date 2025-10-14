@@ -221,3 +221,10 @@ RinUI
 temp
 .vscode
 data
+
+# User data
+/backup/
+/chunks/
+/audio/music/*
+/background.mp4
+

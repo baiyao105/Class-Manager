@@ -5,7 +5,7 @@ import json
 from typing import (Literal, Optional, TYPE_CHECKING, 
                     Tuple, Union, List, Dict)
 from utils.consts import inf
-from utils.algorithm import OrderedKeyList
+from utils.algorithm import OrderedKeyList, SupportsKeyOrdering
 from ..classdataobj import ClassDataObj
 from ..basetype import ClassDataType
 from utils.basetypes import Base
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .homeworkrule import HomeworkRule
 
 
-class Class(ClassDataType):
+class Class(ClassDataType, SupportsKeyOrdering):
         "一个班级"
 
         chunk_type_name: Literal["Class"] = "Class"
@@ -24,9 +24,6 @@ class Class(ClassDataType):
 
         is_unrelated_data_type = False
         "是否是与其他班级数据类型无关联的数据类型"
-
-        dummy: "Class" = None
-        "空班级"
 
         @staticmethod
         def new_dummy():
@@ -37,9 +34,7 @@ class Class(ClassDataType):
             self,
             name: str,
             owner: str,
-            students: Union[
-                Dict[int, Student], OrderedKeyList[Student]
-            ],
+            students: Dict[int, Student],   # 学生不要用OrderedKeyList，有歧义
             key: str,
             groups: Union[
                 Dict[str, Group], OrderedKeyList[Group]
@@ -203,7 +198,7 @@ class Class(ClassDataType):
                     "cleaning_mapping": [
                         (k, [(t, [str(_s.uuid) for _s in s]) for t, s in v.items()])
                         for k, v in self.cleaning_mapping.items()
-                    ],
+                    ] if self.cleaning_mapping else None,
                     "homework_rules": [
                         (n, h.to_string()) for n, h in self.homework_rules.items()
                     ],

@@ -37,7 +37,7 @@ class ClassStatusObserver:
             "目标班级"
             self.templates = base.modify_templates
             "所有的分数修改模板"
-            self.opreation_record: Stack[Iterable[ScoreModification]] = Stack()
+            self.opreation_record: Stack[Iterable[ScoreModification]] = Stack([])
             "操作记录"
             self.base = base
             "算法基层"
@@ -95,7 +95,7 @@ class ClassStatusObserver:
 
 
     @property
-    def student_total_score(self) -> int:
+    def student_total_score(self) -> float:
         """班级总分"""
         return self.target_class.student_total_score
 

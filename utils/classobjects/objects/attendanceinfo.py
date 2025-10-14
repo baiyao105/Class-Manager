@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import (Literal, TYPE_CHECKING, List)
+from typing import (Literal, TYPE_CHECKING, List, Optional)
 from ..classdataobj import ClassDataObj
 from ..basetype import ClassDataType
 
@@ -19,9 +19,6 @@ class AttendanceInfo(ClassDataType):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    dummy: "AttendanceInfo" = None
-    "空的考勤信息实例"
-
     @staticmethod
     def new_dummy():
         "返回一个空考勤信息"
@@ -30,13 +27,13 @@ class AttendanceInfo(ClassDataType):
     def __init__(
         self,
         target_class: str = "CLASS_TEST",
-        is_early: List[Student] = None,
-        is_late: List[Student] = None,
-        is_late_more: List[Student] = None,
-        is_absent: List[Student] = None,
-        is_leave: List[Student] = None,
-        is_leave_early: List[Student] = None,
-        is_leave_late: List[Student] = None,
+        is_early: Optional[List[Student]] = None,
+        is_late: Optional[List[Student]] = None,
+        is_late_more: Optional[List[Student]] = None,
+        is_absent: Optional[List[Student]] = None,
+        is_leave: Optional[List[Student]] = None,
+        is_leave_early: Optional[List[Student]] = None,
+        is_leave_late: Optional[List[Student]] = None,
     ):
         """
         考勤信息

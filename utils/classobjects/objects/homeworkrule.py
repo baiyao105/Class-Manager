@@ -17,9 +17,6 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    dummy: "HomeworkRule" = None
-    "空作业规则"
-
     @staticmethod
     def new_dummy():
         "返回一个空作业规则"

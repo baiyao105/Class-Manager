@@ -56,7 +56,7 @@ DT = TypeVar("DT")
 class Stack(Generic[DT]):
     "非常朴素的栈"
 
-    def __init__(self, items: Iterable[DT] = None):
+    def __init__(self, items: Optional[Iterable[DT]] = None):
         "初始化栈"
         self.items = list(items) if items is not None else []
 
@@ -93,7 +93,7 @@ class Thread(OrigThread):
         group: None = None,
         target: Optional[Callable] = None,
         name: Optional[str] = None,
-        args: Iterable[Any] = None,
+        args: Optional[Iterable[Any]] = None,
         kwargs: Optional[Mapping[str, Any]] = None,
         *,
         daemon: Optional[bool] = None,
@@ -117,12 +117,12 @@ class Thread(OrigThread):
             kwargs=kwargs,
             daemon=daemon,
         )
-        self._return = None
+        self._return: Any = None
         self._finished = False
         self.thread_id: Optional[int] = None
 
     @property
-    def return_value(self):
+    def return_value(self) -> Any:
         "返回线程的返回值"
         if self._finished:
             return self._return
@@ -134,8 +134,8 @@ class Thread(OrigThread):
         self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long)(
             lambda: ctypes.pythonapi.PyThread_get_thread_ident()
         )()  # pylint: disable=W0108
-        if self._target is not None:
-            self._return = self._target(*self._args, **self._kwargs)
+        if self._target is not None:        # type: ignore
+            self._return = self._target(*self._args, **self._kwargs) # type: ignore
         self._finished = True
 
     def join(self, timeout: Optional[float] = None) -> Any:

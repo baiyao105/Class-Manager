@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import time
 from queue import Queue
-from typing import (TYPE_CHECKING, Callable, Any)
+from typing import (TYPE_CHECKING, Callable, Any, Optional, Tuple)
 from utils.algorithm import Thread
 from utils.basetypes import Base
 from ..objects.achievement import Achievement
@@ -21,7 +21,7 @@ class AchievementStatusObserver:
         self,
         base: ClassObj,
         class_key: str,
-        achievement_display: Callable[[str, Student], Any] = None,
+        achievement_display: Optional[Callable[[str, Student], Any]] = None,
         tps: int = 20,
     ):
         """
@@ -43,9 +43,9 @@ class AchievementStatusObserver:
         "成就模板（Dict[成就模板key, 成就模板]）"
         self.class_obs = base.class_obs
         "班级信息侦测器"
-        self.display_achievement_queue = Queue()
+        self.display_achievement_queue: Queue[Tuple[str, Student]] = Queue()
         "成就显示队列"
-        self.achievement_displayer: Callable[[str, Student], Any] = (
+        self.achievement_displayer: Optional[Callable[[str, Student], Any]] = (
             achievement_display
         )
         "成就显示器，传参是一个成就模板的key和一个学生"
@@ -137,7 +137,7 @@ class AchievementStatusObserver:
                         )
                         a2.give()
                         self.display_achievement_queue.put(
-                            {"achievement": a, "student": s}
+                            (a, s)
                         )
 
         cur_time = time.time()
@@ -200,7 +200,8 @@ class AchievementStatusObserver:
             try:
                 if not self.display_achievement_queue.empty():
                     item = self.display_achievement_queue.get()
-                    self.achievement_displayer(item["achievement"], item["student"])
+                    if self.achievement_displayer:
+                        self.achievement_displayer(item[0], item[1])
                 time.sleep(0.1)  # 每一行代码都有它存在的意义，不信删了试试
             except Exception as e:  # pylint: disable=broad-exception-caught
                 Base.log(

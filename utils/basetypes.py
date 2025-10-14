@@ -11,7 +11,7 @@ import threading
 import ctypes
 import copy
 
-from .logger import Logger, logger
+from .logger import Logger
 
 
 

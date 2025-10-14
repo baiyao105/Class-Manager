@@ -19,6 +19,7 @@ import utils.consts as consts
 from utils.consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
 from utils.system import SystemLogger
 from utils.functions.excinfo import format_exc_like_java
+
 def get_time():
     "获得当前时间"
     lt = time.localtime()
@@ -220,7 +221,8 @@ class                                                                           
     def reopen_log_file():
         "重新打开日志文件"
         if log_settings.log_file_path:
-            Logger.log_file.close()
+            if Logger.log_file:
+                Logger.log_file.close()
             Logger.log_file = open(
                 log_settings.log_file_path,
                 "a",
@@ -287,13 +289,18 @@ class                                                                           
                 if not m.strip():
                     continue
                 frame = inspect.currentframe()
-                file = frame.f_back.f_code.co_filename.replace(cwd, "")
-                if file == "<string>":
+                if not frame:
+                    file = "<unknown>"
                     lineno = 0
-                if file.startswith(("/", "\\")):
-                    file = file[1:]
-                frame = inspect.currentframe()
-                caller_frame = frame.f_back
+                    caller_frame = frame
+                else:
+                    file = frame.f_back.f_code.co_filename.replace(cwd, "")
+                    if file == "<string>":
+                        lineno = 0
+                    if file.startswith(("/", "\\")):
+                        file = file[1:]
+                    frame = inspect.currentframe()
+                    caller_frame = frame.f_back
                 log_level = {
                     "I": "INFO",
                     "W": "WARNING",
@@ -400,16 +407,18 @@ class                                                                           
         "把日志写进日志文件的线程的运行函数"
         while Logger.logger_running:
             s = Logger.logfile_log_queue.get()
-            Logger.log_file.write(s + "\n")
-            Logger.log_file.flush()
+            if Logger.log_file:
+                Logger.log_file.write(s + "\n")
+                Logger.log_file.flush()
 
     @staticmethod
     def log_thread_console():
         "把日志写在终端的线程的运行函数"
         while Logger.logger_running:
             s = Logger.console_log_queue.get()
-            Logger.stdout_orig.write(s + "\n")
-            Logger.stdout_orig.flush()
+            if Logger.stdout_orig:
+                Logger.stdout_orig.write(s + "\n")
+                Logger.stdout_orig.flush()
 
     @staticmethod
     def stop_loggers():

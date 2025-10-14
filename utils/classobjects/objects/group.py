@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import (Literal, TYPE_CHECKING, List)
+from utils.algorithm import SupportsKeyOrdering
 from ..classdataobj import ClassDataObj
 from ..basetype import ClassDataType
 
@@ -9,7 +10,7 @@ if TYPE_CHECKING:
     from .student import Student
 
 
-class Group(ClassDataType):
+class Group(ClassDataType, SupportsKeyOrdering):
     "一个小组"
 
     chunk_type_name: Literal["Group"] = "Group"
@@ -17,9 +18,6 @@ class Group(ClassDataType):
 
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
-
-    dummy: "Group" = None
-    "空小组"
 
     @staticmethod
     def new_dummy():
@@ -116,21 +114,21 @@ class Group(ClassDataType):
     def from_string(string: str):
         "将字符串转化为小组对象。"
         from .student import Student
-        string = json.loads(string)
-        if string["type"] != Group.chunk_type_name:
+        data = json.loads(string)
+        if data["type"] != Group.chunk_type_name:
             raise TypeError(
-                f"类型不匹配：{string['type']} != {Group.chunk_type_name}"
+                f"类型不匹配：{data['type']} != {Group.chunk_type_name}"
             )
         obj = Group(
-            key=string["key"],
-            name=string["name"],
-            leader=ClassDataObj.LoadUUID(string["leader"], Student),
-            members=[ClassDataObj.LoadUUID(s, Student) for s in string["members"]],
-            belongs_to=string["belongs_to"],
-            further_desc=string["further_desc"],
+            key=data["key"],
+            name=data["name"],
+            leader=ClassDataObj.LoadUUID(data["leader"], Student),
+            members=[ClassDataObj.LoadUUID(s, Student) for s in data["members"]],
+            belongs_to=data["belongs_to"],
+            further_desc=data["further_desc"],
         )
-        obj.uuid = string["uuid"]
-        obj.archive_uuid = string["archive_uuid"]
+        obj.uuid = data["uuid"]
+        obj.archive_uuid = data["archive_uuid"]
 
         return obj
 

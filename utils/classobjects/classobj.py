@@ -457,7 +457,7 @@ class ClassObj(ClassDataObj, Base):
             self.achievement_templates: Dict[str, AchievementTemplate] = (
                 OrderedKeyList(data.achievements).to_dict()
             )  # 转换为字典
-            self.modify_templates: OrderedKeyList[ScoreModificationTemplate] = (
+            self.modify_templates = (
                 OrderedKeyList(data.templates).to_dict()
             )
 

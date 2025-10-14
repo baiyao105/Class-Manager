@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import time
-from typing import (Literal, TYPE_CHECKING, Dict, Optional)
-from ..basetype import ClassDataType
+from uuid import UUID
+from typing import (Literal, TYPE_CHECKING, Dict, Optional, Self, Union)
+from ..basetype import ClassDataType, ClassDataTypeUUID
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -26,6 +27,8 @@ class History(ClassDataType):
         weekdays: Dict[str, Dict[float, DayRecord]],
         save_time: Optional[float] = None,
     ):
+        super().__init__()
+        self._uuid: Optional[ClassDataTypeUUID[Self]] = None    
         self.classes = dict(classes)
         self.time = save_time or time.time()
         weekdays = weekdays.copy()
@@ -38,12 +41,40 @@ class History(ClassDataType):
 
     def __repr__(self):
         return f"<History object at time {self.time:.3f}>"
+    
+    @property
+    def uuid(self) -> Optional[ClassDataTypeUUID[Self]]:
+        """
+        该班级数据类型的唯一标识符。
+
+        特别的是，History类型的uuid可以为None。
+        """
+        if not hasattr(self, "_uuid"):
+            self._uuid = ClassDataTypeUUID(self.__class__)
+        return self._uuid
+
+    @uuid.setter
+    def uuid(self, value: Optional[Union[UUID, ClassDataTypeUUID[Self], str]]):
+
+        if isinstance(value, ClassDataTypeUUID):
+            self._uuid = value
+            
+        elif isinstance(value, UUID):
+            self._uuid = ClassDataTypeUUID(self.__class__, value)
+        
+        elif isinstance(value, str):
+            self._uuid = ClassDataTypeUUID(self.__class__, UUID(value.replace("-", "")))
+
+
+        elif value is None:
+            self._uuid = None
+
+        else:
+            raise TypeError(f"uuid.setter需要提供UUID，ClassDataTypeUUID或者str， 但提供了{type(value)}")
 
     def to_string(self):
         "将历史记录转换为字符串。"
-        for _class, item in self.weekdays.items():
-            if isinstance(item, list):
-                self.weekdays[_class] = {d.utc: d for d in item}
+
 
         return json.dumps(
             {

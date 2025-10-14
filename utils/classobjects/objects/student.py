@@ -32,13 +32,15 @@ class Student(ClassDataType, SupportsKeyOrdering):
         last_reset_info_keep_turns = 2
         "在存档中上次重置信息的轮数"
 
-        dummy: "Student" = None
-        "空学生"
+        class NoBelongningClass(Exception): "学生没有所属班级。"
+        class NoBelongningGroup(Exception): "学生没有所属小组。"
+
 
         @staticmethod
         def new_dummy():
             "返回一个空学生"
             return Student("dummy", 0, 0.0, "dummy")
+        
 
         def __init__(
             self,
@@ -46,16 +48,16 @@ class Student(ClassDataType, SupportsKeyOrdering):
             num: int,
             score: float,
             belongs_to: str,
-            history: Dict[Any, ScoreModification] = None,
+            history: Optional[Dict[Any, ScoreModification]] = None,
             last_reset: Optional[float] = None,
-            highest_score: float = 0.0,
-            lowest_score: float = 0.0,
-            achievements: Dict[int, Achievement] = None,
-            total_score: float = None,
-            highest_score_cause_time: float = 0.0,
-            lowest_score_cause_time: float = 0.0,
+            highest_score: Optional[float] = None,
+            lowest_score: Optional[float] = None,
+            achievements: Optional[Dict[int, Achievement]] = None,
+            total_score: Optional[float] = None,
+            highest_score_cause_time: Optional[float] = None,
+            lowest_score_cause_time: Optional[float] = None,
             belongs_to_group: Optional[str] = None,
-            last_reset_info: Optional["Student"] = None,
+            last_reset_info: Optional[Student] = None,
         ):
             """
             一个学生。
@@ -81,8 +83,8 @@ class Student(ClassDataType, SupportsKeyOrdering):
             self._num = num
             self._score = score
             self._belongs_to: str = belongs_to
-            self._highest_score: float = highest_score
-            self._lowest_score: float = lowest_score
+            self._highest_score: float = highest_score or 0.0
+            self._lowest_score: float = lowest_score or 0.0
             self._total_score: float = total_score or score
             self._last_reset = last_reset
             "分数上次重置的时间"
@@ -105,9 +107,8 @@ class Student(ClassDataType, SupportsKeyOrdering):
             return self._last_reset
 
         @last_reset.setter
-        def last_reset(self, value):
+        def last_reset(self, value: Optional[float]) -> None:
             self._last_reset = value
-        
 
 
         @DataProperty
@@ -120,7 +121,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
             )
 
         @last_reset_info.setter
-        def last_reset_info(self, value):
+        def last_reset_info(self, value: Optional[Student]):
             self._last_reset_info = value
 
         @DataProperty
@@ -129,8 +130,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
             return float(self._highest_score)
 
         @highest_score.setter
-        def highest_score(self, value):
-            # Base.log("D", f"{self.name} 更改最高分：{self._highest_score} -> {value}")
+        def highest_score(self, value: Union[score_dtype, float]):
             self._highest_score = self.score_dtype(value)
 
         @DataProperty
@@ -139,7 +139,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
             return float(self._lowest_score)
 
         @lowest_score.setter
-        def lowest_score(self, value):
+        def lowest_score(self, value: Union[score_dtype, float]):
             self._lowest_score = self.score_dtype(value)
 
         @DataProperty
@@ -148,7 +148,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
             return self._highest_score_cause_time
 
         @highest_score_cause_time.setter
-        def highest_score_cause_time(self, value):
+        def highest_score_cause_time(self, value: float):
             self._highest_score_cause_time = value
 
         @DataProperty
@@ -157,7 +157,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
             return self._lowest_score_cause_time
 
         @lowest_score_cause_time.setter
-        def lowest_score_cause_time(self, value):
+        def lowest_score_cause_time(self, value: float):
             self._lowest_score_cause_time = value
 
         def __repr__(self):
@@ -182,14 +182,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
             return self._name
 
         @name.setter
-        def name(self, val):
-            # if len(val) >= 50:
-                # Base.log(
-                    # "E",
-                    # f"更改名字失败：不是谁名字有{len(val)}个字啊？？？？",
-                    # "Student.name.setter",
-                # )
-                # raise DataBase.OpreationError(f'请求更改的名字"{val}"过长')
+        def name(self, val: str):
             self._name = val
 
         @name.deleter
@@ -209,9 +202,6 @@ class Student(ClassDataType, SupportsKeyOrdering):
                 f"正在尝试更改学号为{self._name}的学生的学号：由{self._num}更改为{val}",
                 "Student.num.setter",
             )
-            # if abs(val) > 1024:
-                # Base.log("E", "更改学号失败：学号过大了，不合理", "Student.name.setter")
-                # raise DataBase.OpreationError(f"请求更改的学号{val}过大了, 无法设置")
             self._num = val
             Base.log("D", "更改完成！", "Student.name.setter")
 
@@ -329,10 +319,24 @@ class Student(ClassDataType, SupportsKeyOrdering):
             return (score, highest, lowest, history, achievements)
 
         def get_group(self, class_obs: ClassStatusObserver) -> Group:
-            """获取学生所在小组。
+            """
+            获取学生所在小组。
 
             :param class_obs: 班级侦测器
-            :return: Group对象"""
+            :return: Group对象
+            """
+            if not self._belongs_to:
+                raise Student.NoBelongningClass(f"尝试访问没有所属班级的学生{self!r}所在的小组")
+        
+            if not self.belongs_to_group:
+                raise Student.NoBelongningGroup(f"尝试访问没有所属小组的学生{self!r}所在的小组")
+
+            if self._belongs_to != class_obs.class_id:
+                raise ClassDataObj.ObserverError(f"但是从理论层面来讲"
+                    f"你不应该把{repr(class_obs.class_id)}的侦测器"
+                    f"给一个{repr(self._belongs_to)}的学生"
+                )
+
             return class_obs.classes[self._belongs_to].groups[self.belongs_to_group]
 
         def get_dumplicated_ranking(self, class_obs: ClassStatusObserver) -> int:
@@ -408,8 +412,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
                     achievements=achievements,
                     highest_score=self.highest_score + value.highest_score,
                     lowest_score=self.lowest_score + value.lowest_score,
-                    highest_score_cause_time=self.highest_score_cause_time
-                    + value.highest_score_cause_time,
+                    highest_score_cause_time=(self.highest_score_cause_time or 0) + (value.highest_score_cause_time or 0),
                     lowest_score_cause_time=self.lowest_score_cause_time,
                     belongs_to_group=self.belongs_to_group,
                     total_score=self.total_score + value.total_score,
@@ -425,8 +428,8 @@ class Student(ClassDataType, SupportsKeyOrdering):
             if isinstance(value, Student):
                 self.achievements.update(value.achievements)
                 self.history.update(value.history)
-                self.score += value
-                self.total_score += value
+                self.score += value.score
+                self.total_score += value.total_score
                 return self
             else:
                 self.score += value
