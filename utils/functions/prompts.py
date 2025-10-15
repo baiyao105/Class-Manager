@@ -3,7 +3,7 @@
 """
 
 import random
-from typing import Optional, Literal, List, Union
+from typing import Literal
 from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtGui import QPixmap, QIcon
 
