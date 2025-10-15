@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import (Literal, TYPE_CHECKING, List)
+from typing import TYPE_CHECKING, Literal
+
 from utils.algorithm import SupportsKeyOrdering
-from ..classdataobj import ClassDataObj
+
 from ..basetype import ClassDataType
+from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
     from .student import Student
@@ -23,6 +25,7 @@ class Group(ClassDataType, SupportsKeyOrdering):
     def new_dummy():
         "创建一个空的小组"
         from .student import Student
+
         return Group("dummy", "dummy", Student.new_dummy(), [], "dummy")
 
     def __init__(
@@ -30,7 +33,7 @@ class Group(ClassDataType, SupportsKeyOrdering):
         key: str,
         name: str,
         leader: Student,
-        members: List[Student],
+        members: list[Student],
         belongs_to: str,
         further_desc: str = "这个小组的组长还没有为这个小组提供详细描述",
     ) -> None:
@@ -76,10 +79,7 @@ class Group(ClassDataType, SupportsKeyOrdering):
         return (
             (
                 round(
-                    (
-                        sum([s.score for s in self.members])
-                        - min(*[s.score for s in self.members])
-                    )
+                    (sum([s.score for s in self.members]) - min(*[s.score for s in self.members]))
                     / (len(self.members) - 1),
                     2,
                 )
@@ -114,11 +114,10 @@ class Group(ClassDataType, SupportsKeyOrdering):
     def from_string(string: str):
         "将字符串转化为小组对象。"
         from .student import Student
+
         data = json.loads(string)
         if data["type"] != Group.chunk_type_name:
-            raise TypeError(
-                f"类型不匹配：{data['type']} != {Group.chunk_type_name}"
-            )
+            raise TypeError(f"类型不匹配：{data['type']} != {Group.chunk_type_name}")
         obj = Group(
             key=data["key"],
             name=data["name"],
@@ -140,11 +139,10 @@ class Group(ClassDataType, SupportsKeyOrdering):
 
     def __repr__(self):
         return (
-            f"Group(key={repr(self.key)}, "
-            f"name={repr(self.name)}, "
-            f"leader={repr(self.leader)}, "
-            f"members={repr(self.members)}, "
-            f"belongs_to={repr(self.belongs_to)}, "
-            f"further_desc={repr(self.further_desc)}"
+            f"Group(key={self.key!r}, "
+            f"name={self.name!r}, "
+            f"leader={self.leader!r}, "
+            f"members={self.members!r}, "
+            f"belongs_to={self.belongs_to!r}, "
+            f"further_desc={self.further_desc!r}"
         )
-

@@ -1,13 +1,16 @@
 from __future__ import annotations
+
 import json
 import time
 import traceback
-from typing import Literal, Optional, TYPE_CHECKING, Tuple
-from utils.consts import debug
-from ..classdataobj import ClassDataObj
-from ..basetype import ClassDataType
+from typing import TYPE_CHECKING, Literal
+
 from utils.basetypes import Base
-from .scoremodtemplate import ScoreModificationTemplate # 可以直接导入，这个没有依赖
+from utils.consts import debug
+
+from ..basetype import ClassDataType
+from ..classdataobj import ClassDataObj
+from .scoremodtemplate import ScoreModificationTemplate  # 可以直接导入，这个没有依赖
 
 if TYPE_CHECKING:
     from .student import Student
@@ -22,25 +25,22 @@ class ScoreModification(ClassDataType):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-
-
     @staticmethod
     def new_dummy():
         "返回一个空的分数加减操作"
         from .student import Student
-        return ScoreModification(
-            ScoreModificationTemplate.new_dummy(), Student.new_dummy()
-        )
+
+        return ScoreModification(ScoreModificationTemplate.new_dummy(), Student.new_dummy())
 
     def __init__(
         self,
         template: ScoreModificationTemplate,
         target: Student,
-        title: Optional[str] = None,
-        desc: Optional[str] = None,
-        mod: Optional[float] = None,
-        execute_time: Optional[str] = None,
-        create_time: Optional[str] = None,
+        title: str | None = None,
+        desc: str | None = None,
+        mod: float | None = None,
+        execute_time: str | None = None,
+        create_time: str | None = None,
         executed: bool = False,
     ):
         """
@@ -82,11 +82,11 @@ class ScoreModification(ClassDataType):
 
     def __repr__(self):
         return (
-            f"ScoreModification(template={repr(self.temp)}, "
-            f"target={repr(self.target)}, title={repr(self.title)}, "
-            f"desc={repr(self.desc)}, mod={repr(self.mod)}, "
-            f"execute_time={repr(self.execute_time)}, create_time={repr(self.create_time)}, "
-            f"executed={repr(self.executed)})"
+            f"ScoreModification(template={self.temp!r}, "
+            f"target={self.target!r}, title={self.title!r}, "
+            f"desc={self.desc!r}, mod={self.mod!r}, "
+            f"execute_time={self.execute_time!r}, create_time={self.create_time!r}, "
+            f"executed={self.executed!r})"
         )
 
     def execute(self) -> bool:
@@ -124,20 +124,15 @@ class ScoreModification(ClassDataType):
             ZeroDivisionError,
         ) as exception:
             if debug:
-                raise ClassDataObj.OpreationError(
-                    "执行加减分操作时发生错误"
-                ) from exception
+                raise ClassDataObj.OpreationError("执行加减分操作时发生错误") from exception
             Base.log(
                 "E",
-                "执行时出现错误：\n\t\t"
-                + ("\t" * 2)
-                .join(str(traceback.format_exc()).splitlines(True))
-                .strip(),
+                "执行时出现错误：\n\t\t" + ("\t" * 2).join(str(traceback.format_exc()).splitlines(True)).strip(),
                 "ScoreModification.execute",
             )
             return False
 
-    def retract(self) -> Tuple[bool, str]:
+    def retract(self) -> tuple[bool, str]:
         """撤销执行的操作
 
         :return: 是否执行成功（bool: 结果, str: 成功/失败原因）
@@ -155,16 +150,10 @@ class ScoreModification(ClassDataType):
                     for i in self.target.history:
                         tmp: ScoreModification = self.target.history[i]
 
-                        if (
-                            tmp.execute_time_key != self.execute_time_key
-                            and tmp.executed
-                        ):  # 排除自身
+                        if tmp.execute_time_key != self.execute_time_key and tmp.executed:  # 排除自身
                             findscore += tmp.mod
 
-                        if (
-                            lowestscore > findscore
-                            and tmp.execute_time_key != self.execute_time_key
-                        ):
+                        if lowestscore > findscore and tmp.execute_time_key != self.execute_time_key:
                             lowesttimekey = tmp.execute_time_key
                             lowestscore = findscore
 
@@ -183,16 +172,10 @@ class ScoreModification(ClassDataType):
                     highesttimekey = 0
                     for i in self.target.history:
                         tmp: ScoreModification = self.target.history[i]
-                        if (
-                            tmp.execute_time_key != self.execute_time_key
-                            and tmp.executed
-                        ):
+                        if tmp.execute_time_key != self.execute_time_key and tmp.executed:
                             findscore += tmp.mod
 
-                        if (
-                            highestscore < findscore
-                            and tmp.execute_time_key != self.execute_time_key
-                        ):
+                        if highestscore < findscore and tmp.execute_time_key != self.execute_time_key:
                             highesttimekey = tmp.execute_time_key
                             highestscore = findscore
                     if self.execute_time_key == highesttimekey:
@@ -218,13 +201,10 @@ class ScoreModification(ClassDataType):
                 ZeroDivisionError,
             ) as exception:
                 if debug:
-                    raise exception
+                    raise
                 Base.log(
                     "E",
-                    "执行时出现错误：\n\t\t"
-                    + ("\t" * 2)
-                    .join(str(traceback.format_exc()).splitlines(True))
-                    .strip(),
+                    "执行时出现错误：\n\t\t" + ("\t" * 2).join(str(traceback.format_exc()).splitlines(True)).strip(),
                     "ScoreModification.retract",
                 )
                 return False, "执行时出现不可预测的错误"
@@ -255,12 +235,10 @@ class ScoreModification(ClassDataType):
     def from_string(string: str):
         "将字符串转换为分数修改对象。"
         from .student import Student
+
         d = json.loads(string)
         if d["type"] != ScoreModification.chunk_type_name:
-            raise ValueError(
-                f"类型不匹配：{d['type']} != "
-                f"{ScoreModification.chunk_type_name}"
-            )
+            raise ValueError(f"类型不匹配：{d['type']} != {ScoreModification.chunk_type_name}")
         obj = ScoreModification(
             template=ClassDataObj.LoadUUID(d["template"], ScoreModificationTemplate),
             target=ClassDataObj.LoadUUID(d["target"], Student),

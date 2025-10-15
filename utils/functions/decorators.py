@@ -2,19 +2,16 @@
 一堆有用的装饰器
 """
 
-import sys
 import functools
 from threading import Thread
-from typing import Literal
 
 from utils.logger import Logger as Base
 
-
 __all__ = [
-    "repeat",
-    "run_async",
     "canbe",
     "pass_exceptions",
+    "repeat",
+    "run_async",
 ]
 
 
@@ -79,9 +76,7 @@ def canbe(value, _class: type):
     try:
         _class(value)
         return True
-    except (
-        Exception
-    ) as unused:  # pylint: disable=unused-argument, broad-exception-caught
+    except Exception as unused:  # pylint: disable=unused-argument, broad-exception-caught
         return False
 
 
@@ -117,14 +112,10 @@ def pass_exceptions(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (
-            BaseException
-        ) as unused:  # pylint: disable=broad-exception-caught
+        except BaseException as unused:  # pylint: disable=broad-exception-caught
             Base.log_exc(
-                f"执行函数{repr(func.__name__)}时捕获到异常",
+                f"执行函数{func.__name__!r}时捕获到异常",
                 f"pass_exceptions -> {func.__name__}",
             )
 
     return wrapper
-
-

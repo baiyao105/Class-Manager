@@ -2,13 +2,12 @@
 常量文件
 """
 
+import datetime
+import math
 import os
 import sys
-import math
 import time
-import datetime
-from typing import Literal, Any, Dict
-
+from typing import Any, Literal
 
 debug: bool = True
 "是否为调试模式"
@@ -29,13 +28,13 @@ qt_version: Literal["PyQt5", "PyQt6", "PySide2", "PySide6"] = "PySide6"
 
 app_stylesheet: str = """
 QMainWindow {
-    color: black; 
-    font-family: 'Microsoft YaHei UI'; 
+    color: black;
+    font-family: 'Microsoft YaHei UI';
 }
 
 QWidget {
-    color: black; 
-    font-family: 'Microsoft YaHei UI'; 
+    color: black;
+    font-family: 'Microsoft YaHei UI';
 }
 """
 "软件的样式表"
@@ -65,13 +64,13 @@ nan = -math.nan
 cwd = os.getcwd()
 
 LOG_FILE_PATH = (
-    f'log/ClassManager_log_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+    f"log/ClassManager_log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
     + f"_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log"
 )
 "日志文件路径"
 
 
-runtime_flags: Dict[Any, Any] = {}
+runtime_flags: dict[Any, Any] = {}
 "全局变量字典"
 
 
@@ -79,7 +78,6 @@ runtime_flags: Dict[Any, Any] = {}
 # 如果检测到没有输出流，就打开一个文件作为输出流
 
 if sys.stdout is None:
-
     if sys.__stdout__ is None:
         sys.stdout = open(os.path.join(os.getcwd(), "stdout"), "w", encoding="utf-8")
         sys.stderr = open(os.path.join(os.getcwd(), "stderr"), "w", encoding="utf-8")

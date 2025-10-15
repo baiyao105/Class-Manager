@@ -8,6 +8,7 @@ import uuid
 from typing import Any
 
 from config.class_config import ClassConfigManager
+
 from ..models.class_ import Classroom
 from ..models.master import DataRegistry
 from ..repositories.class_repository import ClassRepository
@@ -76,7 +77,7 @@ class ClassService:
             max_students=max_students,
             academic_year=academic_year,
             semester=semester,
-            is_active=True
+            is_active=True,
         )
 
         # 准备数据库数据(只保留业务相关字段)
@@ -226,7 +227,7 @@ class ClassService:
         # 执行数据库更新
         if db_update_data:
             return self.class_repository.update(class_id, db_update_data)
-        
+
         return existing_class
 
     def delete_class(self, class_id: str, soft_delete: bool = True) -> bool:

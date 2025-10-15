@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import time
-from typing import (TYPE_CHECKING, Tuple, Iterable, List)
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
+from utils.algorithm import Stack, Thread
 from utils.basetypes import Base
-from utils.algorithm import Stack
-from utils.algorithm import Thread
+
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
     from ..classobj import ClassObj
-    from ..objects.student import Student
     from ..objects.scoremod import ScoreModification
+    from ..objects.student import Student
 
 
 class ClassStatusObserver:
@@ -65,9 +67,7 @@ class ClassStatusObserver:
         while self.on_active:
             last_opreate_time = time.time()
             if self.limited_tps:
-                time.sleep(
-                    max((1 / self.limited_tps) - (time.time() - last_frame_time), 0)
-                )
+                time.sleep(max((1 / self.limited_tps) - (time.time() - last_frame_time), 0))
             last_frame_time = time.time()
             if time.time() - self.last_update > 1:
                 self.last_update = time.time()
@@ -77,8 +77,7 @@ class ClassStatusObserver:
                     s.num = k
                     Base.log(
                         "I",
-                        f"学生 {s.name} 的学号已"
-                        f"从 {orig} 变为 {s.num}（二者不同步）",
+                        f"学生 {s.name} 的学号已从 {orig} 变为 {s.num}（二者不同步）",
                         "ClassStatusObserver._start",
                     )
             self.stu_score_ord = dict(
@@ -93,7 +92,6 @@ class ClassStatusObserver:
             self.mspt = (time.time() - last_frame_time) * 1000
             self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
 
-
     @property
     def student_total_score(self) -> float:
         """班级总分"""
@@ -105,7 +103,7 @@ class ClassStatusObserver:
         return self.target_class.student_count
 
     @property
-    def rank_non_dumplicate(self) -> List[Tuple[int, Student]]:
+    def rank_non_dumplicate(self) -> list[tuple[int, Student]]:
         """
         学生分数排序，去重
 
@@ -120,13 +118,13 @@ class ClassStatusObserver:
             (5, Student(name="某个学生", score=9,   ...)),
             (7, Student(name="某个学生", score=1,   ...))
         ]
-        
+
         （即List[Tuple[排名数，学生对象]]，同分排名数相同，但是下一个分数段继承上一个分数的人次数）
         """
         return self.target_class.rank_non_dumplicate
 
     @property
-    def rank_dumplicate(self) -> List[Tuple[int, Student]]:
+    def rank_dumplicate(self) -> list[tuple[int, Student]]:
         """
         学生分数排序，不去重
 

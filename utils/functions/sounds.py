@@ -2,11 +2,12 @@
 播放声音和音乐的工具
 """
 
-
 import os
 from threading import Thread
+
 from utils.logger import Logger
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
+
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514"  # 可以让pygame闭嘴
 
 
 import pygame
@@ -16,8 +17,8 @@ pygame.mixer.init()
 # 初始化pygame的混音器
 
 __all__ = [
-    "play_sound",
     "play_music",
+    "play_sound",
     "stop_music",
 ]
 

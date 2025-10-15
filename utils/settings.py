@@ -1,8 +1,10 @@
-from typing import Literal, Any
-import pickle
 import os
+import pickle
+from types import FunctionType, MethodType
+from typing import Any, Literal
+
 import dill as pickle
-from types import MethodType, FunctionType
+
 from utils.basetypes import Base
 from utils.update_check import CLIENT_VERSION, CLIENT_VERSION_CODE
 
@@ -92,7 +94,7 @@ class SettingsInfo:
         :return: 加载后的设置信息对象
         """
         try:
-            obj: "SettingsInfo" = pickle.load(open(file_path, "rb"))
+            obj: SettingsInfo = pickle.load(open(file_path, "rb"))
             self.__dict__.update(obj.get_dict())
         except Exception as e:
             Base.log_exc("加载设置失败，将会返回默认", "SettingsInfo.load_from", exc=e)
@@ -127,13 +129,12 @@ class SettingsInfo:
         return dict(
             (k, v)
             for k, v in self.__dict__.items()
-            if (not k.startswith("__"))
-            and (not isinstance(k, (FunctionType, MethodType)))
+            if (not k.startswith("__")) and (not isinstance(k, (FunctionType, MethodType)))
         )
 
     def __repr__(self):
         "返回设置信息"
-        return f"SettingsInfo({dict((k, v) for k, v in self.__dict__.items() if not k.startswith('__')) !r})"
+        return f"SettingsInfo({dict((k, v) for k, v in self.__dict__.items() if not k.startswith('__'))!r})"
 
 
 SettingsInfo.current = SettingsInfo()
