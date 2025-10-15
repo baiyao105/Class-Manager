@@ -26,10 +26,12 @@ class ClassType(str, Enum):
 
 class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     """子库班级表 - 存储班级业务数据
+    
+    注意：班级基础信息(名称、班主任、描述等)已迁移到配置文件中
+    此模型仅保留业务相关的数据库字段
 
     核心字段：
     - 关联信息：总库班级索引UUID
-    - 基本信息：班级名称、班主任、班级类型
     - 积分设置：基础积分、积分规则
     - 统计信息：学生数量、总分、平均分
     - 管理信息：创建时间、状态等
@@ -42,31 +44,10 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
 
     # 关联总库
     registry_uuid: UUID = Field(description="总库班级索引UUID")
-    name: str = Field(description="班级名称", max_length=100, nullable=False, index=True)
-    description: str | None = Field(default=None, description="班级描述", max_length=500)
-
-    # 班主任信息
-    teacher_name: str = Field(description="班主任姓名", max_length=50, nullable=False)
-    teacher_contact: str | None = Field(default=None, description="班主任联系方式", max_length=100)
-
-    # 班级类型和状态
-    class_type: str = Field(max_length=50, description="班级类型")
-    is_active: bool = Field(default=True, description="是否活跃")
-
-    # 学期信息
-    academic_year: str = Field(description="学年", max_length=20, default="2024-2025")
-    semester: int = Field(description="学期(1或2)", default=1)
-
-    # 班级设置
-    max_students: int = Field(default=ClassConstants.MAX_CLASS_SIZE, description="最大学生数量")
 
     # 积分设置
     base_score: float = Field(default=100.0, description="基础积分")
     score_rules: str | None = Field(default=None, sa_column=Column(Text), description="积分规则JSON")
-
-    # 状态信息
-    start_date: datetime | None = Field(default=None, description="开始日期")
-    end_date: datetime | None = Field(default=None, description="结束日期")
 
     # 关系字段
     students: list["Student"] = Relationship(
@@ -80,41 +61,13 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     #     sa_relationship_kwargs={"lazy": "select"}
     # )
 
-    # 验证器
-    @field_validator("name")
+    # 验证器 (移除已迁移字段的验证器)
+    @field_validator("base_score")
     @classmethod
-    def validate_name(cls, v):
-        """验证班级名称"""
-        if not v or not v.strip():
-            raise ValueError("班级名称不能为空")
-        if len(v.strip()) > 100:
-            raise ValueError("班级名称长度不能超过100个字符")
-        return v.strip()
-
-    @field_validator("teacher_name")
-    @classmethod
-    def validate_teacher_name(cls, v):
-        """验证班主任姓名"""
-        if not v or not v.strip():
-            raise ValueError("班主任姓名不能为空")
-        if len(v.strip()) > 50:
-            raise ValueError("班主任姓名长度不能超过50个字符")
-        return v.strip()
-
-    @field_validator("max_students")
-    @classmethod
-    def validate_max_students(cls, v):
-        """验证最大学生数量"""
-        if not (ClassConstants.MIN_CLASS_SIZE <= v <= ClassConstants.MAX_CLASS_SIZE):
-            raise ValueError(f"班级最大人数必须在{ClassConstants.MIN_CLASS_SIZE}-{ClassConstants.MAX_CLASS_SIZE}范围内")
-        return v
-
-    @field_validator("semester")
-    @classmethod
-    def validate_semester(cls, v):
-        """验证学期"""
-        if v not in [1, 2]:
-            raise ValueError("学期只能是1或2")
+    def validate_base_score(cls, v):
+        """验证基础积分"""
+        if v < 0:
+            raise ValueError("基础积分不能为负数")
         return v
 
     # 统计属性
@@ -154,17 +107,18 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
             return 0
         return len([g for g in self.groups if not g.is_deleted])
 
-    # 业务方法
-    def add_student(self, student: "Student") -> bool:
+    # 业务方法 (需要配合配置文件使用)
+    def add_student(self, student: "Student", max_students: int = 50) -> bool:
         """添加学生到班级
 
         Args:
             student: 学生对象
+            max_students: 最大学生数量(从配置文件获取)
 
         Returns:
             是否添加成功
         """
-        if self.student_count >= self.max_students:
+        if self.student_count >= max_students:
             return False
 
         # 检查学号是否重复
