@@ -1,20 +1,22 @@
 from __future__ import annotations
-import os
-import sys
-from types import TracebackType
-import time
+
+import base64
 import copy
 import enum
 import errno
-import random
-import base64
-import pickle as pickle_orig
+import os
 import pickle
+import pickle as pickle_orig
+import random
+import sys
+import time
 import traceback
-import dill as pickle
 from abc import abstractmethod
-from typing import (Union, Callable, Optional, 
-                    Dict, Literal, List, Tuple, Type)
+from collections.abc import Callable
+from types import TracebackType
+from typing import Literal
+
+import dill as pickle
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QMessageBox
 
@@ -22,15 +24,15 @@ from utils.algorithm import Mutex, OrderedKeyList
 from utils.basetypes import Base
 from utils.functions.prompts import question_yes_no
 from utils.update_check import CORE_VERSION, CORE_VERSION_CODE
-from .objects import *
-from .classdataobj import *
-from .default import *
-from .dataloader import UserDataBase, Chunk
 
+from .classdataobj import *
+from .dataloader import Chunk, UserDataBase
+from .default import *
+from .objects import *
+from .observers.achievementstatobs import AchievementStatusObserver
 
 # 添加类型检查导入
 from .observers.classstatobs import ClassStatusObserver
-from .observers.achievementstatobs import AchievementStatusObserver
 
 
 class ClassObj(ClassDataObj, Base):
@@ -42,7 +44,7 @@ class ClassObj(ClassDataObj, Base):
     _saving_task_mutex: Mutex = Mutex()
     "保存任务互斥锁"
 
-    def __init__(self, user: str = default_user, save_path: Optional[str] = None):
+    def __init__(self, user: str = default_user, save_path: str | None = None):
         """
         构造一个新的用户班级对象。
 
@@ -68,19 +70,19 @@ class ClassObj(ClassDataObj, Base):
         "默认分数模板"
         self.last_reset: float
         "上次重置时间"
-        self.history_data: Dict[float, History]
+        self.history_data: dict[float, History]
         "历史数据"
         self.save_path: str = save_path
         "保存路径"
-        self.modify_templates: Dict[str, ScoreModificationTemplate]
+        self.modify_templates: dict[str, ScoreModificationTemplate]
         "分数修改模板"
-        self.achievement_templates: Dict[str, AchievementTemplate]
+        self.achievement_templates: dict[str, AchievementTemplate]
         "成就模板"
-        self.current_day_attendance: Dict[str, AttendanceInfo]
+        self.current_day_attendance: dict[str, AttendanceInfo]
         "当前日考勤信息"
-        self.classes: Dict[str, Class]
+        self.classes: dict[str, Class]
         "班级"
-        self.weekday_record: Dict[str, Dict[float, DayRecord]]
+        self.weekday_record: dict[str, dict[float, DayRecord]]
         "每日记录"
         self.auto_saving: bool = False
         "是否正在进行自动保存"
@@ -92,9 +94,9 @@ class ClassObj(ClassDataObj, Base):
 
     def init_class_data(
         self,
-        current_user: str = None,
-        class_name: str = None,
-        class_id: str = None,
+        current_user: str | None = None,
+        class_name: str | None = None,
+        class_id: str | None = None,
         class_obs_tps: int = 10,
         achievement_obs_tps: int = 10,
     ):
@@ -110,9 +112,7 @@ class ClassObj(ClassDataObj, Base):
         self.current_user = current_user
         self.target_class = self.classes[class_id]
         self.class_obs = ClassStatusObserver(self, class_id, class_obs_tps)
-        self.achievement_obs = AchievementStatusObserver(
-            self, class_id, tps=achievement_obs_tps
-        )
+        self.achievement_obs = AchievementStatusObserver(self, class_id, tps=achievement_obs_tps)
         self.class_obs.start()
         self.achievement_obs.start()
         if self.current_day_attendance is None:
@@ -128,7 +128,7 @@ class ClassObj(ClassDataObj, Base):
             f"成就侦测器刻速率：{achievement_obs_tps}",
             "ClassObjects.init_class_data",
         )
-    
+
     @property
     def target_class_id(self):
         "目标班级id"
@@ -136,7 +136,7 @@ class ClassObj(ClassDataObj, Base):
             return self.target_class.key
         except AttributeError as unused:
             return None
-    
+
     @property
     def target_class_name(self):
         "目标班级名称"
@@ -144,7 +144,6 @@ class ClassObj(ClassDataObj, Base):
             return self.target_class.name
         except AttributeError as unused:
             return None
-
 
     @staticmethod
     def load_data(
@@ -177,7 +176,7 @@ class ClassObj(ClassDataObj, Base):
 
         try:
             if method == "pickle":
-                b = base64.b85decode(open(path, "r", encoding="utf-8").read())
+                b = base64.b85decode(open(path, encoding="utf-8").read())
                 f = open(path + ".tmp", "wb")
                 f.write(b)
                 f.close()
@@ -187,59 +186,49 @@ class ClassObj(ClassDataObj, Base):
                     data = pickle_orig.load(open(path + ".tmp", "rb"))
                 try:
                     os.remove(path + ".tmp")
-                except (
-                    Exception
-                ) as unused:  # pylint: disable=unused-variable, broad-exception-caught
+                except Exception as unused:  # pylint: disable=unused-variable, broad-exception-caught
                     pass
                 if not silent:
-                    Base.log(
-                        "I", f"耗时：{time.time()-start:.2f}", "MainThread.load_data"
-                    )
+                    Base.log("I", f"耗时：{time.time() - start:.2f}", "MainThread.load_data")
                 return UserDataBase(**data)
 
-            elif method == "sqlite":
+            if method == "sqlite":
                 path = os.path.dirname(path) if path.endswith(".datas") else path
                 data_chunk = Chunk(path)
                 data = data_chunk.load_data(load_full_histories)
                 if not silent:
-                    Base.log(
-                        "I", f"耗时：{time.time()-start:.2f}", "MainThread.load_data"
-                    )
+                    Base.log("I", f"耗时：{time.time() - start:.2f}", "MainThread.load_data")
                 return data
 
         except FileNotFoundError as exception:
             if strict:
-                raise exception
-            Base.log(
-                "W", "存档" + path + "不存在，重置所有数据", "MainThread.load_data"
-            )
+                raise
+            Base.log("W", "存档" + path + "不存在，重置所有数据", "MainThread.load_data")
             ClassObj.reset_data(path)
-            Base.log("I", f"耗时：{time.time()-start:.2f}", "MainThread.load_data")
+            Base.log("I", f"耗时：{time.time() - start:.2f}", "MainThread.load_data")
             Base.log("I", "重新加载...", "MainThread.load_data")
 
             return ClassObj.load_data(path, strict=True)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             if strict:
-                raise e
+                raise
             Base.log_exc("读取存档" + path + "失败：", "Mainhread.load_data")
-            Base.log("I", f"耗时：{time.time()-start:.2f}", "MainThread.load_data")
+            Base.log("I", f"耗时：{time.time() - start:.2f}", "MainThread.load_data")
 
             if isinstance(e, OSError):
                 if e.errno == errno.EACCES:
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"没有权限读取文件[{path}]，请检查文件权限"
-                        + f"\n[{e.__class__.__name__}] {e}",
+                        f"没有权限读取文件[{path}]，请检查文件权限" + f"\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
                 elif e.errno == errno.EPERM:
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"没有权限读文件[{path}]，请检查文件权限"
-                        + f"\n[{e.__class__.__name__}] {e}",
+                        f"没有权限读文件[{path}]，请检查文件权限" + f"\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
 
@@ -247,8 +236,7 @@ class ClassObj(ClassDataObj, Base):
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"文件[{path}]是一个目录，请检查文件路径"
-                        + f"\n[{e.__class__.__name__}] {e}",
+                        f"文件[{path}]是一个目录，请检查文件路径" + f"\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
 
@@ -256,8 +244,7 @@ class ClassObj(ClassDataObj, Base):
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"磁盘空间不足，无法读取文件[{path}]，请清理后重新尝试"
-                        + f"\n[{e.__class__.__name__}] {e}",
+                        f"磁盘空间不足，无法读取文件[{path}]，请清理后重新尝试" + f"\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
 
@@ -272,8 +259,7 @@ class ClassObj(ClassDataObj, Base):
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"打开文件过多，无法读取文件[{path}]"
-                        + f"\n[{e.__class__.__name__}] {e}",
+                        f"打开文件过多，无法读取文件[{path}]" + f"\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
 
@@ -281,8 +267,7 @@ class ClassObj(ClassDataObj, Base):
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"读取文件[{path}]时发生I/O错误"
-                        + f"\n[{e.__class__.__name__}] {e}",
+                        f"读取文件[{path}]时发生I/O错误" + f"\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
 
@@ -290,8 +275,7 @@ class ClassObj(ClassDataObj, Base):
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"文件[{path}]是一个无效的文件描述符"
-                        + f"\n[{e.__class__.__name__}] {e}",
+                        f"文件[{path}]是一个无效的文件描述符" + f"\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
 
@@ -299,8 +283,7 @@ class ClassObj(ClassDataObj, Base):
                     QMessageBox.critical(
                         None,
                         "出错了！",
-                        f"读取文件[{path}]时发生未知错误：\n{traceback.format_exc()}"
-                        f"\n[{e.__class__.__name__}] {e}",
+                        f"读取文件[{path}]时发生未知错误：\n{traceback.format_exc()}\n[{e.__class__.__name__}] {e}",
                     )
                     os._exit(1)
 
@@ -320,40 +303,30 @@ class ClassObj(ClassDataObj, Base):
         "把默认数据（比如当前不存在的模板和成就）加入到现有数据中"
         for _class in DEFAULT_CLASSES.values():
             for default_group in _class.groups.values():
-                if (
-                    default_group.key not in _class.groups
-                ):  # 如果默认小组不存在就给他加回去
+                if default_group.key not in _class.groups:  # 如果默认小组不存在就给他加回去
                     _class.groups[default_group.key] = default_group
-                self.classes[_class.key].groups[
-                    default_group.key
-                ].further_desc = default_group.further_desc
+                self.classes[_class.key].groups[default_group.key].further_desc = default_group.further_desc
                 # 复原默认描述，满足他们的文学创作
 
-        for (
-            default_achievement
-        ) in DEFAULT_ACHIEVEMENTS.values():  # 补齐存档中缺失的默认成就
+        for default_achievement in DEFAULT_ACHIEVEMENTS.values():  # 补齐存档中缺失的默认成就
             if default_achievement.key not in self.achievement_templates:
-                self.achievement_templates[default_achievement.key] = (
-                    default_achievement
-                )
+                self.achievement_templates[default_achievement.key] = default_achievement
 
-        for (
-            default_template
-        ) in DEFAULT_SCORE_TEMPLATES.values():  # 补齐存档中缺失的默认模板
+        for default_template in DEFAULT_SCORE_TEMPLATES.values():  # 补齐存档中缺失的默认模板
             if default_template.key not in self.modify_templates:
                 self.modify_templates[default_template.key] = default_template
 
     def reset_all_defaults(self):
         "重置所有默认模板"
-        for a in copy.deepcopy(self.achievement_templates).keys():  # 重置成就模板
+        for a in copy.deepcopy(self.achievement_templates):  # 重置成就模板
             if a in DEFAULT_ACHIEVEMENTS:
                 self.achievement_templates[a] = DEFAULT_ACHIEVEMENTS[a]
 
-        for a in copy.deepcopy(self.modify_templates).keys():  # 重置分数模板
-            if a in DEFAULT_SCORE_TEMPLATES.keys():
+        for a in copy.deepcopy(self.modify_templates):  # 重置分数模板
+            if a in DEFAULT_SCORE_TEMPLATES:
                 self.modify_templates[a] = DEFAULT_SCORE_TEMPLATES[a]
 
-        for c in copy.deepcopy(self.classes).keys():  # 重置班级信息
+        for c in copy.deepcopy(self.classes):  # 重置班级信息
             if c in DEFAULT_CLASSES:
                 # 恢复默认卫生打扫规则
                 self.classes[c].cleaning_mapping = DEFAULT_CLASSES[c].cleaning_mapping
@@ -364,7 +337,7 @@ class ClassObj(ClassDataObj, Base):
                 default_students = DEFAULT_CLASSES[c].students.copy()
 
                 # 重置这个班级的学生信息
-                for s in copy.deepcopy(self.classes[c].students).keys():
+                for s in copy.deepcopy(self.classes[c].students):
                     if s in default_students:
                         # 恢复学生姓名
                         self.classes[c].students[s].name = default_students[s].name
@@ -375,20 +348,13 @@ class ClassObj(ClassDataObj, Base):
                         ].belongs_to_group  # 恢复所属小组
 
         for _class in self.classes.values():
-            for g in copy.deepcopy(_class.groups).keys():  # 重置小组信息
-                if g in DEFAULT_CLASSES[_class.key].groups.keys():
+            for g in copy.deepcopy(_class.groups):  # 重置小组信息
+                if g in DEFAULT_CLASSES[_class.key].groups:
+                    _class.groups[g].further_desc = DEFAULT_CLASSES[_class.key].groups[g].further_desc  # 恢复默认描述
 
-                    _class.groups[g].further_desc = (
-                        DEFAULT_CLASSES[_class.key].groups[g].further_desc
-                    )  # 恢复默认描述
+                    _class.groups[g].name = DEFAULT_CLASSES[_class.key].groups[g].name  # 恢复小组名
 
-                    _class.groups[g].name = (
-                        DEFAULT_CLASSES[_class.key].groups[g].name
-                    )  # 恢复小组名
-
-                    _class.groups[g].belongs_to = (
-                        DEFAULT_CLASSES[_class.key].groups[g].belongs_to
-                    )  # 恢复所属班级
+                    _class.groups[g].belongs_to = DEFAULT_CLASSES[_class.key].groups[g].belongs_to  # 恢复所属班级
 
     def reset_all_data(self, reset_students_and_groups: bool = False):
         "重置所有数据"
@@ -444,8 +410,7 @@ class ClassObj(ClassDataObj, Base):
             )
 
         if reset_current:
-
-            self.classes: Dict[str, "Class"] = data.classes
+            self.classes: dict[str, Class] = data.classes
             if isinstance(self.classes, OrderedKeyList):
                 self.classes = self.classes.to_dict()  # 转换为字典解决类型问题
 
@@ -454,12 +419,10 @@ class ClassObj(ClassDataObj, Base):
             else:
                 self.target_class = None
 
-            self.achievement_templates: Dict[str, AchievementTemplate] = (
-                OrderedKeyList(data.achievements).to_dict()
-            )  # 转换为字典
-            self.modify_templates = (
-                OrderedKeyList(data.templates).to_dict()
-            )
+            self.achievement_templates: dict[str, AchievementTemplate] = OrderedKeyList(
+                data.achievements
+            ).to_dict()  # 转换为字典
+            self.modify_templates = OrderedKeyList(data.templates).to_dict()
 
             achievements = copy.deepcopy(self.achievement_templates)
             for key, achievement in achievements.items():
@@ -511,11 +474,7 @@ class ClassObj(ClassDataObj, Base):
                 for attr, default in [
                     (
                         "homework_rules",
-                        (
-                            (DEFAULT_CLASSES[key_class].homework_rules)
-                            if key_class in DEFAULT_CLASSES
-                            else {}
-                        ),
+                        ((DEFAULT_CLASSES[key_class].homework_rules) if key_class in DEFAULT_CLASSES else {}),
                     ),
                     (
                         "cleaning_mapping",
@@ -551,25 +510,19 @@ class ClassObj(ClassDataObj, Base):
                                 setattr(student, attr, default)
                 if not hasattr(_class, "groups"):
                     if _class.key in DEFAULT_CLASSES:
-                        _class.groups = copy.deepcopy(
-                            DEFAULT_CLASSES[_class.key].groups
-                        )
+                        _class.groups = copy.deepcopy(DEFAULT_CLASSES[_class.key].groups)
                     else:
                         _class.groups = {}
                 for key, group in _class.groups.items():
                     index = 0
                     for member in group.members:
-                        group.members[index] = self.classes[member.belongs_to].students[
-                            member.num
-                        ]
+                        group.members[index] = self.classes[member.belongs_to].students[member.num]
                         index += 1
 
             if "current_day_attendance" in data:
                 self.current_day_attendance = data.current_day_attendance
             else:
-                self.current_day_attendance = {
-                    self.target_class_id: AttendanceInfo()
-                }
+                self.current_day_attendance = {self.target_class_id: AttendanceInfo()}
 
             if "weekday_record" in data:
                 self.weekday_record = data.weekday_record
@@ -612,13 +565,13 @@ class ClassObj(ClassDataObj, Base):
         version: str,
         version_code: int,
         last_reset: float,
-        history_data: Dict[float, History],
-        classes: Dict[str, Class],
-        templates: Dict[str, "ScoreModificationTemplate"],
-        achievements: Dict[str, AchievementTemplate],
+        history_data: dict[float, History],
+        classes: dict[str, Class],
+        templates: dict[str, ScoreModificationTemplate],
+        achievements: dict[str, AchievementTemplate],
         last_start_time: float,
-        weekday_record: Dict[str, List[DayRecord]],
-        current_day_attendance: Dict[str, AttendanceInfo],
+        weekday_record: dict[str, list[DayRecord]],
+        current_day_attendance: dict[str, AttendanceInfo],
         *,
         path: str = os.path.abspath(f"chunks/{default_user}/"),
         mode: Literal["pickle", "sqlite"] = "sqlite",
@@ -671,22 +624,22 @@ class ClassObj(ClassDataObj, Base):
                     chunk.save_data()
                     Base.log(
                         "I",
-                        f"写入文件完成 ({time.time()-t:.3f}s)",
+                        f"写入文件完成 ({time.time() - t:.3f}s)",
                         "MainThread.save_data_strict",
                     )
                     Base.log(
                         "I",
-                        "保存数据到" + path + f"完成，总时间：{time.time()-st:.3f}",
+                        "保存数据到" + path + f"完成，总时间：{time.time() - st:.3f}",
                         "MainThread.save_data_strict",
                     )
                     return database
 
-                elif mode == "pickle":
+                if mode == "pickle":
                     t = time.time()
                     b = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
                     Base.log(
                         "I",
-                        f"读取内存完成 ({time.time()-t:.3f}s)",
+                        f"读取内存完成 ({time.time() - t:.3f}s)",
                         "MainThread.save_data_strict",
                     )
 
@@ -694,7 +647,7 @@ class ClassObj(ClassDataObj, Base):
                     b2 = base64.b85encode(b)
                     Base.log(
                         "I",
-                        f"编码完成 ({time.time()-t:.3f}s)",
+                        f"编码完成 ({time.time() - t:.3f}s)",
                         "MainThread.save_data_strict",
                     )
 
@@ -704,24 +657,22 @@ class ClassObj(ClassDataObj, Base):
                     b.close()
                     Base.log(
                         "I",
-                        f"写入文件完成 ({time.time()-t:.3f}s)",
+                        f"写入文件完成 ({time.time() - t:.3f}s)",
                         "MainThread.save_data_strict",
                     )
 
                     Base.log(
                         "I",
-                        "保存数据到" + path + f"完成，总时间：{time.time()-st:.3f}",
+                        "保存数据到" + path + f"完成，总时间：{time.time() - st:.3f}",
                         "MainThread.save_data_strict",
                     )
                     return database
 
-            except (
-                Exception
-            ) as unused:  # pylint: disable=unused-variable, broad-exception-caught
+            except Exception as unused:  # pylint: disable=unused-variable, broad-exception-caught
                 Base.log_exc("保存存档" + path + "失败：", "Mainhread.save_data_strict")
                 raise
 
-    def save_data(self, path: str = None, mode: Literal["pickle", "sqlite"] = "sqlite"):
+    def save_data(self, path: str | None = None, mode: Literal["pickle", "sqlite"] = "sqlite"):
         """保存当前存档。
 
         :param path: 文件路径
@@ -806,10 +757,10 @@ class ClassObj(ClassDataObj, Base):
     class ObserverError(RuntimeError):
         "侦测器出现错误"
 
-    achievement_obs: "AchievementStatusObserver"
+    achievement_obs: AchievementStatusObserver
     "成就侦测器"
 
-    class_obs: "ClassStatusObserver"
+    class_obs: ClassStatusObserver
     "班级侦测器"
 
     class EditingError(Exception):
@@ -864,11 +815,11 @@ class ClassObj(ClassDataObj, Base):
 
     def findstu(
         self,
-        identifier: Union[int, str],
+        identifier: int | str,
         from_class: str = DEFAULT_CLASS_KEY,
         *,
         strict: bool = False,
-    ) -> Union[Student, int]:
+    ) -> Student | int:
         """
         在from_class中找到一个匹配identifier（可以是学号或者名字）的人
 
@@ -883,35 +834,32 @@ class ClassObj(ClassDataObj, Base):
         except KeyError as e:
             if not strict:
                 return ClassObj.EditErrInfo.FindStudent.ClassNotExists
-            raise ClassObj.ClassNotExistError(f"班级{repr(from_class)}不存在") from e
+            raise ClassObj.ClassNotExistError(f"班级{from_class!r}不存在") from e
         if isinstance(identifier, int):
-            for k in real_class.students.keys():
+            for k in real_class.students:
                 if real_class.students[k].num == identifier:
                     s = real_class.students[k]
                     Base.log(
                         "D",
-                        f"寻找到了该学生，信息：来自{real_class.name} "
-                        f"(班主任：{real_class.owner})"
-                        f"\n{str(s)}".replace("\n", ", "),
+                        f"寻找到了该学生，信息：来自{real_class.name} (班主任：{real_class.owner})\n{s!s}".replace(
+                            "\n", ", "
+                        ),
                         "MainThread.findstu",
                     )
                     return s
             if not strict:
                 return ClassObj.EditErrInfo.FindStudent.StudentNotExists
             raise ClassObj.StudentNotExistError("没有找到指定的学生")
-        elif isinstance(identifier, str):
-            for k in real_class.students.keys():
+        if isinstance(identifier, str):
+            for k in real_class.students:
                 if real_class.students[k].name == identifier:
-                    s = real_class.students[k]
-                    return s
+                    return real_class.students[k]
             if not strict:
                 return ClassObj.EditErrInfo.FindStudent.ClassNotExists
             raise ClassObj.StudentNotExistError("没有找到指定的学生")
         raise TypeError("传参错误")
 
-    def student_exists(
-        self, identifier: Union[int, str], from_class: str = DEFAULT_CLASS_KEY
-    ):
+    def student_exists(self, identifier: int | str, from_class: str = DEFAULT_CLASS_KEY):
         """
         检测一个学生是否存在
 
@@ -935,7 +883,7 @@ class ClassObj(ClassDataObj, Base):
         reason: str = "创建原因未知",
         *,
         strict: bool = False,
-    ) -> Union[ScoreModificationTemplate, int]:
+    ) -> ScoreModificationTemplate | int:
         """
         新建模板。
 
@@ -949,31 +897,24 @@ class ClassObj(ClassDataObj, Base):
         """
         Base.log("I", f"正在新建模板{key}, 原因：{reason}", "MainThread.add_template")
 
-        if key in self.modify_templates.keys():
-            Base.log(
-                "W", f"尝试覆盖已经存在的模板,key={key!r} :", "MainThread.add_template"
-            )
+        if key in self.modify_templates:
+            Base.log("W", f"尝试覆盖已经存在的模板,key={key!r} :", "MainThread.add_template")
             if self.modify_templates[key].cant_replace:
                 Base.log(
                     "E",
-                    "尝试覆盖一个无法修改的模板"
-                    + (", raise TemplateExistsError" if strict else ""),
+                    "尝试覆盖一个无法修改的模板" + (", raise TemplateExistsError" if strict else ""),
                     "MainThread.add_template",
                 )
                 if not strict:
                     return ClassObj.EditErrInfo.AddTemplate.TargetUnreplaceable
-                raise ClassObj.TemplateExistsError(
-                    f'模板"{self.modify_templates[key].title}"({key})被设置为无法替换!'
-                )
+                raise ClassObj.TemplateExistsError(f'模板"{self.modify_templates[key].title}"({key})被设置为无法替换!')
             self.modify_templates[key].title = title
             self.modify_templates[key].mod = value
             self.modify_templates[key].desc = description
             Base.log("I", "覆盖成功", "MainThread.add_template")
             return self.modify_templates[key]
         try:
-            self.modify_templates[key] = ScoreModificationTemplate(
-                key, value, title, description
-            )
+            self.modify_templates[key] = ScoreModificationTemplate(key, value, title, description)
             Base.log("I", "新建成功", "MainThread.add_template")
             return self.modify_templates[key]
 
@@ -985,7 +926,7 @@ class ClassObj(ClassDataObj, Base):
 
     def del_template(
         self, key: str, reason: str = "删除原因未知", *, strict: bool = False
-    ) -> Union[ScoreModificationTemplate, int]:
+    ) -> ScoreModificationTemplate | int:
         """
         删除模板。
 
@@ -997,11 +938,10 @@ class ClassObj(ClassDataObj, Base):
         :raise TemplateExistsError: 模板存在了且无法覆盖（指的是key重复）
         """
         Base.log("I", f"正在删除模板{key}, 原因：{reason}", "MainThread.del_template")
-        if key not in self.modify_templates.keys():
+        if key not in self.modify_templates:
             Base.log(
                 "E" if strict else "W",
-                f"模板{key}本就不存在"
-                + (", raise TemplateNotExistError" if strict else ""),
+                f"模板{key}本就不存在" + (", raise TemplateNotExistError" if strict else ""),
                 "MainThread.del_template",
             )
             if not strict:
@@ -1011,15 +951,12 @@ class ClassObj(ClassDataObj, Base):
         if self.modify_templates[key].cant_replace:
             Base.log(
                 "E" if strict else "W",
-                "尝试覆盖一个无法修改的模板"
-                + (", raise TemplateExistsError" if strict else ""),
+                "尝试覆盖一个无法修改的模板" + (", raise TemplateExistsError" if strict else ""),
                 "MainThread.del_template",
             )
             if not strict:
                 return ClassObj.EditErrInfo.DeleteTemplate.TargetUnreplaceable
-            raise ClassObj.TemplateExistsError(
-                f'模板"{self.modify_templates[key].title}"' f"({key})被设置为无法替换!"
-            )
+            raise ClassObj.TemplateExistsError(f'模板"{self.modify_templates[key].title}"({key})被设置为无法替换!')
         try:
             orig = self.modify_templates[key]
             del self.modify_templates[key]
@@ -1037,11 +974,11 @@ class ClassObj(ClassDataObj, Base):
         key: str,
         name: str,
         owner: str,
-        students: Dict[int, Student],
+        students: dict[int, Student],
         reason: str = "创建原因未知",
         *,
         strict: bool = False,
-    ) -> Union[Class, int]:
+    ) -> Class | int:
         """
         新建班级。
 
@@ -1060,7 +997,7 @@ class ClassObj(ClassDataObj, Base):
             f"正在新建班级{name}(所属老师{owner},标识符{key}), 原因：{reason}",
             "MainThread.add_class",
         )
-        if key in self.classes.keys():
+        if key in self.classes:
             Base.log("E", "指定的班级已存在!", "MainThread.add_class")
             if not strict:
                 return ClassObj.EditErrInfo.AddClass.TargetExists
@@ -1072,15 +1009,12 @@ class ClassObj(ClassDataObj, Base):
             return self.classes[key]
 
         except Exception as e:  # pylint: disable=broad-exception-caught
-
             Base.log_exc("新建班级失败:", "MainThread.class")
             if not strict:
                 return ClassObj.EditErrInfo.AddClass.SystemError
             raise ClassObj.EditingError(f"新建班级失败{key!r}失败") from e
 
-    def del_class(
-        self, key: str, reason: str = "删除原因未知", *, strict: bool = False
-    ) -> Union[Class, bool]:
+    def del_class(self, key: str, reason: str = "删除原因未知", *, strict: bool = False) -> Class | bool:
         """
         删除班级。
 
@@ -1090,11 +1024,9 @@ class ClassObj(ClassDataObj, Base):
         :raise ClassNotExistError: 班级不存在
         """
         class_orig = self.classes[key]
-        Base.log(
-            "I", f"正在删除班级(标识符{key}), 原因：{reason}", "MainThread.del_class"
-        )
+        Base.log("I", f"正在删除班级(标识符{key}), 原因：{reason}", "MainThread.del_class")
 
-        if key not in self.classes.keys():
+        if key not in self.classes:
             Base.log("E", "指定的班级不存在,无需操作!", "MainThread.del_class")
             if not strict:
                 return True
@@ -1131,10 +1063,8 @@ class ClassObj(ClassDataObj, Base):
         :raise ClassNotExistError: 指定的班级不存在
         :raise StudentExistsError: 指定的学生已存在
         """
-        Base.log(
-            "I", f"正在新建学生{name!r}, 原因：{reason!r}", "MainThread.add_student"
-        )
-        if to_class not in self.classes.keys():
+        Base.log("I", f"正在新建学生{name!r}, 原因：{reason!r}", "MainThread.add_student")
+        if to_class not in self.classes:
             Base.log("E", "指定的班级不存在!", "MainThread.add_student")
             if not strict:
                 return False
@@ -1147,13 +1077,9 @@ class ClassObj(ClassDataObj, Base):
             )
             if not strict:
                 return False
-            raise ClassObj.StudentExistsError(
-                f"指定学生{name!r}已存在! (学号{num!r}已占用)"
-            )
+            raise ClassObj.StudentExistsError(f"指定学生{name!r}已存在! (学号{num!r}已占用)")
         try:
-            self.classes[to_class].students[num] = Student(
-                name, num, init_score, to_class, {}
-            )
+            self.classes[to_class].students[num] = Student(name, num, init_score, to_class, {})
             Base.log("I", f"学生{name}新建完毕!", "MainThread.add_student")
             return True
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -1164,10 +1090,10 @@ class ClassObj(ClassDataObj, Base):
 
     def del_student(
         self,
-        identifier: Union[str, int],
+        identifier: str | int,
         from_class: str = DEFAULT_CLASS_KEY,
         reason: str = "删除原因未知",
-    ) -> Union[Optional[Student], Exception]:
+    ) -> Student | None | Exception:
         """删除学生。
 
         :param identifier: 学号或姓名
@@ -1176,9 +1102,7 @@ class ClassObj(ClassDataObj, Base):
         :return: 被删除的学生
         :raise Exception: 我也不知道这东西会怎么炸，忘了
         """
-        Base.log(
-            "I", f"正在删除学生{identifier}, 原因：{reason}", "MainThread.del_student"
-        )
+        Base.log("I", f"正在删除学生{identifier}, 原因：{reason}", "MainThread.del_student")
         try:
             stuobj = self.findstu(identifier, from_class)
         except ClassObj.EditingError as unused:
@@ -1187,7 +1111,7 @@ class ClassObj(ClassDataObj, Base):
                 "指定的学生不存在, 无需操作! 信息：" + repr(sys.exc_info()[1]),
                 "MainThread.del_student",
             )
-            return
+            return None
         try:
             orig = self.classes[from_class].students[stuobj.num]
             del self.classes[from_class].students[stuobj.num]
@@ -1195,9 +1119,7 @@ class ClassObj(ClassDataObj, Base):
             return orig
         except KeyError as e:  # pylint: disable=broad-exception-caught
             Base.log_exc("删除学生失败:", "MainThread.del_student")
-            raise ClassObj.EditingError(
-                f"从{from_class!r}删除学生{identifier!r}失败"
-            ) from e
+            raise ClassObj.EditingError(f"从{from_class!r}删除学生{identifier!r}失败") from e
 
     class SendModifyError(RuntimeError):
         "发送点评出现错误"
@@ -1205,12 +1127,12 @@ class ClassObj(ClassDataObj, Base):
     def send_modify(
         self,
         key: str,
-        send_to: Union[List[Student], Student],
-        extra_title: Optional[str] = None,
-        extra_desc: Optional[str] = None,
-        extra_mod: Optional[Union[float]] = None,
-        info: str = None,
-    ) -> Optional[List[ScoreModification]]:
+        send_to: list[Student] | Student,
+        extra_title: str | None = None,
+        extra_desc: str | None = None,
+        extra_mod: float | None = None,
+        info: str | None = None,
+    ) -> list[ScoreModification] | None:
         """发送点评。
 
         :param key: 模板标识符
@@ -1228,48 +1150,43 @@ class ClassObj(ClassDataObj, Base):
 
         if send_to is None:
             Base.log("W", "传参为None，疑似初始化，return", "MainThread.send_modify")
-            return
+            return None
 
-        elif send_to == []:
+        if send_to == []:
             Base.log("W", "传参为空，疑似初始化，return", "MainThread.send_modify")
-            return
+            return None
 
-        elif send_to == [None]:
+        if send_to == [None]:
             Base.log("W", "传参为[None]，疑似初始化，return", "MainThread.send_modify")
-            return
+            return None
 
         if key is None:
-            Base.log(
-                "W", "key为None，疑似模板选择时取消，return", "MainThread.send_modify"
-            )
-            return
+            Base.log("W", "key为None，疑似模板选择时取消，return", "MainThread.send_modify")
+            return None
 
-        send_to: List[Student]
+        send_to: list[Student]
 
         Base.log(
             "I",
-            f"开始发送点评\n模板： {self.modify_templates[key].__repr__()}\n"
-            f"发送至：\n---------------------",
+            f"开始发送点评\n模板： {self.modify_templates[key].__repr__()}\n发送至：\n---------------------",
             "MainThread.send_modify",
         )
         result = []
-        succeed: List[ScoreModification] = []
+        succeed: list[ScoreModification] = []
 
         for stu in send_to:
-            a = ScoreModification(
-                self.modify_templates[key], stu, extra_title, extra_desc, extra_mod
-            )
+            a = ScoreModification(self.modify_templates[key], stu, extra_title, extra_desc, extra_mod)
             success = a.execute()
             if not success:
                 for m in succeed:
                     m.retract()
                 Base.log(
                     "E",
-                    "---------------------\n发送失败，" f"总数:{len(send_to)}",
+                    f"---------------------\n发送失败，总数:{len(send_to)}",
                     "MainThread.send_modify",
                 )
                 raise ClassObj.SendModifyError(f"向学生{stu.name}发送点评出现错误")
-            Base.log("I", f"对象 -> {repr(stu)}")
+            Base.log("I", f"对象 -> {stu!r}")
             succeed.append(a)
             result.append(a)
 
@@ -1279,33 +1196,23 @@ class ClassObj(ClassDataObj, Base):
             "MainThread.send_modify",
         )
         self.class_obs.opreation_record.push(succeed)
-        info_list: List[Tuple[str, Callable]] = []
+        info_list: list[tuple[str, Callable]] = []
         index = 0
         for s in succeed:
             info_list.append(
                 (
                     f"{s.target.name} {s.temp.title} {s.execute_time.rsplit('.')[0]} {s.mod:+.1f}",
-                    lambda s=s, index=index: self.history_window(
-                        s, index, None, False, None, False
-                    ),
+                    lambda s=s, index=index: self.history_window(s, index, None, False, None, False),
                     (
                         (
                             QColor(202, 255, 222)
                             if s.mod > 0
-                            else (
-                                QColor(255, 202, 202)
-                                if s.mod < 0
-                                else QColor(201, 232, 255)
-                            )
+                            else (QColor(255, 202, 202) if s.mod < 0 else QColor(201, 232, 255))
                         ),
                         (
                             QColor(232, 255, 232)
                             if s.mod > 0
-                            else (
-                                QColor(255, 232, 232)
-                                if s.mod < 0
-                                else QColor(233, 244, 255)
-                            )
+                            else (QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255))
                         ),
                     ),
                 )
@@ -1315,31 +1222,27 @@ class ClassObj(ClassDataObj, Base):
             "发送了点评"
             + " "
             + (
-                f"成功{len(succeed)}"
-                + f" [{succeed[0].target.num}号{'等' if len(succeed) > 1 else ''}] "
+                f"成功{len(succeed)}" + f" [{succeed[0].target.num}号{'等' if len(succeed) > 1 else ''}] "
                 if len(succeed) != 0
                 else ""
             )
             + (
-                f"失败{len(send_to)-len(succeed)}"
-                + f" [{send_to[0].num}号{'等' if len(send_to) > 1 else ''}] "
+                f"失败{len(send_to) - len(succeed)}" + f" [{send_to[0].num}号{'等' if len(send_to) > 1 else ''}] "
                 if len(send_to) != len(succeed)
                 else ""
             )
             + f"<{a.title} {a.mod:.1f}分>"
             + (" " + info if info is not None else ""),
-            lambda: self.list_view(
-                info_list, "点评记录" + (" " + info if info is not None else "")
-            ),
+            lambda: self.list_view(info_list, "点评记录" + (" " + info if info is not None else "")),
             (127, 225, 195, 224, 255, 255),
         )
         return result.copy()
 
     def send_modify_instance(
         self,
-        modify: Union[List[ScoreModification], ScoreModification],
-        info: str = None,
-    ) -> Optional[List[ScoreModification]]:
+        modify: list[ScoreModification] | ScoreModification,
+        info: str | None = None,
+    ) -> list[ScoreModification] | None:
         """
         发送点评。
 
@@ -1352,7 +1255,7 @@ class ClassObj(ClassDataObj, Base):
         if isinstance(modify, ScoreModification):
             modify = [modify]
 
-        succeed: List[ScoreModification] = []
+        succeed: list[ScoreModification] = []
         for m in modify:
             success = m.execute()
             if not success:
@@ -1371,13 +1274,12 @@ class ClassObj(ClassDataObj, Base):
 
                 raise ClassObj.SendModifyError(f"向学生{m.target.name}发送点评出现错误")
 
-            else:
-                Base.log(
-                    "I",
-                    f"发送了{m.target.name}的点评",
-                    "MainThread.send_modify_instance",
-                )
-                succeed.append(m)
+            Base.log(
+                "I",
+                f"发送了{m.target.name}的点评",
+                "MainThread.send_modify_instance",
+            )
+            succeed.append(m)
             lastest = m
 
         Base.log(
@@ -1386,34 +1288,23 @@ class ClassObj(ClassDataObj, Base):
             "MainThread.send_modify",
         )
         self.class_obs.opreation_record.push(succeed)
-        info_list: List[Tuple[str, Callable]] = []
+        info_list: list[tuple[str, Callable]] = []
         index = 0
         for s in succeed:
             info_list.append(
                 (
-                    f"{s.target.name} {s.temp.title} "
-                    f"{s.execute_time.rsplit('.')[0]} {s.mod:+.1f}",
-                    lambda s=s, index=index: self.history_window(
-                        s, index, None, False, None, False
-                    ),
+                    f"{s.target.name} {s.temp.title} {s.execute_time.rsplit('.')[0]} {s.mod:+.1f}",
+                    lambda s=s, index=index: self.history_window(s, index, None, False, None, False),
                     (
                         (
                             QColor(202, 255, 222)
                             if s.mod > 0
-                            else (
-                                QColor(255, 202, 202)
-                                if s.mod < 0
-                                else QColor(201, 232, 255)
-                            )
+                            else (QColor(255, 202, 202) if s.mod < 0 else QColor(201, 232, 255))
                         ),
                         (
                             QColor(232, 255, 232)
                             if s.mod > 0
-                            else (
-                                QColor(255, 232, 232)
-                                if s.mod < 0
-                                else QColor(233, 244, 255)
-                            )
+                            else (QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255))
                         ),
                     ),
                 )
@@ -1424,39 +1315,30 @@ class ClassObj(ClassDataObj, Base):
             "发送了点评"
             + " "
             + (
-                (
-                    f"成功{len(succeed)}"
-                    + f" [{repr(succeed[0].target.num)}号{'等' if len(succeed) > 1 else ''}] "
-                )
+                (f"成功{len(succeed)}" + f" [{succeed[0].target.num!r}号{'等' if len(succeed) > 1 else ''}] ")
                 if len(succeed) != 0
                 else ""
             )
             + (
                 (
-                    f"失败{len(modify)-len(succeed)}"
-                    + f" [{repr(modify[0].target.num)}号{'等' if len(succeed) > 1 else ''}] "
+                    f"失败{len(modify) - len(succeed)}"
+                    + f" [{modify[0].target.num!r}号{'等' if len(succeed) > 1 else ''}] "
                 )
                 if len(modify) != len(succeed)
                 else ""
             )
-            + (
-                "<多项类型可能不一>"
-                if len(modify) > 1
-                else f"<{lastest.title} {lastest.mod:.1f}分>"
-            )
+            + ("<多项类型可能不一>" if len(modify) > 1 else f"<{lastest.title} {lastest.mod:.1f}分>")
             + (" " + info if info is not None else ""),
-            lambda: self.list_view(
-                info_list, "点评记录" + (" " + info if info is not None else "")
-            ),
+            lambda: self.list_view(info_list, "点评记录" + (" " + info if info is not None else "")),
             (127, 225, 195, 224, 255, 255),
         )
         return modify.copy()
 
     def retract_modify(
         self,
-        modify: Union[List[ScoreModification], ScoreModification],
-        info: str = None,
-    ) -> Tuple[bool, str]:
+        modify: list[ScoreModification] | ScoreModification,
+        info: str | None = None,
+    ) -> tuple[bool, str]:
         """撤回点评。
 
         :param modify: 撤回的点评
@@ -1469,63 +1351,49 @@ class ClassObj(ClassDataObj, Base):
             Base.log("I", "没有需要撤回的点评", "MainThread.retract_modify")
             return False, "没有需要撤回的点评"
 
-        succeed: List[ScoreModification] = []
-        failure: List[ScoreModification] = []
-        failure_result: List[str] = []
+        succeed: list[ScoreModification] = []
+        failure: list[ScoreModification] = []
+        failure_result: list[str] = []
         return_result = "操作成功完成"
         for m in modify:
             success, result = m.retract()
             if not success:
-                Base.log(
-                    "W", f"撤回{m.target.name}的点评失败", "MainThread.retract_modify"
-                )
+                Base.log("W", f"撤回{m.target.name}的点评失败", "MainThread.retract_modify")
                 failure.append(m)
                 failure_result.append(result)
                 return_result = result
             else:
-                Base.log(
-                    "I", f"撤回了{m.target.name}的点评", "MainThread.retract_modify"
-                )
+                Base.log("I", f"撤回了{m.target.name}的点评", "MainThread.retract_modify")
                 succeed.append(m)
         index = 0
         info_list = []
-        if len(succeed):
-            if len(failure):
+        if succeed:
+            if failure:
                 info_list += [("撤回成功的...", lambda: None)]
             index += 1
             for s in succeed:
                 info_list.append(
                     (
                         f"{s.target.name} {s.temp.title} {s.create_time.rsplit('.')[0]} {s.mod:+.1f}",
-                        lambda s=s, index=index: self.history_window(
-                            s, index, None, False, None, False
-                        ),
+                        lambda s=s, index=index: self.history_window(s, index, None, False, None, False),
                         (
                             (
                                 QColor(202, 255, 222)
                                 if s.mod > 0
-                                else (
-                                    QColor(255, 202, 202)
-                                    if s.mod < 0
-                                    else QColor(201, 232, 255)
-                                )
+                                else (QColor(255, 202, 202) if s.mod < 0 else QColor(201, 232, 255))
                             ),
                             (
                                 QColor(232, 255, 232)
                                 if s.mod > 0
-                                else (
-                                    QColor(255, 232, 232)
-                                    if s.mod < 0
-                                    else QColor(233, 244, 255)
-                                )
+                                else (QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255))
                             ),
                         ),
                     )
                 )
                 index += 1
 
-        if len(failure):
-            if len(succeed):
+        if failure:
+            if succeed:
                 info_list += [("", lambda: None)]
             info_list += [("撤回失败的...", lambda: None)]
             index += 1
@@ -1534,27 +1402,17 @@ class ClassObj(ClassDataObj, Base):
                 info_list.append(
                     (
                         f"{f.target.name} {f.temp.title} {f.mod:+.1f} ({failure_result[index_2]})",
-                        lambda f=f, index=index: self.history_window(
-                            f, index, None, False, None, False
-                        ),
+                        lambda f=f, index=index: self.history_window(f, index, None, False, None, False),
                         (
                             (
                                 QColor(172, 225, 192)
                                 if f.mod > 0
-                                else (
-                                    QColor(225, 172, 172)
-                                    if f.mod < 0
-                                    else QColor(171, 202, 225)
-                                )
+                                else (QColor(225, 172, 172) if f.mod < 0 else QColor(171, 202, 225))
                             ),
                             (
                                 QColor(202, 225, 202)
                                 if f.mod > 0
-                                else (
-                                    QColor(225, 202, 202)
-                                    if f.mod < 0
-                                    else QColor(203, 214, 225)
-                                )
+                                else (QColor(225, 202, 202) if f.mod < 0 else QColor(203, 214, 225))
                             ),
                         ),
                     )
@@ -1565,26 +1423,18 @@ class ClassObj(ClassDataObj, Base):
         self.insert_action_history_info(
             "撤回了点评 "
             + (
-                f"成功{len(succeed)} "
-                f"[{repr(succeed[0].target.num)}号{'等' if len(succeed) > 1 else ''}] "
-                if len(succeed)
+                f"成功{len(succeed)} [{succeed[0].target.num!r}号{'等' if len(succeed) > 1 else ''}] "
+                if succeed
                 else ""
             )
             + (
-                f"失败{len(modify)-len(succeed)} "
-                f"[{repr(failure[0].target.num)}号{'等' if len(failure) > 1 else ''}] "
+                f"失败{len(modify) - len(succeed)} [{failure[0].target.num!r}号{'等' if len(failure) > 1 else ''}] "
                 if len(modify) != len(succeed)
                 else ""
             )
             + (" " + info if info is not None else ""),
-            lambda: self.list_view(
-                info_list, "撤回记录" + (" " + info if info is not None else "")
-            ),
-            (
-                (0xEC, 0xC9, 0x7C, 0xF3, 0xF1, 0xA7)
-                if len(failure)
-                else (127, 192, 245, 224, 234, 255)
-            ),
+            lambda: self.list_view(info_list, "撤回记录" + (" " + info if info is not None else "")),
+            ((0xEC, 0xC9, 0x7C, 0xF3, 0xF1, 0xA7) if failure else (127, 192, 245, 224, 234, 255)),
         )
 
         return len(failure) == 0, (
@@ -1597,7 +1447,7 @@ class ClassObj(ClassDataObj, Base):
             )
         )
 
-    def retract_lastest(self) -> Tuple[bool, str]:
+    def retract_lastest(self) -> tuple[bool, str]:
         """
         撤销上一步操作
 
@@ -1616,27 +1466,21 @@ class ClassObj(ClassDataObj, Base):
         )
         for item in lastest:
             item: ScoreModification
-            Base.log("I", f" -> {repr(item)}", "MainThread.retract_last")
+            Base.log("I", f" -> {item!r}", "MainThread.retract_last")
         result, info = self.retract_modify(lastest, "<一键撤回>")
         Base.log("I", "---------------------\n撤回完成", "MainThread.retract_last")
         return result, info
 
-    def reset_scores(self) -> Dict[str, Class]:
+    def reset_scores(self) -> dict[str, Class]:
         "结算所有数据"
-        history = History(
-            copy.deepcopy(self.classes), 
-            self.weekday_record, 
-            time.time()
-        )
+        history = History(copy.deepcopy(self.classes), self.weekday_record, time.time())
         Base.log("W", "正在重置所有班级...", "ClassObjects.reset")
 
         for _class in self.classes.values():
             _class.reset()
 
         Base.log("I", "重置完成", "ClassObjects.reset")
-        self.insert_action_history_info(
-            "分数结算", self.show_all_history, (216, 112, 112, 255, 202, 202), 40
-        )
+        self.insert_action_history_info("分数结算", self.show_all_history, (216, 112, 112, 255, 202, 202), 40)
         self.history_data[time.time()] = history
         self.class_obs.opreation_record.clear()
         self.last_reset = time.time()
@@ -1648,10 +1492,10 @@ class ClassObj(ClassDataObj, Base):
     def random_choose_stu(
         self,
         count: int = 1,
-        from_students: List[Student] = None,
-        includes: List[Student] = None,
-        excludes: List[Student] = None,
-    ) -> Union[List[Student], Student]:
+        from_students: list[Student] | None = None,
+        includes: list[Student] | None = None,
+        excludes: list[Student] | None = None,
+    ) -> list[Student] | Student:
         """随机选择学生
 
         :param count: 要选择的数量
@@ -1661,11 +1505,7 @@ class ClassObj(ClassDataObj, Base):
         :return: 学生列表
         :raises ValueError: 要选择的数量小于1/必选项的长度大于了要选择的数量
         """
-        stus = (
-            list(from_students)
-            if from_students
-            else list(self.classes[self.target_class.key].students.values())
-        )
+        stus = list(from_students) if from_students else list(self.classes[self.target_class.key].students.values())
         if count < 1:
             raise ValueError(f"要选择的数量 ({count}) 不能小于1")
         if includes is None:
@@ -1673,15 +1513,11 @@ class ClassObj(ClassDataObj, Base):
         if excludes is None:
             excludes = []
         if len(includes) > count:
-            raise ValueError(
-                f"必选项的长度 ({len(includes)}) 大于了要选择的数量 ({count})"
-            )
+            raise ValueError(f"必选项的长度 ({len(includes)}) 大于了要选择的数量 ({count})")
         result = list(includes)
         for _ in range(count - len(includes)):
             while True:
-                stu = random.choice(
-                    list([s for s in stus if s not in excludes and s not in includes])
-                )
+                stu = random.choice(list([s for s in stus if s not in excludes and s not in includes]))
                 if stu not in result:
                     result.append(stu)
                     break
@@ -1697,7 +1533,7 @@ class ClassObj(ClassDataObj, Base):
         self,
         text: str,
         func: Callable,
-        color: Tuple[int, int, int, int],
+        color: tuple[int, int, int, int],
         stepcount: int = 0,
     ):
         """
@@ -1733,10 +1569,10 @@ class ClassObj(ClassDataObj, Base):
     @abstractmethod
     def list_view(
         self,
-        data: List[Tuple[str, Callable]],
+        data: list[tuple[str, Callable]],
         title: str,
         master=None,
-        commands: List[Tuple[str, Callable]] = None,
+        commands: list[tuple[str, Callable]] | None = None,
     ):
         """
         展示一个列表视图。
@@ -1747,9 +1583,7 @@ class ClassObj(ClassDataObj, Base):
         :param commands: 在列表视图右侧的命令列表，格式为[显示信息，回调函数]
         """
 
-    def on_auto_save_failure(
-        self, exc_info: Tuple[Type[BaseException], BaseException, TracebackType]
-    ):
+    def on_auto_save_failure(self, exc_info: tuple[type[BaseException], BaseException, TracebackType]):
         """
         当自动保存失败时执行的操作。
 
@@ -1777,17 +1611,13 @@ class ClassObj(ClassDataObj, Base):
                     self.save_data(self.save_path)
                     Base.log("I", "自动保存完成", "ClassObj.auto_save")
 
-                except (
-                    Exception
-                ) as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
+                except Exception as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
                     exc_info = sys.exc_info()
                     self.on_auto_save_failure(exc_info)
 
                 self.auto_saving = False
 
-        except (
-            Exception
-        ) as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
+        except Exception as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
             Base.log_exc("自动保存因错误而停止", "ClassObj.auto_save", "E")
 
     def find_with_uuid(
@@ -1802,15 +1632,7 @@ class ClassObj(ClassDataObj, Base):
             "group",
             "any",
         ],
-    ) -> Union[
-        "ScoreModification",
-        "ScoreModificationTemplate",
-        "Student",
-        "Group",
-        "Achievement",
-        "AchievementTemplate",
-    ]:
-
+    ) -> ScoreModification | ScoreModificationTemplate | Student | Group | Achievement | AchievementTemplate:
         def find_in_modify(uuid: str):
             for _class in self.classes.values():
                 for student in _class.students.values():
@@ -1855,38 +1677,32 @@ class ClassObj(ClassDataObj, Base):
 
         if find_class == "modify":
             return find_in_modify(uuid)
-        elif find_class == "modify_template":
+        if find_class == "modify_template":
             return find_in_modify_template(uuid)
-        elif find_class == "achievement":
+        if find_class == "achievement":
             return find_in_achievement(uuid)
-        elif find_class == "achievement_template":
+        if find_class == "achievement_template":
             return find_in_achievement_template(uuid)
-        elif find_class == "student":
+        if find_class == "student":
             return find_in_student(uuid)
-        elif find_class == "group":
+        if find_class == "group":
             return find_in_group(uuid)
-        else:
+        try:
+            return find_in_modify(uuid)
+        except ValueError:
             try:
-                return find_in_modify(uuid)
+                return find_in_modify_template(uuid)
             except ValueError:
                 try:
-                    return find_in_modify_template(uuid)
+                    return find_in_achievement(uuid)
                 except ValueError:
                     try:
-                        return find_in_achievement(uuid)
+                        return find_in_achievement_template(uuid)
                     except ValueError:
                         try:
-                            return find_in_achievement_template(uuid)
+                            return find_in_student(uuid)
                         except ValueError:
                             try:
-                                return find_in_student(uuid)
-                            except ValueError:
-                                try:
-                                    return find_in_group(uuid)
-                                except ValueError as e:
-                                    raise ValueError(
-                                        f"找不到对应的数据，uuid: {uuid}"
-                                    ) from e
-
-
-
+                                return find_in_group(uuid)
+                            except ValueError as e:
+                                raise ValueError(f"找不到对应的数据，uuid: {uuid}") from e

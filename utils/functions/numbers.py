@@ -2,10 +2,8 @@
 关于数字的函数
 """
 
-import time
 import random
-from typing import Union, List
-
+import time
 
 
 def utc(prec: int = 3):
@@ -18,9 +16,7 @@ def utc(prec: int = 3):
     return int(time.time() * (10**prec))
 
 
-def steprange(
-    start: Union[int, float], stop: Union[int, float], step: int
-) -> List[float]:
+def steprange(start: int | float, stop: int | float, step: int) -> list[float]:
     """
     生成step步长的从start到stop的列表
 
@@ -35,11 +31,8 @@ def steprange(
     [0, 2.5, 5.0, 7.5, 10]
     """
     if (stop - start) % step != 0:
-        return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [
-            stop
-        ]
-    else:
-        return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
+        return [*[start + i * (int(stop - start) / step) for i in range(step)][:-1], stop]
+    return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
 
 
 def addrof(obj) -> str:
@@ -63,5 +56,5 @@ def get_time():
     return (
         f"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} "
         + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
-        + f".{int((time.time()%1)*1000):03}"
+        + f".{int((time.time() % 1) * 1000):03}"
     )

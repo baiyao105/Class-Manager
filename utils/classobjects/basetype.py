@@ -4,54 +4,52 @@
 （类型检查写的我炸掉了）
 """
 
-
 import copy
-from uuid import UUID, uuid4
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Union, Optional, Type
-from typing_extensions import Self
+from typing import Generic, Self, TypeVar
+from uuid import UUID, uuid4
 
 _StringDataType = TypeVar("_StringDataType")
+
 
 class StringObjectDataKind(Generic[_StringDataType], str):
     "对象数据类型, ObjectDataKind[Student]代表这个字符串可以加载出一个学牲"
 
+
 _DataType = TypeVar("_DataType")
+
 
 class ClassDataTypeUUID(UUID, Generic[_DataType]):
     """
     班级数据类型的唯一标识符。
     """
 
-    def __init__(self, dt: Type[_DataType], _uuid: Optional[UUID] = None):
+    def __init__(self, dt: type[_DataType], _uuid: UUID | None = None):
         super().__init__(int=_uuid.int if _uuid else uuid4().int)
         self.dtype = dt
-    
-    def __setattr__(self, name, value): # 为了去掉UUID的限制
+
+    def __setattr__(self, name, value):  # 为了去掉UUID的限制
         return object.__setattr__(self, name, value)
-    
+
     def __eq__(self, other: object) -> bool:
         if self.__class__ != other.__class__:
             return False
-        if str(self) != str(other):
-            return False
-        return True
-    
+        return str(self) == str(other)
+
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
-    
+
     def __getitem__(self, item):
         return str(self).replace("-", "")[item]
-    
+
     def __hash__(self) -> int:
-        return hash(self.dtype.__qualname__ + "_" + str(self)) # 防止不同类但UUID相同的情况
-    
+        return hash(self.dtype.__qualname__ + "_" + str(self))  # 防止不同类但UUID相同的情况
+
     def __repr__(self) -> str:
         return f"ClassDataTypeUUID(value={super().__repr__()}, dtype={self.dtype.__name__})"
-    
+
     def __str__(self) -> str:
         return super().__str__()
-
 
 
 class ClassDataType(ABC):
@@ -65,7 +63,7 @@ class ClassDataType(ABC):
     is_unrelated_dtype: bool
     "该班级数据类型是否与其它班级数据类型无关。"
 
-    def __init__(self, uuid: Optional[Union[ClassDataTypeUUID[Self], UUID]] = None):
+    def __init__(self, uuid: ClassDataTypeUUID[Self] | UUID | None = None):
         self._uuid: ClassDataTypeUUID[Self]
         if uuid is None:
             self._uuid = ClassDataTypeUUID(self.__class__, uuid4())
@@ -75,8 +73,6 @@ class ClassDataType(ABC):
 
         elif isinstance(uuid, UUID):
             self._uuid = ClassDataTypeUUID(self.__class__, uuid)
-            
-
 
     @property
     def uuid(self) -> ClassDataTypeUUID[Self]:
@@ -86,16 +82,15 @@ class ClassDataType(ABC):
         if not hasattr(self, "_uuid"):
             self._uuid = ClassDataTypeUUID(self.__class__)
         return self._uuid
-    
-    @uuid.setter
-    def uuid(self, value: Union[UUID, ClassDataTypeUUID[Self], str]):
 
+    @uuid.setter
+    def uuid(self, value: UUID | ClassDataTypeUUID[Self] | str):
         if isinstance(value, ClassDataTypeUUID):
             self._uuid = value
-            
+
         elif isinstance(value, UUID):
             self._uuid = ClassDataTypeUUID(self.__class__, value)
-        
+
         elif isinstance(value, str):
             self._uuid = ClassDataTypeUUID(self.__class__, UUID(value.replace("-", "")))
 
@@ -106,20 +101,19 @@ class ClassDataType(ABC):
         self.uuid = uuid4()
 
     @property
-    def archive_uuid(self) -> Optional[UUID]:
+    def archive_uuid(self) -> UUID | None:
         """
         该班级数据类型的对应的存档标识符。
         """
         if not hasattr(self, "_archive_uuid"):
             self._archive_uuid = uuid4()
         return self._archive_uuid
-    
+
     @archive_uuid.setter
-    def archive_uuid(self, value: Union[UUID, str, None]):
-        
+    def archive_uuid(self, value: UUID | str | None):
         if isinstance(value, UUID):
             self._archive_uuid = value
-            
+
         elif isinstance(value, str):
             if value == str(None):
                 # 这里要注意下，一个对象的archive_uuid可能为None
@@ -134,13 +128,12 @@ class ClassDataType(ABC):
         else:
             raise TypeError(f"archive_uuid.setter需要提供UUID，ClassDataTypeUUID或者str， 但提供了{type(value)}")
 
-
     def copy(self) -> Self:
         """
         返回该班级数据类型的副本。
         """
         return copy.deepcopy(self)
-    
+
     def __repr__(self):
         """
         返回这个对象的表达式。
@@ -149,7 +142,6 @@ class ClassDataType(ABC):
             f"{self.__class__.__name__}"
             f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})"
         )
-
 
     @abstractmethod
     def from_string(self, string: str) -> StringObjectDataKind[Self]:
@@ -167,14 +159,14 @@ class ClassDataType(ABC):
         """
         将该班级数据类型转换为字典。
         """
-        raise NotImplementedError(F"该数据类型({self.__class__.__name__})的to_dict方法未实现")
+        raise NotImplementedError(f"该数据类型({self.__class__.__name__})的to_dict方法未实现")
 
     def from_dict(self, data: dict) -> "ClassDataType":
         """
         从字典解析该班级数据类型。
         """
-        raise NotImplementedError(F"该数据类型({self.__class__.__name__})的from_dict方法未实现")
-    
+        raise NotImplementedError(f"该数据类型({self.__class__.__name__})的from_dict方法未实现")
+
     @abstractmethod
     def inst_from_string(self, string: str) -> "ClassDataType":
         """
@@ -202,11 +194,10 @@ class DataProperty(property):
 
     def __set__(self, instance, value):
         if instance is None:
-            return
+            return None
         return super().__set__(instance, value)
 
     def __delete__(self, instance):
         if instance is None:
-            return
+            return None
         return super().__delete__(instance)
-    

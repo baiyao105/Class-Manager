@@ -3,7 +3,6 @@
 """
 
 import math
-import time
 import random
 from typing import Union, Optional, List, Type, SupportsInt
 from ctypes import (
@@ -85,7 +84,7 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
             return str(self._data.value)
 
         def __repr__(self):
-            return f"{self._tpname}({repr(self._data.value)})"
+            return f"{self._tpname}({self._data.value!r})"
 
         def __int__(self):
             return int(self._data.value)
@@ -487,9 +486,7 @@ def utc(prec: int = 3):
     return int(time.time() * (10**prec))
 
 
-def steprange(
-    start: Union[int, float], stop: Union[int, float], step: int
-) -> List[float]:
+def steprange(start: int | float, stop: int | float, step: int) -> list[float]:
     """生成step步长的从start到stop的列表
 
     :param start: 起始值
@@ -526,5 +523,5 @@ def get_time():
     return (
         f"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} "
         + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
-        + f".{int((time.time()%1)*1000):03}"
+        + f".{int((time.time() % 1) * 1000):03}"
     )

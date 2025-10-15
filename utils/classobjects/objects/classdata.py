@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import (TYPE_CHECKING, Dict)
+from typing import TYPE_CHECKING
+
 from utils.basetypes import Object
 
 if TYPE_CHECKING:
-    from .student import Student
-    from .classtype import Class
     from ..observers.achievementstatobs import AchievementStatusObserver
     from ..observers.classstatobs import ClassStatusObserver
-
+    from .classtype import Class
+    from .student import Student
 
 
 class ClassData(Object):
@@ -17,7 +17,7 @@ class ClassData(Object):
     def __init__(
         self,
         student: Student,
-        classes: Dict[str, Class],
+        classes: dict[str, Class],
         class_obs: ClassStatusObserver,
         achievement_obs: AchievementStatusObserver,
     ):
@@ -40,9 +40,7 @@ class ClassData(Object):
         self.student_class = self.classes[self.student.belongs_to]
         "学生所在的班级"
         self.student_group = (
-            self.student_class.groups[self.student.belongs_to_group]
-            if self.student.belongs_to_group
-            else None
+            self.student_class.groups[self.student.belongs_to_group] if self.student.belongs_to_group else None
         )
         "学生所在的组"
         self.groups = self.student_class.groups

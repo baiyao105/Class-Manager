@@ -2,11 +2,12 @@
 数据类型
 """
 
-import time
 import ctypes
-from threading import Thread as OrigThread, Lock
-from typing import Any, Callable, Generic, Iterable, Mapping, Optional, TypeVar
-
+import time
+from collections.abc import Callable, Iterable, Mapping
+from threading import Lock
+from threading import Thread as OrigThread
+from typing import Any, Generic, TypeVar
 
 
 class NULLPTR:
@@ -56,7 +57,7 @@ DT = TypeVar("DT")
 class Stack(Generic[DT]):
     "非常朴素的栈"
 
-    def __init__(self, items: Optional[Iterable[DT]] = None):
+    def __init__(self, items: Iterable[DT] | None = None):
         "初始化栈"
         self.items = list(items) if items is not None else []
 
@@ -91,12 +92,12 @@ class Thread(OrigThread):
     def __init__(
         self,
         group: None = None,
-        target: Optional[Callable] = None,
-        name: Optional[str] = None,
-        args: Optional[Iterable[Any]] = None,
-        kwargs: Optional[Mapping[str, Any]] = None,
+        target: Callable | None = None,
+        name: str | None = None,
+        args: Iterable[Any] | None = None,
+        kwargs: Mapping[str, Any] | None = None,
         *,
-        daemon: Optional[bool] = None,
+        daemon: bool | None = None,
     ) -> None:
         """
         初始化线程
@@ -119,26 +120,23 @@ class Thread(OrigThread):
         )
         self._return: Any = None
         self._finished = False
-        self.thread_id: Optional[int] = None
+        self.thread_id: int | None = None
 
     @property
     def return_value(self) -> Any:
         "返回线程的返回值"
         if self._finished:
             return self._return
-        else:
-            raise RuntimeError("线程并未执行完成")
+        raise RuntimeError("线程并未执行完成")
 
     def run(self):
         "运行线程"
-        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long)(
-            lambda: ctypes.pythonapi.PyThread_get_thread_ident()
-        )()  # pylint: disable=W0108
-        if self._target is not None:        # type: ignore
-            self._return = self._target(*self._args, **self._kwargs) # type: ignore
+        self.thread_id = ctypes.CFUNCTYPE(ctypes.c_long)(lambda: ctypes.pythonapi.PyThread_get_thread_ident())()  # pylint: disable=W0108
+        if self._target is not None:  # type: ignore
+            self._return = self._target(*self._args, **self._kwargs)  # type: ignore
         self._finished = True
 
-    def join(self, timeout: Optional[float] = None) -> Any:
+    def join(self, timeout: float | None = None) -> Any:
         """
         等待线程完成并返回结果
 
@@ -175,11 +173,11 @@ class Mutex:
     def locked(self):
         "判断锁是否被占用"
         return self._lock.locked()
-    
+
     def __bool__(self):
         "判断锁是否被占用"
         return self.locked()
-    
+
     def __repr__(self):
         return f"Mutex(locked={self.locked()})"
 
@@ -187,7 +185,7 @@ class Mutex:
 class FrameCounter:
     "帧计数器"
 
-    def __init__(self, maxcount: Optional[int] = None, timeout: Optional[float] = None):
+    def __init__(self, maxcount: int | None = None, timeout: float | None = None):
         "初始化帧计数器"
         self.maxcount = maxcount
         self.timeout = timeout

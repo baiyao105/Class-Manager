@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-from typing import (Literal, TYPE_CHECKING, List, Optional)
-from ..classdataobj import ClassDataObj
+from typing import TYPE_CHECKING, Literal
+
 from ..basetype import ClassDataType
+from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
-    from .student import Student
     from .classtype import Class
+    from .student import Student
 
 
 class AttendanceInfo(ClassDataType):
@@ -27,13 +28,13 @@ class AttendanceInfo(ClassDataType):
     def __init__(
         self,
         target_class: str = "CLASS_TEST",
-        is_early: Optional[List[Student]] = None,
-        is_late: Optional[List[Student]] = None,
-        is_late_more: Optional[List[Student]] = None,
-        is_absent: Optional[List[Student]] = None,
-        is_leave: Optional[List[Student]] = None,
-        is_leave_early: Optional[List[Student]] = None,
-        is_leave_late: Optional[List[Student]] = None,
+        is_early: list[Student] | None = None,
+        is_late: list[Student] | None = None,
+        is_late_more: list[Student] | None = None,
+        is_absent: list[Student] | None = None,
+        is_leave: list[Student] | None = None,
+        is_leave_early: list[Student] | None = None,
+        is_leave_late: list[Student] | None = None,
     ):
         """
         考勤信息
@@ -101,14 +102,13 @@ class AttendanceInfo(ClassDataType):
         )
 
     @staticmethod
-    def from_string(string: str) -> "AttendanceInfo":
+    def from_string(string: str) -> AttendanceInfo:
         "从字符串加载出勤信息对象。"
         from .student import Student
+
         d = json.loads(string)
         if d["type"] != AttendanceInfo.chunk_type_name:
-            raise ValueError(
-                f"类型不匹配：{d['type']} != {AttendanceInfo.chunk_type_name}"
-            )
+            raise ValueError(f"类型不匹配：{d['type']} != {AttendanceInfo.chunk_type_name}")
         obj = AttendanceInfo(
             target_class=d["target_class"],
             is_early=[ClassDataObj.LoadUUID(s, Student) for s in d["is_early"]],
@@ -116,18 +116,14 @@ class AttendanceInfo(ClassDataType):
             is_late_more=[ClassDataObj.LoadUUID(s, Student) for s in d["is_late_more"]],
             is_absent=[ClassDataObj.LoadUUID(s, Student) for s in d["is_absent"]],
             is_leave=[ClassDataObj.LoadUUID(s, Student) for s in d["is_leave"]],
-            is_leave_early=[
-                ClassDataObj.LoadUUID(s, Student) for s in d["is_leave_early"]
-            ],
-            is_leave_late=[
-                ClassDataObj.LoadUUID(s, Student) for s in d["is_leave_late"]
-            ],
+            is_leave_early=[ClassDataObj.LoadUUID(s, Student) for s in d["is_leave_early"]],
+            is_leave_late=[ClassDataObj.LoadUUID(s, Student) for s in d["is_leave_late"]],
         )
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
         return obj
 
-    def is_normal(self, target_class: Class) -> List[Student]:
+    def is_normal(self, target_class: Class) -> list[Student]:
         "正常出勤的学生，没有缺席"
         return [
             s

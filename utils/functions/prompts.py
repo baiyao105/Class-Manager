@@ -49,12 +49,12 @@ def button_reject_text():
 
 
 def question_yes_no(
-    master: Optional[QWidget],
+    master: QWidget | None,
     title: str,
     text: str,
     default: bool = True,
     msg_type: Literal["question", "information", "warning", "critical"] = "question",
-    pixmap: Optional[QPixmap] = None,
+    pixmap: QPixmap | None = None,
 ) -> bool:
     """
     显示一个询问对话框。
@@ -80,12 +80,8 @@ def question_yes_no(
         box = QMessageBox(QMessageBox.Icon.Critical, title, text, parent=master)
         box.setWindowIcon(pixmap or QIcon("./img/logo/favicon-error.png"))
 
-    box.setStandardButtons(
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-    )
-    box.setDefaultButton(
-        QMessageBox.StandardButton.No if not default else QMessageBox.StandardButton.Yes
-    )
+    box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+    box.setDefaultButton(QMessageBox.StandardButton.No if not default else QMessageBox.StandardButton.Yes)
     button_y = box.button(QMessageBox.StandardButton.Yes)
     button_y.setText(button_accept_text())
     button_n = box.button(QMessageBox.StandardButton.No)
@@ -94,13 +90,13 @@ def question_yes_no(
 
 
 def question_chooose(
-    master: Optional[QWidget],
+    master: QWidget | None,
     title: str,
     text: str,
-    choices: List[str],
+    choices: list[str],
     default: int = 0,
     msg_type: Literal["question", "information", "warning", "critical"] = "question",
-    pixmap: Optional[QPixmap] = None,
+    pixmap: QPixmap | None = None,
 ) -> int:
     """
     显示一个选择对话框。
@@ -136,11 +132,11 @@ def question_chooose(
 
 
 def messagebox(
-    master: Optional[QWidget],
+    master: QWidget | None,
     title: str,
     text: str,
     msg_type: Literal["question", "information", "warning", "critical"] = "question",
-    pixmap: Optional[Union[QPixmap, QIcon]] = None,
+    pixmap: QPixmap | QIcon | None = None,
 ):
     """
     展示一个弹窗。

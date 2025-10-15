@@ -1,10 +1,13 @@
 """班级管理服务层 - Repository模式重构
 
 提供班级相关的业务逻辑操作，使用Repository模式进行数据访问
+结合配置文件管理班级基础信息
 """
 
 import uuid
 from typing import Any
+
+from config.class_config import ClassConfigManager
 
 from ..models.class_ import Classroom
 from ..models.master import DataRegistry
@@ -28,23 +31,25 @@ class ClassService:
     def create_class(
         self,
         name: str,
+        teacher_name: str,
         description: str | None = None,
-        teacher_name: str | None = None,
         teacher_contact: str | None = None,
         class_type: str = "regular",
-        grade: str | None = None,
-        school_year: str | None = None,
+        max_students: int = 50,
+        academic_year: str = "2024-2025",
+        semester: int = 1,
     ) -> DataRegistry:
-        """创建新班级
+        """创建新班级 - 基础信息存储在配置文件中
 
         Args:
             name: 班级名称
-            description: 班级描述
             teacher_name: 班主任姓名
+            description: 班级描述
             teacher_contact: 班主任联系方式
             class_type: 班级类型
-            grade: 年级
-            school_year: 学年
+            max_students: 最大学生数量
+            academic_year: 学年
+            semester: 学期
 
         Returns:
             创建的班级索引对象
@@ -61,15 +66,24 @@ class ClassService:
         class_uuid = uuid.uuid4()
         db_path = f"data/class_{class_uuid}.db"
 
-        # 准备班级数据
+        # 创建班级配置文件
+        class_config = ClassConfigManager.create_config(
+            class_id=str(class_uuid),
+            class_name=name,
+            teacher_name=teacher_name,
+            description=description,
+            teacher_contact=teacher_contact,
+            class_type=class_type,
+            max_students=max_students,
+            academic_year=academic_year,
+            semester=semester,
+            is_active=True,
+        )
+
+        # 准备数据库数据(只保留业务相关字段)
         class_data = {
-            "name": name,
-            "description": description,
-            "teacher_name": teacher_name or "待分配",
-            "teacher_contact": teacher_contact,
-            "class_type": class_type,
-            "grade": grade or "未设置",
-            "school_year": school_year or "2024-2025",
+            "registry_uuid": class_uuid,
+            "base_score": 100.0,
             "db_path": db_path,
         }
 
@@ -130,11 +144,13 @@ class ClassService:
         teacher_name: str | None = None,
         teacher_contact: str | None = None,
         class_type: str | None = None,
-        grade: str | None = None,
-        school_year: str | None = None,
+        max_students: int | None = None,
+        academic_year: str | None = None,
+        semester: int | None = None,
         is_active: bool | None = None,
+        base_score: float | None = None,
     ) -> DataRegistry | None:
-        """更新班级信息
+        """更新班级信息 - 基础信息更新配置文件，业务信息更新数据库
 
         Args:
             class_id: 班级ID
@@ -143,9 +159,11 @@ class ClassService:
             teacher_name: 新班主任姓名
             teacher_contact: 新班主任联系方式
             class_type: 新班级类型
-            grade: 新年级
-            school_year: 新学年
+            max_students: 最大学生数量
+            academic_year: 学年
+            semester: 学期
             is_active: 是否活跃
+            base_score: 基础积分
 
         Returns:
             更新后的班级对象或None
@@ -158,33 +176,59 @@ class ClassService:
         if not existing_class:
             return None
 
+        # 获取班级配置
+        class_config = ClassConfigManager.get_config(class_id)
+
         # 如果要更新名称，检查新名称是否已被其他班级使用
-        if name and name != existing_class.class_name:
+        if name and name != class_config.class_name:
             name_conflict = self.class_repository.get_by_name(name)
             if name_conflict and str(name_conflict.id) != class_id:
                 raise ValueError(f"班级名称 '{name}' 已被其他班级使用")
 
-        # 准备更新数据
-        update_data = {}
+        # 更新配置文件中的基础信息
+        config_updated = False
         if name is not None:
-            update_data["class_name"] = name
+            class_config.class_name = name
+            config_updated = True
         if description is not None:
-            update_data["description"] = description
+            class_config.description = description
+            config_updated = True
         if teacher_name is not None:
-            update_data["teacher_name"] = teacher_name
+            class_config.teacher_name = teacher_name
+            config_updated = True
         if teacher_contact is not None:
-            update_data["teacher_contact"] = teacher_contact
+            class_config.teacher_contact = teacher_contact
+            config_updated = True
         if class_type is not None:
-            update_data["class_type"] = class_type
-        if grade is not None:
-            update_data["grade"] = grade
-        if school_year is not None:
-            update_data["school_year"] = school_year
+            class_config.class_type = class_type
+            config_updated = True
+        if max_students is not None:
+            class_config.max_students = max_students
+            config_updated = True
+        if academic_year is not None:
+            class_config.academic_year = academic_year
+            config_updated = True
+        if semester is not None:
+            class_config.semester = semester
+            config_updated = True
         if is_active is not None:
-            update_data["is_active"] = is_active
+            class_config.is_active = is_active
+            config_updated = True
 
-        # 执行更新
-        return self.class_repository.update(class_id, update_data)
+        # 保存配置文件更新
+        if config_updated:
+            class_config.save_to_file()
+
+        # 更新数据库中的业务信息
+        db_update_data = {}
+        if base_score is not None:
+            db_update_data["base_score"] = base_score
+
+        # 执行数据库更新
+        if db_update_data:
+            return self.class_repository.update(class_id, db_update_data)
+
+        return existing_class
 
     def delete_class(self, class_id: str, soft_delete: bool = True) -> bool:
         """删除班级

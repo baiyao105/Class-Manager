@@ -1,26 +1,20 @@
+import subprocess
 import sys
 import time
-import subprocess
+from collections.abc import Callable
 from io import TextIOWrapper
 from typing_extensions import TextIO
 from typing import Optional, Union, Any, Callable, List
 from queue import Queue
-from typing import NamedTuple
 from threading import Thread
+from typing import Any, NamedTuple, TextIO
 
 stdout_queue: Queue[str] = Queue()
 stderr_queue: Queue[str] = Queue()
 output_list: List[str] = []
 
-__all__ = [
-    "SystemLogger", 
-    "CommandOutput", 
-    "system", 
-    "system_lined",
-    "output_list",
-    "stdout_queue",
-    "stderr_queue"
-    ]
+__all__ = ["CommandOutput", "SystemLogger", "output_list", "stderr_queue", "stdout_queue", "system", "system_lined"]
+
 
 class SystemLogger(TextIOWrapper):
     """用于重定向标准输出的日志记录类
@@ -72,13 +66,12 @@ class SystemLogger(TextIOWrapper):
                 log_content = self.line.rsplit("\n", 1)[0].strip()
                 if self.function:
                     self.function(log_content)
-                else:
-                    if self.logger_name == "sys.stdout":
-                        stdout_queue.put(log_content)
-                        output_list.append(log_content)
-                    elif self.logger_name == "sys.stderr":
-                        stderr_queue.put(log_content)
-                        output_list.append(log_content)
+                elif self.logger_name == "sys.stdout":
+                    stdout_queue.put(log_content)
+                    output_list.append(log_content)
+                elif self.logger_name == "sys.stderr":
+                    stderr_queue.put(log_content)
+                    output_list.append(log_content)
                 self.line = self.line.rsplit("\n", 1)[1]
             return len(lines)
         except IndexError:
@@ -104,13 +97,13 @@ class CommandOutput(NamedTuple):
 
 
 def system(
-    args: Union[str, list],
+    args: str | list,
     show_output: bool = True,
-    stdin: Optional[TextIO] = None,
-    stdout: Optional[TextIO] = None,
-    stderr: Optional[TextIO] = None,
+    stdin: TextIO | None = None,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
     encoding: str = "gbk",
-    cwd: Optional[str] = None,
+    cwd: str | None = None,
     sync_update_bit: int = 1,
 ) -> CommandOutput:
     """执行系统命令并返回结果
@@ -159,13 +152,7 @@ def system(
     def _write():
         nonlocal _stderr_sb, _stdout_sb
         nonlocal _outprt_pointer, _errprt_pointer
-        while (
-            not (
-                len(_stdout_sb) <= _outprt_pointer
-                and len(_stderr_sb) <= _errprt_pointer
-            )
-            or _popen.poll() is None
-        ):
+        while not (len(_stdout_sb) <= _outprt_pointer and len(_stderr_sb) <= _errprt_pointer) or _popen.poll() is None:
             if len(_stdout_sb) > _outprt_pointer:
                 _written = len(_stdout_sb)
                 if show_output and stdout:
@@ -220,19 +207,17 @@ def system(
     sys.stderr.flush()
     while t.is_alive():
         "等待直到输出线程结束"
-    return CommandOutput(
-        _stdout_sb, _stderr_sb, _final_output, returncode, pid, time.time() - st, _popen
-    )
+    return CommandOutput(_stdout_sb, _stderr_sb, _final_output, returncode, pid, time.time() - st, _popen)
 
 
 def system_lined(
-    args: Union[str, list],
+    args: str | list,
     show_output: bool = True,
-    stdin: Optional[TextIO] = None,
-    stdout: Optional[TextIO] = None,
-    stderr: Optional[TextIO] = None,
+    stdin: TextIO | None = None,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
     encoding: str = "gbk",
-    cwd: Optional[str] = None,
+    cwd: str | None = None,
 ) -> CommandOutput:
     """执行命令，但是输出按行
 
@@ -301,9 +286,7 @@ def system_lined(
     returncode = _popen.returncode
     sys.stdout.flush()
     sys.stderr.flush()
-    return CommandOutput(
-        _stdout_sb, _stderr_sb, _final_output, returncode, pid, time.time() - st, _popen
-    )
+    return CommandOutput(_stdout_sb, _stderr_sb, _final_output, returncode, pid, time.time() - st, _popen)
 
 
 if __name__ == "__main__":

@@ -2,23 +2,23 @@
 日志记录器
 """
 
+import inspect
 import os
 import sys
 import time
-import inspect
 import traceback
 from queue import Queue
-from threading import Thread, Lock
-from typing import Optional, TextIO, Literal, final, List
+from threading import Lock, Thread
+from typing import Literal, TextIO, final, Optional
 
 import colorama
 from loguru import logger
 
-import utils.consts as consts
-
-from utils.consts import LOG_FILE_PATH, stdout_orig, stderr_orig, log_style, cwd
-from utils.system import SystemLogger
+from utils import consts
+from utils.consts import LOG_FILE_PATH, cwd, log_style, stderr_orig, stdout_orig
 from utils.functions.excinfo import format_exc_like_java
+from utils.system import SystemLogger
+
 
 def get_time():
     "获得当前时间"
@@ -26,12 +26,11 @@ def get_time():
     return (
         f"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} "
         + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
-        + f".{int((time.time()%1)*1000):03}"
+        + f".{int((time.time() % 1) * 1000):03}"
     )
 
 
-
-__all__ = ["LoggerSettings", "log_settings", "Logger", "Color"]
+__all__ = ["Color", "Logger", "LoggerSettings", "log_settings"]
 
 
 class LoggerSettings:
@@ -39,14 +38,14 @@ class LoggerSettings:
 
     def __init__(
         self,
-        log_file_path: Optional[str] = LOG_FILE_PATH,
-        fast_log_file_path: Optional[str] = None,
-        console_wrapper: Optional[TextIO] = stdout_orig,
+        log_file_path: str | None = LOG_FILE_PATH,
+        fast_log_file_path: str | None = None,
+        console_wrapper: TextIO | None = stdout_orig,
         log_mode: Literal["write_instantly", "write_buffered"] = "write_instantly",
         log_level: Literal["I", "W", "E", "F", "D", "C"] = "D",
         draw_color: bool = True,
         use_mutex: bool = True,
-        encoding: Optional[str] = "utf-8",
+        encoding: str | None = "utf-8",
     ):
         """
         初始化日志配置
@@ -162,10 +161,10 @@ class Color:
         return f"\033[38;2;{r};{g};{b}m" if log_settings.draw_color else ""
 
 
-class                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Logger:
+class Logger:
     "日志记录器"
 
-    log_file: Optional[TextIO] = (
+    log_file: TextIO | None = (
         open(
             log_settings.log_file_path,
             "a",
@@ -178,7 +177,7 @@ class                                                                           
     )
     "日志文件"
 
-    fast_log_file: Optional[TextIO] = (
+    fast_log_file: TextIO | None = (
         open(
             log_settings.fast_log_file_path,
             "a",
@@ -239,7 +238,7 @@ class                                                                           
     "日志文件保留数量"
     logger_running = True
     "日志记录器是否在运行（我自己都不知道有没有用，忘了）"
-    short_log_info: List[str] = []
+    short_log_info: list[str] = []
     "给主界面用的简短日志信息列表"
     short_log_keep_length: int = 150
     "日志信息保留的条数"
@@ -266,19 +265,11 @@ class                                                                           
             if (
                 (msg_type == "D" and Logger.log_settings.log_level not in ("D"))
                 or (msg_type == "I" and Logger.log_settings.log_level not in ("D", "I"))
-                or (
-                    msg_type == "W"
-                    and Logger.log_settings.log_level not in ("D", "I", "W")
-                )
-                or (
-                    msg_type == "E"
-                    and Logger.log_settings.log_level not in ("D", "I", "W", "E")
-                )
+                or (msg_type == "W" and Logger.log_settings.log_level not in ("D", "I", "W"))
+                or (msg_type == "E" and Logger.log_settings.log_level not in ("D", "I", "W", "E"))
                 or (
                     msg_type == "F"
-                    or msg_type == "C"
-                    and Logger.log_settings.log_level
-                    not in ("D", "I", "W", "E", "F", "C")
+                    or (msg_type == "C" and Logger.log_settings.log_level not in ("D", "I", "W", "E", "F", "C"))
                 )
             ):
                 return
@@ -332,9 +323,7 @@ class                                                                           
                     full_file=file,
                     source_with_lineno=f"{source}:{lineno}",
                 ).log(log_level, m)
-                short_info = (
-                    f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
-                )
+                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
                 Logger.short_log_info.append(short_info)
                 short_info = short_info[-Logger.short_log_keep_length :]
                 Logger.logged_count += 1
@@ -367,7 +356,7 @@ class                                                                           
                     color = Color.YELLOW
                 elif msg_type == "E":
                     color = Color.RED
-                elif msg_type == "F" or msg_type == "C":
+                elif msg_type in {"F", "C"}:
                     color = Color.MAGENTA
                 elif msg_type == "D":
                     color = Color.CYAN
@@ -407,13 +396,9 @@ class                                                                           
                     Logger.console_log_queue.put(cm)
                     Logger.logfile_log_queue.put(lfm)
 
-                short_info = (
-                    f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
-                )
+                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
                 Logger.short_log_info.append(short_info)
-                Logger.short_log_info = Logger.short_log_info[
-                    -Logger.short_log_keep_length :
-                ]
+                Logger.short_log_info = Logger.short_log_info[-Logger.short_log_keep_length :]
                 Logger.logged_count += 1
             if Logger.log_settings.use_mutex:
                 Logger.log_mutex.release()
@@ -493,9 +478,7 @@ class                                                                           
         Logger.log(level, info, sender)
         Logger.log(
             level,
-            ("").join(
-                traceback.format_exception(exc.__class__, exc, exc.__traceback__)
-            ),
+            ("").join(traceback.format_exception(exc.__class__, exc, exc.__traceback__)),
             sender,
         )
         Logger.log(level, "\n".join(format_exc_like_java(exc)), sender)

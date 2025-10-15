@@ -98,7 +98,7 @@ class SortingConfig(BaseModel):
 
 
 class ClassConfig(BaseSettings):
-    """班级配置模型"""
+    """班级配置模型 - 存储班级基础信息和特殊配置"""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -108,9 +108,27 @@ class ClassConfig(BaseSettings):
         extra="allow",  # 允许额外字段，便于扩展
     )
 
-    # 班级基本信息
+    # 班级基本信息 (从数据库迁移到配置文件)
     class_id: str = Field(description="班级ID")
     class_name: str = Field(description="班级名称")
+    description: str | None = Field(default=None, description="班级描述")
+
+    # 班主任信息
+    teacher_name: str = Field(description="班主任姓名")
+    teacher_contact: str | None = Field(default=None, description="班主任联系方式")
+
+    # 班级设置
+    max_students: int = Field(default=50, description="最大学生数量")
+    class_type: str = Field(default="regular", description="班级类型")
+
+    # 学期信息
+    academic_year: str = Field(default="2024-2025", description="学年")
+    semester: int = Field(default=1, description="学期(1或2)")
+
+    # 班级状态
+    is_active: bool = Field(default=True, description="是否活跃")
+    start_date: str | None = Field(default=None, description="开始日期")
+    end_date: str | None = Field(default=None, description="结束日期")
 
     # 配置模块
     quick_bar: QuickBarConfig = Field(default_factory=QuickBarConfig)
@@ -136,7 +154,17 @@ class ClassConfig(BaseSettings):
 
         if not file_path.exists():
             # 如果文件不存在，创建默认配置
-            config = cls(class_id=class_id, class_name=f"班级_{class_id[:8]}")
+            config = cls(
+                class_id=class_id,
+                class_name=f"班级_{class_id[:8]}",
+                teacher_name="未设置",
+                description="",
+                max_students=50,
+                class_type="regular",
+                academic_year="2024-2025",
+                semester=1,
+                is_active=True,
+            )
             config.save_to_file(file_path)
             return config
 
@@ -220,9 +248,21 @@ class ClassConfigManager:
             cls._configs[class_id].save_to_file()
 
     @classmethod
-    def create_config(cls, class_id: str, class_name: str, **kwargs) -> ClassConfig:
+    def create_config(cls, class_id: str, class_name: str, teacher_name: str = "未设置", **kwargs) -> ClassConfig:
         """创建新的班级配置"""
-        config = ClassConfig(class_id=class_id, class_name=class_name, **kwargs)
+        config_data = {
+            "class_id": class_id,
+            "class_name": class_name,
+            "teacher_name": teacher_name,
+            "description": kwargs.get("description", ""),
+            "max_students": kwargs.get("max_students", 50),
+            "class_type": kwargs.get("class_type", "regular"),
+            "academic_year": kwargs.get("academic_year", "2024-2025"),
+            "semester": kwargs.get("semester", 1),
+            "is_active": kwargs.get("is_active", True),
+            **kwargs,
+        }
+        config = ClassConfig(**config_data)
         config.save_to_file()
         cls._configs[class_id] = config
         return config
