@@ -3,14 +3,14 @@ import time
 import subprocess
 from io import TextIOWrapper
 from typing_extensions import TextIO
-from typing import Optional, Union, Any, Callable
+from typing import Optional, Union, Any, Callable, List
 from queue import Queue
 from typing import NamedTuple
 from threading import Thread
 
-stdout_queue = Queue()
-stderr_queue = Queue()
-output_list = []
+stdout_queue: Queue[str] = Queue()
+stderr_queue: Queue[str] = Queue()
+output_list: List[str] = []
 
 __all__ = [
     "SystemLogger", 
@@ -32,7 +32,7 @@ class SystemLogger(TextIOWrapper):
         self,
         *args,
         logger_name: str = "sys.stdout",
-        function: Callable[[str], Any] = None,
+        function: Optional[Callable[[str], Any]] = None,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -135,9 +135,9 @@ def system(
     :param sync_update_bit: 同步更新位数，默认为1（每次从输出里面读取的字节数）
     """
     st = time.time()
-    stdin = stdin if stdin is not None else sys.stdin
-    stdout = stdout if stdout is not None else sys.stdout
-    stderr = stderr if stderr is not None else sys.stderr
+    stdin  = stdin  or sys.stdin
+    stdout = stdout or sys.stdout
+    stderr = stderr or sys.stderr
 
     _popen = subprocess.Popen(
         args,
@@ -168,12 +168,12 @@ def system(
         ):
             if len(_stdout_sb) > _outprt_pointer:
                 _written = len(_stdout_sb)
-                if show_output:
+                if show_output and stdout:
                     stdout.write(_stdout_sb[_outprt_pointer:_written])
                 _outprt_pointer = _written
             if len(_stderr_sb) > _errprt_pointer:
                 _written = len(_stderr_sb)
-                if show_output:
+                if show_output and stderr:
                     stderr.write(_stderr_sb[_errprt_pointer:_written])
                 _errprt_pointer = _written
 
@@ -182,6 +182,8 @@ def system(
 
     def _read_stdout():
         nonlocal _stdout_sb, _popen, _final_output
+        if not _popen.stdout:
+            return
         while True:
             try:
                 c = _popen.stdout.read(sync_update_bit)
@@ -194,6 +196,8 @@ def system(
 
     def _read_stderr():
         nonlocal _stderr_sb, _popen, _final_output
+        if not _popen.stderr:
+            return
         while True:
             try:
                 c = _popen.stderr.read(sync_update_bit)
@@ -242,9 +246,9 @@ def system_lined(
     :param sync_update_bit: 同步更新位数，默认为1（每次从输出里面读取的字节数）
     """
     st = time.time()
-    stdin = stdin if stdin is not None else sys.stdin
-    stdout = stdout if stdout is not None else sys.stdout
-    stderr = stderr if stderr is not None else sys.stderr
+    stdin = stdin or sys.stdin
+    stdout = stdout or sys.stdout
+    stderr = stderr or sys.stderr
 
     _popen = subprocess.Popen(
         args,
@@ -263,6 +267,8 @@ def system_lined(
 
     def _read_stdout():
         nonlocal _stdout_sb, _popen, _final_output
+        if not _popen.stdout:
+            return
         while True:
             c = _popen.stdout.readline()
             if c == "" and _popen.poll() is not None:
@@ -274,6 +280,8 @@ def system_lined(
 
     def _read_stderr():
         nonlocal _stderr_sb, _popen, _final_output
+        if not _popen.stderr:
+            return
         while True:
             c = _popen.stderr.readline()
             if c == "" and _popen.poll() is not None:

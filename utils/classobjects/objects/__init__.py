@@ -19,3 +19,18 @@ from .student import Student
 from .dayrecord import DayRecord
 from .history import History
 from .attendanceinfo import AttendanceInfo
+
+__all__ = [
+    "Achievement",
+    "AchievementTemplate",
+    "ClassData",
+    "Class",
+    "Group",
+    "HomeworkRule",
+    "ScoreModification",
+    "ScoreModificationTemplate",
+    "Student",
+    "DayRecord",
+    "History",
+    "AttendanceInfo",
+]

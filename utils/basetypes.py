@@ -10,6 +10,7 @@ import psutil
 import threading
 import ctypes
 import copy
+from typing import Dict, Any
 
 from .logger import Logger
 
@@ -65,7 +66,7 @@ class Object(DataObject):
         return self._uuid
 
     @uuid.setter
-    def uuid(self, value):
+    def uuid(self, value: str):
         "设置对象的UUID"
         self._uuid = value
 
@@ -125,7 +126,7 @@ class SysMemTracer:
         "追踪间隔"
         self.record_data = record_data
         "是否记录数据"
-        self.data = {}
+        self.data: Dict[float, Any] = {}
         "内存使用数据"
         self.current_usage = 0
         "当前内存使用量"
