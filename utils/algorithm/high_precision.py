@@ -17,7 +17,7 @@ class HighPrecisionOperation:
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             provisional_result = provisional_figure_1 + provisional_figure_2
@@ -32,7 +32,7 @@ class HighPrecisionOperation:
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             provisional_result = provisional_figure_1 - provisional_figure_2
@@ -47,7 +47,7 @@ class HighPrecisionOperation:
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             provisional_result = provisional_figure_1 * provisional_figure_2
@@ -62,7 +62,7 @@ class HighPrecisionOperation:
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             result = provisional_figure_1 / provisional_figure_2
@@ -102,7 +102,7 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             provisional_result = provisional_figure_1 + provisional_figure_2
@@ -119,7 +119,7 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             provisional_result = provisional_figure_1 - provisional_figure_2
@@ -136,7 +136,7 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             provisional_result = provisional_figure_1 * provisional_figure_2
@@ -153,7 +153,7 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            a_power_of_ten = int(10 ** len_1) if len_1 > len_2 else int(10 ** len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             result = provisional_figure_1 / provisional_figure_2

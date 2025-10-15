@@ -1,30 +1,26 @@
-
 import unittest
+
 from utils.classobjects import *
 from utils.classobjects.dataloader import DataObject
-
 
 test_chunk = Chunk("chunks/_test_chunk", UserDataBase())
 test_chunk.save_data()
 test_chunk.load_data()
 
 
-
 class MultiTest(unittest.TestCase):
-
-
     def test_default_data(self):
         self.assertGreater(len(DEFAULT_SCORE_TEMPLATES), 0)
         self.assertGreater(len(DEFAULT_ACHIEVEMENTS), 0)
         self.assertGreater(len(DEFAULT_CLASSES), 0)
 
     def test_student(self):
-        stu1  = Student("名称1", 1145, 0.1, "class_id", belongs_to_group="group_id")
+        stu1 = Student("名称1", 1145, 0.1, "class_id", belongs_to_group="group_id")
         stu2 = Student("名称2", 1919, 0.2, "class_id", belongs_to_group="group_id")
-        self.assertNotEqual(stu1.uuid, stu2.uuid, "每个学生对象应该有唯一的uuid"
-                                                f"当前uuid1为{stu1.uuid!r}, uuid2为{stu2.uuid!r}")
+        self.assertNotEqual(
+            stu1.uuid, stu2.uuid, f"每个学生对象应该有唯一的uuid当前uuid1为{stu1.uuid!r}, uuid2为{stu2.uuid!r}"
+        )
         self.assertEqual(stu1.archive_uuid, stu2.archive_uuid, "每个学生对象的归档uuid应当相同")
-
 
         self.assertEqual(stu1.name, "名称1", "学生姓名应当符合原设置")
         self.assertEqual(stu1.num, 1145, "学生学号应当符合原设置")
@@ -42,15 +38,17 @@ class MultiTest(unittest.TestCase):
         stu4 = Student.from_string(data)
 
         for attr in stu1.__dict__:
-            self.assertEqual(getattr(stu1, attr), getattr(stu4, attr), 
-                            "字符串序列化与反序列化应当不会影响对象属性; "
-                            f"当前不同的属性：{attr}, stu的为{getattr(stu1, attr)!r}, stu4的为{getattr(stu4, attr)!r}")
-        
+            self.assertEqual(
+                getattr(stu1, attr),
+                getattr(stu4, attr),
+                "字符串序列化与反序列化应当不会影响对象属性; "
+                f"当前不同的属性：{attr}, stu的为{getattr(stu1, attr)!r}, stu4的为{getattr(stu4, attr)!r}",
+            )
+
         stu1.highest_score = 114514
         stu1.reset()
         self.assertEqual(stu1.score, 0.0, "重置之后应分数当恢复默认值")
         self.assertEqual(stu1.highest_score, 0, "重置之后本周最高分应当恢复默认值")
-
 
     def test_score_mods(self):
         template_1 = ScoreModificationTemplate("template_1", 2, "模板1", "大概就是我不知道该写啥了")
@@ -60,8 +58,7 @@ class MultiTest(unittest.TestCase):
         self.assertEqual(template_1.title, "模板1", "模板名称应当符合原设置")
         self.assertEqual(template_1.desc, "大概就是我不知道该写啥了", "模板描述应当符合原设置")
 
-
-        stu1  = Student("名称1", 1145, 1, "class_id")
+        stu1 = Student("名称1", 1145, 1, "class_id")
 
         action_1 = ScoreModification(template_1, stu1, "修改过的名称", "修改过的描述", 114514)
         action_2 = ScoreModification(template_2, stu1)
@@ -70,7 +67,7 @@ class MultiTest(unittest.TestCase):
         time.sleep(0.02)
         action_2.execute()
 
-        executed_action_1 = list(stu1.history.values())[0]
+        executed_action_1 = next(iter(stu1.history.values()))
         executed_action_2 = list(stu1.history.values())[1]
 
         self.assertIs(executed_action_1, action_1, "执行过的操作应当与原操作为同一个对象")
@@ -98,16 +95,18 @@ class MultiTest(unittest.TestCase):
         DataObject.static_save(template_1, test_chunk)
         DataObject.static_save(template_2, test_chunk)
 
-
         action_3 = ScoreModification.from_string(data)
 
         for attr in action_1.__dict__:
             if isinstance(getattr(action_1, attr), ClassDataType):
                 self.assertEqual(getattr(action_1, attr).uuid, getattr(action_3, attr).uuid)
                 continue
-            self.assertEqual(getattr(action_1, attr), getattr(action_3, attr), 
-                                "字符串序列化与反序列化应当不会影响对象属性; "
-                                f"当前不同的属性：{attr}, action1的为{getattr(action_1, attr)!r}, action3的为{getattr(action_3, attr)!r}")
+            self.assertEqual(
+                getattr(action_1, attr),
+                getattr(action_3, attr),
+                "字符串序列化与反序列化应当不会影响对象属性; "
+                f"当前不同的属性：{attr}, action1的为{getattr(action_1, attr)!r}, action3的为{getattr(action_3, attr)!r}",
+            )
 
     def runTest(self):
         self.test_default_data()
@@ -121,8 +120,6 @@ def suite():
     return suite
 
 
-
 def main():
     runner = unittest.TextTestRunner()
     runner.run(suite())
-
