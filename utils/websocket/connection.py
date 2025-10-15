@@ -43,7 +43,9 @@ class Message:
     def __init__(self, json_data: str) -> "Message":
         "从一个json字符串创建一个新的信息对象"
 
-    def __init__(self, content: str, edit_time: float | None = None, sender: str | None = None, others: dict | None = None):
+    def __init__(
+        self, content: str, edit_time: float | None = None, sender: str | None = None, others: dict | None = None
+    ):
         if edit_time:
             self.content = content
             "内容"
@@ -303,7 +305,9 @@ class Connection:
                 addr = ipaddress.IPv4Address(addr) if connection_mode == "ipv4" else ipaddress.IPv6Address(addr)
 
         self.devinfo = (
-            devinfo if devinfo else DevInfo(user if user else "未知用户", self_addr, self_port, socket.gethostname(), sys.version_info, {})
+            devinfo
+            if devinfo
+            else DevInfo(user if user else "未知用户", self_addr, self_port, socket.gethostname(), sys.version_info, {})
         )
 
         # addrinfo = socket.getaddrinfo(self_addr, self_port, socket.AF_INET, socket.SOCK_STREAM)[0]

@@ -22,7 +22,8 @@ except:
         "可以参考一下classdatatypes/bak/default.py和"
         "classdatatypes/bak/login.py后"
         "在进行classdatatypes下配置自己的login和default模块",
-        stacklevel=2, category=RuntimeWarning,
+        stacklevel=2,
+        category=RuntimeWarning,
     )
 
 from .classobj import *
