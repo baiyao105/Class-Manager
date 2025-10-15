@@ -2,25 +2,27 @@
 数据加载模块
 """
 
-import os
-import sys
-import math
-import uuid
-import time
 import json
+import math
+import os
 import shutil
 import sqlite3
+import sys
+import time
+import uuid
 from collections import OrderedDict
-from typing import (Union, TypeVar, Dict, Any, Type, 
-                    Optional, Tuple, List, Iterable)
-from utils.consts import runtime_flags
-from utils.basetypes import Base, Object
-from utils.functions.prompts import question_yes_no
-from utils.classobjects import *
+from collections.abc import Iterable
+from typing import Any, TypeVar, Union
+
 from utils.algorithm import Mutex
+from utils.basetypes import Base, Object
+from utils.classobjects import *
+from utils.consts import runtime_flags
+from utils.functions.prompts import question_yes_no
+
 from .basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
-from .classdataobj import ClassDataObj
 from .classdataobj import *
+from .classdataobj import ClassDataObj
 
 # 数据加载器
 
@@ -33,19 +35,18 @@ class UserDataBase(Object):
 
     def __init__(
         self,
-        user: Optional[str] = None,
-        save_time: Optional[float] = None,
-        version: Optional[str] = None,
-        version_code: Optional[int] = None,
-        last_reset: Optional[float] = None,
-        history_data: Optional[Dict[float, History]] = None,
-        classes: Optional[Dict[str, Class]] = None,
-        templates: Optional[Union[OrderedDict[str, ScoreModificationTemplate], 
-                                    Dict[str, ScoreModificationTemplate]]] = None,
-        achievements: Optional[Dict[str, AchievementTemplate]] = None,
-        last_start_time: Optional[float] = None,
-        weekday_record: Optional[Dict[str, Dict[float, DayRecord]]] = None,
-        current_day_attendance: Optional[Dict[str, AttendanceInfo]] = None,
+        user: str | None = None,
+        save_time: float | None = None,
+        version: str | None = None,
+        version_code: int | None = None,
+        last_reset: float | None = None,
+        history_data: dict[float, History] | None = None,
+        classes: dict[str, Class] | None = None,
+        templates: OrderedDict[str, ScoreModificationTemplate] | dict[str, ScoreModificationTemplate] | None = None,
+        achievements: dict[str, AchievementTemplate] | None = None,
+        last_start_time: float | None = None,
+        weekday_record: dict[str, dict[float, DayRecord]] | None = None,
+        current_day_attendance: dict[str, AttendanceInfo] | None = None,
     ):
         """
         构建一个数据库对象。
@@ -80,19 +81,18 @@ class UserDataBase(Object):
 
     def set(
         self,
-        user: Optional[str] = None,
-        save_time: Optional[float] = None,
-        version: Optional[str] = None,
-        version_code: Optional[int] = None,
-        last_reset: Optional[float] = None,
-        history_data: Optional[Dict[float, History]] = None,
-        classes: Optional[Dict[str, Class]] = None,
-        templates: Optional[Union[OrderedDict[str, ScoreModificationTemplate], 
-                                    Dict[str, ScoreModificationTemplate]]] = None,
-        achievements: Optional[Dict[str, AchievementTemplate]] = None,
-        last_start_time: Optional[float] = None,
-        weekday_record: Optional[Dict[str, Dict[float, DayRecord]]] = None,
-        current_day_attendance: Optional[Dict[str, AttendanceInfo]] = None,
+        user: str | None = None,
+        save_time: float | None = None,
+        version: str | None = None,
+        version_code: int | None = None,
+        last_reset: float | None = None,
+        history_data: dict[float, History] | None = None,
+        classes: dict[str, Class] | None = None,
+        templates: OrderedDict[str, ScoreModificationTemplate] | dict[str, ScoreModificationTemplate] | None = None,
+        achievements: dict[str, AchievementTemplate] | None = None,
+        last_start_time: float | None = None,
+        weekday_record: dict[str, dict[float, DayRecord]] | None = None,
+        current_day_attendance: dict[str, AttendanceInfo] | None = None,
     ):
         """
         构建一个数据库对象。
@@ -124,11 +124,7 @@ class UserDataBase(Object):
         self.loaded = user is not None  # 任一参数非空即视为已加载
 
     def __contains__(self, key):
-        return (
-            key in self.__dict__
-            and self.__dict__[key] is not None
-            and self.__dict__[key] is not None
-        )
+        return key in self.__dict__ and self.__dict__[key] is not None and self.__dict__[key] is not None
 
 
 class DataObject:
@@ -140,15 +136,15 @@ class DataObject:
     saved_objects = 0
     "保存了的对象数量"
 
-    cur_list: Dict[str, sqlite3.Cursor] = {}
+    cur_list: dict[str, sqlite3.Cursor] = {}
     "连接列表，conn_list[数据类型名称]=光标"
 
-    loaded_object_list: Dict[
-        Tuple[Optional[ClassDataTypeUUID[History]], str, ClassDataTypeUUID[ClassDataType]], ClassDataType
+    loaded_object_list: dict[
+        tuple[ClassDataTypeUUID[History] | None, str, ClassDataTypeUUID[ClassDataType]], ClassDataType
     ] = {}
     "加载目标列表"
 
-    load_tasks: List[Tuple[Optional[ClassDataTypeUUID[History]], str, ClassDataTypeUUID[Any]]] = []
+    load_tasks: list[tuple[ClassDataTypeUUID[History] | None, str, ClassDataTypeUUID[Any]]] = []
     "加载任务列表"
 
     @staticmethod
@@ -189,7 +185,7 @@ class DataObject:
         dobj.save()
         return obj
 
-    def save(self, path: Optional[str] = None, max_retry: int = 3):
+    def save(self, path: str | None = None, max_retry: int = 3):
         "在数据分组中保存这个对象。"
         uuid = self.object.uuid
         string = self.object.to_string()
@@ -198,9 +194,7 @@ class DataObject:
         while max_retry:
             max_retry -= 1
             if type_name not in self.cur_list:
-                conn = sqlite3.connect(
-                    os.path.join(path, f"{type_name}.db"), check_same_thread=False
-                )
+                conn = sqlite3.connect(os.path.join(path, f"{type_name}.db"), check_same_thread=False)
                 cur = conn.cursor()
                 for i in range(16):
                     prefix = f"{i:01x}"
@@ -213,19 +207,14 @@ class DataObject:
                     )
                 conn.commit()
                 conn.close()
-                conn = sqlite3.connect(
-                    os.path.join(path, f"{type_name}.db"), check_same_thread=False
-                )  # 重新连接
+                conn = sqlite3.connect(os.path.join(path, f"{type_name}.db"), check_same_thread=False)  # 重新连接
                 self.cur_list[type_name] = conn.cursor()
 
             cursor = self.cur_list[type_name]
 
             for i in range(3):
                 try:
-
-                    cursor.execute(
-                        f"SELECT class FROM datas_{uuid[:1]} WHERE uuid = ?", (str(uuid),)
-                    )
+                    cursor.execute(f"SELECT class FROM datas_{uuid[:1]} WHERE uuid = ?", (str(uuid),))
                     existing_class = cursor.fetchone()
 
                     if existing_class:
@@ -236,7 +225,11 @@ class DataObject:
                                 SET class = ?, data = ?
                                 WHERE uuid = ?
                             """,
-                                (type_name, string, str(uuid),)
+                                (
+                                    type_name,
+                                    string,
+                                    str(uuid),
+                                ),
                             )
                         else:
                             raise ValueError(
@@ -259,9 +252,7 @@ class DataObject:
                     return
                 except sqlite3.Error as e:
                     Base.log_exc_short(
-                        f"处理数据出现错误，"
-                        f"对象：{self.object.__class__.__name__}({self.object.uuid})，"
-                        "0.1秒后重试",
+                        f"处理数据出现错误，对象：{self.object.__class__.__name__}({self.object.uuid})，0.1秒后重试",
                         "DataObject.save",
                         "W",
                         exc=e,
@@ -278,8 +269,7 @@ class DataObject:
                     time.sleep(0.1)
                     continue
             Base.log_exc(
-                f"处理数据时出现错误，对象：{self.object!r}，重试3次后仍然失败；"
-                "已重置所有连接，将会重试",
+                f"处理数据时出现错误，对象：{self.object!r}，重试3次后仍然失败；已重置所有连接，将会重试",
                 "DataObject.save",
                 "E",
             )
@@ -292,9 +282,9 @@ _LT = TypeVar("_LT")
 def spilt_list(
     lst: Iterable[_LT],
     slices: int,
-    max_size: Optional[int] = None,
-    min_size: Optional[int] = None,
-) -> List[List[_LT]]:
+    max_size: int | None = None,
+    min_size: int | None = None,
+) -> list[list[_LT]]:
     """
     将列表按指定数量分组。
 
@@ -310,33 +300,29 @@ def spilt_list(
         size = min(size, max_size)
     if min_size is not None:
         size = max(size, min_size)
-    result: List[List[_LT]] = []
+    result: list[list[_LT]] = []
     while len(lst) > 0:
         result.append(lst[:size])
         lst = lst[size:]
     return result
 
 
-_DT = TypeVar("_DT",  bound=ClassDataType)
+_DT = TypeVar("_DT", bound=ClassDataType)
 
 
 class Chunk:
     "数据分组"
 
-    database_connections: Dict[
-        Tuple[Optional[Optional[ClassDataTypeUUID[History]]], str], sqlite3.Connection
-    ] = {}
+    database_connections: dict[tuple[ClassDataTypeUUID[History] | None, str], sqlite3.Connection] = {}
     "数据库连接池，database_connection[(历史记录uuid,数据类型名)] = sqlite3.Connection"
 
-    loading_info: Dict[str, Any] = {}
+    loading_info: dict[str, Any] = {}
     "加载信息, 字典里面是啥自己开盲盒吧（懒得写了）"
 
     save_task_mutex: Mutex = Mutex()
     "保存任务互斥锁"
 
-
-
-    def __init__(self, path: str, bound_database: Optional[UserDataBase] = None):
+    def __init__(self, path: str, bound_database: UserDataBase | None = None):
         self.path = path
         self.bound_db = bound_database or UserDataBase()
         self.is_saving = False
@@ -347,7 +333,7 @@ class Chunk:
 
     def get_object_rdata(
         self,
-        history_uuid: Optional[ClassDataTypeUUID[History]],
+        history_uuid: ClassDataTypeUUID[History] | None,
         uuid: ClassDataTypeUUID[_DT],
         data_type: str,
     ) -> StringObjectDataKind[_DT]:
@@ -363,21 +349,17 @@ class Chunk:
         try:
             conn = self.database_connections[(history_uuid, data_type)]
         except KeyError:
-            conn = sqlite3.connect(
-                os.path.join(self.path, f"{data_type}.db"), check_same_thread=False
-            )
+            conn = sqlite3.connect(os.path.join(self.path, f"{data_type}.db"), check_same_thread=False)
             self.database_connections[(history_uuid, data_type)] = conn
-        result = conn.execute(
-            f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?", (str(uuid),)
-        ).fetchone()
+        result = conn.execute(f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?", (str(uuid),)).fetchone()
         if result is None:
             raise ValueError("数据不存在")
         return result[0]
 
     def load_history(
         self,
-        history_uuid: Optional[ClassDataTypeUUID[History]] = None,
-        request_uuid: Optional[uuid.UUID] = None,
+        history_uuid: ClassDataTypeUUID[History] | None = None,
+        request_uuid: uuid.UUID | None = None,
     ) -> History:
         """
         加载历史记录。
@@ -387,35 +369,35 @@ class Chunk:
         :return: 历史记录
         :raise FileNotFoundError: 历史记录不存在
         """
-        failures: List[Tuple[Optional[ClassDataTypeUUID[History]], str, ClassDataTypeUUID[ClassDataType]]] = []
+        failures: list[tuple[ClassDataTypeUUID[History] | None, str, ClassDataTypeUUID[ClassDataType]]] = []
         start_time = time.time()
         start_obj = DataObject.loaded_objects
-        
-
 
         def _load_object(
-            uuid: Optional[ClassDataTypeUUID[ClassDataType]],
-            data_type: Type[ClassDataType],
-            history_uuid: Optional[ClassDataTypeUUID[History]] = history_uuid,
-        ) -> Optional[ClassDataType]:
+            uuid: ClassDataTypeUUID[ClassDataType] | None,
+            data_type: type[ClassDataType],
+            history_uuid: ClassDataTypeUUID[History] | None = history_uuid,
+        ) -> ClassDataType | None:
             "加载对象"
-            
+
             DataObject.loaded_objects += 1
 
             if uuid is None:
                 if "noticed_uuid_is_none" not in runtime_flags:
                     Base.log("W", "加载时遇到uuid为None，将会返回None", "Chunk.load_history._load_object")
                     call_fr = sys._getframe(2)
-                    Base.log("W", f"调用者：{call_fr.f_code.co_name}({call_fr.f_code.co_filename}:{call_fr.f_lineno})", "Chunk.load_history._load_object")
+                    Base.log(
+                        "W",
+                        f"调用者：{call_fr.f_code.co_name}({call_fr.f_code.co_filename}:{call_fr.f_lineno})",
+                        "Chunk.load_history._load_object",
+                    )
                     runtime_flags["noticed_uuid_is_none"] = True
 
-                    if (runtime_flags["noticed_uuid_is_none"]):
+                    if runtime_flags["noticed_uuid_is_none"]:
                         Base.log("W", "将不会再次展示此警告", "Chunk.load_history._load_object")
                 return None
 
-            
             _id = (history_uuid, data_type.chunk_type_name, uuid)
-
 
             DataObject.load_tasks.append(_id)
             try:
@@ -428,9 +410,7 @@ class Chunk:
                 # 如果不存在的话就从数据库读取
                 try:
                     # 从连接池获取连接
-                    conn = self.database_connections[
-                        (history_uuid, data_type.chunk_type_name)
-                    ]
+                    conn = self.database_connections[(history_uuid, data_type.chunk_type_name)]
                 except KeyError:
                     # 如果没连接就直接开一个新的连接放连接池，不用反复开开关关的节约性能
                     # （加载完记得relase_connections，清理内存）
@@ -439,16 +419,11 @@ class Chunk:
                         check_same_thread=False,
                     )
 
-                    self.database_connections[
-                        (history_uuid, data_type.chunk_type_name)
-                    ] = conn
+                    self.database_connections[(history_uuid, data_type.chunk_type_name)] = conn
 
                 try:
-                    result = conn.execute(
-                        f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?", (str(uuid),)
-                    ).fetchone()
+                    result = conn.execute(f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?", (str(uuid),)).fetchone()
                 except sqlite3.Error:
-
                     Base.log(
                         "W",
                         f"数据不存在，将会返回默认\n数据：{data_type.__qualname__}({uuid})",
@@ -474,7 +449,6 @@ class Chunk:
                     obj.uuid = _id[2]
                     return obj
 
-
                 obj_shallow_loaded = data_type.new_dummy()
                 # 先浅层加载一下，防止触发无限递归
                 DataObject.loaded_object_list[_id] = obj_shallow_loaded
@@ -488,12 +462,10 @@ class Chunk:
         if history_uuid is None:
             path = os.path.join(self.path, "Current")
         else:
-            path = os.path.join(
-                self.path, "Histories", history_uuid[:2], history_uuid[2:]
-            )
+            path = os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:])
         if not os.path.isdir(path):
             raise FileNotFoundError("历史记录不存在")
-        info = json.load(open(os.path.join(path, "info.json"), "r", encoding="utf-8"))
+        info = json.load(open(os.path.join(path, "info.json"), encoding="utf-8"))
         if "python_version" in info:
             data_python_ver = info["python_version"]
             current_ver = [
@@ -504,11 +476,7 @@ class Chunk:
             if data_python_ver != current_ver:
                 if "noticed_version_changed" not in runtime_flags:
                     runtime_flags["noticed_version_changed"] = set()
-                if (
-                    request_uuid is not None
-                    and request_uuid not in runtime_flags["noticed_version_changed"]
-                ):
-
+                if request_uuid is not None and request_uuid not in runtime_flags["noticed_version_changed"]:
                     Base.log(
                         "W",
                         f"历史记录的Python版本为{data_python_ver}，当前版本为{current_ver}，可能存在兼容性问题",
@@ -530,12 +498,12 @@ class Chunk:
                 "历史记录的Python版本信息缺失，可能存在兼容性问题",
                 "Chunk.load_history",
             )
-        class_uuids: List[Tuple[str, ClassDataTypeUUID[Class]]] = json.load(
-            open(os.path.join(path, "classes.json"), "r", encoding="utf-8")
+        class_uuids: list[tuple[str, ClassDataTypeUUID[Class]]] = json.load(
+            open(os.path.join(path, "classes.json"), encoding="utf-8")
         )
 
-        weekday_uuids: Dict[str, Dict[float, ClassDataTypeUUID[DayRecord]]] = json.load(
-            open(os.path.join(path, "weekdays.json"), "r", encoding="utf-8")
+        weekday_uuids: dict[str, dict[float, ClassDataTypeUUID[DayRecord]]] = json.load(
+            open(os.path.join(path, "weekdays.json"), encoding="utf-8")
         )
 
         # index = 0
@@ -546,12 +514,12 @@ class Chunk:
 
         classes = {}
         for _, class_uuid in class_uuids:
-            _class: Optional[Class] = ClassDataObj.LoadUUID(class_uuid, Class)
+            _class: Class | None = ClassDataObj.LoadUUID(class_uuid, Class)
             classes[_class.key] = _class
 
         for target_class, item in weekday_uuids.items():
-            for time_key, weekday_uuid in item.items():
-                weekday: Optional[DayRecord] = ClassDataObj.LoadUUID(weekday_uuid, DayRecord)
+            for _time_key, weekday_uuid in item.items():
+                weekday: DayRecord | None = ClassDataObj.LoadUUID(weekday_uuid, DayRecord)
                 if target_class not in self.bound_db.weekday_record:
                     self.bound_db.weekday_record[target_class] = {}
                 self.bound_db.weekday_record[target_class][weekday.utc] = weekday
@@ -559,17 +527,18 @@ class Chunk:
         history = History(
             classes,
             self.bound_db.weekday_record,
-            json.load(open(os.path.join(path, "info.json"), "r", encoding="utf-8"))[
-                "create_time"
-            ],
+            json.load(open(os.path.join(path, "info.json"), encoding="utf-8"))["create_time"],
         )
-            
+
         history.uuid = history_uuid
         history.archive_uuid = history_uuid
 
         total_time = time.time() - start_time
         total_obj = DataObject.loaded_objects - start_obj
-        Base.log("I", f"历史记录{history_uuid}加载完成，总数据处理数：{total_obj}, 警告数量：{len(failures)}, 耗时：{total_time:.3f}s, 平均速度：{total_obj/max(total_time, 0.001):.3f}个/秒")
+        Base.log(
+            "I",
+            f"历史记录{history_uuid}加载完成，总数据处理数：{total_obj}, 警告数量：{len(failures)}, 耗时：{total_time:.3f}s, 平均速度：{total_obj / max(total_time, 0.001):.3f}个/秒",
+        )
         return history
 
     def del_history(self, history_uuid: str) -> bool:
@@ -577,9 +546,7 @@ class Chunk:
         删除历史记录
         """
         try:
-            shutil.rmtree(
-                os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:])
-            )
+            shutil.rmtree(os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:]))
             return True
         except Exception as unused:  # pylint: disable=broad-exception-caught
             return False
@@ -594,58 +561,47 @@ class Chunk:
         req_uuid = uuid.uuid4()
         current_record = self.load_history(None, req_uuid)
 
-        templates: List[ScoreModificationTemplate]  = []
-        achievements: List[AchievementTemplate] = []
+        templates: list[ScoreModificationTemplate] = []
+        achievements: list[AchievementTemplate] = []
         current_day_attendance = {}
 
         # 有个细节，这里的LoadUUID是刚刚加载完这周的，所以不用填默认参数
-        template_uuids: List[Tuple[str, ClassDataTypeUUID[ScoreModificationTemplate]]] = json.load(
+        template_uuids: list[tuple[str, ClassDataTypeUUID[ScoreModificationTemplate]]] = json.load(
             open(
                 os.path.join(self.path, "Current", "templates.json"),
-                "r",
                 encoding="utf-8",
             )
         )
 
         for _, template_uuid in template_uuids:
-            templates.append(
-                ClassDataObj.LoadUUID(template_uuid, ScoreModificationTemplate)
-            )
+            templates.append(ClassDataObj.LoadUUID(template_uuid, ScoreModificationTemplate))
 
-        achievement_uuids: List[Tuple[str, ClassDataTypeUUID[AchievementTemplate]]] = json.load(
+        achievement_uuids: list[tuple[str, ClassDataTypeUUID[AchievementTemplate]]] = json.load(
             open(
                 os.path.join(self.path, "Current", "achievements.json"),
-                "r",
                 encoding="utf-8",
             )
         )
         for _, achievement_uuid in achievement_uuids:
-            achievements.append(
-                ClassDataObj.LoadUUID(achievement_uuid, AchievementTemplate)
-            )
+            achievements.append(ClassDataObj.LoadUUID(achievement_uuid, AchievementTemplate))
 
-        current_day_attendance_uuids: List[Tuple[str, ClassDataTypeUUID[AttendanceInfo]]] = json.load(
+        current_day_attendance_uuids: list[tuple[str, ClassDataTypeUUID[AttendanceInfo]]] = json.load(
             open(
                 os.path.join(self.path, "Current", "current_day_attendance.json"),
-                "r",
                 encoding="utf-8",
             )
         )
         for target_class, history_uuid in current_day_attendance_uuids:
-            current_day_attendance[target_class] = ClassDataObj.LoadUUID(
-                history_uuid, AttendanceInfo
-            )
+            current_day_attendance[target_class] = ClassDataObj.LoadUUID(history_uuid, AttendanceInfo)
 
-        info = json.load(
-            open(os.path.join(self.path, "info.json"), "r", encoding="utf-8")
-        )
+        info = json.load(open(os.path.join(self.path, "info.json"), encoding="utf-8"))
         self.bound_db.uuid = info["uuid"]
         self.bound_db.save_time = info["save_time"]
         self.bound_db.version = info["version"]
         self.bound_db.version_code = info["version_code"]
         self.bound_db.last_reset = info["last_reset"]
         self.bound_db.last_start_time = info["last_start_time"]
-        histories: Dict[float, History] = {}
+        histories: dict[float, History] = {}
         if load_all:
             for history_uuid in info["histories"]:
                 try:
@@ -654,9 +610,7 @@ class Chunk:
                         h.time += 0.001
                     histories[h.time] = h
                 except FileNotFoundError as e:
-                    Base.log_exc(
-                        f"历史记录{history_uuid}加载失败，将跳过", "Chunk.load_data", "E", e
-                    )
+                    Base.log_exc(f"历史记录{history_uuid}加载失败，将跳过", "Chunk.load_data", "E", e)
             h2 = sorted(histories.items(), key=lambda i: i[0])
             histories = dict(h2)
         return UserDataBase(
@@ -671,7 +625,7 @@ class Chunk:
             {a.key: a for a in achievements},
             info["last_start_time"],
             current_record.weekdays,
-            current_day_attendance
+            current_day_attendance,
         )
 
     @staticmethod
@@ -712,7 +666,7 @@ class Chunk:
                 os.makedirs(self.path, exist_ok=True)
                 os.makedirs(os.path.join(self.path, "Histories"), exist_ok=True)
                 history = History(self.bound_db.classes, self.bound_db.weekday_record)
-                save_tasks: List[Tuple[Optional[ClassDataTypeUUID[History]], History, bool]] = [
+                save_tasks: list[tuple[ClassDataTypeUUID[History] | None, History, bool]] = [
                     (None, history, clear_current)
                 ]
                 if save_history:
@@ -728,17 +682,13 @@ class Chunk:
                                 )
                             ):
                                 os.makedirs(
-                                    os.path.join(
-                                        self.path, "Histories",str(v.uuid)[:2], str(v.uuid)[2:]
-                                    ),
+                                    os.path.join(self.path, "Histories", str(v.uuid)[:2], str(v.uuid)[2:]),
                                     exist_ok=True,
                                 )
                                 save_tasks.append((v.uuid, v, clear_histories))
                         else:
                             os.makedirs(
-                                os.path.join(
-                                    self.path, "Histories", str(v.uuid)[:2], str(v.uuid)[2:]
-                                ),
+                                os.path.join(self.path, "Histories", str(v.uuid)[:2], str(v.uuid)[2:]),
                                 exist_ok=True,
                             )
                             save_tasks.append((v.uuid, v, clear_histories))
@@ -747,7 +697,7 @@ class Chunk:
                 history_percentage = 100 / max(1, total_history_count)
 
                 def save_part(
-                    uuid: Optional[ClassDataTypeUUID], current_history: History, clear: bool, index: int
+                    uuid: ClassDataTypeUUID | None, current_history: History, clear: bool, index: int
                 ) -> None:
                     """
                     保存历史记录的一部分。
@@ -767,23 +717,19 @@ class Chunk:
                     os.makedirs(path, exist_ok=True)
                     total_saved_objects = 0
                     t = time.time()
-                    modify_templates: List[ScoreModificationTemplate] = list(
-                        self.bound_db.templates.values()
-                    )
-                    day_records: List[DayRecord] = []
-                    achivement_templates: List[AchievementTemplate] = list(
-                        self.bound_db.achievements.values()
-                    )
+                    modify_templates: list[ScoreModificationTemplate] = list(self.bound_db.templates.values())
+                    day_records: list[DayRecord] = []
+                    achivement_templates: list[AchievementTemplate] = list(self.bound_db.achievements.values())
 
                     for c, records in current_history.weekdays.items():
                         for r in records.values():
                             day_records.append(r)
-                        
-                    students: List[Student] = []
-                    modifies: List[ScoreModification] = []
-                    achievements: List[Achievement] = []
-                    groups: List[Group] = []
-                    classes: List[Class] = []
+
+                    students: list[Student] = []
+                    modifies: list[ScoreModification] = []
+                    achievements: list[Achievement] = []
+                    groups: list[Group] = []
+                    classes: list[Class] = []
 
                     for _class in current_history.classes.values():
                         for homework_rule in _class.homework_rules:
@@ -793,18 +739,12 @@ class Chunk:
                         for student in _class.students.values():
                             students.append(student)
                             s = student
-                            for _ in range(
-                                Student.last_reset_info_keep_turns
-                            ):  # 保留最近几次的重置信息
+                            for _ in range(Student.last_reset_info_keep_turns):  # 保留最近几次的重置信息
                                 # TODO: 把这个废性能的方法改一下，last_reset_info改成动态查询
                                 if s._last_reset_info:
                                     students.append(student.last_reset_info)
-                                    modifies.extend(
-                                        student.last_reset_info.history.values()
-                                    )
-                                    achievements.extend(
-                                        student.last_reset_info.achievements.values()
-                                    )
+                                    modifies.extend(student.last_reset_info.history.values())
+                                    achievements.extend(student.last_reset_info.achievements.values())
                                     s = s.last_reset_info
                             modifies.extend(student.history.values())
                             achievements.extend(student.achievements.values())
@@ -812,9 +752,7 @@ class Chunk:
                             while student.last_reset_info:
                                 students.append(student.last_reset_info)
                                 modifies.extend(student.last_reset_info.history.values())
-                                achievements.extend(
-                                    student.last_reset_info.achievements.values()
-                                )
+                                achievements.extend(student.last_reset_info.achievements.values())
                                 i += 1
                                 student.last_reset_info = None
                                 if i > Student.last_reset_info_keep_turns:
@@ -826,9 +764,17 @@ class Chunk:
                         f"历史记录中的{uuid}的数据汇总完成，耗时{time.time() - t: .5f}秒",
                         "Chunk.save",
                     )
-                    total_objects = len(classes) + len(students) + len(groups) + len(modifies) + len(achievements) \
-                                    + len(modify_templates) + len(day_records) + len(achivement_templates) \
-                                    + len(self.bound_db.current_day_attendance)
+                    total_objects = (
+                        len(classes)
+                        + len(students)
+                        + len(groups)
+                        + len(modifies)
+                        + len(achievements)
+                        + len(modify_templates)
+                        + len(day_records)
+                        + len(achivement_templates)
+                        + len(self.bound_db.current_day_attendance)
+                    )
                     object_percentage = history_percentage / max(total_objects, 1)
                     t = time.time()
                     c = 0
@@ -995,8 +941,7 @@ class Chunk:
                         c += 1
                     Base.log(
                         "D",
-                        f"历史记录中的{uuid}的当前出勤保存完成，"
-                        f"时间耗时{time.time() - t}秒",
+                        f"历史记录中的{uuid}的当前出勤保存完成，时间耗时{time.time() - t}秒",
                         "Chunk.save",
                     )
 
@@ -1041,7 +986,7 @@ class Chunk:
 
                     json.dump(
                         [(a.target_class, str(a.uuid)) for a in self.bound_db.current_day_attendance.values()],
-                        open(os.path.join(path, "current_day_attendance.json"), "w", encoding="utf-8"),             
+                        open(os.path.join(path, "current_day_attendance.json"), "w", encoding="utf-8"),
                     )
 
                     json.dump(
@@ -1052,15 +997,11 @@ class Chunk:
 
                     json.dump(
                         [(a.key, str(a.uuid)) for a in self.bound_db.achievements.values()],
-                        open(
-                            os.path.join(path, "achievements.json"), "w", encoding="utf-8"
-                        ),
+                        open(os.path.join(path, "achievements.json"), "w", encoding="utf-8"),
                         indent=4,
                     )
 
-                    Base.log(
-                        "I", f"{uuid}的存档信息保存完成({index}/{total})", "Chunk.save"
-                    )
+                    Base.log("I", f"{uuid}的存档信息保存完成({index}/{total})", "Chunk.save")
 
                 i = 1
                 for uuid, current_history, clear in save_tasks:
@@ -1069,7 +1010,7 @@ class Chunk:
 
                 Base.log("D", "所有数据保存完成", "Chunk.save")
 
-                history_uuids: List[str] = []
+                history_uuids: list[str] = []
                 for dir_1 in os.listdir(os.path.join(self.path, "Histories")):
                     for dir_2 in os.listdir(os.path.join(self.path, "Histories", dir_1)):
                         history_uuids.append(dir_1 + dir_2)
@@ -1097,7 +1038,7 @@ class Chunk:
             except Exception as e:
                 self.relase_connections()
                 self.is_saving = False
-                raise e
+                raise
 
             else:
                 self.relase_connections()

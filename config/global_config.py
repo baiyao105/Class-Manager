@@ -1,5 +1,4 @@
-"""全局配置模型扩展
-"""
+"""全局配置模型扩展"""
 
 import json
 from pathlib import Path
@@ -12,6 +11,7 @@ from .settings import AppSettings
 
 class SystemConfig(BaseModel):
     """系统配置"""
+
     language: str = Field(default="zh_CN", description="语言设置")
     auto_start: bool = Field(default=False, description="开机自启动")
     auto_update: bool = Field(default=True, description="自动检查更新")
@@ -21,6 +21,7 @@ class SystemConfig(BaseModel):
 
 class DataManagementConfig(BaseModel):
     """数据管理配置"""
+
     enable_database_splitting: bool = Field(default=True, description="启用数据库拆分")
     max_database_size_mb: int = Field(default=100, ge=10, le=1000, description="数据库最大大小(MB)")
     split_threshold_records: int = Field(default=10000, ge=1000, description="拆分阈值记录数")

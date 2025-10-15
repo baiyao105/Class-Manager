@@ -1,4 +1,3 @@
-
 """
 所有基础班级数据类型的包。
 
@@ -9,9 +8,12 @@
 
 from .achievement import Achievement
 from .achievementtemp import AchievementTemplate
+from .attendanceinfo import AttendanceInfo
 from .classdata import ClassData
 from .classtype import Class
+from .dayrecord import DayRecord
 from .group import Group
+from .history import History
 from .homeworkrule import HomeworkRule
 from .scoremod import ScoreModification
 from .scoremodtemplate import ScoreModificationTemplate

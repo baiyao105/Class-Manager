@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import (Literal, Dict)
-from ..classdataobj import ClassDataObj
-from ..basetype import ClassDataType
+from typing import Literal
+
 from utils.algorithm import SupportsKeyOrdering
+
+from ..basetype import ClassDataType
+from ..classdataobj import ClassDataObj
 from .scoremodtemplate import ScoreModificationTemplate
 
 
@@ -27,7 +29,7 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         key: str,
         subject_name: str,
         ruler: str,
-        rule_mapping: Dict[str, "ScoreModificationTemplate"],
+        rule_mapping: dict[str, ScoreModificationTemplate],
     ):
         """
         作业规则构造函数。
@@ -51,9 +53,7 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
                 "key": self.key,
                 "subject_name": self.subject_name,
                 "ruler": self.ruler,
-                "rule_mapping": dict(
-                    [(n, str(t.uuid)) for n, t in self.rule_mapping.items()]
-                ),
+                "rule_mapping": dict([(n, str(t.uuid)) for n, t in self.rule_mapping.items()]),
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
@@ -64,18 +64,12 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         "从字符串加载作业规则对象。"
         d = json.loads(s)
         if d["type"] != HomeworkRule.chunk_type_name:
-            raise ValueError(
-                f"类型不匹配：{d['type']} != "
-                f"{HomeworkRule.chunk_type_name}"
-            )
+            raise ValueError(f"类型不匹配：{d['type']} != {HomeworkRule.chunk_type_name}")
         obj = HomeworkRule(
             key=d["key"],
             subject_name=d["subject_name"],
             ruler=d["ruler"],
-            rule_mapping={
-                n: ClassDataObj.LoadUUID(t, ScoreModificationTemplate)
-                for n, t in d["rule_mapping"].items()
-            },
+            rule_mapping={n: ClassDataObj.LoadUUID(t, ScoreModificationTemplate) for n, t in d["rule_mapping"].items()},
         )
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]

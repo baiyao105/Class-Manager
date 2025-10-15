@@ -1,23 +1,24 @@
 from __future__ import annotations
-import json
+
 import base64
+import json
 import pickle
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal
+
 import dill as pickle
-from typing import (Literal, Optional, TYPE_CHECKING, 
-                    Tuple, Union, List,
-                    Callable, Dict, Any)
-from utils.consts import runtime_flags, inf
-from ..classdataobj import ClassDataObj
-from ..basetype import ClassDataType
-from utils.basetypes import Base
+
 from utils.algorithm import SupportsKeyOrdering
+from utils.basetypes import Base
+from utils.consts import inf, runtime_flags
+
+from ..basetype import ClassDataType
+from ..classdataobj import ClassDataObj
 from .classdata import ClassData
 
-
 if TYPE_CHECKING:
-    from .student import Student
     from ..observers.classstatobs import ClassStatusObserver
-
+    from .student import Student
 
 
 class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
@@ -46,44 +47,33 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         name: str,
         desc: str,
         # 满足以下所有条件才会给成就
-        when_triggered: Union[
-            Literal["any", "on_reset"], List[Literal["any", "on_reset"]]
-        ] = "any",  # 触发时机
+        when_triggered: Literal["any", "on_reset"] | list[Literal["any", "on_reset"]] = "any",  # 触发时机
         # 名称等于/在列表中
-        name_equals: Optional[Union[str, List[str]]] = None,
+        name_equals: str | list[str] | None = None,
         # 学号等于/在列表中
-        num_equals: Optional[Union[int, List[int]]] = None,
+        num_equals: int | list[int] | None = None,
         # 名称不等于/在列表中
-        name_not_equals: Optional[Union[str, List[str]]] = None,
+        name_not_equals: str | list[str] | None = None,
         # 学号不等于/在列表中
-        num_not_equals: Optional[Union[int, List[int]]] = None,
-        score_range: Optional[
-            Union[Tuple[float, float], List[Tuple[float, float]]]
-        ] = None,  # 分数范围
+        num_not_equals: int | list[int] | None = None,
+        score_range: tuple[float, float] | list[tuple[float, float]] | None = None,  # 分数范围
         # 名次范围（不计算并列）
-        score_rank_range: Optional[Tuple[int, int]] = None,
+        score_rank_range: tuple[int, int] | None = None,
         # 最高分数范围
-        highest_score_range: Optional[Tuple[float, float]] = None,
+        highest_score_range: tuple[float, float] | None = None,
         # 最低分数范围
-        lowest_score_range: Optional[Tuple[float, float]] = None,
-        highest_score_cause_range: Optional[
-            Tuple[int, int]
-        ] = None,  # 最高分产生时间的范围（utc，*1000）
+        lowest_score_range: tuple[float, float] | None = None,
+        highest_score_cause_range: tuple[int, int] | None = None,  # 最高分产生时间的范围（utc，*1000）
         # 最低分产生时间的范围
-        lowest_score_cause_range: Optional[Tuple[int, int]] = None,
-        modify_key_range: Optional[
-            Union[Tuple[str, Union[int, float], Union[int, float]], List[Tuple[str, Union[int, float], Union[int, float]]]]
-        ] = None,
+        lowest_score_cause_range: tuple[int, int] | None = None,
+        modify_key_range: tuple[str, int | float, int | float]
+        | list[tuple[str, int | float, int | float]]
+        | None = None,
         # 指定点评次数的范围（必须全部符合）
-        others: Optional[
-            Union[
-                Callable[[ClassData], bool],
-                List[Callable[[ClassData], bool]],
-            ]
-        ] = None,
+        others: Callable[[ClassData], bool] | list[Callable[[ClassData], bool]] | None = None,
         # 其他条件
-        sound: Optional[str] = None,
-        icon: Optional[str] = None,
+        sound: str | None = None,
+        icon: str | None = None,
         condition_info: str = "具体就是这样，我也不清楚，没写",
         further_info: str = "貌似是那几个开发者懒得进行文学创作了，所以没有进一步描述",
     ):
@@ -115,32 +105,16 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         self.active = True
 
         if name_equals is not None:
-            self.name_eq = (
-                list(name_equals)
-                if isinstance(name_equals, List)
-                else [name_equals]
-            )
+            self.name_eq = list(name_equals) if isinstance(name_equals, list) else [name_equals]
 
         if name_not_equals is not None:
-            self.name_ne = (
-                list(name_not_equals)
-                if isinstance(name_not_equals, List)
-                else [name_not_equals]
-            )
+            self.name_ne = list(name_not_equals) if isinstance(name_not_equals, list) else [name_not_equals]
 
         if num_equals is not None:
-            self.num_eq = (
-                list(num_equals)
-                if isinstance(num_equals, List)
-                else [num_equals]
-            )
+            self.num_eq = list(num_equals) if isinstance(num_equals, list) else [num_equals]
 
         if num_not_equals is not None:
-            self.num_ne = (
-                list(num_not_equals)
-                if isinstance(num_not_equals, List)
-                else [num_not_equals]
-            )
+            self.num_ne = list(num_not_equals) if isinstance(num_not_equals, list) else [num_not_equals]
 
         if score_range is not None:
             if not score_range:
@@ -150,7 +124,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     "AchievementTemplate.__init__",
                 )
             else:
-                if isinstance(score_range, Tuple):
+                if isinstance(score_range, tuple):
                     score_range = [score_range]
                 self.score_range = list(score_range)
 
@@ -174,35 +148,29 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             self.lowest_score_cause_range_down_limit = lowest_score_cause_range[0]
             self.lowest_score_cause_range_up_limit = lowest_score_cause_range[1]
 
-
         if modify_key_range is not None:
             if not len(modify_key_range):
-                    Base.log(
-                        "W",
-                        "score_range为一个空列表，将会忽略此属性",
-                        "AchievementTemplate.__init__",
-                    )
+                Base.log(
+                    "W",
+                    "score_range为一个空列表，将会忽略此属性",
+                    "AchievementTemplate.__init__",
+                )
             else:
-                if (isinstance(modify_key_range, tuple)):
+                if isinstance(modify_key_range, tuple):
                     modify_key_range = [modify_key_range]
-                
+
                 self.modify_ranges_orig = modify_key_range
-                self.modify_ranges: List[Dict[str, Union[str, int, float]]] = [
-                    {"key": item[0], "lowest": item[1], "highest": item[2]}
-                    for item in self.modify_ranges_orig
+                self.modify_ranges: list[dict[str, str | int | float]] = [
+                    {"key": item[0], "lowest": item[1], "highest": item[2]} for item in self.modify_ranges_orig
                 ]
 
         if others is not None:
-            if not isinstance(others, List):
-                self.other: List[Callable[[ClassData], bool]] = [others]
+            if not isinstance(others, list):
+                self.other: list[Callable[[ClassData], bool]] = [others]
             else:
-                self.other: List[Callable[[ClassData], bool]] = others
+                self.other: list[Callable[[ClassData], bool]] = others
 
-        self.when_triggered = (
-            when_triggered
-            if isinstance(when_triggered, List)
-            else [when_triggered]
-        )
+        self.when_triggered = when_triggered if isinstance(when_triggered, list) else [when_triggered]
         self.sound = sound
         self.icon = icon
         self.further_info = further_info
@@ -212,7 +180,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
     @property
     def kwargs(self):
         "等同于构造函数关键字参数的字典"
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "key": self.key,
             "name": self.name,
             "desc": self.desc,
@@ -268,9 +236,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             kwargs["condition_info"] = self.condition_info
         return kwargs
 
-    def achieved_by(
-        self, student: Student, class_obs: ClassStatusObserver
-    ) -> bool:
+    def achieved_by(self, student: Student, class_obs: ClassStatusObserver) -> bool:
         """
         判断一个成就是否达成
 
@@ -283,10 +249,8 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
 
         if not self.active:
             return False
-        
-        if (
-            "on_reset" in self.when_triggered and "any" not in self.when_triggered
-        ) and (
+
+        if ("on_reset" in self.when_triggered and "any" not in self.when_triggered) and (
             not student.highest_score == student.lowest_score == student.score == 0
         ):
             return False
@@ -303,9 +267,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         if hasattr(self, "num_eq") and student.num not in self.num_eq:
             return False
 
-        if hasattr(self, "score_range") and not any(
-            [i[0] <= student.score <= i[1] for i in self.score_range]
-        ):
+        if hasattr(self, "score_range") and not any([i[0] <= student.score <= i[1] for i in self.score_range]):
             return False
         try:
             if hasattr(self, "score_rank_down_limit"):
@@ -320,15 +282,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     if self.score_rank_up_limit < 0
                     else self.score_rank_up_limit
                 )
-                if not (
-                    l
-                    <= [
-                        i[0]
-                        for i in class_obs.rank_dumplicate
-                        if i[1].num == student.num
-                    ][0]
-                    <= r
-                ):
+                if not (l <= next(i[0] for i in class_obs.rank_dumplicate if i[1].num == student.num) <= r):
                     return False
         except (
             KeyError,
@@ -339,47 +293,39 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             return False
 
         if hasattr(self, "highest_score_down_limit") and (
-            not self.highest_score_down_limit
-            <= student.highest_score
-            <= self.highest_score_up_limit
+            not self.highest_score_down_limit <= student.highest_score <= self.highest_score_up_limit
         ):
             return False
-        
 
-        if hasattr(self, "highest_score_cause_range_down_limit") and ((
-            not student.highest_score_cause_time
-        ) or
-        (
-            not self.highest_score_cause_range_down_limit
-            <= student.highest_score_cause_time
-            <= self.highest_score_cause_range_up_limit
-        )):
+        if hasattr(self, "highest_score_cause_range_down_limit") and (
+            (not student.highest_score_cause_time)
+            or (
+                not self.highest_score_cause_range_down_limit
+                <= student.highest_score_cause_time
+                <= self.highest_score_cause_range_up_limit
+            )
+        ):
             return False
 
         if hasattr(self, "lowest_score_down_limit") and (
-            not self.lowest_score_down_limit
-            <= student.lowest_score
-            <= self.lowest_score_up_limit
+            not self.lowest_score_down_limit <= student.lowest_score <= self.lowest_score_up_limit
         ):
             return False
 
-        if hasattr(self, "lowest_score_cause_range_down_limit") and ((
-            not student.lowest_score_cause_time
-        ) or (
-            not self.lowest_score_cause_range_down_limit
-            <= student.lowest_score_cause_time
-            <= self.lowest_score_cause_range_up_limit
-        )):
+        if hasattr(self, "lowest_score_cause_range_down_limit") and (
+            (not student.lowest_score_cause_time)
+            or (
+                not self.lowest_score_cause_range_down_limit
+                <= student.lowest_score_cause_time
+                <= self.lowest_score_cause_range_up_limit
+            )
+        ):
             return False
         try:
             if hasattr(self, "modify_ranges") and not all(
                 [
                     item["lowest"]
-                    <= [
-                        history.temp.key
-                        for history in student.history.values()
-                        if history.executed
-                    ].count(item["key"])   # type: ignore
+                    <= [history.temp.key for history in student.history.values() if history.executed].count(item["key"])  # type: ignore
                     <= item["highest"]
                     for item in self.modify_ranges
                 ]
@@ -405,13 +351,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     if not item(d):
                         return False
 
-            except (
-                NameError,
-                TypeError,
-                SystemError,
-                AttributeError,
-                RuntimeError
-            ) as e:  # pylint: disable=unused-variable
+            except (NameError, TypeError, SystemError, AttributeError, RuntimeError) as e:  # pylint: disable=unused-variable
                 if e.args:
                     if e.args[0] == "name 'student' is not defined":
                         Base.log(
@@ -446,13 +386,9 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     elif isinstance(self.other, str):
                         return False
                     self.other = class_obs.base.default_achievements[self.key].other
-                    Base.log(
-                        "I", "已经重置为默认值", "AchievementTemplate.achieved"
-                    )
+                    Base.log("I", "已经重置为默认值", "AchievementTemplate.achieved")
                 else:
-                    raise ClassDataObj.ObserverError(
-                        f"位于成就{self.name}({self.key})的lambda函数出错"
-                    )
+                    raise ClassDataObj.ObserverError(f"位于成就{self.name}({self.key})的lambda函数出错")
                 return False
         return True
 
@@ -471,21 +407,13 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             return_str += "仅适用于" + "，".join(self.name_eq) + "\n"
 
         if hasattr(self, "num_eq"):
-            return_str += (
-                "仅适用于学号为"
-                + "，".join([str(n) for n in self.num_eq])
-                + "的学生\n"
-            )
+            return_str += "仅适用于学号为" + "，".join([str(n) for n in self.num_eq]) + "的学生\n"
 
         if hasattr(self, "name_ne"):
             return_str += "不适用于" + "，".join(self.name_eq) + "\n"
 
         if hasattr(self, "num_ne"):
-            return_str += (
-                "不适用于学号为"
-                + "，".join([str(n) for n in self.num_eq])
-                + "的学生\n"
-            )
+            return_str += "不适用于学号为" + "，".join([str(n) for n in self.num_eq]) + "的学生\n"
 
         if hasattr(self, "score_range"):
             first = True
@@ -539,9 +467,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             elif down < -(2**63):
                 return_str += f"历史最高分数低于{up:.1f}\n"
             else:
-                return_str += (
-                    "没看懂，反正对历史最高分有要求（写的抽象了没法判断）\n"
-                )
+                return_str += "没看懂，反正对历史最高分有要求（写的抽象了没法判断）\n"
 
         if hasattr(self, "lowest_score_down_limit"):
             down = self.lowest_score_down_limit
@@ -555,18 +481,16 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             elif down < -(2**63):
                 return_str += f"历史最低分数低于{up:.1f}\n"
             else:
-                return_str += (
-                    "没看懂，反正对历史最低分有要求（写的抽象了没法判断）\n"
-                )
+                return_str += "没看懂，反正对历史最低分有要求（写的抽象了没法判断）\n"
 
         if hasattr(self, "modify_ranges"):
             for item in self.modify_ranges:
-                lowest: Union[int, float] = item["lowest"]  # type: ignore
-                highest: Union[int, float] = item["highest"]  # type: ignore
+                lowest: int | float = item["lowest"]  # type: ignore
+                highest: int | float = item["highest"]  # type: ignore
                 key: str = item["key"]  # type: ignore
                 return_str += (
                     f'达成{lowest}到{highest}次"{class_obs.templates[key].title}"\n'
-                    if lowest != highest and lowest != inf and highest != inf
+                    if lowest not in (highest, inf) and highest != inf
                     else (
                         f'达成{lowest}次"{class_obs.templates[key].title}"\n'
                         if lowest == highest != inf
@@ -599,11 +523,9 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
     @staticmethod
     def from_string(string: str):
         "从字符串加载成就模板对象。"
-        d: Dict[str, Any] = json.loads(string)
+        d: dict[str, Any] = json.loads(string)
         if d["type"] != AchievementTemplate.chunk_type_name:
-            raise ValueError(
-                f"类型不匹配：{d['type']} != {AchievementTemplate.chunk_type_name}"
-            )
+            raise ValueError(f"类型不匹配：{d['type']} != {AchievementTemplate.chunk_type_name}")
         try:
             if "others" in d:
                 d["others"] = pickle.loads(base64.b64decode(d["others"]))
@@ -616,7 +538,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                 )
                 d.pop("others")
             else:
-                raise e
+                raise
         d.pop("type")
         uuid = d.pop("uuid")
         archive_uuid = d.pop("archive_uuid")
@@ -631,4 +553,3 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         obj = self.from_string(string)
         self.__dict__.update(obj.__dict__)
         return self
-

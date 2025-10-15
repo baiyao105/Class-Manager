@@ -55,8 +55,7 @@ def get_function_namespace(func) -> str:
 def format_exc_like_java(exc: BaseException) -> List[str]:
     "不是我做这东西有啥用啊"
     result = [
-        f"{get_function_namespace(exc.__class__)}: "
-        + (str(exc) if str(exc).strip() else "no further information"),
+        f"{get_function_namespace(exc.__class__)}: " + (str(exc) if str(exc).strip() else "no further information"),
         "Stacktrace:",
     ]
     tb = exc.__traceback__
@@ -88,7 +87,7 @@ def format_exc_like_java(exc: BaseException) -> List[str]:
     return result
 
 
-def get_function_module(func: Union[object, Callable]) -> str:
+def get_function_module(func: object | Callable) -> str:
     "获取函数的模块"
     module = inspect.getmodule(func)
     if module is None:

@@ -7,12 +7,11 @@ from threading import Thread
 
 from utils.logger import Logger as Base
 
-
 __all__ = [
-    "repeat",
-    "run_async",
     "canbe",
     "pass_exceptions",
+    "repeat",
+    "run_async",
 ]
 
 
@@ -74,9 +73,7 @@ def canbe(value, _class: type):
     try:
         _class(value)
         return True
-    except (
-        Exception
-    ) as unused:  # pylint: disable=unused-argument, broad-exception-caught
+    except Exception as unused:  # pylint: disable=unused-argument, broad-exception-caught
         return False
 
 

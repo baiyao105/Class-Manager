@@ -7,84 +7,68 @@ from typing import Union
 
 
 class HighPrecisionOperation:
-    def __init__(self, basic_num: Union[int, float] = 0):
+    def __init__(self, basic_num: int | float = 0):
         sys.set_int_max_str_digits(2147483647)
         self.basic_num = basic_num
 
-    def Addition(self, other_num: Union[int, float] = 0):
+    def Addition(self, other_num: int | float = 0):
         if "." in str(self.basic_num) or "." in str(other_num):
             str_1 = str(self.basic_num).split(".")[-1]
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             provisional_result = provisional_figure_1 + provisional_figure_2
             result = provisional_result / a_power_of_ten
             return HighPrecisionOperation(result)
-        else:
-            result = self.basic_num + other_num
-            return HighPrecisionOperation(result)
+        result = self.basic_num + other_num
+        return HighPrecisionOperation(result)
 
-    def Subtraction(self, other_num: Union[int, float] = 0):
+    def Subtraction(self, other_num: int | float = 0):
         if "." in str(self.basic_num) or "." in str(other_num):
             str_1 = str(self.basic_num).split(".")[-1]
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             provisional_result = provisional_figure_1 - provisional_figure_2
             result = provisional_result / a_power_of_ten
             return HighPrecisionOperation(result)
-        else:
-            result = self.basic_num - other_num
-            return HighPrecisionOperation(result)
+        result = self.basic_num - other_num
+        return HighPrecisionOperation(result)
 
-    def Multiplication(self, other_num: Union[int, float] = 0):
+    def Multiplication(self, other_num: int | float = 0):
         if "." in str(self.basic_num) or "." in str(other_num):
             str_1 = str(self.basic_num).split(".")[-1]
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             provisional_result = provisional_figure_1 * provisional_figure_2
             result = provisional_result / (a_power_of_ten**2)
             return HighPrecisionOperation(result)
-        else:
-            result = self.basic_num * other_num
-            return HighPrecisionOperation(result)
+        result = self.basic_num * other_num
+        return HighPrecisionOperation(result)
 
-    def Division(self, other_num: Union[int, float] = 0):
+    def Division(self, other_num: int | float = 0):
         if "." in str(self.basic_num) or "." in str(other_num):
             str_1 = str(self.basic_num).split(".")[-1]
             str_2 = str(other_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num * a_power_of_ten)
             result = provisional_figure_1 / provisional_figure_2
             return HighPrecisionOperation(result)
-        else:
-            result = self.basic_num / other_num
-            return HighPrecisionOperation(result)
+        result = self.basic_num / other_num
+        return HighPrecisionOperation(result)
 
     def nThRoot(self, n: int = 3):
         float(self.basic)
@@ -118,18 +102,14 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             provisional_result = provisional_figure_1 + provisional_figure_2
             result = provisional_result / a_power_of_ten
             return HighPrecision(result)
-        else:
-            result = self.basic_num + other_num.basic_num
-            return HighPrecision(result)
+        result = self.basic_num + other_num.basic_num
+        return HighPrecision(result)
 
     def __sub__(self, other_num: "HighPrecision"):
         if not isinstance(other_num, HighPrecision):
@@ -139,18 +119,14 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             provisional_result = provisional_figure_1 - provisional_figure_2
             result = provisional_result / a_power_of_ten
             return HighPrecision(result)
-        else:
-            result = self.basic_num - other_num.basic_num
-            return HighPrecision(result)
+        result = self.basic_num - other_num.basic_num
+        return HighPrecision(result)
 
     def __mul__(self, other_num: "HighPrecision"):
         if not isinstance(other_num, HighPrecision):
@@ -160,18 +136,14 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             provisional_result = provisional_figure_1 * provisional_figure_2
             result = provisional_result / (a_power_of_ten**2)
             return HighPrecision(result)
-        else:
-            result = self.basic_num * other_num.basic_num
-            return HighPrecision(result)
+        result = self.basic_num * other_num.basic_num
+        return HighPrecision(result)
 
     def __truediv__(self, other_num: "HighPrecision"):
         if not isinstance(other_num, HighPrecision):
@@ -181,17 +153,13 @@ class HighPrecision:
             str_2 = str(other_num.basic_num).split(".")[-1]
             len_1 = len(str_1)
             len_2 = len(str_2)
-            if len_1 > len_2:
-                a_power_of_ten = int(10**len_1)
-            else:
-                a_power_of_ten = int(10**len_2)
+            a_power_of_ten = int(10**len_1) if len_1 > len_2 else int(10**len_2)
             provisional_figure_1 = int(self.basic_num * a_power_of_ten)
             provisional_figure_2 = int(other_num.basic_num * a_power_of_ten)
             result = provisional_figure_1 / provisional_figure_2
             return HighPrecision(result)
-        else:
-            result = self.basic_num / other_num.basic_num
-            return HighPrecision(result)
+        result = self.basic_num / other_num.basic_num
+        return HighPrecision(result)
 
     # 后面的暂且这么写着，等NCW来写具体实现就行
 
@@ -228,7 +196,7 @@ class HighPrecision:
         return str(self.basic_num)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.basic_num)})"
+        return f"{self.__class__.__name__}({self.basic_num!r})"
 
     def __len__(self):
         return len(str(self.basic_num))
@@ -240,8 +208,7 @@ class HighPrecision:
 
         if is_int:
             return HighPrecision(int(self.basic_num) << other_num)
-        else:
-            raise TypeError(f"无法对浮点数进行位移操作（{self.basic_num}）")
+        raise TypeError(f"无法对浮点数进行位移操作（{self.basic_num}）")
 
     def __rshift__(self, other_num: int):
         if not isinstance(other_num, int):
@@ -250,16 +217,14 @@ class HighPrecision:
 
         if is_int:
             return HighPrecision(int(self.basic_num) >> other_num)
-        else:
-            raise TypeError(f"无法对浮点数进行位移操作（{self.basic_num}）")
+        raise TypeError(f"无法对浮点数进行位移操作（{self.basic_num}）")
 
     def __invert__(self):
         is_int = self.basic_num % 1 == 0
 
         if is_int:
             return HighPrecision(~int(self.basic_num))
-        else:
-            raise TypeError(f"无法对浮点数进行按位取反操作（{self.basic_num}）")
+        raise TypeError(f"无法对浮点数进行按位取反操作（{self.basic_num}）")
 
     def __and__(self, other_num: "HighPrecision"):
         if not isinstance(other_num, HighPrecision):
@@ -268,8 +233,7 @@ class HighPrecision:
 
         if is_int:
             return HighPrecision(int(self.basic_num) & int(other_num.basic_num))
-        else:
-            raise TypeError(f"无法对浮点数进行按位与操作（{self.basic_num}）")
+        raise TypeError(f"无法对浮点数进行按位与操作（{self.basic_num}）")
 
     def __or__(self, other_num: "HighPrecision"):
         if not isinstance(other_num, HighPrecision):
@@ -278,8 +242,7 @@ class HighPrecision:
 
         if is_int:
             return HighPrecision(int(self.basic_num) | int(other_num.basic_num))
-        else:
-            raise TypeError(f"无法对浮点数进行按位或操作（{self.basic_num}）")
+        raise TypeError(f"无法对浮点数进行按位或操作（{self.basic_num}）")
 
     def __xor__(self, other_num: "HighPrecision"):
         if not isinstance(other_num, HighPrecision):
@@ -288,8 +251,7 @@ class HighPrecision:
 
         if is_int:
             return HighPrecision(int(self.basic_num) ^ int(other_num.basic_num))
-        else:
-            raise TypeError(f"无法对浮点数进行按位异或操作（{self.basic_num}）")
+        raise TypeError(f"无法对浮点数进行按位异或操作（{self.basic_num}）")
 
     def __iadd__(self, other_num: "HighPrecision"):
         if not isinstance(other_num, HighPrecision):
