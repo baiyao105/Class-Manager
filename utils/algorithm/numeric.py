@@ -3,9 +3,8 @@
 """
 
 import math
-import time
 import random
-from typing import Union, Optional, Any, List
+import time
 from ctypes import (
     c_int,
     c_int8,
@@ -18,7 +17,7 @@ from ctypes import (
     c_uint32,
     c_uint64,
 )
-
+from typing import Any, Union
 
 inf = math.inf
 nan = math.nan
@@ -38,7 +37,7 @@ CIntegerType = Union[
 ]
 
 
-def cinttype(dtype: CIntegerType, name: Optional[str] = None):
+def cinttype(dtype: CIntegerType, name: str | None = None):
     """
     自定义C整数类型包装器(抽象)
 
@@ -66,7 +65,7 @@ def cinttype(dtype: CIntegerType, name: Optional[str] = None):
             return str(self._data.value)
 
         def __repr__(self):
-            return f"{self._tpname}({repr(self._data.value)})"
+            return f"{self._tpname}({self._data.value!r})"
 
         def __int__(self):
             return int(self._data.value)
@@ -143,7 +142,7 @@ def cinttype(dtype: CIntegerType, name: Optional[str] = None):
         def __pos__(self):
             return cinttype(self._dtype, self._tpname)(+self._data.value)
 
-        def __round__(self, ndigits = None):
+        def __round__(self, ndigits=None):
             return cinttype(self._dtype, self._tpname)(round(self._data.value, ndigits))
 
         def __add__(self, other: Any):
@@ -240,7 +239,6 @@ def cinttype(dtype: CIntegerType, name: Optional[str] = None):
             return cinttype(self._dtype, self._tpname)(int(other) - self._data.value)
 
         def __rmul__(self, other):
-
             return cinttype(self._dtype, self._tpname)(int(other) * self._data.value)
 
         def __rtruediv__(self, other):
@@ -313,9 +311,7 @@ def utc(prec: int = 3):
     return int(time.time() * (10**prec))
 
 
-def steprange(
-    start: Union[int, float], stop: Union[int, float], step: int
-) -> List[float]:
+def steprange(start: int | float, stop: int | float, step: int) -> list[float]:
     """生成step步长的从start到stop的列表
 
     :param start: 起始值
@@ -329,11 +325,8 @@ def steprange(
     [0, 2.5, 5.0, 7.5, 10]
     """
     if (stop - start) % step != 0:
-        return [start + i * (int(stop - start) / step) for i in range(step)][:-1] + [
-            stop
-        ]
-    else:
-        return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
+        return [*[start + i * (int(stop - start) / step) for i in range(step)][:-1], stop]
+    return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
 
 
 def addrof(obj) -> str:
@@ -356,5 +349,5 @@ def get_time():
     return (
         f"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} "
         + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
-        + f".{int((time.time()%1)*1000):03}"
+        + f".{int((time.time() % 1) * 1000):03}"
     )

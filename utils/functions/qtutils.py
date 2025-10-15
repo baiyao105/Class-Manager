@@ -2,13 +2,14 @@
 关于Qt的函数
 """
 
-import cv2
 import time
-from typing import Callable, Optional, Literal
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from collections.abc import Callable
+from typing import Literal
 
+import cv2
+from PySide6.QtCore import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
 
 def mat_to_pixmap(mat: cv2.Mat) -> QPixmap:
@@ -20,18 +21,16 @@ def mat_to_pixmap(mat: cv2.Mat) -> QPixmap:
     """
     height, width, channels = mat.shape
     bytes_per_line = channels * width
-    qimage = QImage(
-        mat.data, width, height, bytes_per_line, QImage.Format.Format_BGR888
-    )
-    pixmap = QPixmap.fromImage(qimage)
-    return pixmap
+    qimage = QImage(mat.data, width, height, bytes_per_line, QImage.Format.Format_BGR888)
+    return QPixmap.fromImage(qimage)
+
 
 def wait_until(
-        condition: Callable[[], bool], 
-        check_interval: int = 33,
-        timeout: Optional[int] = None,
-        timeout_handling: Literal["ignore", "raise"] = "raise"
-    ) -> bool:
+    condition: Callable[[], bool],
+    check_interval: int = 33,
+    timeout: int | None = None,
+    timeout_handling: Literal["ignore", "raise"] = "raise",
+) -> bool:
     """
     等待直到条件为真
 
@@ -45,6 +44,7 @@ def wait_until(
     timer = QTimer()
     loop = QEventLoop()
     result: bool = False
+
     def _check_if_done():
         nonlocal result
         if condition():
@@ -53,6 +53,7 @@ def wait_until(
         elif timeout is not None and time.time() - start_time > timeout / 1000:
             loop.quit()
             result = False
+
     timer.timeout.connect(_check_if_done)
     timer.start(check_interval)
     loop.exec()
@@ -60,4 +61,3 @@ def wait_until(
     if timeout_handling == "raise" and not result:
         raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} /{timeout} ms)")
     return result
-

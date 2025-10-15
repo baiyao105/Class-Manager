@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import sys
 import time
+from collections.abc import Callable
 from queue import Queue
-from typing import (TYPE_CHECKING, Callable, Any, Optional, Tuple)
+from typing import TYPE_CHECKING, Any
+
 from utils.algorithm import Thread
 from utils.basetypes import Base
+
 from ..objects.achievement import Achievement
 
-
 if TYPE_CHECKING:
-    from ..objects.student import Student
     from ..classobj import ClassObj
+    from ..objects.student import Student
 
 
 class AchievementStatusObserver:
@@ -21,7 +23,7 @@ class AchievementStatusObserver:
         self,
         base: ClassObj,
         class_key: str,
-        achievement_display: Optional[Callable[[str, Student], Any]] = None,
+        achievement_display: Callable[[str, Student], Any] | None = None,
         tps: int = 20,
     ):
         """
@@ -43,11 +45,9 @@ class AchievementStatusObserver:
         "成就模板（Dict[成就模板key, 成就模板]）"
         self.class_obs = base.class_obs
         "班级信息侦测器"
-        self.display_achievement_queue: Queue[Tuple[str, Student]] = Queue()
+        self.display_achievement_queue: Queue[tuple[str, Student]] = Queue()
         "成就显示队列"
-        self.achievement_displayer: Optional[Callable[[str, Student], Any]] = (
-            achievement_display
-        )
+        self.achievement_displayer: Callable[[str, Student], Any] | None = achievement_display
         "成就显示器，传参是一个成就模板的key和一个学生"
         self.class_obs = base.class_obs
         "班级信息侦测器"
@@ -63,7 +63,7 @@ class AchievementStatusObserver:
         """侦测器过载比例
 
         当一帧实际耗时大于 (1s/帧率)*过载比例 就视为过载，会减小侦测器tps
-        
+
         设置这个的目的是防止在处理过大数据的时候系统把时间花在计算成就上导致界面卡顿"""
         self.overloaded = False
         "侦测器是否过载"
@@ -82,15 +82,12 @@ class AchievementStatusObserver:
         self.overload_count = 0
         "过载帧数"
 
-    def next_frame(self, 
-                    recheck_achievement: bool = True,
-                    recheck_interval: float = 0.1,
-                    handle_overloading: bool = True
-                    ):
-
+    def next_frame(
+        self, recheck_achievement: bool = True, recheck_interval: float = 0.1, handle_overloading: bool = True
+    ):
         """
         下一帧
-        
+
         :param recheck_achievement: 是否需要重新检查成就
         :param recheck_interval: 重新检查成就的间隔
         :param handle_overloading: 是否需要处理过载
@@ -101,44 +98,29 @@ class AchievementStatusObserver:
         if time.time() - self.last_update > 1:
             self.last_update = time.time()
         if self.limited_tps:
-            time.sleep(
-                max((1 / self.limited_tps) - (time.time() - self.last_frame_time), 0)
-            )
+            time.sleep(max((1 / self.limited_tps) - (time.time() - self.last_frame_time), 0))
         self.last_frame_time = time.time()
         opreated = False
         # 性能优化点：O(n²)复杂度(?)
         for s in list(self.classes[self.class_id].students.values()):
-
             for a in list(self.achievement_templates.keys()):
-
-                if self.achievement_templates[a].achieved_by(
-                    s, self.class_obs
-                ) and (
+                if self.achievement_templates[a].achieved_by(s, self.class_obs) and (
                     self.achievement_templates[a].key
                     not in [  # 判断成就是否已经达成过
-                        a.temp.key
-                        for a in self.classes[self.class_id]
-                        .students[s.num]
-                        .achievements.values()
+                        a.temp.key for a in self.classes[self.class_id].students[s.num].achievements.values()
                     ]
                 ):
                     opreated = True
                     if recheck_achievement and recheck_interval > 0:
                         time.sleep(recheck_interval)  # 等待操作完成，避免竞态条件
-                    if self.achievement_templates[a].achieved_by(
-                        s, self.class_obs
-                    ) or not recheck_achievement:
+                    if self.achievement_templates[a].achieved_by(s, self.class_obs) or not recheck_achievement:
                         Base.log(
                             "I",
                             f"[{s.name}] 达成了成就 [{self.achievement_templates[a].name}]",
                         )
-                        a2 = Achievement(
-                            self.achievement_templates[a], s
-                        )
+                        a2 = Achievement(self.achievement_templates[a], s)
                         a2.give()
-                        self.display_achievement_queue.put(
-                            (a, s)
-                        )
+                        self.display_achievement_queue.put((a, s))
 
         cur_time = time.time()
         self.mspt = (cur_time - self.last_frame_time) * 1000
@@ -158,13 +140,9 @@ class AchievementStatusObserver:
             ):
                 # 刚才才开始过载并且已经开了有一段时间了
                 if handle_overloading:
-                    self.on_observer_overloaded(
-                        self.last_frame_time, last_opreate_time, self.mspt
-                    )
+                    self.on_observer_overloaded(self.last_frame_time, last_opreate_time, self.mspt)
             time.sleep((self.mspt * (1 / self.overload_ratio)) / 1000)
         self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
-
-    
 
     def on_observer_overloaded(
         self,
@@ -175,7 +153,7 @@ class AchievementStatusObserver:
         "侦测器过载时调用"
         Base.log(
             "W",
-            "侦测器过载，当前帧耗时：" f"{round(cur_mspt, 3)}" "ms, 将会适当减小tps",
+            f"侦测器过载，当前帧耗时：{round(cur_mspt, 3)}ms, 将会适当减小tps",
             "AchievementStatusObserver._start",
         )
 
@@ -183,16 +161,12 @@ class AchievementStatusObserver:
         "内部启动用函数"
         self.total_frame_count = 0
         self.on_active = True
-        t = Thread(
-            target=self._display_thread, name="DisplayAchievement", daemon=True
-        )
+        t = Thread(target=self._display_thread, name="DisplayAchievement", daemon=True)
         t.start()
         self.start_time = time.time()
         while self.on_active:
             self.next_frame()
         t.join()
-        
-
 
     def _display_thread(self):
         "显示成就的线程"
@@ -214,7 +188,6 @@ class AchievementStatusObserver:
         "启动侦测器"
         self.on_active = True
         Thread(target=self.run, name="AchievementStatusObserver", daemon=True).start()
-
 
     def stop(self):
         "停止侦测器"

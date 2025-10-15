@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
-from typing import (Literal, TYPE_CHECKING, Dict, Any, Optional)
-from ..classdataobj import ClassDataObj
-from ..basetype import ClassDataType
+from typing import TYPE_CHECKING, Any, Literal
+
 from utils.basetypes import Base
 
+from ..basetype import ClassDataType
+from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
-    from .student import Student
     from .achievementtemp import AchievementTemplate
+    from .student import Student
 
 
 class Achievement(ClassDataType):
@@ -26,6 +27,7 @@ class Achievement(ClassDataType):
         "创建一个空的成就实例"
         from .achievementtemp import AchievementTemplate
         from .student import Student
+
         return Achievement(
             AchievementTemplate.new_dummy(),
             Student.new_dummy(),
@@ -37,8 +39,8 @@ class Achievement(ClassDataType):
         self,
         template: AchievementTemplate,
         target: Student,
-        reach_time: Optional[str] = None,
-        reach_time_key: Optional[int] = None,
+        reach_time: str | None = None,
+        reach_time_key: int | None = None,
     ):
         """一个成就的实例。
 
@@ -62,8 +64,7 @@ class Achievement(ClassDataType):
         "发放成就"
         Base.log(
             "I",
-            f"发放成就：target={repr(self.target)}, "
-            f"time={repr(self.time)}, key={self.time_key}",
+            f"发放成就：target={self.target!r}, time={self.time!r}, key={self.time_key}",
         )
         self.target.achievements[self.time_key] = self
 
@@ -71,8 +72,7 @@ class Achievement(ClassDataType):
         "删除成就"
         Base.log(
             "I",
-            f"删除成就：target={repr(self.target)}, "
-            f"time={repr(self.time)}, key={self.time_key}",
+            f"删除成就：target={self.target!r}, time={self.time!r}, key={self.time_key}",
         )
         del self
 
@@ -96,11 +96,10 @@ class Achievement(ClassDataType):
         "从字符串加载成就对象。"
         from .achievementtemp import AchievementTemplate
         from .student import Student
-        d: Dict[str, Any] = json.loads(string)
+
+        d: dict[str, Any] = json.loads(string)
         if d["type"] != Achievement.chunk_type_name:
-            raise ValueError(
-                f"类型不匹配：{d['type']} != {Achievement.chunk_type_name}"
-            )
+            raise ValueError(f"类型不匹配：{d['type']} != {Achievement.chunk_type_name}")
         obj = Achievement(
             template=ClassDataObj.LoadUUID(d["template"], AchievementTemplate),
             target=ClassDataObj.LoadUUID(d["target"], Student),

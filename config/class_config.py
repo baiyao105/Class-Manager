@@ -112,19 +112,19 @@ class ClassConfig(BaseSettings):
     class_id: str = Field(description="班级ID")
     class_name: str = Field(description="班级名称")
     description: str | None = Field(default=None, description="班级描述")
-    
+
     # 班主任信息
     teacher_name: str = Field(description="班主任姓名")
     teacher_contact: str | None = Field(default=None, description="班主任联系方式")
-    
+
     # 班级设置
     max_students: int = Field(default=50, description="最大学生数量")
     class_type: str = Field(default="regular", description="班级类型")
-    
+
     # 学期信息
     academic_year: str = Field(default="2024-2025", description="学年")
     semester: int = Field(default=1, description="学期(1或2)")
-    
+
     # 班级状态
     is_active: bool = Field(default=True, description="是否活跃")
     start_date: str | None = Field(default=None, description="开始日期")
@@ -155,7 +155,7 @@ class ClassConfig(BaseSettings):
         if not file_path.exists():
             # 如果文件不存在，创建默认配置
             config = cls(
-                class_id=class_id, 
+                class_id=class_id,
                 class_name=f"班级_{class_id[:8]}",
                 teacher_name="未设置",
                 description="",
@@ -163,7 +163,7 @@ class ClassConfig(BaseSettings):
                 class_type="regular",
                 academic_year="2024-2025",
                 semester=1,
-                is_active=True
+                is_active=True,
             )
             config.save_to_file(file_path)
             return config
@@ -260,7 +260,7 @@ class ClassConfigManager:
             "academic_year": kwargs.get("academic_year", "2024-2025"),
             "semester": kwargs.get("semester", 1),
             "is_active": kwargs.get("is_active", True),
-            **kwargs
+            **kwargs,
         }
         config = ClassConfig(**config_data)
         config.save_to_file()

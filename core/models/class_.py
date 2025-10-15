@@ -26,7 +26,7 @@ class ClassType(str, Enum):
 
 class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     """子库班级表 - 存储班级业务数据
-    
+
     注意：班级基础信息(名称、班主任、描述等)已迁移到配置文件中
     此模型仅保留业务相关的数据库字段
 

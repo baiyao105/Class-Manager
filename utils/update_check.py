@@ -1,13 +1,16 @@
-from typing import Literal, Union, Dict, Tuple
-import requests
+import contextlib
+import enum
 import json
 import os
-import signal
-import zipfile
 import shutil
-from utils.basetypes import Base
+import signal
 import sys
-import enum
+import zipfile
+from typing import Literal
+
+import requests
+
+from utils.basetypes import Base
 
 sys.stdout = Base.captured_stdout
 sys.stderr = Base.captured_stderr
@@ -21,11 +24,7 @@ REPO_NAME = "Class-Manager"
 
 MASTER = "master"
 
-DOWNLOAD_URL = (
-    "https://gitee.com/api/v5/repos/{}/{}/zipball?access_token={}&ref={}".format(
-        AUTHOR, REPO_NAME, TOKEN, MASTER
-    )
-)
+DOWNLOAD_URL = f"https://gitee.com/api/v5/repos/{AUTHOR}/{REPO_NAME}/zipball?access_token={TOKEN}&ref={MASTER}"
 
 
 # 神秘的硬编码更新日志
@@ -131,7 +130,7 @@ CLIENT_UPDATE_LOG = {
 优化内容：
  - 优化了ListView侧边的按钮命令执行方式的逻辑
  - 优化了程序爆炸的错误显示
- 
+
 修复内容：
  - 修复了学生分数折线图打不开的问题
  - 修复了侧边栏按钮抽风的问题
@@ -147,7 +146,7 @@ CLIENT_UPDATE_LOG = {
 优化内容：
  - ListView的动画和事件处理
  - 代码逻辑
- 
+
 修复内容：
  - 暂无
 """,
@@ -181,7 +180,7 @@ CLIENT_UPDATE_LOG = {
 更新内容：
  - 按照班主任所说简化了我们的程序（代码结构上？）
  - 没有主要的大更新（你们记得告诉我要改什么）
- 
+
 优化内容：
  - 优化了按钮闪烁的动画（不过好像变得更卡了？？？）
  - 优化了学生分数折线图的绘制（用新模块）
@@ -189,7 +188,7 @@ CLIENT_UPDATE_LOG = {
  - 优化了学生名次列表的着色
  - 优化了paintEvent的处理
  - 优化了我的脑子
- 
+
 修复内容：
  - 修复了加载还原点窗口卡死的问题（因为现在还是会卡）
  - 修复了侧边栏通知过多时窗口动画卡住的问题
@@ -229,7 +228,7 @@ CLIENT_UPDATE_LOG = {
  - 在历史记录中会按照点评的分数对项目进行着色
  - 升级的方式（修改了升级用的脚本）
  - 优化了代码逻辑（这不废话么
- 
+
 修复内容：
  - 没有修复什么bug
  - 新增了114514个bug""",
@@ -302,7 +301,7 @@ CLIENT_UPDATE_LOG = {
 }
 
 
-CORE_UPDATE_LOG: Dict[int, str] = {
+CORE_UPDATE_LOG: dict[int, str] = {
     10106: """
 
 1.1.6（2025/3/29）更新日志：
@@ -334,7 +333,7 @@ bug修复：
  - 成就系统内部支持对上周信息的查询
  - 增加绘图类，支持绘制各种函数图像
  - 然后我自己都不记得更新了什么
- 
+
 bug修复：
  - 修复了多用户的接口（NCW狂喜）
  - 修复了撤回点评时历史最低分不能恢复的bug
@@ -347,7 +346,7 @@ bug修复：
 
 # 获取本地版本信息
 try:
-    VERSION_INFO = json.loads(open("version", "r", encoding="utf-8").read())
+    VERSION_INFO = json.loads(open("version", encoding="utf-8").read())
     CORE_VERSION = VERSION_INFO["core_version"]
     CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
     CLIENT_VERSION = VERSION_INFO["client_version"]
@@ -376,9 +375,7 @@ class UpdateInfo(enum.IntEnum):
     ERROR = 3
 
 
-def update_check(
-    current_core_version: int, current_gui_version: int
-) -> Tuple[int, Union[str, BaseException, dict]]:
+def update_check(current_core_version: int, current_gui_version: int) -> tuple[int, str | BaseException | dict]:
     """获取更新信息。
 
     Args:
@@ -397,18 +394,15 @@ def update_check(
         gui_version = data["client_version_code"]
         if core_version > current_core_version or gui_version > current_gui_version:
             return UpdateInfo.UPDATE_AVAILABLE, data
-        elif (
-            core_version == current_core_version and gui_version == current_gui_version
-        ):
+        if core_version == current_core_version and gui_version == current_gui_version:
             return UpdateInfo.NO_UPDATE, data
-        else:
-            return UpdateInfo.VERSION_IS_AHEAD, data
+        return UpdateInfo.VERSION_IS_AHEAD, data
 
     except Exception as e:
         return UpdateInfo.ERROR, e
 
 
-def get_update_zip(path: str = "update.zip") -> Union[Literal[True], Exception, dict]:
+def get_update_zip(path: str = "update.zip") -> Literal[True] | Exception | dict:
     """下载更新包"""
     try:
         response = requests.get(DOWNLOAD_URL)
@@ -422,10 +416,8 @@ def get_update_zip(path: str = "update.zip") -> Union[Literal[True], Exception, 
 
 def unzip_to_dir(path: str = "update.zip", dir: str = "update"):
     """解压更新包到指定目录"""
-    try:
+    with contextlib.suppress(FileNotFoundError):
         shutil.rmtree(dir)
-    except FileNotFoundError:
-        pass
     try:
         with zipfile.ZipFile(path, "r") as zip_ref:
             zip_ref.extractall(dir)
@@ -437,9 +429,7 @@ def unzip_to_dir(path: str = "update.zip", dir: str = "update"):
 def update(dir: str = "update"):
     """执行更新操作"""
     try:
-        shutil.copytree(
-            os.path.join(dir, f"{REPO_NAME}-{MASTER}"), os.getcwd(), dirs_exist_ok=True
-        )
+        shutil.copytree(os.path.join(dir, f"{REPO_NAME}-{MASTER}"), os.getcwd(), dirs_exist_ok=True)
 
     except Exception as e:
         print("更新失败，请手动更新")

@@ -1,58 +1,38 @@
 """
 默认数据。
 """
-import os
-import copy
-from math import inf
-from typing import Dict
 
-from ..objects import *
+import copy
+import os
+from math import inf
 
 from utils.algorithm import OrderedKeyList
 from utils.consts import sound_file_path
 
+from ..objects import *
+
 # 因为这个是最后一个导入的，所以要控制一下，不然会出现莫名其妙的未导入
 __all__ = [
+    "DEFAULT_ACHIEVEMENTS",
+    "DEFAULT_CLASSES",
     "DEFAULT_CLASS_KEY",
     "DEFAULT_SCORE_TEMPLATES",
-    "DEFAULT_CLASSES",
-    "DEFAULT_ACHIEVEMENTS",
 ]
 
 DEFAULT_CLASS_KEY = "CLASS_TEST"
 
 DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyList(
     [
-        ScoreModificationTemplate(
-            "go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃"
-        ),
-        ScoreModificationTemplate(
-            "go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"
-        ),
-        ScoreModificationTemplate(
-            "go_to_school_late_more", -2.0, "7:30后到校", "哥们为什么不睡死在家里？"
-        ),
-        ScoreModificationTemplate(
-            "Chinese_class_good", 2.0, "语文课堂表扬", "王の表扬"
-        ),
-        ScoreModificationTemplate(
-            "Chinese_class_bad", -2.0, "语文课堂批评", "霸道晶晶对你使用了锁定技！"
-        ),
-        ScoreModificationTemplate(
-            "Chinese_homework_best", 4.0, "语文作业A++", "全！体！起！立！！！"
-        ),
-        ScoreModificationTemplate(
-            "Chinese_homework_good", 2.0, "语文作业A+", " 噫！好！我中了！"
-        ),
-        ScoreModificationTemplate(
-            "Chinese_homework_normal", 0.0, "语文作业A", "这并不好笑"
-        ),
-        ScoreModificationTemplate(
-            "Chinese_homework_bad", -2.0, "语文作业B", "你感觉到前所未有的危机感"
-        ),
-        ScoreModificationTemplate(
-            "Chinese_homework_worst", -3.0, "语文作业C", '"留下来！"'
-        ),
+        ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃"),
+        ScoreModificationTemplate("go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
+        ScoreModificationTemplate("go_to_school_late_more", -2.0, "7:30后到校", "哥们为什么不睡死在家里？"),
+        ScoreModificationTemplate("Chinese_class_good", 2.0, "语文课堂表扬", "王の表扬"),
+        ScoreModificationTemplate("Chinese_class_bad", -2.0, "语文课堂批评", "霸道晶晶对你使用了锁定技！"),
+        ScoreModificationTemplate("Chinese_homework_best", 4.0, "语文作业A++", "全！体！起！立！！！"),
+        ScoreModificationTemplate("Chinese_homework_good", 2.0, "语文作业A+", " 噫！好！我中了！"),
+        ScoreModificationTemplate("Chinese_homework_normal", 0.0, "语文作业A", "这并不好笑"),
+        ScoreModificationTemplate("Chinese_homework_bad", -2.0, "语文作业B", "你感觉到前所未有的危机感"),
+        ScoreModificationTemplate("Chinese_homework_worst", -3.0, "语文作业C", '"留下来！"'),
         ScoreModificationTemplate(
             "Chinese_homework_missing",
             -4.0,
@@ -61,18 +41,14 @@ DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyL
         ),
         ScoreModificationTemplate("math_class_good", 2.0, "数学课堂表扬", "坤之嘉奖"),
         ScoreModificationTemplate("math_class_bad", -2.0, "数学课堂批评", "坤哥发飙"),
-        ScoreModificationTemplate(
-            "math_homework_good", 2.0, "数学作业100", "热知识：0.1+0.2=0.3"
-        ),
+        ScoreModificationTemplate("math_homework_good", 2.0, "数学作业100", "热知识：0.1+0.2=0.3"),
         ScoreModificationTemplate(
             "math_homework_bad",
             -2.0,
             "数学作业缺交/未写",
             "冷知识：0.1+0.2=0.30000000000000004",
         ),
-        ScoreModificationTemplate(
-            "English_reading_good", 2.0, "英语背诵提前完成", "难道你不是临时背的？"
-        ),
+        ScoreModificationTemplate("English_reading_good", 2.0, "英语背诵提前完成", "难道你不是临时背的？"),
         ScoreModificationTemplate(
             "English_reading_last_for_week",
             -20.0,
@@ -80,15 +56,9 @@ DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyL
             "孩子，该去背你的2b了！",
         ),  # 扣20分？！！这合理吗...
         ScoreModificationTemplate("English_class_good", 2.0, "英语课堂表扬", "English"),
-        ScoreModificationTemplate(
-            "English_class_bad", -2.0, "英语课堂批评", "E那个历史"
-        ),
-        ScoreModificationTemplate(
-            "English_homework_best", 4.0, "英语作业A++", "OHHHHHHHHHHHHHH"
-        ),
-        ScoreModificationTemplate(
-            "English_homework_good", 2.0, "英语作业A+", "Pass（赏析在此处的文学效果）"
-        ),
+        ScoreModificationTemplate("English_class_bad", -2.0, "英语课堂批评", "E那个历史"),
+        ScoreModificationTemplate("English_homework_best", 4.0, "英语作业A++", "OHHHHHHHHHHHHHH"),
+        ScoreModificationTemplate("English_homework_good", 2.0, "英语作业A+", "Pass（赏析在此处的文学效果）"),
         ScoreModificationTemplate(
             "English_homework_normal",
             0.0,
@@ -96,66 +66,42 @@ DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyL
             "没用小寄巧：多写笔记能提升等第",
         ),
         ScoreModificationTemplate("English_homework_bad", -2.0, "英语作业B", "Bruh"),
-        ScoreModificationTemplate(
-            "English_homework_worst", -3.0, "英语作业C", "Cinema（音译）"
-        ),
+        ScoreModificationTemplate("English_homework_worst", -3.0, "英语作业C", "Cinema（音译）"),
         ScoreModificationTemplate(
             "English_homework_missing",
             -4.0,
             "英语作业未完成",
             "孩子，该去写你的英语作业了！",
         ),
-        ScoreModificationTemplate(
-            "physics_homework_best", 4.0, "物理作业A++", '"这不有手就行吗？"'
-        ),
-        ScoreModificationTemplate(
-            "physics_homework_better", 3.0, "物理作业A+", '"这不有手就行吗？"'
-        ),
+        ScoreModificationTemplate("physics_homework_best", 4.0, "物理作业A++", '"这不有手就行吗？"'),
+        ScoreModificationTemplate("physics_homework_better", 3.0, "物理作业A+", '"这不有手就行吗？"'),
         ScoreModificationTemplate(
             "physics_homework_good",
             2.0,
             "物理作业A",
             "烫知识：物理是唯一一名A也加分的学科",
         ),
-        ScoreModificationTemplate(
-            "physics_homework_little_good", 1.0, "物理作业A-", "够仁慈了吧A-也加分"
-        ),
-        ScoreModificationTemplate(
-            "physics_homework_normal", 0.0, "物理作业B+", "孩子你很危险"
-        ),
-        ScoreModificationTemplate(
-            "physics_homework_bad", -2.0, "物理作业B", "死了啦都你害的啦"
-        ),
-        ScoreModificationTemplate(
-            "physics_homework_worst", -3.0, "物理作业C", "小心刘老师用p=F/S压缩你"
-        ),
+        ScoreModificationTemplate("physics_homework_little_good", 1.0, "物理作业A-", "够仁慈了吧A-也加分"),
+        ScoreModificationTemplate("physics_homework_normal", 0.0, "物理作业B+", "孩子你很危险"),
+        ScoreModificationTemplate("physics_homework_bad", -2.0, "物理作业B", "死了啦都你害的啦"),
+        ScoreModificationTemplate("physics_homework_worst", -3.0, "物理作业C", "小心刘老师用p=F/S压缩你"),
         ScoreModificationTemplate(
             "physics_homework_missing",
             -4.0,
             "物理作业未完成",
             "孩子，该去写你的物理作业了！",
         ),
-        ScoreModificationTemplate(
-            "physics_class_good", 2.0, "物理课堂表扬", "不知道填什么，如题吧"
-        ),
-        ScoreModificationTemplate(
-            "physics_class_bad", -2.0, "物理课堂批评", "秉公执法（bushi）"
-        ),
-        ScoreModificationTemplate(
-            "history_homework_good", 2.0, "历史作业A+", '"黄玲老师怎么突然变这么好？"'
-        ),
-        ScoreModificationTemplate(
-            "history_homework_normal", 0.0, "历史作业A", "中规中矩，但容易趋势"
-        ),
+        ScoreModificationTemplate("physics_class_good", 2.0, "物理课堂表扬", "不知道填什么，如题吧"),
+        ScoreModificationTemplate("physics_class_bad", -2.0, "物理课堂批评", "秉公执法（bushi）"),
+        ScoreModificationTemplate("history_homework_good", 2.0, "历史作业A+", '"黄玲老师怎么突然变这么好？"'),
+        ScoreModificationTemplate("history_homework_normal", 0.0, "历史作业A", "中规中矩，但容易趋势"),
         ScoreModificationTemplate(
             "history_homework_little_bad",
             -1.0,
             "历史作业A-",
             "黄玲老师怎么突然变这么__？",
         ),
-        ScoreModificationTemplate(
-            "history_homework_bad", -2.0, "历史作业B", "路易十六快乐台"
-        ),
+        ScoreModificationTemplate("history_homework_bad", -2.0, "历史作业B", "路易十六快乐台"),
         ScoreModificationTemplate(
             "history_homework_worst",
             -3.0,
@@ -168,30 +114,18 @@ DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyL
             "历史作业未完成",
             "你获得了<历史>星神的凝视！（*脖子发凉*）",
         ),
-        ScoreModificationTemplate(
-            "history_class_good", 2.0, "历史课堂表扬", "孩子，你有至高无上的勇气"
-        ),
-        ScoreModificationTemplate(
-            "history_class_bad", -2.0, "历史课堂批评", '"生命因何而沉睡？"'
-        ),
-        ScoreModificationTemplate(
-            "biology_class_good", 2.0, "生物课堂表扬", "获得成就：我从哪里来？"
-        ),
-        ScoreModificationTemplate(
-            "biology_class_bad", 2.0, "生物课堂批评", "获得成就：亲身见到达尔文"
-        ),
-        ScoreModificationTemplate(
-            "biology_homework_good", 2.0, "生物作业A+", "所以我们得到这两种性状是1:31"
-        ),
+        ScoreModificationTemplate("history_class_good", 2.0, "历史课堂表扬", "孩子，你有至高无上的勇气"),
+        ScoreModificationTemplate("history_class_bad", -2.0, "历史课堂批评", '"生命因何而沉睡？"'),
+        ScoreModificationTemplate("biology_class_good", 2.0, "生物课堂表扬", "获得成就：我从哪里来？"),
+        ScoreModificationTemplate("biology_class_bad", 2.0, "生物课堂批评", "获得成就：亲身见到达尔文"),
+        ScoreModificationTemplate("biology_homework_good", 2.0, "生物作业A+", "所以我们得到这两种性状是1:31"),
         ScoreModificationTemplate(
             "biology_homework_bad",
             -2.0,
             "生物作业缺交/不合格",
             "所以我们得到做对题目的概率是1:31",
         ),
-        ScoreModificationTemplate(
-            "geography_class_good", 2.0, "地理课堂表扬", "死去的回忆又开始攻击我"
-        ),
+        ScoreModificationTemplate("geography_class_good", 2.0, "地理课堂表扬", "死去的回忆又开始攻击我"),
         ScoreModificationTemplate(
             "geography_class_bad",
             -2.0,
@@ -210,74 +144,34 @@ DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyL
             "地理作业缺交/不合格",
             "地理老师开着房车马上就到你家门口",
         ),
-        ScoreModificationTemplate(
-            "chemistry_class_good", 2.0, "化学课堂表扬", "高锰酸钾制氧气"
-        ),
-        ScoreModificationTemplate(
-            "chemistry_class_bad", -2.0, "化学课堂批评", "高锰酸钾加白糖"
-        ),
-        ScoreModificationTemplate(
-            "chemistry_homework_good", -2.0, "化学作业100", "错误示范：用火柴点燃酒精灯"
-        ),
+        ScoreModificationTemplate("chemistry_class_good", 2.0, "化学课堂表扬", "高锰酸钾制氧气"),
+        ScoreModificationTemplate("chemistry_class_bad", -2.0, "化学课堂批评", "高锰酸钾加白糖"),
+        ScoreModificationTemplate("chemistry_homework_good", -2.0, "化学作业100", "错误示范：用火柴点燃酒精灯"),
         ScoreModificationTemplate(
             "chemistry_homework_bad",
             -4.0,
             "化学作业缺交/不合格",
             "正确示范：用酒精灯点燃化学老师",
         ),
-        ScoreModificationTemplate(
-            "laws_homework_best", 4.0, "道法作业A++", "能抓好老鼠的就是好猫"
-        ),
-        ScoreModificationTemplate(
-            "laws_homework_good", 2.0, "道法作业A+", "能抓老鼠的就是好猫"
-        ),
-        ScoreModificationTemplate(
-            "laws_homework_normal", 0.0, "道法作业A", "能抓老鼠的就是猫"
-        ),  # 为什么是laws？？
-        ScoreModificationTemplate(
-            "laws_homework_bad", -2.0, "道法作业B", "不换思想就换人"
-        ),
-        ScoreModificationTemplate(
-            "laws_homework_worst", -3.0, "道法作业C", '"遵纪守法"好公民'
-        ),
-        ScoreModificationTemplate(
-            "laws_homework_missing", -4.0, "道法作业缺交", "发逐出境"
-        ),
-        ScoreModificationTemplate(
-            "laws_class_best", 2.0, "道法课堂回答问题表扬", "遵纪守法好公民"
-        ),
-        ScoreModificationTemplate(
-            "laws_class_good", 1.0, "道法课堂回答问题参与奖", "（赞美太阳）"
-        ),
+        ScoreModificationTemplate("laws_homework_best", 4.0, "道法作业A++", "能抓好老鼠的就是好猫"),
+        ScoreModificationTemplate("laws_homework_good", 2.0, "道法作业A+", "能抓老鼠的就是好猫"),
+        ScoreModificationTemplate("laws_homework_normal", 0.0, "道法作业A", "能抓老鼠的就是猫"),  # 为什么是laws？？
+        ScoreModificationTemplate("laws_homework_bad", -2.0, "道法作业B", "不换思想就换人"),
+        ScoreModificationTemplate("laws_homework_worst", -3.0, "道法作业C", '"遵纪守法"好公民'),
+        ScoreModificationTemplate("laws_homework_missing", -4.0, "道法作业缺交", "发逐出境"),
+        ScoreModificationTemplate("laws_class_best", 2.0, "道法课堂回答问题表扬", "遵纪守法好公民"),
+        ScoreModificationTemplate("laws_class_good", 1.0, "道法课堂回答问题参与奖", "（赞美太阳）"),
         ScoreModificationTemplate("laws_class_bad", -2.0, "道法课堂批评", "缺德与犯法"),
-        ScoreModificationTemplate(
-            "attendance_bad", -1.0, "考勤待改进", "please思考你的人生"
-        ),
-        ScoreModificationTemplate(
-            "wearing_bad", -1.0, "着装待改进", "cjsy的校服我爱死你个呜呜伯"
-        ),
+        ScoreModificationTemplate("attendance_bad", -1.0, "考勤待改进", "please思考你的人生"),
+        ScoreModificationTemplate("wearing_bad", -1.0, "着装待改进", "cjsy的校服我爱死你个呜呜伯"),
         ScoreModificationTemplate("reading_good", 2.0, "朗读表扬", "扩音器转世认证"),
-        ScoreModificationTemplate(
-            "reading_bad", -2.0, "朗读批评", "不会开口的话建议学一下手语"
-        ),
-        ScoreModificationTemplate(
-            "eye_exercise_bad", -1.0, "眼操批评", "近视：亻尔 女子"
-        ),
-        ScoreModificationTemplate(
-            "eye_exercise_good", 1.0, "眼操表扬", "近视：亻尔 女马"
-        ),
-        ScoreModificationTemplate(
-            "exercise_bad", -2.0, "大课间批评", "文明其体魄野蛮其精神"
-        ),
-        ScoreModificationTemplate(
-            "exercise_good", 2.0, "大课间表扬", "文明其精神野蛮其体魄"
-        ),
-        ScoreModificationTemplate(
-            "school_life_bad", -2.0, "校园纪律批评", "我也不知道你干了啥"
-        ),
-        ScoreModificationTemplate(
-            "seriously_criticized", -5.0, "严重批评", '"你，给我出去！"'
-        ),
+        ScoreModificationTemplate("reading_bad", -2.0, "朗读批评", "不会开口的话建议学一下手语"),
+        ScoreModificationTemplate("eye_exercise_bad", -1.0, "眼操批评", "近视：亻尔 女子"),
+        ScoreModificationTemplate("eye_exercise_good", 1.0, "眼操表扬", "近视：亻尔 女马"),
+        ScoreModificationTemplate("exercise_bad", -2.0, "大课间批评", "文明其体魄野蛮其精神"),
+        ScoreModificationTemplate("exercise_good", 2.0, "大课间表扬", "文明其精神野蛮其体魄"),
+        ScoreModificationTemplate("school_life_bad", -2.0, "校园纪律批评", "我也不知道你干了啥"),
+        ScoreModificationTemplate("seriously_criticized", -5.0, "严重批评", '"你，给我出去！"'),
         ScoreModificationTemplate(
             "cleaning_5.0_leader",
             4.0,
@@ -824,9 +718,7 @@ DEFAULT_CLASSES: OrderedKeyList[Class] = OrderedKeyList(
                         "A+": DEFAULT_SCORE_TEMPLATES["Chinese_homework_good"],
                         "A": DEFAULT_SCORE_TEMPLATES["Chinese_homework_normal"],
                         "B": DEFAULT_SCORE_TEMPLATES["Chinese_homework_bad"],
-                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES[
-                            "Chinese_homework_worst"
-                        ],
+                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES["Chinese_homework_worst"],
                     },
                 ),
                 "math": HomeworkRule(
@@ -835,9 +727,7 @@ DEFAULT_CLASSES: OrderedKeyList[Class] = OrderedKeyList(
                     "创建者",
                     {
                         "100": DEFAULT_SCORE_TEMPLATES["math_homework_good"],
-                        "不合格/缺交/未写": DEFAULT_SCORE_TEMPLATES[
-                            "math_homework_bad"
-                        ],
+                        "不合格/缺交/未写": DEFAULT_SCORE_TEMPLATES["math_homework_bad"],
                     },
                 ),
                 "English": HomeworkRule(
@@ -849,9 +739,7 @@ DEFAULT_CLASSES: OrderedKeyList[Class] = OrderedKeyList(
                         "A+": DEFAULT_SCORE_TEMPLATES["English_homework_good"],
                         "A": DEFAULT_SCORE_TEMPLATES["English_homework_normal"],
                         "B": DEFAULT_SCORE_TEMPLATES["English_homework_bad"],
-                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES[
-                            "English_homework_worst"
-                        ],
+                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES["English_homework_worst"],
                     },
                 ),
                 "physics": HomeworkRule(
@@ -865,9 +753,7 @@ DEFAULT_CLASSES: OrderedKeyList[Class] = OrderedKeyList(
                         "A-": DEFAULT_SCORE_TEMPLATES["physics_homework_little_good"],
                         "B+": DEFAULT_SCORE_TEMPLATES["physics_homework_normal"],
                         "B": DEFAULT_SCORE_TEMPLATES["physics_homework_bad"],
-                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES[
-                            "physics_homework_worst"
-                        ],
+                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES["physics_homework_worst"],
                     },
                 ),
                 "chemistry": HomeworkRule(
@@ -876,9 +762,7 @@ DEFAULT_CLASSES: OrderedKeyList[Class] = OrderedKeyList(
                     "创建者",
                     {
                         "100": DEFAULT_SCORE_TEMPLATES["chemistry_homework_good"],
-                        "不合格/缺交/未写": DEFAULT_SCORE_TEMPLATES[
-                            "chemistry_homework_bad"
-                        ],
+                        "不合格/缺交/未写": DEFAULT_SCORE_TEMPLATES["chemistry_homework_bad"],
                     },
                 ),
                 "politics": HomeworkRule(
@@ -899,9 +783,7 @@ DEFAULT_CLASSES: OrderedKeyList[Class] = OrderedKeyList(
                         "A+": DEFAULT_SCORE_TEMPLATES["history_homework_good"],
                         "A": DEFAULT_SCORE_TEMPLATES["history_homework_normal"],
                         "B": DEFAULT_SCORE_TEMPLATES["history_homework_bad"],
-                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES[
-                            "history_homework_worst"
-                        ],
+                        "C/缺交/未写": DEFAULT_SCORE_TEMPLATES["history_homework_worst"],
                     },
                 ),
             },
@@ -1028,8 +910,8 @@ DEFAULT_CLASSES["CLASS_TEST"].groups = {
             DEFAULT_CLASSES["CLASS_TEST"].students[32],
         ],
         "CLASS_TEST",
-        """对团员十分包容 比如包容肘晋吃垃圾 这件事只有我们团知道😉✌ 
-团长十分善良美丽大方 特别表扬团员鸭爱 也十分的善良温柔大方 
+        """对团员十分包容 比如包容肘晋吃垃圾 这件事只有我们团知道😉✌
+团长十分善良美丽大方 特别表扬团员鸭爱 也十分的善良温柔大方
 对文鸡进行批评 因为他一点都不大方 不给鸭爱和美丽的团长安鸡讲题 必须大大的批评 体现了团长憎恶分明 公平正直
 还有我们十分活泼可爱的艾吃鸡""",
     ),
@@ -1097,7 +979,7 @@ DEFAULT_CLASSES["CLASS_TEST"].groups = {
 "默认小组"
 
 
-DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
+DEFAULT_ACHIEVEMENTS: dict[str, AchievementTemplate] = {
     "beyond_life_and_death": AchievementTemplate(
         "beyond_life_and_death",
         "超越生死",
@@ -1155,10 +1037,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         score_range=(-5, 5),
         highest_score_range=(0, 5),
         lowest_score_range=(-5, 0),
-        others=lambda d: len(
-            [history for history in d.student.history.values() if history.executed]
-        )
-        >= 10,
+        others=lambda d: len([history for history in d.student.history.values() if history.executed]) >= 10,
         condition_info="在接受超过10次点评的情况下分数始终在-5到5之间",
         further_info="""我有种不祥的预感""",
     ),
@@ -1169,10 +1048,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         score_range=(-5, 5),
         highest_score_range=(0, 5),
         lowest_score_range=(-5, 0),
-        others=lambda d: len(
-            [history for history in d.student.history.values() if history.executed]
-        )
-        >= 15,
+        others=lambda d: len([history for history in d.student.history.values() if history.executed]) >= 15,
         condition_info="在接受超过15次点评的情况下分数始终在-5到5之间",
         further_info="""丸辣，这周又是0分""",
     ),
@@ -1181,8 +1057,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "终极奉献",
         "你所在的小组应该感谢你的",
         score_range=(30, inf),
-        others=lambda d: d.student.score
-        >= d.student.get_group(d.class_obs).total_score * 0.5,
+        others=lambda d: d.student.score >= d.student.get_group(d.class_obs).total_score * 0.5,
         condition_info="分数>=30，且分数大于全团的一半",
         further_info="""\"包带飞的！\"\n\"黑子说话！\"""",
     ),
@@ -1208,12 +1083,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "exercise_good",
         "身强体健",
         "计算题：我们一周需要跑多少米",
-        others=lambda data: sum(
-            s.mod
-            for s in data.student.history.values()
-            if s.temp.key == "exercise_good"
-        )
-        >= 15,
+        others=lambda data: sum(s.mod for s in data.student.history.values() if s.temp.key == "exercise_good") >= 15,
         modify_key_range=("exercise_good", 5, inf),
         condition_info="一周大课间的得分>=15且表扬次数>=5",
         further_info="下次物资搬运就找你了",
@@ -1222,10 +1092,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "exercise_bad",
         "身弱体衰",
         "计算题：你一周可以偷懒多少米",
-        others=lambda data: sum(
-            s.mod for s in data.student.history.values() if s.temp.key == "exercise_bad"
-        )
-        <= -3,
+        others=lambda data: sum(s.mod for s in data.student.history.values() if s.temp.key == "exercise_bad") <= -3,
         modify_key_range=("exercise_bad", 2, inf),
         condition_info="一周大课间的扣分>=3且批评次数>=2",
         further_info="下次物资搬运就别找你了",
@@ -1271,8 +1138,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "佛跳墙实在是太好吃啦",
         num_equals=[14],
         condition_info="成为这个工具的开发者",
-        further_info="问ChatGPT怎么写代码，ChatGPT：佛跳墙，佛跳墙（由AI生成）\n"
-        "（真的是AI自己写的吗？）",
+        further_info="问ChatGPT怎么写代码，ChatGPT：佛跳墙，佛跳墙（由AI生成）\n（真的是AI自己写的吗？）",
     ),
     "mascot_normaltype": AchievementTemplate(
         "mascot_normaltype",
@@ -1289,10 +1155,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         num_equals=[41],
         condition_info="成为这个工具的开发者\n（文学创作也算开发吧）",
         further_info=(
-            "特别鸣谢：语文老师\n"
-            "（7：尝试分析这句话的多重意蕴）\n"
-            "（...）\n"
-            "（出现异常：java.lang.NullPointerException）"
+            "特别鸣谢：语文老师\n（7：尝试分析这句话的多重意蕴）\n（...）\n（出现异常：java.lang.NullPointerException）"
         ),
     ),
     "finally_returns": AchievementTemplate(
@@ -1300,8 +1163,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "回归原点",
         "所以这周我干了啥？",
         condition_info="努力了一周分数还是0",
-        further_info="忙活了一周，终于把自己忙活死了\n"
-        "（说实话这是我最有自信能拿到的成就）",
+        further_info="忙活了一周，终于把自己忙活死了\n（说实话这是我最有自信能拿到的成就）",
         others=[
             lambda data: data.student.last_reset_info.score == 0,
             lambda data: data.student.last_reset_info.highest_score != 0
@@ -1336,18 +1198,11 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         score_range=(40, inf),
         others=[
             lambda d: sorted(
-                [
-                    g.total_score
-                    for g in d.groups.values()
-                    if g.belongs_to == d.student.belongs_to
-                ],
+                [g.total_score for g in d.groups.values() if g.belongs_to == d.student.belongs_to],
                 reverse=True,
             )[min(len(d.groups) - 1, 3)]
             <= d.student.get_group(d.class_obs).total_score,
-            lambda d: len(
-                [s for s in d.student.get_group(d.class_obs).members if s.score < 0]
-            )
-            >= 2,
+            lambda d: len([s for s in d.student.get_group(d.class_obs).members if s.score < 0]) >= 2,
         ],
     ),
     "the_real_center": AchievementTemplate(
@@ -1356,10 +1211,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "全团的中心！",
         condition_info="本人分数四舍五入刚好等于团均分",
         score_range=[(5, inf), (-inf, -5)],
-        others=[
-            lambda d: round(d.student.score)
-            == round(d.student.get_group(d.class_obs).average_score)
-        ],
+        others=[lambda d: round(d.student.score) == round(d.student.get_group(d.class_obs).average_score)],
     ),
     "chosen_one": AchievementTemplate(
         "chosen_one",
@@ -1367,10 +1219,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "这东西真就是随机给的",
         condition_info="每周随机选一个人给",
         further_info="幸运，但没用",
-        others=[
-            lambda d: d.student.num
-            == int(d.class_obs.base.last_reset) % len(d.class_obs.target_class.students)
-        ],
+        others=[lambda d: d.student.num == int(d.class_obs.base.last_reset) % len(d.class_obs.target_class.students)],
     ),
     "interrupts_cast": AchievementTemplate(
         "interrupts_cast",
@@ -1379,11 +1228,8 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         condition_info='在得到了"极限闪避"之后被扣分',
         further_info="See you again",
         others=[
-            lambda d: any(
-                [m.mod < 0 for m in d.student.history.values() if m.executed]
-            ),
-            lambda d: "extremal_dodge"
-            in [a.temp.key for a in d.student.achievements.values()],
+            lambda d: any([m.mod < 0 for m in d.student.history.values() if m.executed]),
+            lambda d: "extremal_dodge" in [a.temp.key for a in d.student.achievements.values()],
         ],
     ),
     "interrupts_cast_2": AchievementTemplate(
@@ -1393,11 +1239,8 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         condition_info='在得到了"极限闪避 - 进阶"之后被扣分',
         further_info="啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊",
         others=[
-            lambda d: any(
-                [m.mod < 0 for m in d.student.history.values() if m.executed]
-            ),
-            lambda d: "extremal_dodge_2"
-            in [a.temp.key for a in d.student.achievements.values()],
+            lambda d: any([m.mod < 0 for m in d.student.history.values() if m.executed]),
+            lambda d: "extremal_dodge_2" in [a.temp.key for a in d.student.achievements.values()],
         ],
     ),
     "without_backward": AchievementTemplate(
@@ -1407,9 +1250,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         condition_info="扣分次数>10, 但分数仍>10",
         score_range=(10, inf),
         further_info="小伤而已",
-        others=[
-            lambda d: len([m for m in d.student.history.values() if m.mod < 0]) > 10
-        ],
+        others=[lambda d: len([m for m in d.student.history.values() if m.mod < 0]) > 10],
     ),
     "turned_back": AchievementTemplate(
         "turned_back",
@@ -1426,10 +1267,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "至于你干啥了就不得而知了",
         condition_info='被"严肃批评"一次',
         further_info="无限制格斗（雾",
-        others=[
-            lambda d: "seriously_criticized"
-            in [a.temp.key for a in d.student.achievements.values()]
-        ],
+        others=[lambda d: "seriously_criticized" in [a.temp.key for a in d.student.achievements.values()]],
     ),
     # 这个key值也是非常直白啊
     "breaking_upscore": AchievementTemplate(
@@ -1438,10 +1276,7 @@ DEFAULT_ACHIEVEMENTS: Dict[str, AchievementTemplate] = {
         "booooooooom",
         condition_info="一次加分15分",
         further_info="你真棒",
-        others=[
-            lambda d: len(d.student.history.values()) > 0
-            and list(d.student.history.values())[-1].mod >= 15
-        ],
+        others=[lambda d: len(d.student.history.values()) > 0 and list(d.student.history.values())[-1].mod >= 15],
     ),
     "stone_age": AchievementTemplate(
         "stone_age",

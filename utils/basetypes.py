@@ -2,31 +2,25 @@
 基本类型
 """
 
-import os
-import sys
-import time
-import random
-import psutil
-import threading
-import ctypes
 import copy
+import ctypes
+import os
+import random
+import sys
+import threading
+import time
+
+import psutil
 
 from .logger import Logger
 
+__all__ = ["Base", "DataObject", "ModifyingError", "Object", "stderr_orig", "stdout_orig"]
 
-
-__all__ = [
-    "ModifyingError",
-    "DataObject",
-    "Object",
-    "Base",
-    "stdout_orig",
-    "stderr_orig"
-]
 
 def gen_uuid(length: int = 32) -> str:
     "生成一个长32位的uuid"
     return "".join([str(random.choice("0123456789abcdef")) for _ in range(length)])
+
 
 os.makedirs(os.path.abspath("log"), exist_ok=True)
 
@@ -38,8 +32,7 @@ class ModifyingError(Exception):
     "修改出现错误。"
 
 
-class DataObject(object):
-
+class DataObject:
     def copy(self):
         "给自己复制一次，两个对象不会互相影响"
         return copy.deepcopy(self)
@@ -59,7 +52,7 @@ class Object(DataObject):
     @property
     def uuid(self):
         "获取对象的UUID"
-        if not hasattr(self, "_uuid") or not getattr(self, "_uuid"):
+        if not hasattr(self, "_uuid") or not self._uuid:
             self._uuid = gen_uuid()
 
         return self._uuid
@@ -81,9 +74,7 @@ class Object(DataObject):
 class Base(Logger, Object):
     "工具基层"
 
-    thread_id = int(
-        ctypes.CFUNCTYPE(ctypes.c_long)(ctypes.pythonapi.PyThread_get_thread_ident)()
-    )
+    thread_id = int(ctypes.CFUNCTYPE(ctypes.c_long)(ctypes.pythonapi.PyThread_get_thread_ident)())
     # 一种很神奇的获取pid方法
     "当前进程的pid"
     thread_name = threading.current_thread().name
@@ -107,9 +98,10 @@ class Base(Logger, Object):
         return (
             f"{lt.tm_year}-{lt.tm_mon:02}-{lt.tm_mday:02} "
             + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
-            + f".{int((time.time()%1)*1000):03}"
+            + f".{int((time.time() % 1) * 1000):03}"
         )
-    
+
+
 class SysMemTracer:
     "系统内存追踪器"
 
@@ -145,11 +137,10 @@ class SysMemTracer:
         self._running = True
         self._thread = threading.Thread(target=self._trace, name=f"SysMemTracer_{id(self):x}")
         self._thread.start()
-    
+
     def stop(self):
         "停止追踪"
         self._running = False
-
 
     def _trace(self):
         "追踪"
@@ -172,4 +163,3 @@ sys.stderr = Base.captured_stderr
 
 if __name__ == "__main__":
     print("你闲的没事跑这玩意干啥")
-
