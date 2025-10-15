@@ -1,6 +1,7 @@
 
-from .multi_test import main as multi_test_main
+from .multi_test import ClassObjectMultiTest
 
 
-def main():
-    multi_test_main()
+__all__ = [
+    "ClassObjectMultiTest",
+]

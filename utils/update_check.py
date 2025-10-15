@@ -1,4 +1,4 @@
-from typing import Literal, Union, Dict, Tuple
+from typing import Literal, Union, Dict, Tuple, Any
 import requests
 import json
 import os
@@ -353,8 +353,8 @@ try:
     CLIENT_VERSION = VERSION_INFO["client_version"]
     CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
 except Exception:
-    print("警告：获取本地版本信息失败")
-    VERSION_INFO = {
+    Base.log("W", "警告：获取本地版本信息失败", "update_check")
+    VERSION_INFO: Dict[str, Any] = {
         "core_version": "unknown",
         "core_version_code": 0,
         "client_version": "unknown",
@@ -442,16 +442,15 @@ def update(dir: str = "update"):
         )
 
     except Exception as e:
-        print("更新失败，请手动更新")
-        print(f"错误：[{e.__class__.__name__}] {e}")
+        Base.log_exc("更新失败，请手动更新", "update_check.update")
         raise
     finally:
         try:
             os.remove("update.zip")
-            print("删除源文件，准备趋势")
+            Base.log("I", "更新包删除成功", "update_check.update")
             shutil.rmtree(dir)
         except Exception as e:
-            print("警告：更新包删除失败")
-            print(f"[{e.__class__.__name__}] {e}")
-    print("更新完成，趋势")
+            Base.log_exc("更新包删除失败", "update_check.update", "W")
+            
+    Base.log("I", "更新成功，趋势", "update_check.update")
     os.kill(os.getpid(), signal.SIGTERM)

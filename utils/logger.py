@@ -231,9 +231,9 @@ class                                                                           
                 buffering=1,
             )
 
-    console_log_queue = Queue()
+    console_log_queue: Queue[str] = Queue()
     "控制台日志队列"
-    logfile_log_queue = Queue()
+    logfile_log_queue: Queue[str] = Queue()
     "日志文件日志队列"
     log_file_keepcount = 20
     "日志文件保留数量"
@@ -294,13 +294,19 @@ class                                                                           
                     lineno = 0
                     caller_frame = frame
                 else:
-                    file = frame.f_back.f_code.co_filename.replace(cwd, "")
+                    if frame.f_back:
+                        file = frame.f_back.f_code.co_filename.replace(cwd, "")
+                    else:
+                        file = "<unknown>"
                     if file == "<string>":
                         lineno = 0
                     if file.startswith(("/", "\\")):
                         file = file[1:]
                     frame = inspect.currentframe()
-                    caller_frame = frame.f_back
+                    if frame:
+                        caller_frame = frame.f_back
+                    else:
+                        caller_frame = None
                 log_level = {
                     "I": "INFO",
                     "W": "WARNING",
@@ -310,9 +316,15 @@ class                                                                           
                     "D": "DEBUG",
                 }.get(msg_type, "INFO")
 
-                filename = caller_frame.f_code.co_filename
-                file_basename = os.path.basename(filename)
-                lineno = caller_frame.f_lineno
+                if caller_frame:
+                    filename = caller_frame.f_code.co_filename
+                    file_basename = os.path.basename(filename)
+                    lineno = caller_frame.f_lineno
+                else:
+                    filename = "<unknown>"
+                    file_basename = "<unknown>"
+                    lineno = 0
+
                 logger.bind(
                     file=file_basename,
                     source=source,
@@ -365,12 +377,16 @@ class                                                                           
                 if not m.strip():
                     continue
                 frame = inspect.currentframe()
-                lineno = frame.f_back.f_lineno
-                file = frame.f_back.f_code.co_filename.replace(cwd, "")
-                if file == "<string>":
+                if frame and frame.f_back:
+                    lineno = frame.f_back.f_lineno
+                    file = frame.f_back.f_code.co_filename.replace(cwd, "")
+                    if file == "<string>":
+                        lineno = 0
+                    if file.startswith(("/", "\\")):
+                        file = file[1:]
+                else:
+                    file = "<unknown>"
                     lineno = 0
-                if file.startswith(("/", "\\")):
-                    file = file[1:]
                 cm = (
                     f"{Color.BLUE}{get_time()}{Color.END} {color}{msg_type}{Color.END} "
                     f"{Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}"
@@ -460,7 +476,7 @@ class                                                                           
         info: str = "未知错误：",
         sender="MainThread -> Unknown",
         level: Literal["I", "W", "E", "F", "D", "C"] = "E",
-        exc: Exception = None,
+        exc: Optional[BaseException] = None,
     ):
         """向控制台和日志报错。
 
@@ -489,7 +505,7 @@ class                                                                           
         info: str = "未知错误：",
         sender="MainThread -> Unknown",
         level: Literal["I", "W", "E", "F", "D", "C"] = "W",
-        exc: Exception = None,
+        exc: Optional[BaseException] = None,
     ):
         """
         向控制台和日志报错，但是相对精简，格式为[ERROR_TYPE] INFO

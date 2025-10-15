@@ -4,13 +4,12 @@ from utils.classobjects import *
 from utils.classobjects.dataloader import DataObject
 
 
-test_chunk = Chunk("chunks/_test_chunk", UserDataBase())
-test_chunk.save_data()
-test_chunk.load_data()
 
 
 
-class MultiTest(unittest.TestCase):
+class ClassObjectMultiTest(unittest.TestCase):
+
+
 
 
     def test_default_data(self):
@@ -92,11 +91,11 @@ class MultiTest(unittest.TestCase):
 
         data = action_1.to_string()
 
-        DataObject.static_save(stu1, test_chunk)
-        DataObject.static_save(action_1, test_chunk)
-        DataObject.static_save(action_2, test_chunk)
-        DataObject.static_save(template_1, test_chunk)
-        DataObject.static_save(template_2, test_chunk)
+        DataObject.static_save(stu1, self.test_chunk)
+        DataObject.static_save(action_1, self.test_chunk)
+        DataObject.static_save(action_2, self.test_chunk)
+        DataObject.static_save(template_1, self.test_chunk)
+        DataObject.static_save(template_2, self.test_chunk)
 
 
         action_3 = ScoreModification.from_string(data)
@@ -109,20 +108,17 @@ class MultiTest(unittest.TestCase):
                                 "字符串序列化与反序列化应当不会影响对象属性; "
                                 f"当前不同的属性：{attr}, action1的为{getattr(action_1, attr)!r}, action3的为{getattr(action_3, attr)!r}")
 
+    def __init__(self):
+        super().__init__()
+        self.test_chunk = Chunk("chunks/_test_chunk", UserDataBase())
+        self.test_chunk.save_data()
+        self.test_chunk.load_data()
+
     def runTest(self):
         self.test_default_data()
         self.test_student()
         self.test_score_mods()
 
 
-def suite():
-    suite = unittest.TestSuite()
-    suite.addTest(MultiTest())
-    return suite
 
-
-
-def main():
-    runner = unittest.TextTestRunner()
-    runner.run(suite())
-
+__all__ = ["ClassObjectMultiTest"]

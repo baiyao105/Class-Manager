@@ -64,7 +64,7 @@ class Stack(Generic[DT]):
         "判断栈是否为空"
         return len(self.items) == 0
 
-    def push(self, item):
+    def push(self, item: DT):
         "添加元素到栈顶"
         self.items.append(item)
 
@@ -191,34 +191,44 @@ class FrameCounter:
         "初始化帧计数器"
         self.maxcount = maxcount
         self.timeout = timeout
-        self._c = 0
+        self.counted_frames = 0
         self.running = False
+        self.start_time: Optional[float] = None
 
     @property
-    def _t(self):
+    def elapsed_time(self) -> float:
         "获取当前时间戳"
-        return time.time()
+        return 0 if not self.running else time.time() - self.start_time # type: ignore
 
     @property
     def framerate(self):
         "获取帧率"
-        if self._c == 0 or not self.running:
+        if self.counted_frames == 0 or not self.running:
             return 0
-        return self._c / self._t
+        return self.counted_frames / self.elapsed_time
+
 
     def start(self):
         "启动计数器"
         if self.running:
             raise RuntimeError("这个计数器已经启动过了！")
-        self._c = 0
-        self.running = True
-        while (
-            (self.maxcount is None or self._c < self.maxcount)
-            and (self.timeout is None or time.time() - self._t <= self.timeout)
-            and self.running
-        ):
-            self._c += 1
+        self.start_time = time.time()
+        Thread(target=self.run).start()
 
     def stop(self):
         "停止计数器"
         self.running = False
+
+    def run(self):
+        "启动计数器"
+        if self.running:
+            raise RuntimeError("这个计数器已经启动过了！")
+        self.counted_frames = 0
+        self.running = True
+        while (
+                (self.maxcount is None or self.counted_frames < self.maxcount)
+            and (self.timeout is None or time.time() - self.elapsed_time <= self.timeout)
+            and self.running
+        ):
+            self.counted_frames += 1
+

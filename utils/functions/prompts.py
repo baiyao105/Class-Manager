@@ -4,9 +4,8 @@
 
 import random
 from typing import Optional, Literal, List, Union
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
+from PySide6.QtWidgets import QWidget, QMessageBox
+from PySide6.QtGui import QPixmap, QIcon
 
 
 
@@ -130,7 +129,7 @@ def question_chooose(
         box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-error.png"))
     for choice in choices:
         box.addButton(choice, QMessageBox.ButtonRole.NoRole)
-    box.setDefaultButton(box.buttons()[default])
+    box.setDefaultButton(box.buttons()[default]) # type: ignore
     box.exec()
     result = box.clickedButton()
     return box.buttons().index(result) if result else -1
@@ -166,14 +165,3 @@ def messagebox(
         box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-error.png"))
     box.exec()
 
-
-def send_notice(
-    title: str, content: str, msg_type: Literal["info", "warn", "error"] = "info"
-):  # pylint: disable=W0613
-    """
-    发送通知。
-
-    :param title: 标题
-    :param content: 内容
-    :param msg_type: 消息类型
-    """
