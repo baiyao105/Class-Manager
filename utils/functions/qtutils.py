@@ -1,9 +1,9 @@
 """
 关于Qt的函数
 """
-
+import cv2
 import time
-from typing import Callable, Optional, Literal
+from typing import Callable, Literal
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import QTimer, QEventLoop
 

@@ -2,9 +2,10 @@
 数字类型
 """
 
+import time
 import math
 import random
-from typing import Union, Optional, List, Type, SupportsInt
+from typing import Union, Optional, Type, SupportsInt
 from ctypes import (
     c_int,
     c_int8,

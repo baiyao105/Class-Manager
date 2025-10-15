@@ -6,4 +6,7 @@
 
 from .prompts import *
 from .qtutils import *
-# from .sounds import *
+from .sounds import *
+from .excinfo import *
+from .sounds import *
+from .decorators import *

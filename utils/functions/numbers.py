@@ -22,7 +22,7 @@ def steprange(start: int | float, stop: int | float, step: int) -> list[float]:
 
     :param start: 起始值
     :param stop: 结束值
-    :param step: 步长
+    :param step: 步数
     :return: 从start到stop的列表
 
     举个例子
@@ -30,9 +30,8 @@ def steprange(start: int | float, stop: int | float, step: int) -> list[float]:
     >>> steprange(0, 10, 5)
     [0, 2.5, 5.0, 7.5, 10]
     """
-    if (stop - start) % step != 0:
-        return [*[start + i * (int(stop - start) / step) for i in range(step)][:-1], stop]
-    return [start + i * (int(stop - start) / (step - 1)) for i in range(step)]
+    diff = (stop - start) / (step - 1)
+    return [start + i * diff for i in range(step)]
 
 
 def addrof(obj) -> str:

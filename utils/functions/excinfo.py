@@ -10,7 +10,7 @@
 """
 
 import inspect
-from typing import List, Union, Callable
+from typing import List, Callable
 
 
 # 还是type: ignore 大神（
