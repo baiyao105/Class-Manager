@@ -1,8 +1,9 @@
 """单元测试"""
 
 import unittest
-from .classobjects import ClassObjectMultiTest
+
 from .algorithm import AlgorithmMultiTest
+from .classobjects import ClassObjectMultiTest
 
 
 def test_suite():
@@ -14,8 +15,5 @@ def test_suite():
     suite.addTest(AlgorithmMultiTest())
     return suite
 
-__all__ = [
-    "ClassObjectMultiTest",
-    "AlgorithmMultiTest",
-    "test_suite"
-]
+
+__all__ = ["AlgorithmMultiTest", "ClassObjectMultiTest", "test_suite"]

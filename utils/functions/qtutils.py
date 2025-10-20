@@ -1,11 +1,14 @@
 """
 关于Qt的函数
 """
-import cv2
+
 import time
-from typing import Callable, Literal
-from PySide6.QtGui import QPixmap, QImage
-from PySide6.QtCore import QTimer, QEventLoop
+from collections.abc import Callable
+from typing import Literal
+
+import cv2
+from PySide6.QtCore import QEventLoop, QTimer
+from PySide6.QtGui import QImage, QPixmap
 
 
 def mat_to_pixmap(mat: cv2.Mat) -> QPixmap:

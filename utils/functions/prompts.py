@@ -4,9 +4,9 @@
 
 import random
 from typing import Literal
-from PySide6.QtWidgets import QWidget, QMessageBox
-from PySide6.QtGui import QPixmap, QIcon
 
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtWidgets import QMessageBox, QWidget
 
 
 def button_ok_text():
@@ -125,7 +125,7 @@ def question_chooose(
         box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-error.png"))
     for choice in choices:
         box.addButton(choice, QMessageBox.ButtonRole.NoRole)
-    box.setDefaultButton(box.buttons()[default]) # type: ignore
+    box.setDefaultButton(box.buttons()[default])  # type: ignore
     box.exec()
     result = box.clickedButton()
     return box.buttons().index(result) if result else -1
@@ -160,4 +160,3 @@ def messagebox(
         box = QMessageBox(QMessageBox.Icon.Critical, title, text, parent=master)
         box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-error.png"))
     box.exec()
-

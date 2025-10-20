@@ -6,6 +6,7 @@
 
 import sys
 import unittest
+
 from tests import test_suite
 
 if __name__ == "__main__":

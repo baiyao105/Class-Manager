@@ -7,9 +7,10 @@ import os
 import sys
 import time
 import traceback
+from collections.abc import Callable
 from queue import Queue
 from threading import Lock, Thread
-from typing import Literal, TextIO, final, Optional, List, Callable
+from typing import Literal, TextIO, final
 
 import colorama
 from loguru import logger
@@ -29,34 +30,30 @@ def get_function_namespace(func) -> str:
     module = inspect.getmodule(func)
     if not hasattr(func, "__module__"):
         try:
-            return func.__qualname__    # type: ignore
+            return func.__qualname__  # type: ignore
         except BaseException as unused:  # pylint: disable=broad-exception-caught
             try:
-                return func.__name__ # type: ignore
-            except (
-                BaseException
-            ) as unused:  # pylint: disable=broad-exception-caught
+                return func.__name__  # type: ignore
+            except BaseException as unused:  # pylint: disable=broad-exception-caught
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
-                elif isinstance(func, classmethod):
-                    return str(func.__func__.__qualname__) # type: ignore
+                if isinstance(func, classmethod):
+                    return str(func.__func__.__qualname__)  # type: ignore
                 try:
-                    return func.__class__.__qualname__ # type: ignore
-                except (
-                    BaseException
-                ) as unused_2:  # pylint: disable=broad-exception-caught
-                    return func.__class__.__name__ # type: ignore
+                    return func.__class__.__qualname__  # type: ignore
+                except BaseException as unused_2:  # pylint: disable=broad-exception-caught
+                    return func.__class__.__name__  # type: ignore
     if module is None:
-        module_name = ( # type: ignore
-            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__ # type: ignore
-        ) 
+        module_name = (  # type: ignore
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__  # type: ignore
+        )
     else:
         module_name = module.__name__
 
-    return f"{module_name}.{func.__qualname__}" # type: ignore
+    return f"{module_name}.{func.__qualname__}"  # type: ignore
 
 
-def format_exc_like_java(exc: BaseException) -> List[str]:
+def format_exc_like_java(exc: BaseException) -> list[str]:
     "不是我做这东西有啥用啊"
     result = [
         f"{get_function_namespace(exc.__class__)}: " + (str(exc) if str(exc).strip() else "no further information"),
@@ -95,12 +92,12 @@ def get_function_module(func: object | Callable) -> str:
     "获取函数的模块"
     module = inspect.getmodule(func)
     if module is None:
-        module_name = ( # type: ignore
-            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__ # type: ignore
+        module_name = (  # type: ignore
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__  # type: ignore
         )
     else:
         module_name = module.__name__
-    return module_name # type: ignore
+    return module_name  # type: ignore
 
 
 def get_time():
@@ -111,8 +108,6 @@ def get_time():
         + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
         + f".{int((time.time() % 1) * 1000):03}"
     )
-
-
 
 
 class LoggerSettings:
@@ -543,7 +538,7 @@ class Logger:
         info: str = "未知错误：",
         sender="MainThread -> Unknown",
         level: Literal["I", "W", "E", "F", "D", "C"] = "E",
-        exc: Optional[BaseException] = None,
+        exc: BaseException | None = None,
     ):
         """向控制台和日志报错。
 
@@ -570,7 +565,7 @@ class Logger:
         info: str = "未知错误：",
         sender="MainThread -> Unknown",
         level: Literal["I", "W", "E", "F", "D", "C"] = "W",
-        exc: Optional[BaseException] = None,
+        exc: BaseException | None = None,
     ):
         """
         向控制台和日志报错，但是相对精简，格式为[ERROR_TYPE] INFO
