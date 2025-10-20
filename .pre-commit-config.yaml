@@ -19,13 +19,13 @@ repos:
   #     - id: actionlint
 
   - repo: https://github.com/pappasam/toml-sort
-    rev: v0.24.2
+    rev: v0.24.3
     hooks:
       - id: toml-sort-fix
         args: ["--all", "--in-place"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.14.1
     hooks:
       - id: ruff-check
         args:
