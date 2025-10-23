@@ -11,12 +11,12 @@ from loguru import logger
 from PySide6.QtCore import Property, QObject, QSize, Signal, Slot
 from PySide6.QtQml import qmlRegisterType
 from PySide6.QtWidgets import QApplication
+from RinUI import RinUIWindow
 
 from config import get_settings
 from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION
 from core.database import db_manager
 from core.services import AchievementService, ClassService, StudentService
-from RinUI import RinUIWindow
 
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
