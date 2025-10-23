@@ -1,4 +1,3 @@
-
 """
 关于格式化异常信息的函数。
 
@@ -10,10 +9,10 @@
 """
 
 import inspect
-from typing import List, Callable
-
+from collections.abc import Callable
 
 # 还是type: ignore 大神（
+
 
 def get_function_namespace(func) -> str:
     """
@@ -25,34 +24,30 @@ def get_function_namespace(func) -> str:
     module = inspect.getmodule(func)
     if not hasattr(func, "__module__"):
         try:
-            return func.__qualname__    # type: ignore
+            return func.__qualname__  # type: ignore
         except BaseException as unused:  # pylint: disable=broad-exception-caught
             try:
-                return func.__name__ # type: ignore
-            except (
-                BaseException
-            ) as unused:  # pylint: disable=broad-exception-caught
+                return func.__name__  # type: ignore
+            except BaseException as unused:  # pylint: disable=broad-exception-caught
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
-                elif isinstance(func, classmethod):
-                    return str(func.__func__.__qualname__) # type: ignore
+                if isinstance(func, classmethod):
+                    return str(func.__func__.__qualname__)  # type: ignore
                 try:
-                    return func.__class__.__qualname__ # type: ignore
-                except (
-                    BaseException
-                ) as unused_2:  # pylint: disable=broad-exception-caught
-                    return func.__class__.__name__ # type: ignore
+                    return func.__class__.__qualname__  # type: ignore
+                except BaseException as unused_2:  # pylint: disable=broad-exception-caught
+                    return func.__class__.__name__  # type: ignore
     if module is None:
-        module_name = ( # type: ignore
-            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__ # type: ignore
-        ) 
+        module_name = (  # type: ignore
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__  # type: ignore
+        )
     else:
         module_name = module.__name__
 
-    return f"{module_name}.{func.__qualname__}" # type: ignore
+    return f"{module_name}.{func.__qualname__}"  # type: ignore
 
 
-def format_exc_like_java(exc: BaseException) -> List[str]:
+def format_exc_like_java(exc: BaseException) -> list[str]:
     "不是我做这东西有啥用啊"
     result = [
         f"{get_function_namespace(exc.__class__)}: " + (str(exc) if str(exc).strip() else "no further information"),
@@ -91,9 +86,9 @@ def get_function_module(func: object | Callable) -> str:
     "获取函数的模块"
     module = inspect.getmodule(func)
     if module is None:
-        module_name = ( # type: ignore
-            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__ # type: ignore
+        module_name = (  # type: ignore
+            func.__self__.__module__ if hasattr(func, "__self__") else func.__module__  # type: ignore
         )
     else:
         module_name = module.__name__
-    return module_name # type: ignore
+    return module_name  # type: ignore

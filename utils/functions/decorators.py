@@ -36,8 +36,10 @@ def repeat(count):
         def wrapper(*args, **kwargs):
             for _ in range(count):
                 func(*args, **kwargs)
+
         return wrapper  # type: ignore
-    return executor # type: ignore
+
+    return executor  # type: ignore
 
 
 def run_async(func):
@@ -57,7 +59,8 @@ def run_async(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         Thread(target=func, args=args, kwargs=kwargs, daemon=True).start()
-    return wrapper # type: ignore
+
+    return wrapper  # type: ignore
 
 
 def canbe(value, _class: type):
@@ -108,14 +111,11 @@ def pass_exceptions(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs)    # type: ignore
-        except (
-            BaseException
-        ) as unused:  # pylint: disable=broad-exception-caught
+            return func(*args, **kwargs)  # type: ignore
+        except BaseException as unused:  # pylint: disable=broad-exception-caught
             Base.log_exc(
-                f"执行函数{repr(func.__name__)}时捕获到异常",   # type: ignore
-                f"pass_exceptions -> {func.__name__}", # type: ignore
+                f"执行函数{func.__name__!r}时捕获到异常",  # type: ignore
+                f"pass_exceptions -> {func.__name__}",  # type: ignore
             )
-    return wrapper # type: ignore
 
-
+    return wrapper  # type: ignore

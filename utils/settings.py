@@ -4,8 +4,7 @@ from types import FunctionType, MethodType
 from typing import Any, Literal
 
 import dill as pickle
-from typing import Any, Dict
-from types import MethodType, FunctionType
+
 from utils.basetypes import Base
 from utils.update_check import CLIENT_VERSION, CLIENT_VERSION_CODE
 
@@ -15,7 +14,7 @@ class SettingsInfo:
 
     current: "SettingsInfo"
 
-    def __init__(self, **kwargs: Dict[str, Any]):
+    def __init__(self, **kwargs: dict[str, Any]):
         """初始化设置信息对象
 
         :param kwargs: 键值对形式的初始设置参数
@@ -103,7 +102,7 @@ class SettingsInfo:
             self.save_to(file_path)
         return self
 
-    def set(self, **kwargs: Dict[str, Any]) -> "SettingsInfo":
+    def set(self, **kwargs: dict[str, Any]) -> "SettingsInfo":
         """批量设置多个配置参数
 
         :param kwargs: 键值对形式的设置参数
@@ -127,11 +126,11 @@ class SettingsInfo:
 
         :return: 包含所有设置的字典
         """
-        return dict(
-            (k, v)
+        return {
+            k: v
             for k, v in self.__dict__.items()
             if (not k.startswith("__")) and (not isinstance(k, (FunctionType, MethodType)))
-        )
+        }
 
     def __repr__(self):
         "返回设置信息"

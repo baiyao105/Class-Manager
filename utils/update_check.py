@@ -1,14 +1,12 @@
 import contextlib
 import enum
-from typing import Literal, Union, Dict, Tuple, Any
-import requests
 import json
 import os
 import shutil
 import signal
 import sys
 import zipfile
-from typing import Literal
+from typing import Any, Literal
 
 import requests
 
@@ -355,7 +353,7 @@ try:
     CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
 except Exception:
     Base.log("W", "警告：获取本地版本信息失败", "update_check")
-    VERSION_INFO: Dict[str, Any] = {
+    VERSION_INFO: dict[str, Any] = {
         "core_version": "unknown",
         "core_version_code": 0,
         "client_version": "unknown",
@@ -443,6 +441,6 @@ def update(dir: str = "update"):
             shutil.rmtree(dir)
         except Exception as e:
             Base.log_exc("更新包删除失败", "update_check.update", "W")
-            
+
     Base.log("I", "更新成功，趋势", "update_check.update")
     os.kill(os.getpid(), signal.SIGTERM)

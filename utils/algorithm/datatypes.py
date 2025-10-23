@@ -196,7 +196,7 @@ class FrameCounter:
     @property
     def elapsed_time(self) -> float:
         "获取当前时间戳"
-        return 0 if not self.running else time.time() - self.start_time # type: ignore
+        return 0 if not self.running else time.time() - self.start_time  # type: ignore
 
     @property
     def framerate(self):
@@ -204,7 +204,6 @@ class FrameCounter:
         if self.counted_frames == 0 or not self.running:
             return 0
         return self.counted_frames / self.elapsed_time
-
 
     def start(self):
         "启动计数器"
@@ -224,9 +223,8 @@ class FrameCounter:
         self.counted_frames = 0
         self.running = True
         while (
-                (self.maxcount is None or self.counted_frames < self.maxcount)
+            (self.maxcount is None or self.counted_frames < self.maxcount)
             and (self.timeout is None or time.time() - self.elapsed_time <= self.timeout)
             and self.running
         ):
             self.counted_frames += 1
-

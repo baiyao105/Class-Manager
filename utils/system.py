@@ -3,15 +3,13 @@ import sys
 import time
 from collections.abc import Callable
 from io import TextIOWrapper
-from typing_extensions import TextIO
-from typing import Optional, Union, Any, Callable, List
 from queue import Queue
 from threading import Thread
 from typing import Any, NamedTuple, TextIO
 
 stdout_queue: Queue[str] = Queue()
 stderr_queue: Queue[str] = Queue()
-output_list: List[str] = []
+output_list: list[str] = []
 
 __all__ = ["CommandOutput", "SystemLogger", "output_list", "stderr_queue", "stdout_queue", "system", "system_lined"]
 
@@ -22,13 +20,7 @@ class SystemLogger(TextIOWrapper):
     该类通过继承TextIOWrapper实现对标准输出流的捕获和重定向
     """
 
-    def __init__(
-        self,
-        *args,
-        logger_name: str = "sys.stdout",
-        function: Optional[Callable[[str], Any]] = None,
-        **kwargs
-    ):
+    def __init__(self, *args, logger_name: str = "sys.stdout", function: Callable[[str], Any] | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.line = ""
         self.function = function
@@ -128,7 +120,7 @@ def system(
     :param sync_update_bit: 同步更新位数，默认为1（每次从输出里面读取的字节数）
     """
     st = time.time()
-    stdin  = stdin  or sys.stdin
+    stdin = stdin or sys.stdin
     stdout = stdout or sys.stdout
     stderr = stderr or sys.stderr
 

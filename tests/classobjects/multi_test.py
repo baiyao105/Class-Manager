@@ -4,13 +4,7 @@ from utils.classobjects import *
 from utils.classobjects.dataloader import DataObject
 
 
-
-
 class ClassObjectMultiTest(unittest.TestCase):
-
-
-
-
     def test_default_data(self):
         self.assertGreater(len(DEFAULT_SCORE_TEMPLATES), 0)
         self.assertGreater(len(DEFAULT_ACHIEVEMENTS), 0)
@@ -97,16 +91,18 @@ class ClassObjectMultiTest(unittest.TestCase):
         DataObject.static_save(template_1, self.test_chunk)
         DataObject.static_save(template_2, self.test_chunk)
 
-
         action_3 = ScoreModification.from_string(data)
 
         for attr in action_1.__dict__:
             if isinstance(getattr(action_1, attr), ClassDataType):
                 self.assertEqual(getattr(action_1, attr).uuid, getattr(action_3, attr).uuid)
                 continue
-            self.assertEqual(getattr(action_1, attr), getattr(action_3, attr), 
-                                "字符串序列化与反序列化应当不会影响对象属性; "
-                                f"当前不同的属性：{attr}, action1的为{getattr(action_1, attr)!r}, action3的为{getattr(action_3, attr)!r}")
+            self.assertEqual(
+                getattr(action_1, attr),
+                getattr(action_3, attr),
+                "字符串序列化与反序列化应当不会影响对象属性; "
+                f"当前不同的属性：{attr}, action1的为{getattr(action_1, attr)!r}, action3的为{getattr(action_3, attr)!r}",
+            )
 
     def __init__(self):
         super().__init__()
@@ -118,7 +114,6 @@ class ClassObjectMultiTest(unittest.TestCase):
         self.test_default_data()
         self.test_student()
         self.test_score_mods()
-
 
 
 __all__ = ["ClassObjectMultiTest"]

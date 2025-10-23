@@ -2,29 +2,28 @@
 数字类型
 """
 
-import time
 import math
 import random
-from typing import Union, Optional, Type, SupportsInt
+import time
 from ctypes import (
+    c_double,
+    c_float,
     c_int,
     c_int8,
     c_int16,
     c_int32,
     c_int64,
+    c_longdouble,
     c_uint,
     c_uint8,
     c_uint16,
     c_uint32,
     c_uint64,
-    c_float,
-    c_double,
-    c_longdouble)
-
+)
+from typing import SupportsInt, Union
 
 inf = math.inf
 nan = math.nan
-
 
 
 CData = Union[
@@ -40,17 +39,19 @@ CData = Union[
     c_uint64,
     c_float,
     c_double,
-    c_longdouble
+    c_longdouble,
 ]
 
-CDataType = Type[CData]
+CDataType = type[CData]
 
 
 class OverridedCData:
     "重写过的CData类型"
+
     _dtype: CDataType
     _data: CData
     _tpname: str
+
 
 BasicData = Union[int, float, bool]
 Numbers = Union[int, float]
@@ -59,7 +60,8 @@ Numbers = Union[int, float]
 # 偶遇Pylance类型检查解析错误，拼尽全力无法战胜
 # （只能用type: ignore了，但太多了根本打不过来）
 
-def cdatatype(dtype: CDataType, name: Optional[str] = None):
+
+def cdatatype(dtype: CDataType, name: str | None = None):
     """
     自定义C整数类型包装器(抽象)
 
@@ -73,12 +75,12 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
     class _CIntType(OverridedCData, SupportsInt):
         "继承cint类型的类"
 
-        def __init__(self, value: Union[CData, int, float]):
+        def __init__(self, value: CData | int | float):
             if isinstance(value, CData):
                 value = value.value
 
             self._dtype: CDataType = dtype
-            self._data: CData = self._dtype(value) # type: ignore
+            self._data: CData = self._dtype(value)  # type: ignore
             self._tpname: str = name
 
         def __str__(self):
@@ -99,7 +101,7 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
         def __hash__(self):
             return hash(self._data.value)
 
-        def __eq__(self, other: Union[OverridedCData, BasicData]):
+        def __eq__(self, other: OverridedCData | BasicData):
             if isinstance(other, Numbers):
                 if other == inf:
                     return False
@@ -109,7 +111,7 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
                     return False
             return self._data.value == other
 
-        def __ne__(self, other: Union[OverridedCData, BasicData]):
+        def __ne__(self, other: OverridedCData | BasicData):
             if isinstance(other, Numbers):
                 if other == inf:
                     return True
@@ -119,7 +121,7 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
                     return True
             return self._data.value != other
 
-        def __lt__(self, other: Union[OverridedCData, BasicData]):
+        def __lt__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, Numbers):
@@ -132,7 +134,7 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
                 return False
             return self._data.value < other
 
-        def __le__(self, other: Union[OverridedCData, BasicData]):
+        def __le__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, Numbers):
@@ -145,7 +147,7 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
                 return False
             return self._data.value <= other
 
-        def __gt__(self, other: Union[OverridedCData, BasicData]):
+        def __gt__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, Numbers):
@@ -158,7 +160,7 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
                 return False
             return self._data.value > other
 
-        def __ge__(self, other: Union[OverridedCData, BasicData]):
+        def __ge__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, Numbers):
@@ -170,15 +172,14 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
             if math.isnan(other):
                 return False
             return self._data.value >= other
-        
 
-        def _check_datatypes(self, other: Union[OverridedCData, Numbers]):
+        def _check_datatypes(self, other: OverridedCData | Numbers):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if (not isinstance(self._data.value, Numbers)) or (not isinstance(other, Numbers)):
                 raise TypeError(f"类型 {self.__class__.__name__} 与 {other.__class__.__name__} 不支持运算操作")
-            
-        def _check_int_datatypes(self, other: Union[OverridedCData, Numbers]):
+
+        def _check_int_datatypes(self, other: OverridedCData | Numbers):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if (not isinstance(self._data.value, int)) or (not isinstance(other, int)):
@@ -193,89 +194,107 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
         def __pos__(self):
             return cdatatype(self._dtype, self._tpname)(+self._data.value)
 
-        def __round__(self, ndigits = None):
+        def __round__(self, ndigits=None):
             return cdatatype(self._dtype, self._tpname)(round(self._data.value, ndigits))
 
-        def __add__(self, other: Union[OverridedCData, BasicData]):
+        def __add__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(self._data.value + other)
 
-        def __sub__(self, other: Union[OverridedCData, BasicData]):
+        def __sub__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(self._data.value - other)
 
-        def __mul__(self, other: Union[OverridedCData, BasicData]):
+        def __mul__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(self._data.value * other)
 
-        def __truediv__(self, other: Union[OverridedCData, BasicData]):
+        def __truediv__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(self._data.value / other)
 
-        def __floordiv__(self, other: Union[OverridedCData, BasicData]):
+        def __floordiv__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(self._data.value // other)
-        
-        def __mod__(self, other: Union[OverridedCData, BasicData]):
+
+        def __mod__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(self._data.value % other)
 
-        def __pow__(self, other: Union[OverridedCData, BasicData]):
+        def __pow__(self, other: OverridedCData | BasicData):
             if isinstance(other, OverridedCData):
                 other = other._data.value
-            return cdatatype(self._dtype, self._tpname)(self._data.value ** other)
+            return cdatatype(self._dtype, self._tpname)(self._data.value**other)
 
-        def __lshift__(self, other: Union[OverridedCData, BasicData]):
+        def __lshift__(self, other: OverridedCData | BasicData):
             if not isinstance(self._data.value, int):
-                raise TypeError(f"原数字类型 {self.__class__.__name__} 对应的数据类型为{self._dtype.__name__}, 不支持左移操作")
+                raise TypeError(
+                    f"原数字类型 {self.__class__.__name__} 对应的数据类型为{self._dtype.__name__}, 不支持左移操作"
+                )
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, int):
-                raise TypeError(f"位移数类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法左移操作数")
+                raise TypeError(
+                    f"位移数类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法左移操作数"
+                )
             return cdatatype(self._dtype, self._tpname)(self._data.value << other)
 
-        def __rshift__(self, other: Union[OverridedCData, BasicData]):
+        def __rshift__(self, other: OverridedCData | BasicData):
             if not isinstance(self._data.value, int):
-                raise TypeError(f"原数字类型 {self.__class__.__name__} 对应的数据类型为{self._dtype.__name__}, 不支持右移操作")
+                raise TypeError(
+                    f"原数字类型 {self.__class__.__name__} 对应的数据类型为{self._dtype.__name__}, 不支持右移操作"
+                )
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, int):
-                raise TypeError(f"位移数类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法右移操作数")
+                raise TypeError(
+                    f"位移数类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法右移操作数"
+                )
             return cdatatype(self._dtype, self._tpname)(self._data.value >> other)
 
-        def __and__(self, other: Union[OverridedCData, BasicData]):
+        def __and__(self, other: OverridedCData | BasicData):
             if not isinstance(self._data.value, int):
-                raise TypeError(f"位与左值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 不支持按位与操作")
+                raise TypeError(
+                    f"位与左值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 不支持按位与操作"
+                )
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, int):
-                raise TypeError(f"位与右值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法按位与操作数")
+                raise TypeError(
+                    f"位与右值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法按位与操作数"
+                )
             return cdatatype(self._dtype, self._tpname)(self._data.value & other)
-        
 
-        def __or__(self, other: Union[OverridedCData, BasicData]):
+        def __or__(self, other: OverridedCData | BasicData):
             if not isinstance(self._data.value, int):
-                raise TypeError(f"位或左值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 不支持按位或操作")
+                raise TypeError(
+                    f"位或左值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 不支持按位或操作"
+                )
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, int):
-                raise TypeError(f"位或右值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法按位或操作数")
+                raise TypeError(
+                    f"位或右值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法按位或操作数"
+                )
             return cdatatype(self._dtype, self._tpname)(self._data.value & other)
-        
 
-        def __xor__(self, other: Union[OverridedCData, BasicData]):
+        def __xor__(self, other: OverridedCData | BasicData):
             if not isinstance(self._data.value, int):
-                raise TypeError(f"位异或左值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 不支持按位异或操作")
+                raise TypeError(
+                    f"位异或左值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 不支持按位异或操作"
+                )
             if isinstance(other, OverridedCData):
                 other = other._data.value
             if not isinstance(other, int):
-                raise TypeError(f"位异或右值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法按位异或操作数")
+                raise TypeError(
+                    f"位异或右值类型 {self.__class__.__name__} 对应的数据类型为 {self._dtype.__name__}, 为非法按位异或操作数"
+                )
             return cdatatype(self._dtype, self._tpname)(self._data.value ^ other)
 
         def __invert__(self):
@@ -283,86 +302,84 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
                 raise TypeError(f"{self.__class__.__name__}对应的数据类型为 {self._dtype.__name__}, 不支持按位取反操作")
             return cdatatype(self._dtype, self._tpname)(~self._data.value)
 
-        def __iadd__(self, other: Union[OverridedCData, Numbers]):
+        def __iadd__(self, other: OverridedCData | Numbers):
             self._check_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value += other
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __isub__(self, other: Union[OverridedCData, Numbers]):
+        def __isub__(self, other: OverridedCData | Numbers):
             self._check_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value -= other
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __imul__(self, other: Union[OverridedCData, Numbers]):
+        def __imul__(self, other: OverridedCData | Numbers):
             self._check_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value *= other
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __itruediv__(self, other: Union[OverridedCData, BasicData]):
+        def __itruediv__(self, other: OverridedCData | BasicData):
             self._check_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value /= other
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __ifloordiv__(self, other: Union[OverridedCData, Numbers]):
+        def __ifloordiv__(self, other: OverridedCData | Numbers):
             self._check_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value //= other
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __imod__(self, other: Union[OverridedCData, Numbers]):
+        def __imod__(self, other: OverridedCData | Numbers):
             self._check_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value %= other
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __ipow__(self, other: Union[OverridedCData, Numbers]):
+        def __ipow__(self, other: OverridedCData | Numbers):
             self._check_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value **= other
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        
-
-        def __ilshift__(self, other: Union[OverridedCData, Numbers]):
+        def __ilshift__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value <<= other  # type: ignore
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __irshift__(self, other: Union[OverridedCData, Numbers]):
+        def __irshift__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value >>= other  # type: ignore
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __iand__(self, other: Union[OverridedCData, Numbers]):
+        def __iand__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value &= other  # type: ignore
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __ior__(self, other: Union[OverridedCData, Numbers]):
+        def __ior__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             self._data.value |= other  # type: ignore
             return cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __ixor__(self, other: Union[OverridedCData, Numbers]):
+        def __ixor__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
@@ -371,77 +388,73 @@ def cdatatype(dtype: CDataType, name: Optional[str] = None):
 
         # 懒得写了（）
 
-        def __radd__(self, other: Union[OverridedCData, Numbers]):
+        def __radd__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) + cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rsub__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rsub__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) - cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rmul__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rmul__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) * cdatatype(self._dtype, self._tpname)(self._data.value)
 
-        def __rtruediv__(self, other: Union[OverridedCData, Numbers]):
+        def __rtruediv__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) / cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rfloordiv__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rfloordiv__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) // cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rmod__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rmod__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) % cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rpow__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rpow__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) ** cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rlshift__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rlshift__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) << cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rrshift__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rrshift__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) >> cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rand__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rand__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) & cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-        def __rxor__(self, other: Union[OverridedCData, Numbers]):
+
+        def __rxor__(self, other: OverridedCData | Numbers):
             self._check_int_datatypes(other)
             if isinstance(other, OverridedCData):
                 other = other._data.value
             return cdatatype(self._dtype, self._tpname)(other) ^ cdatatype(self._dtype, self._tpname)(self._data.value)
-        
-
-
 
     return _CIntType
-
 
 
 Int8 = cdatatype(c_int8, "Byte")
