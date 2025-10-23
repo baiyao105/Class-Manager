@@ -53,7 +53,7 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
                 "key": self.key,
                 "subject_name": self.subject_name,
                 "ruler": self.ruler,
-                "rule_mapping": dict([(n, str(t.uuid)) for n, t in self.rule_mapping.items()]),
+                "rule_mapping": {n: str(t.uuid) for n, t in self.rule_mapping.items()},
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }

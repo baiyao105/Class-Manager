@@ -1,10 +1,9 @@
-
 import unittest
+
 from utils.algorithm import *
 
 
 class AlgorithmMultiTest(unittest.TestCase):
-
     def test_ctypes(self):
         int8_1 = Int8(114)
         self.assertEqual(int8_1, 114, "由原生int构造的重载C数据类型应当符合构造数值")
@@ -15,8 +14,9 @@ class AlgorithmMultiTest(unittest.TestCase):
         self.assertEqual(int8_1 >> int8_2, 57, "重载C数据类型应当支持原生的位运算")
 
         self.assertEqual(51 - int8_1, -63, "重载C数据类型应当正确实现了与其他数据类型的__rsub__等方法")
-        self.assertEqual(int8_1 + 14, -128, "重载C数据类型应当具有C的自然溢出等特征") # 虽然我设计这个的最初目的只是为了玩抽象（
-
+        self.assertEqual(
+            int8_1 + 14, -128, "重载C数据类型应当具有C的自然溢出等特征"
+        )  # 虽然我设计这个的最初目的只是为了玩抽象（
 
         my_cfloat = cdatatype(c_float, "my_cfloat")
         self.assertEqual(my_cfloat(1.0), 1.0, "自定义C数据类型应当支持构造函数")
@@ -27,25 +27,23 @@ class AlgorithmMultiTest(unittest.TestCase):
         my_cdouble = cdatatype(c_double, "my_cdouble")
         self.assertEqual(my_cdouble(1.0), 1.0, "自定义C数据类型应当支持构造函数")
         self.assertNotEqual(my_cdouble(0.1) + my_cdouble(0.2), 0.3, "自定义C数据类型应当具有C数据类型的特征")
-        self.assertEqual(my_cdouble(0.1) + my_cdouble(0.2), 0.30000000000000004, "自定义C数据类型应当具有C数据类型的特征")
-
+        self.assertEqual(
+            my_cdouble(0.1) + my_cdouble(0.2), 0.30000000000000004, "自定义C数据类型应当具有C数据类型的特征"
+        )
 
     def test_function(self):
         test_range1 = steprange(0, 10, 5)
         self.assertEqual(list(test_range1), [0, 2.5, 5, 7.5, 10], "steprange应当正确生成指定元素数均匀分布的序列")
         test_range2 = steprange(1.75, -25, 5)
-        self.assertEqual(list(test_range2), [1.75, -4.9375, -11.625, -18.3125, -25], 
-                            "steprange应当正确生成指定元素数均匀分布的序列")
-        
+        self.assertEqual(
+            list(test_range2), [1.75, -4.9375, -11.625, -18.3125, -25], "steprange应当正确生成指定元素数均匀分布的序列"
+        )
 
         uuid1 = gen_uuid()
         uuid2 = gen_uuid()
         self.assertNotEqual(uuid1, uuid2, "gen_uuid应当生成不同的UUID")
 
-
-
     def test_datatypes(self):
-
         stack: Stack[int] = Stack()
         stack.push(1)
         stack.push(2)
@@ -64,6 +62,7 @@ class AlgorithmMultiTest(unittest.TestCase):
         def test_thread() -> str:
             time.sleep(0.01)
             return "我是返回值"
+
         thread = Thread(target=test_thread)
         thread.start()
         self.assertEqual(thread.join(), "我是返回值", "Thread应当正确实现返回值处理")
@@ -73,9 +72,11 @@ class AlgorithmMultiTest(unittest.TestCase):
         mutex = Mutex()
 
         mutex.acquire()
+
         def test_thread2():
             nonlocal mutex
             mutex.acquire()
+
         thread2 = Thread(target=test_thread2)
         thread2.start()
         time.sleep(0.001)
@@ -98,7 +99,6 @@ class AlgorithmMultiTest(unittest.TestCase):
         self.test_ctypes()
         self.test_function()
         self.test_datatypes()
-
 
 
 __all__ = ["AlgorithmMultiTest"]

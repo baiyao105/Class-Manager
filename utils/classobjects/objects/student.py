@@ -275,8 +275,8 @@ class Student(ClassDataType, SupportsKeyOrdering):
         self.highest_score_cause_time = 0.0
         self.lowest_score_cause_time = 0.0
         self.last_reset = time.time()
-        self.history: dict[int, ScoreModification] = dict()
-        self.achievements = dict()
+        self.history: dict[int, ScoreModification] = {}
+        self.achievements = {}
         return returnval
 
     def reset_achievements(self) -> dict[int, Achievement]:
@@ -285,7 +285,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
         :return: Dict[成就达成时间utc*1000, 成就]"""
         Base.log("W", f"  -> 重置{self.name} ({self.num})的成就")
         returnval = dict(self.achievements)
-        self.achievements = dict()
+        self.achievements = {}
         return returnval
 
     def reset(

@@ -18,21 +18,18 @@ from .homeworkrule import HomeworkRule
 from .scoremod import ScoreModification
 from .scoremodtemplate import ScoreModificationTemplate
 from .student import Student
-from .dayrecord import DayRecord
-from .history import History
-from .attendanceinfo import AttendanceInfo
 
 __all__ = [
     "Achievement",
     "AchievementTemplate",
-    "ClassData",
+    "AttendanceInfo",
     "Class",
+    "ClassData",
+    "DayRecord",
     "Group",
+    "History",
     "HomeworkRule",
     "ScoreModification",
     "ScoreModificationTemplate",
     "Student",
-    "DayRecord",
-    "History",
-    "AttendanceInfo",
 ]
