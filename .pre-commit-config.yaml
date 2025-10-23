@@ -53,10 +53,7 @@ repos:
     rev: v0.14.1
     hooks:
       - id: ruff-check
-        args:
-          - "--fix"
-          - "--show-fixes"
-          - "--exit-zero"
+        args: ["--fix", "--show-fixes", "--exit-zero"]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -64,9 +61,10 @@ repos:
     hooks:
       - id: prettier
         args: ["--write"]
-        files: \.(json|md|yaml|yml|html|css)$
+        files: \.(json|md|yaml|yml|html|css|qml)$
         additional_dependencies:
-          - "prettier@3.2.5"
+          - "prettier@3.6.2"
+          - "@prettier/plugin-xml"
 
   # - repo: https://github.com/rhysd/actionlint
   #   rev: v1.7.7
