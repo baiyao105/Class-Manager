@@ -11,6 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from utils.basic_dirs import DATA
 
 
 class QuickBarConfig(BaseModel):
@@ -140,7 +141,7 @@ class ClassConfig(BaseSettings):
     def save_to_file(self, file_path: Path | None = None) -> None:
         """保存配置到文件"""
         if file_path is None:
-            file_path = Path(f"./data/Class_{self.class_id}/config.json")
+            file_path = DATA / f"Class_{self.class_id}/config.json"
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
@@ -150,7 +151,7 @@ class ClassConfig(BaseSettings):
     def load_from_file(cls, class_id: str, file_path: Path | None = None) -> "ClassConfig":
         """从文件加载配置"""
         if file_path is None:
-            file_path = Path(f"./data/Class_{class_id}/config.json")
+            file_path = DATA / f"Class_{class_id}/config.json"
 
         if not file_path.exists():
             # 如果文件不存在，创建默认配置

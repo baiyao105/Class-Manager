@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
+from utils.basic_dirs import DATA
 
 
 class ScoreTemplateConfig(BaseModel):
@@ -63,7 +64,7 @@ class TemplateManager:
 
     def __init__(self, class_id: str):
         self.class_id = class_id
-        self.base_path = Path(f"./data/Class_{class_id}/Template")
+        self.base_path = DATA / f"Class_{class_id}/Template"
         self.score_path = self.base_path / "Score"
         self.achievement_path = self.base_path / "Achievement"
         self.score_path.mkdir(parents=True, exist_ok=True)
