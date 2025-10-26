@@ -229,9 +229,9 @@ FluentPage {
                             Item { Layout.fillWidth: true }
 
                             Button {
-                                text: "添加成绩"
+                                text: "添加积分"
                                 highlighted: true
-                                onClicked: addScoreDialog.open()
+                                onClicked: addCreditDialog.open()
                             }
 
                             Button {
@@ -445,8 +445,8 @@ FluentPage {
                                                     flat: true
                                                     font.pixelSize: 12
                                                     onClicked: {
-                                                        selectedScore = modelData
-                                                        editScoreDialog.open()
+                                                        selectedCredit = modelData
+                                                        editCreditDialog.open()
                                                     }
                                                 }
 
@@ -456,8 +456,8 @@ FluentPage {
                                                     font.pixelSize: 12
                                                     palette.buttonText: "#dc2626"
                                                     onClicked: {
-                                                        selectedScore = modelData
-                                                        deleteScoreDialog.open()
+                                                        selectedCredit = modelData
+                                                        deleteCreditDialog.open()
                                                     }
                                                 }
                                             }
@@ -551,8 +551,8 @@ FluentPage {
 
                             Button {
                                 width: parent.width
-                                text: "📝 录入成绩"
-                                onClicked: addScoreDialog.open()
+                                text: "📝 录入积分"
+                                onClicked: addCreditDialog.open()
                             }
 
                             Button {
@@ -570,7 +570,7 @@ FluentPage {
                             Button {
                                 width: parent.width
                                 text: "🔄 刷新数据"
-                                onClicked: refreshScores()
+                                onClicked: refreshCredits()
                             }
                         }
                     }
@@ -651,10 +651,10 @@ FluentPage {
         }
     }
 
-    // 成绩详情模态框
+    // 积分详情模态框
     Dialog {
-        id: scoreDetailModal
-        title: "成绩详情"
+        id: creditDetailModal
+        title: "积分详情"
         width: 500
         height: 400
         anchors.centerIn: parent
@@ -687,32 +687,32 @@ FluentPage {
                     Row {
                         spacing: 16
                         Text { text: "姓名:"; width: 80; color: "#374151" }
-                        Text { text: selectedScore ? selectedScore.studentName || "张三" : "张三"; color: "#111827" }
+                        Text { text: selectedCredit ? selectedCredit.studentName || "张三" : "张三"; color: "#111827" }
                     }
 
                     Row {
                         spacing: 16
                         Text { text: "班级:"; width: 80; color: "#374151" }
-                        Text { text: selectedScore ? selectedScore.className || "高一(1)班" : "高一(1)班"; color: "#111827" }
+                        Text { text: selectedCredit ? selectedCredit.className || "高一(1)班" : "高一(1)班"; color: "#111827" }
                     }
 
                     Row {
                         spacing: 16
                         Text { text: "科目:"; width: 80; color: "#374151" }
-                        Text { text: selectedScore ? selectedScore.subject || "数学" : "数学"; color: "#111827" }
+                        Text { text: selectedCredit ? selectedCredit.subcategory || "项目" : "项目"; color: "#111827" }
                     }
 
                     Row {
                         spacing: 16
                         Text { text: "类型:"; width: 80; color: "#374151" }
-                        Text { text: selectedScore ? selectedScore.examType || "考试成绩" : "考试成绩"; color: "#111827" }
+                        Text { text: selectedCredit ? selectedCredit.category || "积分类别" : "积分类别"; color: "#111827" }
                     }
 
                     Row {
                         spacing: 16
                         Text { text: "分数:"; width: 80; color: "#374151" }
                         Text {
-                            text: selectedScore ? (selectedScore.score || 85).toString() : "85"
+                            text: selectedCredit ? (selectedCredit.score || 85).toString() : "85"
                             color: "#111827"
                             font.weight: Font.Bold
                         }
@@ -730,10 +730,10 @@ FluentPage {
         standardButtons: Dialog.Close
     }
 
-    // 添加成绩对话框
+    // 添加积分对话框
     Dialog {
-        id: addScoreDialog
-        title: "添加成绩记录"
+        id: addCreditDialog
+        title: "添加积分记录"
         width: 500
         height: 450
         anchors.centerIn: parent
@@ -803,10 +803,10 @@ FluentPage {
         standardButtons: Dialog.Ok | Dialog.Cancel
     }
 
-    // 编辑成绩对话框
+    // 编辑积分对话框
     Dialog {
-        id: editScoreDialog
-        title: "编辑成绩记录"
+        id: editCreditDialog
+        title: "编辑积分记录"
         width: 500
         height: 450
         anchors.centerIn: parent
@@ -858,7 +858,7 @@ FluentPage {
                 SpinBox {
                     from: 0
                     to: 100
-                    value: selectedScore ? selectedScore.score || 85 : 85
+                    value: selectedCredit ? selectedCredit.score || 85 : 85
                     width: 200
                 }
             }
@@ -868,7 +868,7 @@ FluentPage {
                 Text { text: "备注:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
                 TextField {
                     placeholderText: "可选备注信息"
-                    text: selectedScore ? selectedScore.note || "" : ""
+                    text: selectedCredit ? selectedCredit.note || "" : ""
                     width: 200
                 }
             }
@@ -877,9 +877,9 @@ FluentPage {
         standardButtons: Dialog.Ok | Dialog.Cancel
     }
 
-    // 删除确认对话框
+    // 删除积分确认对话框
     Dialog {
-        id: deleteScoreDialog
+        id: deleteCreditDialog
         title: "确认删除"
         width: 400
         height: 200
@@ -1084,9 +1084,9 @@ FluentPage {
     }
 
     // 刷新数据函数
-    function refreshScores() {
+    function refreshCredits() {
         if (controller) {
-            controller.refreshScores()
+            controller.refreshCredits()
         }
     }
 }

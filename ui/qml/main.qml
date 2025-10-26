@@ -12,8 +12,13 @@ FluentWindow {
     minimumWidth: 800
     minimumHeight: 600
 
-    // 导航项配置 - 移除仪表盘，班级管理为首页
+    // 导航项配置 - 设置 主页(1.html) 为首页
     navigationItems: [
+        {
+            title: qsTr("主页"),
+            page: Qt.resolvedUrl("HomePage.qml"),
+            icon: "ic_fluent_home_20_regular"
+        },
         {
             title: qsTr("班级管理"),
             page: Qt.resolvedUrl("ClassPage.qml"),
@@ -25,7 +30,7 @@ FluentWindow {
             icon: "ic_fluent_people_20_regular"
         },
         {
-            title: qsTr("成绩管理"),
+            title: qsTr("积分管理"),
             page: Qt.resolvedUrl("ScoreManagementPage.qml"),
             icon: "ic_fluent_chart_multiple_20_regular"
         },
@@ -45,23 +50,27 @@ FluentWindow {
     data: [
         Shortcut {
             sequence: "Ctrl+1"
-            onActivated: currentPageIndex = 0  // 班级管理
+            onActivated: currentPageIndex = 0  // 主页
         },
         Shortcut {
             sequence: "Ctrl+2"
-            onActivated: currentPageIndex = 1  // 学生管理
+            onActivated: currentPageIndex = 1  // 班级管理
         },
         Shortcut {
             sequence: "Ctrl+3"
-            onActivated: currentPageIndex = 2  // 成绩管理
+            onActivated: currentPageIndex = 2  // 学生管理
         },
         Shortcut {
             sequence: "Ctrl+4"
-            onActivated: currentPageIndex = 3  // 数据分析
+            onActivated: currentPageIndex = 3  // 积分管理
         },
         Shortcut {
             sequence: "Ctrl+5"
-            onActivated: currentPageIndex = 4  // 设置
+            onActivated: currentPageIndex = 4  // 数据分析
+        },
+        Shortcut {
+            sequence: "Ctrl+6"
+            onActivated: currentPageIndex = 5  // 设置
         },
         Shortcut {
             sequence: "Ctrl+B"
