@@ -6,6 +6,8 @@
 import sys
 import time
 from pathlib import Path
+import uuid
+import shutil
 
 from loguru import logger
 from PySide6.QtCore import Property, QObject, QSize, Signal, Slot
@@ -13,10 +15,13 @@ from PySide6.QtQml import qmlRegisterType
 from PySide6.QtWidgets import QApplication
 from RinUI import RinUIWindow
 
-from config import get_settings
+from config.class_config import ClassConfigManager
+from config.global_config import GlobalConfigManager
 from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION
+from core.file_store import AchievementFileStore, StudentFileStore, StudentRecord
 from core.database import db_manager
-from core.services import AchievementService, ClassService, StudentService
+from core.models.student import Student, StudentStatus
+from utils.basic_dirs import DATA, ensure_dirs
 
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
@@ -38,105 +43,439 @@ class ClassManagerController(QObject):
     studentsChanged = Signal()
     classesChanged = Signal()
     achievementsChanged = Signal()
+    scoresChanged = Signal()
+    creditsChanged = Signal()
 
     def __init__(self):
         super().__init__()
-        self.settings = get_settings()
 
-        # 初始化数据库
-        db_manager.initialize_database()
-        db_manager.create_sample_data()
+        # 内存数据
+        self._stats = {"total_students": 0, "total_classes": 0, "total_achievements": 0, "avg_score": 0}
+        self._students = []
+        self._classes = []
+        self._achievements = []
+        self._scores = []
+        self._credits = []
 
-        # 初始化服务
-        self._session = None
-        self._class_service = None
-        self._student_service = None
-        self._achievement_service = None
+        # 启动目录与默认班级
+        ensure_dirs()
+        self._current_class_id = self._select_default_class()
 
-        # 初始化数据
-        self._init_services()
+        # 文件存储
+        self._student_store = StudentFileStore(self._current_class_id)
+        self._achievement_store = AchievementFileStore(self._current_class_id)
+
+        # 加载数据
         self._load_data()
 
-    def _init_services(self):
-        """初始化服务层"""
-        # 获取总库会话
-        master_session_gen = db_manager.get_master_session()
-        self._master_session = next(master_session_gen)
+    def _select_default_class(self) -> str:
+        """选择默认班级：优先使用全局配置；若不存在则创建一个演示班级"""
+        try:
+            default_id = GlobalConfigManager.get_setting("custom_settings.default_class_id", None)
+            # 已配置且存在
+            if isinstance(default_id, str):
+                d = DATA / f"Class_{default_id}"
+                if d.exists():
+                    return default_id
+            # 扫描已有班级
+            ids = self._scan_class_ids()
+            if ids:
+                GlobalConfigManager.update_setting("custom_settings.default_class_id", ids[0])
+                return ids[0]
+            # 无班级 -> 创建演示班级
+            new_id = str(uuid.uuid4())
+            ClassConfigManager.create_config(new_id, class_name="演示班级", teacher_name="未设置")
+            # 确保学生/成就文件存在
+            StudentFileStore(new_id).save_all([])
+            AchievementFileStore(new_id).save_all([])
+            GlobalConfigManager.update_setting("custom_settings.default_class_id", new_id)
+            return new_id
+        except Exception as e:
+            print(f"⚠️ 选择默认班级失败: {e}")
+            # 兜底：仍然创建一个
+            new_id = str(uuid.uuid4())
+            ClassConfigManager.create_config(new_id, class_name="演示班级", teacher_name="未设置")
+            StudentFileStore(new_id).save_all([])
+            AchievementFileStore(new_id).save_all([])
+            GlobalConfigManager.update_setting("custom_settings.default_class_id", new_id)
+            return new_id
 
-        # 初始化服务（传入数据库管理器以支持混合架构）
-        self._class_service = ClassService(db_manager)
-        self._student_service = StudentService(db_manager)
-        self._achievement_service = AchievementService(db_manager)
+    def _scan_class_ids(self) -> list[str]:
+        """扫描 DATA 目录，返回所有有效的班级ID"""
+        result: list[str] = []
+        try:
+            base = DATA
+            if not base.exists():
+                return result
+            for p in base.iterdir():
+                if p.is_dir() and p.name.startswith("Class_"):
+                    cid = p.name.replace("Class_", "", 1)
+                    if (p / "config.json").exists():
+                        result.append(cid)
+                        # 平滑迁移旧版子库文件名（class.db -> Class_{uuid}.db）
+                        try:
+                            db_manager.migrate_legacy_db_name(cid)
+                        except Exception as e:
+                            logger.warning(f"迁移旧版子库失败（忽略）: {e}")
+        except Exception as e:
+            print(f"⚠️ 扫描班级目录失败: {e}")
+        return result
+
+    def _map_student_record(self, rec: StudentRecord, credits_map: dict[str, int], class_name: str | None = None) -> dict:
+        """将文件存储的学生记录映射为 QML 友好的字典结构"""
+        cname = class_name or rec.class_name or ""
+        return {
+            "id": rec.student_id,              # QML ClassPage.studentModel 使用 id 作为学号展示
+            "uuid": rec.id,                    # 内部唯一ID，用于删除/更新
+            "name": rec.name,
+            "student_id": rec.student_id,
+            "class_id": rec.class_id,
+            "class_name": cname,
+            "className": cname,               # 兼容 ClassPage 的字段命名
+            "is_active": rec.is_active,
+            "created_at": rec.created_at,
+            "credits": int(credits_map.get(rec.student_id, 0)),
+        }
+
+    def _achievement_to_dict(self, achievement) -> dict:
+        """将成就对象转换为字典（文件存储版）"""
+        return {
+            "id": achievement.id,
+            "student_id": achievement.student_id,
+            "title": getattr(achievement, "title", ""),
+            "description": getattr(achievement, "description", "") or "",
+            "points": int(getattr(achievement, "points", 0) or 0),
+            "created_at": getattr(achievement, "created_at", ""),
+        }
+
+    def _compute_students_and_stats(self) -> None:
+        """聚合所有班级的学生/成就数据，并计算统计值（学生优先从子库读取）"""
+        class_ids = self._scan_class_ids()
+        classes_list: list[dict] = []
+        students_list: list[dict] = []
+        achievements_list: list[dict] = []
+        total_students = 0
+        total_achievements = 0
+        total_points = 0
+        credits_map: dict[str, int] = {}
+
+        for cid in class_ids:
+            cfg = ClassConfigManager.get_config(cid)
+            astore = AchievementFileStore(cid)
+            achievements = astore.list()
+
+            # 成就统计（积分不再通过成就累加）
+            for a in achievements:
+                total_achievements += 1
+                points = int(getattr(a, "points", 0) or 0)
+                total_points += points
+
+            # 积分汇总：读取子库 ScoreRecord 中已应用(APPLIED)的记录
+            try:
+                from core.models.score_record import ScoreRecord, RecordStatus
+            except Exception:
+                ScoreRecord = None
+                RecordStatus = None
+            try:
+                with db_manager.get_sub_session_by_class_id(cid) as ss:
+                    records = []
+                    try:
+                        from sqlmodel import select
+                        if ScoreRecord:
+                            records = ss.exec(select(ScoreRecord)).all()
+                    except Exception:
+                        if ScoreRecord:
+                            records = ss.query(ScoreRecord).all()
+                    for r in records:
+                        status = str(getattr(r, "status", ""))
+                        applied_flag = False
+                        try:
+                            applied_flag = (status == str(RecordStatus.APPLIED))
+                        except Exception:
+                            # 不同ORM类型时直接字符串比较
+                            applied_flag = (status.endswith("APPLIED"))
+                        if not applied_flag:
+                            continue
+                        sid_val = getattr(r, "student_id", None)
+                        if sid_val is None:
+                            continue
+                        v = getattr(r, "final_score", None)
+                        if v is None:
+                            v = getattr(r, "score_value", 0) or 0
+                        try:
+                            v = round(float(v), 2)
+                        except Exception:
+                            v = 0
+                        key = str(sid_val)
+                        credits_map[key] = credits_map.get(key, 0) + v
+            except Exception as e:
+                logger.warning(f"⚠️ 读取子库积分记录失败（忽略）: {e}")
+
+            # 读取学生（优先子库，其次文件存储）
+            student_count = 0
+            try:
+                with db_manager.get_sub_session_by_class_id(cid) as ss:
+                    try:
+                        from sqlmodel import select
+                        db_students = ss.exec(select(Student)).all()
+                    except Exception:
+                        db_students = ss.query(Student).all()
+                    student_count = len(db_students)
+
+                    for s in db_students:
+                        s_num = getattr(s, "student_number", None)
+                        sid_str = str(s_num) if s_num is not None else str(getattr(s, "id", ""))
+                        students_list.append({
+                            "id": sid_str,
+                            "uuid": str(getattr(s, "id", "")),
+                            "name": getattr(s, "name", ""),
+                            "student_id": sid_str,
+                            "class_id": cid,
+                            "class_name": cfg.class_name,
+                            "className": cfg.class_name,
+                            "is_active": getattr(s, "status", None) == StudentStatus.ACTIVE,
+                            "created_at": str(getattr(s, "created_at", "")),
+                            "credits": int(credits_map.get(str(getattr(s, "id", "")), 0)),
+                        })
+                        total_students += 1
+            except Exception as db_e:
+                logger.warning(f"⚠️ 读取子库学生失败（忽略，降级为文件存储）: {db_e}")
+                sstore = StudentFileStore(cid)
+                fs_students = sstore.list()
+                student_count = len(fs_students)
+                for rec in fs_students:
+                    students_list.append(self._map_student_record(rec, credits_map, cfg.class_name))
+                    total_students += 1
+
+            # 班级统计
+            class_points = sum(int(getattr(a, "points", 0) or 0) for a in achievements)
+            class_avg = round(class_points / len(achievements), 2) if achievements else 0.0
+            classes_list.append({
+                "id": cid,
+                "value": cid,                 # ComboBox.currentValue 兼容
+                "name": cfg.class_name,
+                "description": cfg.description or "",
+                "is_active": cfg.is_active,
+                "studentCount": student_count,
+                "avgScore": class_avg,
+            })
+
+            # 成就映射
+            achievements_list.extend([self._achievement_to_dict(a) for a in achievements])
+
+        avg_overall = round(total_points / total_achievements, 2) if total_achievements else 0.0
+        self._stats = {
+            "total_students": total_students,
+            "total_classes": len(class_ids),
+            "total_achievements": total_achievements,
+            "avg_score": avg_overall,
+        }
+        self._classes = classes_list
+        self._students_all = students_list[:]  # 保留一份未过滤的副本
+        self._students = students_list
+        self._achievements = achievements_list
+
+    def _compute_scores(self) -> None:
+        """聚合所有班级的评分记录，映射为QML友好结构"""
+        from core.models.score_record import ScoreRecord
+        score_items: list[dict] = []
+        class_ids = self._scan_class_ids()
+
+        category_map = {
+            "academic": "考试成绩",
+            "homework": "作业成绩",
+            "participation": "课堂表现",
+            "behavior": "平时成绩",
+            "attendance": "出勤",
+            "discipline": "纪律",
+            "teamwork": "团队协作",
+            "leadership": "领导力",
+            "creativity": "创造力",
+            "custom": "其他",
+        }
+
+        for cid in class_ids:
+            cfg = ClassConfigManager.get_config(cid)
+            try:
+                with db_manager.get_sub_session_by_class_id(cid) as ss:
+                    try:
+                        from sqlmodel import select
+                        records = ss.exec(select(ScoreRecord)).all()
+                    except Exception:
+                        records = ss.query(ScoreRecord).all()
+
+                    student_name_cache: dict[int, str] = {}
+
+                    for r in records:
+                        s_name = None
+                        try:
+                            sid = getattr(r, "student_id", None)
+                            if sid is not None:
+                                if sid in student_name_cache:
+                                    s_name = student_name_cache[sid]
+                                else:
+                                    s_obj = None
+                                    try:
+                                        s_obj = ss.get(Student, sid)
+                                    except Exception:
+                                        try:
+                                            from sqlmodel import select as _select
+                                            s_obj = ss.exec(_select(Student).where(Student.id == sid)).first()
+                                        except Exception:
+                                            s_obj = ss.query(Student).filter(Student.id == sid).first()
+                                    s_name = getattr(s_obj, "name", None) if s_obj is not None else None
+                                    if s_name:
+                                        student_name_cache[sid] = s_name
+                        except Exception:
+                            s_name = None
+
+                        score_val = (
+                            getattr(r, "final_score", None)
+                            if getattr(r, "final_score", None) is not None
+                            else getattr(r, "score_value", None)
+                        )
+                        if score_val is None:
+                            score_val = getattr(r, "original_score", 0) or 0
+                        try:
+                            score_val = round(float(score_val), 2)
+                        except Exception:
+                            score_val = 0
+
+                        dt = getattr(r, "occurred_at", None) or getattr(r, "recorded_at", None) or getattr(r, "applied_at", None)
+                        if dt is not None:
+                            try:
+                                date_str = dt.strftime("%Y-%m-%d")
+                            except Exception:
+                                date_str = str(dt)
+                        else:
+                            date_str = ""
+
+                        subject = getattr(r, "subcategory", None) or "综合"
+                        cat = str(getattr(r, "category", "") or "").lower()
+                        exam_type = category_map.get(cat, "其他")
+
+                        score_items.append({
+                            "id": getattr(r, "id", None),
+                            "uuid": str(getattr(r, "uuid", "")),
+                            "studentId": getattr(r, "student_id", None),
+                            "studentName": s_name or "",
+                            "classId": cid,
+                            "className": cfg.class_name,
+                            "subject": subject,
+                            "examType": exam_type,
+                            "score": score_val,
+                            "date": date_str,
+                            "note": getattr(r, "description", None) or getattr(r, "reason", None) or "",
+                        })
+            except Exception as e:
+                logger.warning(f"⚠️ 读取班级({cid})评分记录失败（忽略）: {e}")
+                continue
+
+        self._scores = score_items
+
+    def _compute_credits(self) -> None:
+        """聚合所有班级的积分记录（ScoreRecord），映射为 QML 友好结构"""
+        from core.models.score_record import ScoreRecord, RecordStatus
+        credit_items: list[dict] = []
+        class_ids = self._scan_class_ids()
+
+        for cid in class_ids:
+            cfg = ClassConfigManager.get_config(cid)
+            try:
+                with db_manager.get_sub_session_by_class_id(cid) as ss:
+                    try:
+                        from sqlmodel import select
+                        records = ss.exec(select(ScoreRecord)).all()
+                    except Exception:
+                        records = ss.query(ScoreRecord).all()
+
+                    student_name_cache: dict[int, str] = {}
+
+                    for r in records:
+                        # 学生姓名缓存查找
+                        s_name = None
+                        try:
+                            sid = getattr(r, "student_id", None)
+                            if sid is not None:
+                                if sid in student_name_cache:
+                                    s_name = student_name_cache[sid]
+                                else:
+                                    s_obj = None
+                                    try:
+                                        s_obj = ss.get(Student, sid)
+                                    except Exception:
+                                        try:
+                                            from sqlmodel import select as _select
+                                            s_obj = ss.exec(_select(Student).where(Student.id == sid)).first()
+                                        except Exception:
+                                            s_obj = ss.query(Student).filter(Student.id == sid).first()
+                                    s_name = getattr(s_obj, "name", None) if s_obj is not None else None
+                                    if s_name:
+                                        student_name_cache[sid] = s_name
+                        except Exception:
+                            s_name = None
+
+                        # 计算积分值
+                        val = (
+                            getattr(r, "final_score", None)
+                            if getattr(r, "final_score", None) is not None
+                            else getattr(r, "score_value", None)
+                        )
+                        if val is None:
+                            val = getattr(r, "original_score", 0) or 0
+                        try:
+                            val = round(float(val), 2)
+                        except Exception:
+                            val = 0
+
+                        # 时间格式化
+                        dt = getattr(r, "occurred_at", None) or getattr(r, "recorded_at", None) or getattr(r, "applied_at", None)
+                        if dt is not None:
+                            try:
+                                date_str = dt.strftime("%Y-%m-%d")
+                            except Exception:
+                                date_str = str(dt)
+                        else:
+                            date_str = ""
+
+                        credit_items.append({
+                            "id": getattr(r, "id", None),
+                            "studentId": getattr(r, "student_id", None),
+                            "studentName": s_name or "",
+                            "classId": cid,
+                            "className": cfg.class_name,
+                            "category": getattr(r, "category", "") or "",
+                            "subcategory": getattr(r, "subcategory", "") or "",
+                            "title": getattr(r, "title", "") or "",
+                            "description": getattr(r, "description", "") or getattr(r, "reason", "") or "",
+                            "points": val,
+                            "status": str(getattr(r, "status", RecordStatus.PENDING)),
+                            "date": date_str,
+                        })
+            except Exception as e:
+                logger.warning(f"⚠️ 读取班级({cid})积分记录失败（忽略）: {e}")
+                continue
+
+        self._credits = credit_items
 
     def _load_data(self):
-        """加载数据"""
+        """加载数据（文件存储版）"""
         try:
-            # 加载统计数据
-            class_stats = self._class_service.get_class_stats()
-            student_stats = self._student_service.get_student_stats()
-            achievement_stats = self._achievement_service.get_achievement_stats()
-
-            self._stats = {
-                "total_students": student_stats.get("total_students", 0),
-                "total_classes": class_stats.get("total_classes", 0),
-                "total_achievements": achievement_stats.get("total_achievements", 0),
-                "avg_score": achievement_stats.get("avg_points_per_achievement", 0),
-            }
-
-            # 加载列表数据
-            self._students = [self._student_to_dict(s) for s in self._student_service.get_all_students()]
-            self._classes = [self._class_to_dict(c) for c in self._class_service.get_all_classes()]
-            self._achievements = []
-            # self._achievements = [
-            #     self._achievement_to_dict(a) for a in self._achievement_service.get_all_achievements()
-            # ]
-
-            # 发出信号
+            self._compute_students_and_stats()
+            self._compute_scores()
+            # 刷新积分列表以保持前端一致
+            self._compute_credits()
             self.statsChanged.emit()
             self.studentsChanged.emit()
             self.classesChanged.emit()
             self.achievementsChanged.emit()
-
+            self.scoresChanged.emit()
+            self.creditsChanged.emit()
         except Exception as e:
             print(f"❌ 数据加载失败: {e}")
 
-    def _student_to_dict(self, student) -> dict:
-        """将学生对象转换为字典"""
-        return {
-            "id": student.id,
-            "name": student.name,
-            "student_id": student.student_number,  # 使用student_number字段
-            "class_id": student.class_id,
-            "email": student.email or "",
-            "is_active": student.status == "ACTIVE",  # 使用status字段
-            "created_at": student.created_at.isoformat() if student.created_at else "",
-        }
+    # 已替换为文件存储版映射方法：_map_student_record、_achievement_to_dict
 
-    def _class_to_dict(self, class_obj) -> dict:
-        """将班级注册对象转换为字典"""
-        return {
-            "id": class_obj.id,
-            "name": class_obj.class_name,  # 使用class_name字段
-            "description": class_obj.description or "",
-            "is_active": class_obj.is_active,  # DataRegistry使用is_active字段，不是is_deleted
-            "class_type": class_obj.class_type or "REGULAR",
-            "grade": class_obj.grade or "",
-            "school_year": class_obj.school_year or "",
-            "student_count": class_obj.student_count,  # 直接使用student_count字段
-            "created_at": class_obj.created_at.isoformat() if class_obj.created_at else "",
-            "class_uuid": class_obj.uuid,  # DataRegistry使用uuid字段，不是class_uuid
-        }
-
-    def _achievement_to_dict(self, achievement) -> dict:
-        """将成就对象转换为字典"""
-        return {
-            "id": achievement.id,
-            "student_id": achievement.student_id,
-            "title": achievement.title,
-            "description": achievement.description or "",
-            "points": achievement.points,
-            "created_at": achievement.created_at.isoformat() if achievement.created_at else "",
-        }
 
     # 属性定义
     @Property("QVariant", notify=statsChanged)
@@ -155,6 +494,29 @@ class ClassManagerController(QObject):
     def achievements(self):
         return self._achievements
 
+    @Property("QVariant", notify=scoresChanged)
+    def scores(self):
+        return self._scores
+
+    @Property("QVariant", notify=creditsChanged)
+    def credits(self):
+        return self._credits
+
+    @Property(int, notify=statsChanged)
+    def totalStudents(self):
+        return int(self._stats.get("total_students", 0))
+
+    @Property(int, notify=statsChanged)
+    def totalClasses(self):
+        return int(self._stats.get("total_classes", 0))
+
+    @Property(int, notify=classesChanged)
+    def activeClasses(self):
+        try:
+            return sum(1 for c in (self._classes or []) if c.get("is_active"))
+        except Exception:
+            return 0
+
     @Property(str, constant=True)
     def appName(self):
         return APP_NAME
@@ -171,79 +533,529 @@ class ClassManagerController(QObject):
     @Slot()
     def refreshStats(self):
         """刷新统计数据"""
-        print("刷新统计数据")
-        self.statsChanged.emit()
-
-    @Slot(str, str, int)
-    def addStudent(self, name, studentNumber, registryId):
-        """添加学生"""
         try:
-            # 通过registry_id获取班级信息
-            registry = self._class_service.get_class_by_id(registryId)
-            if not registry:
-                print(f"❌ 班级不存在: {registryId}")
+            self._compute_students_and_stats()
+            # 刷新积分列表以保持前端一致
+            self._compute_credits()
+            self.statsChanged.emit()
+            self.studentsChanged.emit()
+            self.classesChanged.emit()
+            self.achievementsChanged.emit()
+            self.creditsChanged.emit()
+            print("✅ 统计已刷新")
+        except Exception as e:
+            print(f"❌ 刷新统计失败: {e}")
+
+    @Slot()
+    def refreshScores(self):
+        try:
+            self._compute_scores()
+            self.scoresChanged.emit()
+            print("✅ 成绩列表已刷新")
+        except Exception as e:
+            print(f"❌ 刷新成绩失败: {e}")
+
+    @Slot()
+    def refreshCredits(self):
+        try:
+            self._compute_credits()
+            self.creditsChanged.emit()
+            print("✅ 积分列表已刷新")
+        except Exception as e:
+            print(f"❌ 刷新积分失败: {e}")
+
+    def _resolve_student_pk(self, ss, student_ident):
+        """解析学生主键ID（支持 student_number 或 主键ID）"""
+        try:
+            from sqlmodel import select
+        except Exception:
+            select = None
+        try:
+            if student_ident is None:
+                return None
+            s_val = str(student_ident)
+            # 优先按学号
+            if s_val.isdigit():
+                num = int(s_val)
+                try:
+                    if select:
+                        stu = ss.exec(select(Student).where(Student.student_number == num)).first()
+                    else:
+                        stu = ss.query(Student).filter(Student.student_number == num).first()
+                except Exception:
+                    stu = ss.query(Student).filter(Student.student_number == num).first()
+                if stu:
+                    return int(getattr(stu, "id"))
+                # 如果没有匹配学号，当作主键ID
+                return num
+            else:
+                # 非纯数字，尝试作为主键ID
+                try:
+                    return int(s_val)
+                except Exception:
+                    return None
+        except Exception:
+            return None
+
+    @Slot("QVariant")
+    def addCreditRecord(self, data):
+        """新增积分记录（写入子库 ScoreRecord）
+        data 字段示例：{
+          classId, studentId|studentNumber, points, title, description, category, subcategory, occurredAt, recorder
+        }
+        """
+        try:
+            from datetime import datetime
+            from core.models.score_record import ScoreRecord, RecordStatus, RecordSource
+
+            class_id = str(data.get("classId") or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                # 解析学生主键
+                student_ident = data.get("studentId") or data.get("studentNumber")
+                student_pk = self._resolve_student_pk(ss, student_ident)
+                if student_pk is None:
+                    print("❌ 找不到学生，无法新增积分记录")
+                    return
+
+                # 规范化分值
+                pts = data.get("points")
+                try:
+                    pts = round(float(pts or 0), 2)
+                except Exception:
+                    pts = 0.0
+
+                # 发生时间
+                occurred_at = data.get("occurredAt")
+                if isinstance(occurred_at, str) and occurred_at:
+                    try:
+                        occurred_dt = datetime.strptime(occurred_at[:19], "%Y-%m-%d%H:%M:%S")
+                    except Exception:
+                        try:
+                            occurred_dt = datetime.strptime(occurred_at[:10], "%Y-%m-%d")
+                        except Exception:
+                            occurred_dt = datetime.now()
+                elif isinstance(occurred_at, datetime):
+                    occurred_dt = occurred_at
+                else:
+                    occurred_dt = datetime.now()
+
+                record = ScoreRecord(
+                    student_id=int(student_pk),
+                    template_id=None,
+                    score_value=pts,
+                    original_score=None,
+                    final_score=pts,
+                    title=str(data.get("title") or "积分调整"),
+                    description=(data.get("description") or None),
+                    reason=None,
+                    category=str(data.get("category") or "custom"),
+                    subcategory=(data.get("subcategory") or None),
+                    tags=None,
+                    status=RecordStatus.PENDING,
+                    source=RecordSource.MANUAL,
+                    occurred_at=occurred_dt,
+                    recorded_at=datetime.now(),
+                    applied_at=None,
+                    recorder=str(data.get("recorder") or "system"),
+                    approver=None,
+                    approval_note=None,
+                    rejection_reason=None,
+                    related_record_id=None,
+                    batch_id=None,
+                    metadata_json=None,
+                    attachments=None,
+                    view_count=0,
+                )
+                ss.add(record)
+                ss.commit()
+                print(f"✅ 积分记录已新增: 学生ID={student_pk}, 分值={pts}")
+
+            # 刷新内存数据
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 新增积分记录失败: {e}")
+
+    @Slot("QVariant")
+    def editCreditRecord(self, data):
+        """编辑积分记录（仅在可修改状态下）
+        data: { id, classId, title?, description?, category?, subcategory?, points?, occurredAt? }
+        """
+        try:
+            from datetime import datetime
+            from core.models.score_record import ScoreRecord
+            class_id = str(data.get("classId") or self._current_class_id)
+            rec_id = data.get("id")
+            if not class_id or rec_id is None:
+                print("❌ 编辑积分记录缺少参数")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(rec_id))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(rec_id))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(rec_id)).first()
+                if obj is None:
+                    print("❌ 记录不存在")
+                    return
+                if not obj.can_be_modified():
+                    print("❌ 当前状态不允许修改")
+                    return
+                # 更新字段
+                if "title" in data:
+                    obj.title = str(data.get("title") or obj.title)
+                if "description" in data:
+                    v = data.get("description")
+                    obj.description = v if v is not None else obj.description
+                if "category" in data:
+                    obj.category = str(data.get("category") or obj.category)
+                if "subcategory" in data:
+                    v = data.get("subcategory")
+                    obj.subcategory = v if v is not None else obj.subcategory
+                if "points" in data:
+                    try:
+                        pts = round(float(data.get("points")), 2)
+                        obj.score_value = pts
+                        obj.final_score = pts
+                    except Exception:
+                        pass
+                if "occurredAt" in data:
+                    v = data.get("occurredAt")
+                    if isinstance(v, str) and v:
+                        try:
+                            obj.occurred_at = datetime.strptime(v[:19], "%Y-%m-%d%H:%M:%S")
+                        except Exception:
+                            try:
+                                obj.occurred_at = datetime.strptime(v[:10], "%Y-%m-%d")
+                            except Exception:
+                                pass
+                obj.update_timestamp()
+                ss.add(obj)
+                ss.commit()
+                print("✅ 积分记录已更新")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 编辑积分记录失败: {e}")
+
+    @Slot("QVariant")
+    def deleteCreditRecord(self, data):
+        """删除积分记录（仅在可修改状态下）
+        data: { id, classId }
+        """
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(data.get("classId") or self._current_class_id)
+            rec_id = data.get("id")
+            if not class_id or rec_id is None:
+                print("❌ 删除积分记录缺少参数")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(rec_id))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(rec_id))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(rec_id)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                if not obj.can_be_modified():
+                    print("❌ 当前状态不允许删除")
+                    return
+                ss.delete(obj)
+                ss.commit()
+                print("✅ 积分记录已删除")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 删除积分记录失败: {e}")
+
+    @Slot(int, "QVariant", str, "QVariant")
+    def approveCreditRecord(self, recordId, classId, approver, note):
+        """审核通过积分记录"""
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(classId or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(recordId))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                from core.models.score_record import RecordStatus
+                if not obj.can_be_approved():
+                    print("❌ 当前状态不允许审核")
+                    return
+                obj.approve(str(approver or "approver"), note if note is not None else None)
+                ss.add(obj)
+                ss.commit()
+                print("✅ 已审核通过")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 审核通过失败: {e}")
+
+    @Slot(int, "QVariant", str)
+    def rejectCreditRecord(self, recordId, classId, reason):
+        """审核拒绝积分记录"""
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(classId or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(recordId))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                if not obj.can_be_approved():
+                    print("❌ 当前状态不允许审核拒绝")
+                    return
+                obj.reject(str("approver"), str(reason or ""))
+                ss.add(obj)
+                ss.commit()
+                print("✅ 已审核拒绝")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 审核拒绝失败: {e}")
+
+    @Slot(int, "QVariant")
+    def applyCreditRecord(self, recordId, classId):
+        """应用积分记录（会同步更新学生当前分数）"""
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(classId or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(recordId))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                if not obj.can_be_applied():
+                    print("❌ 当前状态不允许应用")
+                    return
+                # 应用积分记录
+                obj.apply_score()
+                ss.add(obj)
+                # 同步更新学生当前分数
+                try:
+                    stu = ss.get(Student, int(obj.student_id))
+                except Exception:
+                    stu = None
+                if stu is not None:
+                    val = obj.final_score if obj.final_score is not None else obj.score_value
+                    try:
+                        change = round(float(val or 0), 2)
+                    except Exception:
+                        change = 0.0
+                    stu.add_score(change, reason=obj.title or "积分调整")
+                    ss.add(stu)
+                ss.commit()
+                print("✅ 积分记录已应用，并同步学生分数")
+            # 刷新汇总与积分列表
+            self._compute_students_and_stats()
+            self._compute_credits()
+            self.studentsChanged.emit()
+            self.statsChanged.emit()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 应用积分记录失败: {e}")
+
+    @Slot(str, str, "QVariant")
+    def addStudent(self, name, studentNumber, registryId):
+        """添加学生（文件存储 + 子库同步）"""
+        try:
+            class_id = str(registryId) if registryId is not None else self._current_class_id
+            if not class_id:
+                print("❌ 未选择班级")
                 return
 
-            # 创建学生
-            student = self._student_service.create_student(
-                name=name,
-                student_number=studentNumber,
-                registry_id=registryId,
-                classroom_id=1,  # 默认classroom_id
-            )
+            cfg = ClassConfigManager.get_config(class_id)
+            store = StudentFileStore(class_id)
+            rec = store.add(name=name, student_id=studentNumber, class_name=cfg.class_name)
 
-            if student:
-                # 重新加载学生数据
-                self._students = [self._student_to_dict(s) for s in self._student_service.get_all_students()]
-                self.studentsChanged.emit()
-                print(f"✅ 学生添加成功: {name}")
-            else:
-                print(f"❌ 学生添加失败: {name}")
+            # 同步到每班级子库（Class_{uuid}.db）——尽力而为，不影响文件存储成功
+            try:
+                # 尝试转换为 UUID
+                from uuid import UUID
+                registry_uuid = UUID(class_id)
+                with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                    db_student = Student(
+                        name=name,
+                        student_number=int(studentNumber) if str(studentNumber).isdigit() else None,
+                        registry_uuid=registry_uuid,
+                        status=StudentStatus.ACTIVE,
+                    )
+                    ss.add(db_student)
+                    ss.commit()
+            except Exception as db_e:
+                logger.warning(f"⚠️ 子库同步学生失败（忽略，不影响文件存储）: {db_e}")
+
+            # 重新计算并同步到QML
+            self._compute_students_and_stats()
+            self.studentsChanged.emit()
+            self.classesChanged.emit()
+            self.statsChanged.emit()
+            print(f"✅ 学生添加成功: {rec.name}({rec.student_id}) -> {cfg.class_name}")
+        except ValueError as ve:
+            print(f"❌ 添加学生失败: {ve}")
         except Exception as e:
             print(f"❌ 添加学生时出错: {e}")
-        print(f"添加学生: {name} ({studentNumber})")
 
     @Slot(str, str)
-    def addClass(self, name, description=""):
-        """添加班级"""
+    def addClass(self, name, teacherName=""):
+        """添加班级（文件存储 + 预创建子库）"""
         try:
-            registry = self._class_service.create_class(
-                name=name, description=description, class_type="REGULAR", grade="", school_year=""
-            )
+            class_id = str(uuid.uuid4())
+            ClassConfigManager.create_config(class_id, class_name=name, teacher_name=teacherName)
+            StudentFileStore(class_id).save_all([])
+            AchievementFileStore(class_id).save_all([])
 
-            if registry:
-                # 重新加载班级数据
-                self._classes = [self._class_to_dict(c) for c in self._class_service.get_all_classes()]
-                self.classesChanged.emit()
-                print(f"✅ 班级添加成功: {name}")
-            else:
-                print(f"❌ 班级添加失败: {name}")
+            # 预创建每班级子库文件并建表
+            try:
+                with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                    # 仅通过获取会话触发建表，无需插入记录
+                    pass
+            except Exception as db_e:
+                logger.warning(f"⚠️ 预创建子库失败（忽略，不影响文件存储）: {db_e}")
+
+            # 如果没有默认班级，则设置为新班级
+            if not self._current_class_id:
+                self._current_class_id = class_id
+
+            self._compute_students_and_stats()
+            self.classesChanged.emit()
+            self.statsChanged.emit()
+            print(f"✅ 班级创建成功: {name}（ID: {class_id}）")
         except Exception as e:
             print(f"❌ 添加班级时出错: {e}")
 
-    @Slot(int)
-    def deleteStudent(self, studentId):
-        """删除学生（需要班级UUID）"""
+    @Slot("QVariant")
+    def deleteStudent(self, student):
+        """删除学生（文件存储 + 子库同步删除）"""
         try:
-            # 注意：这里需要知道学生所在的班级UUID
-            # 在实际使用中，可能需要从UI传递更多参数
-            print(f"⚠️ 删除学生功能需要班级UUID参数，学生ID: {studentId}")
-            # TODO: 实现跨班级学生查找和删除
+            # 支持传入对象或UUID
+            student_uuid = None
+            class_id = None
+            if isinstance(student, dict):
+                student_uuid = student.get("uuid") or student.get("id")
+                class_id = student.get("class_id") or self._current_class_id
+            else:
+                student_uuid = str(student)
+                class_id = self._current_class_id
+
+            if not student_uuid or not class_id:
+                print("❌ 删除学生缺少必要信息")
+                return
+
+            ok = StudentFileStore(class_id).delete(student_uuid)
+            if ok:
+                # 同步删除子库记录（尽力而为）
+                try:
+                    with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                        db_obj = None
+                        # 尝试按UUID删除
+                        try:
+                            from uuid import UUID
+                            uid = UUID(student_uuid)
+                            try:
+                                db_obj = ss.get(Student, uid)
+                            except Exception:
+                                db_obj = None
+                        except Exception:
+                            uid = None
+                        # 若未找到，尝试按学号删除
+                        if db_obj is None and str(student_uuid).isdigit():
+                            num = int(student_uuid)
+                            try:
+                                from sqlmodel import select
+                                db_obj = ss.exec(select(Student).where(Student.student_number == num)).first()
+                            except Exception:
+                                db_obj = ss.query(Student).filter(Student.student_number == num).first()
+                        if db_obj is not None:
+                            ss.delete(db_obj)
+                            ss.commit()
+                except Exception as db_e:
+                    logger.warning(f"⚠️ 子库删除学生失败（忽略）: {db_e}")
+
+                self._compute_students_and_stats()
+                self.studentsChanged.emit()
+                self.classesChanged.emit()
+                self.statsChanged.emit()
+                print(f"✅ 学生删除成功: {student_uuid}")
+            else:
+                print(f"⚠️ 未找到学生，无法删除: {student_uuid}")
         except Exception as e:
             print(f"❌ 删除学生时出错: {e}")
 
-    @Slot(int)
+    @Slot("QVariant")
     def deleteClass(self, registryId):
-        """删除班级"""
+        """删除班级（文件存储）"""
         try:
-            success = self._class_service.delete_class(registryId)
-            if success:
-                # 重新加载班级数据
-                self._classes = [self._class_to_dict(c) for c in self._class_service.get_all_classes()]
-                self.classesChanged.emit()
-                print(f"✅ 班级删除成功，ID: {registryId}")
-            else:
-                print(f"❌ 班级删除失败，ID: {registryId}")
+            class_id = str(registryId)
+            p = DATA / f"Class_{class_id}"
+            if p.exists():
+                shutil.rmtree(p, ignore_errors=True)
+
+            # 从缓存移除
+            try:
+                ClassConfigManager.reload_config(class_id)
+            except Exception:
+                pass
+
+            # 如果删除的是默认班级，重新选择
+            default_id = GlobalConfigManager.get_setting("custom_settings.default_class_id", None)
+            if default_id == class_id:
+                new_default = self._select_default_class()
+                GlobalConfigManager.update_setting("custom_settings.default_class_id", new_default)
+                self._current_class_id = new_default
+
+            self._compute_students_and_stats()
+            self.classesChanged.emit()
+            self.studentsChanged.emit()
+            self.statsChanged.emit()
+            print(f"✅ 班级删除成功，ID: {class_id}")
         except Exception as e:
             print(f"❌ 删除班级时出错: {e}")
 
@@ -254,8 +1066,467 @@ class ClassManagerController(QObject):
 
     @Slot(str, "QVariant")
     def saveSettings(self, key, value):
-        """保存设置"""
-        print(f"保存设置: {key} = {value}")
+        """保存设置（全局配置）"""
+        try:
+            GlobalConfigManager.update_setting(key, value)
+            # 切换默认班级时，重置当前存储
+            if key == "custom_settings.default_class_id":
+                self._current_class_id = str(value)
+                self._student_store = StudentFileStore(self._current_class_id)
+                self._achievement_store = AchievementFileStore(self._current_class_id)
+                self._compute_students_and_stats()
+                self.studentsChanged.emit()
+                self.classesChanged.emit()
+                self.statsChanged.emit()
+            print(f"✅ 设置已保存: {key} = {value}")
+        except Exception as e:
+            print(f"❌ 保存设置失败: {e}")
+
+    @Slot(str)
+    def filterStudents(self, text):
+        """按名称/学号过滤学生"""
+        try:
+            t = (text or "").strip().lower()
+            if not t:
+                self._students = self._students_all[:]
+                self.studentsChanged.emit()
+                return
+            self._students = [
+                s for s in self._students_all
+                if t in (s.get("name", "").lower())
+                or t in (s.get("student_id", "").lower())
+                or t in (str(s.get("className", "")).lower())
+            ]
+            self.studentsChanged.emit()
+        except Exception as e:
+            print(f"❌ 过滤学生失败: {e}")
+
+
+def main():
+    """主函数"""
+    print(f"启动 {APP_NAME} v{APP_VERSION}...")
+
+    # 创建应用程序
+    app = QApplication(sys.argv)
+    app.setApplicationName(APP_NAME)
+    app.setApplicationVersion(APP_VERSION)
+
+    # 注册自定义类型
+    qmlRegisterType(ClassManagerController, "ClassManager", 1, 0, "ClassManagerController")
+
+    # 创建控制器实例
+    controller = ClassManagerController()
+
+    # 创建主窗口
+    main_window = RinUIWindow()
+
+    # 设置QML上下文属性
+    try:
+        # 尝试通过引擎设置context属性
+        if hasattr(main_window, "engine") and main_window.engine:
+            main_window.engine.rootContext().setContextProperty("controller", controller)
+        elif hasattr(main_window, "rootContext"):
+            main_window.rootContext().setContextProperty("controller", controller)
+        else:
+            print("⚠️ 无法设置QML上下文属性, controller可能无法在QML中访问")
+    except Exception as e:
+        print(f"⚠️ 设置QML上下文属性失败: {e}")
+
+    # 加载QML文件
+    main_window.load("ui/qml/main.qml")
+
+    # 设置窗口属性
+    main_window.setTitle(f"{APP_NAME} v{APP_VERSION}")
+    main_window.setMinimumSize(QSize(1000, 700))
+    main_window.resize(1200, 800)
+
+    # 显示窗口
+    main_window.show()
+
+    print("应用程序已启动")
+    print("使用Rinui框架构建的现代化界面")
+
+    # 运行应用程序
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
+
+    def _resolve_student_pk(self, ss, student_ident):
+        """解析学生主键ID（支持 student_number 或 主键ID）"""
+        try:
+            from sqlmodel import select
+        except Exception:
+            select = None
+        try:
+            if student_ident is None:
+                return None
+            s_val = str(student_ident)
+            # 优先按学号
+            if s_val.isdigit():
+                num = int(s_val)
+                try:
+                    if select:
+                        stu = ss.exec(select(Student).where(Student.student_number == num)).first()
+                    else:
+                        stu = ss.query(Student).filter(Student.student_number == num).first()
+                except Exception:
+                    stu = ss.query(Student).filter(Student.student_number == num).first()
+                if stu:
+                    return int(getattr(stu, "id"))
+                # 如果没有匹配学号，当作主键ID
+                return num
+            else:
+                # 非纯数字，尝试作为主键ID
+                try:
+                    return int(s_val)
+                except Exception:
+                    return None
+        except Exception:
+            return None
+
+    @Slot("QVariant")
+    def addCreditRecord(self, data):
+        """新增积分记录（写入子库 ScoreRecord）
+        data 字段示例：{
+          classId, studentId|studentNumber, points, title, description, category, subcategory, occurredAt, recorder
+        }
+        """
+        try:
+            from datetime import datetime
+            from core.models.score_record import ScoreRecord, RecordStatus, RecordSource
+
+            class_id = str(data.get("classId") or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                # 解析学生主键
+                student_ident = data.get("studentId") or data.get("studentNumber")
+                student_pk = self._resolve_student_pk(ss, student_ident)
+                if student_pk is None:
+                    print("❌ 找不到学生，无法新增积分记录")
+                    return
+
+                # 规范化分值
+                pts = data.get("points")
+                try:
+                    pts = round(float(pts or 0), 2)
+                except Exception:
+                    pts = 0.0
+
+                # 发生时间
+                occurred_at = data.get("occurredAt")
+                if isinstance(occurred_at, str) and occurred_at:
+                    try:
+                        occurred_dt = datetime.strptime(occurred_at[:19], "%Y-%m-%d%H:%M:%S")
+                    except Exception:
+                        try:
+                            occurred_dt = datetime.strptime(occurred_at[:10], "%Y-%m-%d")
+                        except Exception:
+                            occurred_dt = datetime.now()
+                elif isinstance(occurred_at, datetime):
+                    occurred_dt = occurred_at
+                else:
+                    occurred_dt = datetime.now()
+
+                record = ScoreRecord(
+                    student_id=int(student_pk),
+                    template_id=None,
+                    score_value=pts,
+                    original_score=None,
+                    final_score=pts,
+                    title=str(data.get("title") or "积分调整"),
+                    description=(data.get("description") or None),
+                    reason=None,
+                    category=str(data.get("category") or "custom"),
+                    subcategory=(data.get("subcategory") or None),
+                    tags=None,
+                    status=RecordStatus.PENDING,
+                    source=RecordSource.MANUAL,
+                    occurred_at=occurred_dt,
+                    recorded_at=datetime.now(),
+                    applied_at=None,
+                    recorder=str(data.get("recorder") or "system"),
+                    approver=None,
+                    approval_note=None,
+                    rejection_reason=None,
+                    related_record_id=None,
+                    batch_id=None,
+                    metadata_json=None,
+                    attachments=None,
+                    view_count=0,
+                )
+                ss.add(record)
+                ss.commit()
+                print(f"✅ 积分记录已新增: 学生ID={student_pk}, 分值={pts}")
+
+            # 刷新内存数据
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 新增积分记录失败: {e}")
+
+    @Slot("QVariant")
+    def editCreditRecord(self, data):
+        """编辑积分记录（仅在可修改状态下）
+        data: { id, classId, title?, description?, category?, subcategory?, points?, occurredAt? }
+        """
+        try:
+            from datetime import datetime
+            from core.models.score_record import ScoreRecord
+            class_id = str(data.get("classId") or self._current_class_id)
+            rec_id = data.get("id")
+            if not class_id or rec_id is None:
+                print("❌ 编辑积分记录缺少参数")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(rec_id))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(rec_id))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(rec_id)).first()
+                if obj is None:
+                    print("❌ 记录不存在")
+                    return
+                if not obj.can_be_modified():
+                    print("❌ 当前状态不允许修改")
+                    return
+                # 更新字段
+                if "title" in data:
+                    obj.title = str(data.get("title") or obj.title)
+                if "description" in data:
+                    v = data.get("description")
+                    obj.description = v if v is not None else obj.description
+                if "category" in data:
+                    obj.category = str(data.get("category") or obj.category)
+                if "subcategory" in data:
+                    v = data.get("subcategory")
+                    obj.subcategory = v if v is not None else obj.subcategory
+                if "points" in data:
+                    try:
+                        pts = round(float(data.get("points")), 2)
+                        obj.score_value = pts
+                        obj.final_score = pts
+                    except Exception:
+                        pass
+                if "occurredAt" in data:
+                    v = data.get("occurredAt")
+                    if isinstance(v, str) and v:
+                        try:
+                            obj.occurred_at = datetime.strptime(v[:19], "%Y-%m-%d%H:%M:%S")
+                        except Exception:
+                            try:
+                                obj.occurred_at = datetime.strptime(v[:10], "%Y-%m-%d")
+                            except Exception:
+                                pass
+                obj.update_timestamp()
+                ss.add(obj)
+                ss.commit()
+                print("✅ 积分记录已更新")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 编辑积分记录失败: {e}")
+
+    @Slot("QVariant")
+    def deleteCreditRecord(self, data):
+        """删除积分记录（仅在可修改状态下）
+        data: { id, classId }
+        """
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(data.get("classId") or self._current_class_id)
+            rec_id = data.get("id")
+            if not class_id or rec_id is None:
+                print("❌ 删除积分记录缺少参数")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(rec_id))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(rec_id))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(rec_id)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                if not obj.can_be_modified():
+                    print("❌ 当前状态不允许删除")
+                    return
+                ss.delete(obj)
+                ss.commit()
+                print("✅ 积分记录已删除")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 删除积分记录失败: {e}")
+
+    @Slot(int, "QVariant", str, "QVariant")
+    def approveCreditRecord(self, recordId, classId, approver, note):
+        """审核通过积分记录"""
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(classId or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(recordId))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                from core.models.score_record import RecordStatus
+                if not obj.can_be_approved():
+                    print("❌ 当前状态不允许审核")
+                    return
+                obj.approve(str(approver or "approver"), note if note is not None else None)
+                ss.add(obj)
+                ss.commit()
+                print("✅ 已审核通过")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 审核通过失败: {e}")
+
+    @Slot(int, "QVariant", str)
+    def rejectCreditRecord(self, recordId, classId, reason):
+        """审核拒绝积分记录"""
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(classId or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(recordId))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                if not obj.can_be_approved():
+                    print("❌ 当前状态不允许审核拒绝")
+                    return
+                obj.reject(str("approver"), str(reason or ""))
+                ss.add(obj)
+                ss.commit()
+                print("✅ 已审核拒绝")
+            self._compute_credits()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 审核拒绝失败: {e}")
+
+    @Slot(int, "QVariant")
+    def applyCreditRecord(self, recordId, classId):
+        """应用积分记录（会同步更新学生当前分数）"""
+        try:
+            from core.models.score_record import ScoreRecord
+            class_id = str(classId or self._current_class_id)
+            if not class_id:
+                print("❌ 未选择班级")
+                return
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                obj = None
+                try:
+                    obj = ss.get(ScoreRecord, int(recordId))
+                except Exception:
+                    try:
+                        from sqlmodel import select
+                        obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
+                    except Exception:
+                        obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
+                if obj is None:
+                    print("⚠️ 记录不存在")
+                    return
+                if not obj.can_be_applied():
+                    print("❌ 当前状态不允许应用")
+                    return
+                # 应用积分记录
+                obj.apply_score()
+                ss.add(obj)
+                # 同步更新学生当前分数
+                try:
+                    stu = ss.get(Student, int(obj.student_id))
+                except Exception:
+                    stu = None
+                if stu is not None:
+                    val = obj.final_score if obj.final_score is not None else obj.score_value
+                    try:
+                        change = round(float(val or 0), 2)
+                    except Exception:
+                        change = 0.0
+                    stu.add_score(change, reason=obj.title or "积分调整")
+                    ss.add(stu)
+                ss.commit()
+                print("✅ 积分记录已应用，并同步学生分数")
+            # 刷新汇总与积分列表
+            self._compute_students_and_stats()
+            self._compute_credits()
+            self.studentsChanged.emit()
+            self.statsChanged.emit()
+            self.creditsChanged.emit()
+        except Exception as e:
+            print(f"❌ 应用积分记录失败: {e}")
+
+    @Slot(str)
+    def saveSettings(self, key, value):
+        """保存设置（全局配置）"""
+        try:
+            GlobalConfigManager.update_setting(key, value)
+            # 切换默认班级时，重置当前存储
+            if key == "custom_settings.default_class_id":
+                self._current_class_id = str(value)
+                self._student_store = StudentFileStore(self._current_class_id)
+                self._achievement_store = AchievementFileStore(self._current_class_id)
+                self._compute_students_and_stats()
+                self.studentsChanged.emit()
+                self.classesChanged.emit()
+                self.statsChanged.emit()
+            print(f"✅ 设置已保存: {key} = {value}")
+        except Exception as e:
+            print(f"❌ 保存设置失败: {e}")
+
+    @Slot(str)
+    def filterStudents(self, text):
+        """按名称/学号过滤学生"""
+        try:
+            t = (text or "").strip().lower()
+            if not t:
+                self._students = self._students_all[:]
+                self.studentsChanged.emit()
+                return
+            self._students = [
+                s for s in self._students_all
+                if t in (s.get("name", "").lower())
+                or t in (s.get("student_id", "").lower())
+                or t in (str(s.get("className", "")).lower())
+            ]
+            self.studentsChanged.emit()
+        except Exception as e:
+            print(f"❌ 过滤学生失败: {e}")
 
 
 def main():

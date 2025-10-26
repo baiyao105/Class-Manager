@@ -5,11 +5,11 @@ import "../components"
 
 FluentPage {
     id: scoreManagementPage
-    title: "成绩管理"
+    title: "积分管理"
 
     // 页面状态
     property int currentView: 0 // 0: 成绩列表, 1: 统计分析, 2: 导入导出
-    property var selectedScore: null
+    property var selectedCredit: null
 
     // 顶部分段控制器
     header: Rectangle {
@@ -24,7 +24,7 @@ FluentPage {
             spacing: 2
 
             Repeater {
-                model: ["成绩列表", "统计分析", "导入导出"]
+                model: ["积分列表", "统计分析", "导入导出"]
 
                 Rectangle {
                     width: 120
@@ -219,7 +219,7 @@ FluentPage {
                             spacing: 12
 
                             Text {
-                                text: "成绩记录"
+                                text: "积分记录"
                                 font.pixelSize: 18
                                 font.weight: Font.Bold
                                 color: "#111827"
@@ -339,7 +339,7 @@ FluentPage {
                                 ListView {
                                     width: parent.width
                                     height: parent.height - 50
-                                    model: controller ? controller.scores : []
+                                    model: controller ? controller.credits : []
                                     spacing: 1
 
                                     delegate: Rectangle {
@@ -353,8 +353,8 @@ FluentPage {
                                             onEntered: parent.color = "#e0f2fe"
                                             onExited: parent.color = index % 2 === 0 ? "#ffffff" : "#f8fafc"
                                             onClicked: {
-                                                selectedScore = modelData
-                                                scoreDetailModal.open()
+                                                selectedCredit = modelData
+                                                creditDetailModal.open()
                                             }
                                         }
 
@@ -380,7 +380,7 @@ FluentPage {
                                             }
 
                                             Text {
-                                                text: modelData.subject || "数学"
+                                                text: modelData.subcategory || "项目"
                                                 font.pixelSize: 14
                                                 color: "#6b7280"
                                                 width: 80
@@ -388,7 +388,7 @@ FluentPage {
                                             }
 
                                             Text {
-                                                text: modelData.examType || "考试成绩"
+                                                text: modelData.category || "积分类别"
                                                 font.pixelSize: 14
                                                 color: "#6b7280"
                                                 width: 100

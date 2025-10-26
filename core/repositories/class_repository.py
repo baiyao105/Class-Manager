@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from ..models.class_ import Classroom
 from ..models.master import DataRegistry
 from .base_repository import BaseRepository
+from uuid import UUID
 
 
 class ClassRepository(BaseRepository[DataRegistry]):
@@ -54,19 +55,15 @@ class ClassRepository(BaseRepository[DataRegistry]):
         self.session.commit()
         self.session.refresh(registry)
 
-        # 创建子库班级详情
-        if self.sub_session_factory:
-            classroom_data = {
-                "registry_uuid": registry.id,  # 关联总库ID
-                "name": entity_data["name"],
-                "teacher_name": entity_data.get("teacher_name", ""),
-                "teacher_contact": entity_data.get("teacher_contact"),
-                "description": entity_data.get("description"),
-            }
-
+        # 创建子库班级详情（仅业务字段）
+        if self.sub_session_factory and registry.db_path:
             sub_session = self.sub_session_factory(registry.db_path)
             try:
-                classroom = Classroom(**classroom_data)
+                classroom = Classroom(
+                    registry_uuid=UUID(registry.uuid),
+                    base_score=entity_data.get("base_score", 100.0),
+                    score_rules=entity_data.get("score_rules"),
+                )
                 sub_session.add(classroom)
                 sub_session.commit()
             finally:
@@ -83,7 +80,7 @@ class ClassRepository(BaseRepository[DataRegistry]):
         Returns:
             DataRegistry对象或None
         """
-        query = select(DataRegistry).where(DataRegistry.id == entity_id)
+        query = select(DataRegistry).where(DataRegistry.uuid == entity_id)
         if hasattr(DataRegistry, "is_deleted"):
             query = query.where(not DataRegistry.is_deleted)
 
@@ -114,22 +111,11 @@ class ClassRepository(BaseRepository[DataRegistry]):
         if self.sub_session_factory and registry.db_path:
             sub_session = self.sub_session_factory(registry.db_path)
             try:
-                classroom_query = select(Classroom).where(Classroom.registry_uuid == registry.id)
+                classroom_query = select(Classroom).where(Classroom.registry_uuid == UUID(registry.uuid))
                 classroom = sub_session.exec(classroom_query).first()
 
-                if classroom:
-                    # 更新子库班级信息
-                    classroom_updates = {
-                        "name": update_data.get("class_name", classroom.name),
-                        "teacher_name": update_data.get("teacher_name", classroom.teacher_name),
-                        "teacher_contact": update_data.get("teacher_contact", classroom.teacher_contact),
-                        "description": update_data.get("description", classroom.description),
-                    }
-
-                    for field, value in classroom_updates.items():
-                        if hasattr(classroom, field):
-                            setattr(classroom, field, value)
-
+                if classroom and "base_score" in update_data:
+                    classroom.base_score = update_data["base_score"]
                     sub_session.add(classroom)
                     sub_session.commit()
             finally:
@@ -211,7 +197,7 @@ class ClassRepository(BaseRepository[DataRegistry]):
 
         sub_session = self.sub_session_factory(registry.db_path)
         try:
-            query = select(Classroom).where(Classroom.registry_uuid == registry.id)
+            query = select(Classroom).where(Classroom.registry_uuid == UUID(registry.uuid))
             result = sub_session.exec(query)
             return result.first()
         finally:

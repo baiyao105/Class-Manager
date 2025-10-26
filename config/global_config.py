@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .settings import AppSettings
+from utils.basic_dirs import DATA
 
 
 class SystemConfig(BaseModel):
@@ -70,7 +71,7 @@ class GlobalConfig(BaseSettings):
     def save_to_file(self, file_path: Path | None = None) -> None:
         """保存配置到文件"""
         if file_path is None:
-            file_path = Path("./data/config.json")
+            file_path = DATA / "config.json"
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
@@ -80,7 +81,7 @@ class GlobalConfig(BaseSettings):
     def load_from_file(cls, file_path: Path | None = None) -> "GlobalConfig":
         """从文件加载配置"""
         if file_path is None:
-            file_path = Path("./data/config.json")
+            file_path = DATA / "config.json"
 
         if not file_path.exists():
             # 如果文件不存在，创建默认配置
