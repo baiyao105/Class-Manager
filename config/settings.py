@@ -95,7 +95,7 @@ class AppSettings(BaseSettings):
     def save_to_file(self, file_path: Path | None = None) -> None:
         """保存配置到文件"""
         if file_path is None:
-            file_path = self.config_dir / "settings.json"
+            file_path = self.data_dir / "settings.json"
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
@@ -126,7 +126,7 @@ def get_settings() -> AppSettings:
     """获取全局设置实例(单例模式)"""
     global _settings
     if _settings is None:
-        config_file = Path("./config/settings.json")
+        config_file = Path("./data/settings.json")
         _settings = AppSettings.load_from_file(config_file)
     return _settings
 
