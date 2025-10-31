@@ -8,7 +8,6 @@ from typing import Any
 from uuid import UUID
 
 from ..models.student import Student, StudentStatus
-from ..repositories.class_repository import ClassRepository
 from ..repositories.student_repository import StudentRepository
 
 
@@ -18,7 +17,7 @@ class StudentService:
     负责学生相关的业务逻辑，通过StudentRepository进行数据访问
     """
 
-    def __init__(self, student_repository: StudentRepository, class_repository: ClassRepository = None):
+    def __init__(self, student_repository: StudentRepository, class_repository: Any = None):
         """初始化学生服务
 
         Args:

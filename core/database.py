@@ -1,9 +1,9 @@
 """数据库管理模块
 
-提供主库与子库的统一管理：
-- 主库引擎/会话（索引与统计）
+仅管理子库（每班级独立数据库）：
 - 子库会话工厂（按班级路径）
-- 初始化建表与示例数据
+- 子库建表初始化（checkfirst）
+- 旧版文件名迁移（class.db -> Class_{uuid}.db）
 """
 from __future__ import annotations
 
@@ -15,9 +15,6 @@ from loguru import logger
 from sqlmodel import Session, create_engine, select
 
 from utils.basic_dirs import DATA, ensure_dirs
-
-# 模型导入（主库）
-from core.models.master import DataRegistry, DataStatistics
 # 模型导入（子库）
 from core.models.class_ import Classroom
 from core.models.student import Student, StudentStatus
@@ -28,37 +25,13 @@ from core.models.achievement import Achievement, AchievementTemplate
 
 
 class DatabaseManager:
-    """数据库管理器：统一管理主库与子库"""
+    """数据库管理器：仅管理子库（已移除主库逻辑）"""
 
-    def __init__(self, master_db: Path | None = None):
+    def __init__(self):
         ensure_dirs()
-        self.master_db_path = Path(master_db or DATA / "master.db").resolve()
-        self.master_db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.master_engine = create_engine(f"sqlite:///{self.master_db_path}", echo=False)
         self._sub_engines: Dict[str, any] = {}
-        logger.debug(f"Master DB at: {self.master_db_path}")
 
-    # ---------- 主库 ----------
-    def initialize_database(self) -> None:
-        """初始化主库表结构（仅主库模型）"""
-        try:
-            logger.info("Initializing master database tables...")
-            # 仅创建主库模型表
-            DataRegistry.__table__.create(self.master_engine, checkfirst=True)
-            DataStatistics.__table__.create(self.master_engine, checkfirst=True)
-            logger.info("Master database initialized.")
-        except Exception as e:
-            logger.error(f"Initialize master database failed: {e}")
-            raise
-
-    def get_master_session(self):
-        """提供一个生成器样式的会话获取（与现有 main.py 兼容）"""
-        session = Session(self.master_engine)
-        try:
-            yield session
-        finally:
-            # 交由调用方决定关闭时机
-            pass
+    # 已移除主库相关接口：initialize_database、get_master_session
 
     # ---------- 子库 ----------
     def _ensure_sub_tables(self, engine) -> None:
@@ -101,70 +74,7 @@ class DatabaseManager:
         """根据班级UUID获取子库会话，路径为 Class_{uuid}/Class_{uuid}.db"""
         return self.get_sub_session(self.get_class_db_path(class_uuid))
 
-    # ---------- 示例数据 ----------
-    def create_sample_data(self) -> None:
-        """如主库为空，则创建一个示例班级与若干学生"""
-        try:
-            with Session(self.master_engine) as ms:
-                count = ms.exec(select(DataRegistry)).all()
-                if count:
-                    logger.info("Master registry already has data. Skip sample creation.")
-                    return
-
-                # 创建一个示例班级
-                cls_uuid = uuid4()
-                class_dir = DATA / f"Class_{cls_uuid}"
-                sub_db_path = class_dir / f"Class_{cls_uuid}.db"  # 统一命名
-                registry = DataRegistry(
-                    class_name="示例班级",
-                    class_type="regular",
-                    grade=None,
-                    school_year=None,
-                    db_path=str(sub_db_path.resolve()),
-                    description="用于演示的数据",
-                    is_active=True,
-                )
-                ms.add(registry)
-                ms.commit()
-                ms.refresh(registry)
-
-                # 子库：创建 Classroom 与学生
-                with self.get_sub_session(registry.db_path) as ss:
-                    classroom = Classroom(registry_uuid=UUID(registry.uuid), base_score=100.0)
-                    ss.add(classroom)
-                    ss.commit()
-                    ss.refresh(classroom)
-
-                    # 三个示例学生
-                    s1 = Student(
-                        name="张三",
-                        student_number=1001,
-                        registry_uuid=UUID(registry.uuid),
-                        classroom_id=classroom.id,
-                        status=StudentStatus.ACTIVE,
-                    )
-                    s2 = Student(
-                        name="李四",
-                        student_number=1002,
-                        registry_uuid=UUID(registry.uuid),
-                        classroom_id=classroom.id,
-                        status=StudentStatus.ACTIVE,
-                    )
-                    s3 = Student(
-                        name="王五",
-                        student_number=1003,
-                        registry_uuid=UUID(registry.uuid),
-                        classroom_id=classroom.id,
-                        status=StudentStatus.ACTIVE,
-                    )
-                    ss.add(s1)
-                    ss.add(s2)
-                    ss.add(s3)
-                    ss.commit()
-                logger.info("Sample data created: 1 class, 3 students.")
-        except Exception as e:
-            logger.error(f"Create sample data failed: {e}")
-            # 不抛出，避免阻断启动
+    # 已移除示例数据创建（主库依赖）
 
     def migrate_legacy_db_name(self, class_uuid: str) -> Path | None:
         """将旧版子库文件名 class.db 迁移为 Class_{uuid}.db。

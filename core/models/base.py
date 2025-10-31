@@ -54,10 +54,7 @@ class SoftDeleteMixin(SQLModel):
         self.deleted_at = None
 
 
-class MasterDBModel(UUIDMixin, TimestampMixin, SQLModel):
-    """总库模型基类 - 用于班级索引和统计缓存"""
-
-    model_config = ConfigDict(from_attributes=True)
+# 已移除总库模型基类 MasterDBModel（总库逻辑已删除）
 
 
 class SubDBModel(UUIDMixin, TimestampMixin, SoftDeleteMixin, SQLModel):

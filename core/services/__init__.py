@@ -4,7 +4,6 @@
 """
 
 from .achievement_service import AchievementService
-from .class_service import ClassService
 from .student_service import StudentService
 
-__all__ = ["AchievementService", "ClassService", "StudentService"]
+__all__ = ["AchievementService", "StudentService"]
