@@ -6,7 +6,6 @@ from .achievement import Achievement, AchievementLevel, AchievementTemplate, Ach
 from .base import (
     ArchiveMixin,
     BaseModel,
-    MasterDBModel,
     OrderMixin,
     SoftDeleteMixin,
     SubDBModel,
@@ -27,8 +26,7 @@ from .class_ import (
     GroupUpdate,
 )
 
-# 总库模型
-from .master import DataRegistry, DataStatistics
+# 业务模型（子库）
 from .score_record import RecordSource, RecordStatus, ScoreRecord
 from .score_template import ScoreCategory, ScoreTemplate, ScoreType
 from .student import Student, StudentCreate, StudentRead, StudentStatus, StudentUpdate
@@ -49,13 +47,10 @@ __all__ = [
     "ClassroomRead",
     "ClassroomUpdate",
     # 总库模型
-    "DataRegistry",
-    "DataStatistics",
     "Group",
     "GroupCreate",
     "GroupRead",
     "GroupUpdate",
-    "MasterDBModel",
     "OrderMixin",
     "RecordSource",
     "RecordStatus",
