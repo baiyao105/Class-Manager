@@ -10,15 +10,24 @@ FluentPage {
 
     // 顶部分段控制器
     segmentedItems: [
-        { text: "界面设置", value: "interface" },
-        { text: "数据设置", value: "data" },
-        { text: "系统信息", value: "system" }
+        {
+            text: "界面设置",
+            value: "interface"
+        },
+        {
+            text: "数据设置",
+            value: "data"
+        },
+        {
+            text: "系统信息",
+            value: "system"
+        }
     ]
 
     property string currentSegment: "interface"
 
     onSegmentChanged: {
-        currentSegment = value
+        currentSegment = value;
     }
 
     // 主内容区域
@@ -127,9 +136,9 @@ FluentPage {
                             currentIndex: 0
 
                             onCurrentIndexChanged: {
-                                var themes = ["light", "dark", "auto"]
+                                var themes = ["light", "dark", "auto"];
                                 if (controller && controller.saveSettings) {
-                                    controller.saveSettings("theme", themes[currentIndex])
+                                    controller.saveSettings("theme", themes[currentIndex]);
                                 }
                             }
                         }
@@ -155,9 +164,9 @@ FluentPage {
                             currentIndex: 0
 
                             onCurrentIndexChanged: {
-                                var languages = ["zh-CN", "en-US"]
+                                var languages = ["zh-CN", "en-US"];
                                 if (controller && controller.saveSettings) {
-                                    controller.saveSettings("language", languages[currentIndex])
+                                    controller.saveSettings("language", languages[currentIndex]);
                                 }
                             }
                         }
@@ -183,7 +192,7 @@ FluentPage {
 
                             onCheckedChanged: {
                                 if (controller && controller.saveSettings) {
-                                    controller.saveSettings("animations_enabled", checked)
+                                    controller.saveSettings("animations_enabled", checked);
                                 }
                             }
                         }
@@ -220,7 +229,7 @@ FluentPage {
 
                             onValueChanged: {
                                 if (controller && controller.saveSettings) {
-                                    controller.saveSettings("window_opacity", value)
+                                    controller.saveSettings("window_opacity", value);
                                 }
                             }
                         }
@@ -267,7 +276,7 @@ FluentPage {
 
                             onCheckedChanged: {
                                 if (controller && controller.saveSettings) {
-                                    controller.saveSettings("auto_save_enabled", checked)
+                                    controller.saveSettings("auto_save_enabled", checked);
                                 }
                             }
                         }
@@ -300,9 +309,9 @@ FluentPage {
                             currentIndex: 1
 
                             onCurrentIndexChanged: {
-                                var backupTypes = ["none", "data_only", "full"]
+                                var backupTypes = ["none", "data_only", "full"];
                                 if (controller && controller.saveSettings) {
-                                    controller.saveSettings("backup_type", backupTypes[currentIndex])
+                                    controller.saveSettings("backup_type", backupTypes[currentIndex]);
                                 }
                             }
                         }
@@ -318,7 +327,7 @@ FluentPage {
                             icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z'/%3E%3C/svg%3E"
                             onClicked: {
                                 if (controller && controller.exportData) {
-                                    controller.exportData()
+                                    controller.exportData();
                                 }
                             }
                         }
@@ -328,7 +337,7 @@ FluentPage {
                             flat: true
                             icon.source: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z'/%3E%3C/svg%3E"
                             onClicked: {
-                                console.log("导入数据")
+                                console.log("导入数据");
                             }
                         }
 
@@ -416,7 +425,7 @@ FluentPage {
                         Button {
                             text: "检查更新"
                             onClicked: {
-                                console.log("检查更新")
+                                console.log("检查更新");
                             }
                         }
 
@@ -470,7 +479,7 @@ FluentPage {
 
         onAccepted: {
             if (controller && controller.resetData) {
-                controller.resetData()
+                controller.resetData();
             }
         }
     }

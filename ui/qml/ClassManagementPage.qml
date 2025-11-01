@@ -30,7 +30,9 @@ ScrollView {
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Row {
                 spacing: 12
@@ -134,7 +136,9 @@ ScrollView {
                     }
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 // 视图切换
                 Row {
@@ -239,8 +243,8 @@ ScrollView {
                     onEntered: parent.border.color = "#3b82f6"
                     onExited: parent.border.color = "#e5e7eb"
                     onClicked: {
-                        classDetailDialog.classData = modelData
-                        classDetailDialog.open()
+                        classDetailDialog.classData = modelData;
+                        classDetailDialog.open();
                     }
                 }
 
@@ -403,8 +407,8 @@ ScrollView {
                             width: (parent.width - 8) / 2
                             font.pixelSize: 12
                             onClicked: {
-                                classDetailDialog.classData = modelData
-                                classDetailDialog.open()
+                                classDetailDialog.classData = modelData;
+                                classDetailDialog.open();
                             }
                         }
 
@@ -414,8 +418,8 @@ ScrollView {
                             width: (parent.width - 8) / 2
                             font.pixelSize: 12
                             onClicked: {
-                                editClassDialog.classData = modelData
-                                editClassDialog.open()
+                                editClassDialog.classData = modelData;
+                                editClassDialog.open();
                             }
                         }
                     }
@@ -863,6 +867,22 @@ ScrollView {
     }
 
     // 简化其他对话框定义...
-    Dialog { id: classSettingsDialog; title: "班级设置"; width: 500; height: 400; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: exportReportDialog; title: "导出班级报告"; width: 500; height: 400; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
+    Dialog {
+        id: classSettingsDialog
+        title: "班级设置"
+        width: 500
+        height: 400
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: exportReportDialog
+        title: "导出班级报告"
+        width: 500
+        height: 400
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
 }

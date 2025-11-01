@@ -30,7 +30,9 @@ ScrollView {
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Row {
                 spacing: 12
@@ -330,7 +332,9 @@ ScrollView {
                         color: "#111827"
                     }
 
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
 
                     Row {
                         spacing: 8
@@ -502,12 +506,17 @@ ScrollView {
                                                 height: 24
                                                 radius: 12
                                                 color: {
-                                                    switch(modelData.type) {
-                                                        case "完整备份": return "#dcfce7"
-                                                        case "增量备份": return "#dbeafe"
-                                                        case "自动备份": return "#fef3c7"
-                                                        case "自定义备份": return "#f3e8ff"
-                                                        default: return "#f3f4f6"
+                                                    switch (modelData.type) {
+                                                    case "完整备份":
+                                                        return "#dcfce7";
+                                                    case "增量备份":
+                                                        return "#dbeafe";
+                                                    case "自动备份":
+                                                        return "#fef3c7";
+                                                    case "自定义备份":
+                                                        return "#f3e8ff";
+                                                    default:
+                                                        return "#f3f4f6";
                                                     }
                                                 }
                                                 anchors.centerIn: parent
@@ -517,12 +526,17 @@ ScrollView {
                                                     anchors.centerIn: parent
                                                     font.pixelSize: 10
                                                     color: {
-                                                        switch(modelData.type) {
-                                                            case "完整备份": return "#166534"
-                                                            case "增量备份": return "#1d4ed8"
-                                                            case "自动备份": return "#92400e"
-                                                            case "自定义备份": return "#7c3aed"
-                                                            default: return "#6b7280"
+                                                        switch (modelData.type) {
+                                                        case "完整备份":
+                                                            return "#166534";
+                                                        case "增量备份":
+                                                            return "#1d4ed8";
+                                                        case "自动备份":
+                                                            return "#92400e";
+                                                        case "自定义备份":
+                                                            return "#7c3aed";
+                                                        default:
+                                                            return "#6b7280";
                                                         }
                                                     }
                                                 }
@@ -741,12 +755,76 @@ ScrollView {
     }
 
     // 简化其他对话框定义...
-    Dialog { id: createFullBackupDialog; title: "完整备份"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: createIncrementalBackupDialog; title: "增量备份"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: createCustomBackupDialog; title: "自定义备份"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: fullRestoreDialog; title: "完整恢复"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: selectiveRestoreDialog; title: "选择性恢复"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: fileRestoreDialog; title: "从文件恢复"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: storageSettingsDialog; title: "存储位置设置"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: cleanupDialog; title: "清理旧备份"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
+    Dialog {
+        id: createFullBackupDialog
+        title: "完整备份"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: createIncrementalBackupDialog
+        title: "增量备份"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: createCustomBackupDialog
+        title: "自定义备份"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: fullRestoreDialog
+        title: "完整恢复"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: selectiveRestoreDialog
+        title: "选择性恢复"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: fileRestoreDialog
+        title: "从文件恢复"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: storageSettingsDialog
+        title: "存储位置设置"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: cleanupDialog
+        title: "清理旧备份"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
 }

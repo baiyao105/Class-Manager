@@ -3,24 +3,24 @@
 现代化的班级管理系统, 基于Rinui框架和PySide6构建
 """
 
+import shutil
 import sys
 import time
-from pathlib import Path
 import uuid
-import shutil
+from pathlib import Path
 
 from loguru import logger
 from PySide6.QtCore import Property, QObject, QSize, Signal, Slot
 from PySide6.QtQml import qmlRegisterType
 from PySide6.QtWidgets import QApplication
-from RinUI import RinUIWindow
 
 from config.class_config import ClassConfigManager
-from config.global_config import GlobalConfigManager
 from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION
-from core.models.achievement import Achievement
+from config.global_config import GlobalConfigManager
 from core.database import db_manager
+from core.models.achievement import Achievement
 from core.models.student import Student, StudentStatus
+from RinUI import RinUIWindow
 from utils.basic_dirs import DATA, ensure_dirs
 
 log_dir = Path("logs")
@@ -109,8 +109,6 @@ class ClassManagerController(QObject):
             print(f"⚠️ 扫描班级目录失败: {e}")
         return result
 
-    
-
     def _achievement_to_dict(self, achievement: Achievement) -> dict:
         """将数据库成就对象转换为字典（QML友好）"""
         tpl = getattr(achievement, "template", None)
@@ -157,16 +155,11 @@ class ClassManagerController(QObject):
                 with db_manager.get_sub_session_by_class_id(cid) as ss:
                     try:
                         from sqlmodel import select
-                        achievements = ss.exec(
-                            select(Achievement).where(Achievement.is_deleted == False)
-                        ).all()
+
+                        achievements = ss.exec(select(Achievement).where(Achievement.is_deleted == False)).all()
                     except Exception:
                         try:
-                            achievements = (
-                                ss.query(Achievement)
-                                .filter(Achievement.is_deleted == False)
-                                .all()
-                            )
+                            achievements = ss.query(Achievement).filter(Achievement.is_deleted == False).all()
                         except Exception:
                             achievements = ss.query(Achievement).all()
             except Exception as e:
@@ -184,7 +177,7 @@ class ClassManagerController(QObject):
 
             # 积分汇总：读取子库 ScoreRecord 中已应用(APPLIED)且未软删除的记录
             try:
-                from core.models.score_record import ScoreRecord, RecordStatus
+                from core.models.score_record import RecordStatus, ScoreRecord
             except Exception:
                 ScoreRecord = None
                 RecordStatus = None
@@ -193,6 +186,7 @@ class ClassManagerController(QObject):
                     records = []
                     try:
                         from sqlmodel import select
+
                         if ScoreRecord:
                             # 统一过滤：只统计未软删除且状态为 APPLIED 的记录
                             records = ss.exec(
@@ -205,21 +199,17 @@ class ClassManagerController(QObject):
                         if ScoreRecord:
                             # 兼容不同 ORM：降级查询并至少过滤未软删除
                             try:
-                                records = (
-                                    ss.query(ScoreRecord)
-                                    .filter(ScoreRecord.is_deleted == False)
-                                    .all()
-                                )
+                                records = ss.query(ScoreRecord).filter(ScoreRecord.is_deleted == False).all()
                             except Exception:
                                 records = ss.query(ScoreRecord).all()
                     for r in records:
                         status = str(getattr(r, "status", ""))
                         applied_flag = False
                         try:
-                            applied_flag = (status == str(RecordStatus.APPLIED))
+                            applied_flag = status == str(RecordStatus.APPLIED)
                         except Exception:
                             # 不同ORM类型时直接字符串比较
-                            applied_flag = (status.endswith("APPLIED"))
+                            applied_flag = status.endswith("APPLIED")
                         if not applied_flag:
                             continue
                         # 统一过滤：忽略已软删除的记录
@@ -246,6 +236,7 @@ class ClassManagerController(QObject):
                 with db_manager.get_sub_session_by_class_id(cid) as ss:
                     try:
                         from sqlmodel import select
+
                         db_students = ss.exec(select(Student)).all()
                     except Exception:
                         db_students = ss.query(Student).all()
@@ -254,18 +245,20 @@ class ClassManagerController(QObject):
                     for s in db_students:
                         s_num = getattr(s, "student_number", None)
                         sid_str = str(s_num) if s_num is not None else str(getattr(s, "id", ""))
-                        students_list.append({
-                            "id": sid_str,
-                            "uuid": str(getattr(s, "uuid", "")),
-                            "name": getattr(s, "name", ""),
-                            "student_id": sid_str,
-                            "class_id": cid,
-                            "class_name": cfg.class_name,
-                            "className": cfg.class_name,
-                            "is_active": getattr(s, "status", None) == StudentStatus.ACTIVE,
-                            "created_at": str(getattr(s, "created_at", "")),
-                            "credits": int(credits_map.get(str(getattr(s, "id", "")), 0)),
-                        })
+                        students_list.append(
+                            {
+                                "id": sid_str,
+                                "uuid": str(getattr(s, "uuid", "")),
+                                "name": getattr(s, "name", ""),
+                                "student_id": sid_str,
+                                "class_id": cid,
+                                "class_name": cfg.class_name,
+                                "className": cfg.class_name,
+                                "is_active": getattr(s, "status", None) == StudentStatus.ACTIVE,
+                                "created_at": str(getattr(s, "created_at", "")),
+                                "credits": int(credits_map.get(str(getattr(s, "id", "")), 0)),
+                            }
+                        )
                         total_students += 1
             except Exception as db_e:
                 logger.warning(f"⚠️ 读取子库学生失败（忽略）: {db_e}")
@@ -280,15 +273,17 @@ class ClassManagerController(QObject):
                     p = 0.0
                 class_points += p
             class_avg = round(class_points / len(achievements), 2) if achievements else 0.0
-            classes_list.append({
-                "id": cid,
-                "value": cid,                 # ComboBox.currentValue 兼容
-                "name": cfg.class_name,
-                "description": cfg.description or "",
-                "is_active": cfg.is_active,
-                "studentCount": student_count,
-                "avgScore": class_avg,
-            })
+            classes_list.append(
+                {
+                    "id": cid,
+                    "value": cid,  # ComboBox.currentValue 兼容
+                    "name": cfg.class_name,
+                    "description": cfg.description or "",
+                    "is_active": cfg.is_active,
+                    "studentCount": student_count,
+                    "avgScore": class_avg,
+                }
+            )
 
             # 成就映射
             achievements_list.extend([self._achievement_to_dict(a) for a in achievements])
@@ -308,6 +303,7 @@ class ClassManagerController(QObject):
     def _compute_scores(self) -> None:
         """聚合所有班级的评分记录，映射为QML友好结构"""
         from core.models.score_record import ScoreRecord
+
         score_items: list[dict] = []
         class_ids = self._scan_class_ids()
 
@@ -330,6 +326,7 @@ class ClassManagerController(QObject):
                 with db_manager.get_sub_session_by_class_id(cid) as ss:
                     try:
                         from sqlmodel import select
+
                         records = ss.exec(select(ScoreRecord)).all()
                     except Exception:
                         records = ss.query(ScoreRecord).all()
@@ -350,6 +347,7 @@ class ClassManagerController(QObject):
                                     except Exception:
                                         try:
                                             from sqlmodel import select as _select
+
                                             s_obj = ss.exec(_select(Student).where(Student.id == sid)).first()
                                         except Exception:
                                             s_obj = ss.query(Student).filter(Student.id == sid).first()
@@ -371,7 +369,11 @@ class ClassManagerController(QObject):
                         except Exception:
                             score_val = 0
 
-                        dt = getattr(r, "occurred_at", None) or getattr(r, "recorded_at", None) or getattr(r, "applied_at", None)
+                        dt = (
+                            getattr(r, "occurred_at", None)
+                            or getattr(r, "recorded_at", None)
+                            or getattr(r, "applied_at", None)
+                        )
                         if dt is not None:
                             try:
                                 date_str = dt.strftime("%Y-%m-%d")
@@ -384,19 +386,21 @@ class ClassManagerController(QObject):
                         cat = str(getattr(r, "category", "") or "").lower()
                         exam_type = category_map.get(cat, "其他")
 
-                        score_items.append({
-                            "id": getattr(r, "id", None),
-                            "uuid": str(getattr(r, "uuid", "")),
-                            "studentId": getattr(r, "student_id", None),
-                            "studentName": s_name or "",
-                            "classId": cid,
-                            "className": cfg.class_name,
-                            "subject": subject,
-                            "examType": exam_type,
-                            "score": score_val,
-                            "date": date_str,
-                            "note": getattr(r, "description", None) or getattr(r, "reason", None) or "",
-                        })
+                        score_items.append(
+                            {
+                                "id": getattr(r, "id", None),
+                                "uuid": str(getattr(r, "uuid", "")),
+                                "studentId": getattr(r, "student_id", None),
+                                "studentName": s_name or "",
+                                "classId": cid,
+                                "className": cfg.class_name,
+                                "subject": subject,
+                                "examType": exam_type,
+                                "score": score_val,
+                                "date": date_str,
+                                "note": getattr(r, "description", None) or getattr(r, "reason", None) or "",
+                            }
+                        )
             except Exception as e:
                 logger.warning(f"⚠️ 读取班级({cid})评分记录失败（忽略）: {e}")
                 continue
@@ -405,7 +409,8 @@ class ClassManagerController(QObject):
 
     def _compute_credits(self) -> None:
         """聚合所有班级的积分记录（ScoreRecord），映射为 QML 友好结构"""
-        from core.models.score_record import ScoreRecord, RecordStatus
+        from core.models.score_record import RecordStatus, ScoreRecord
+
         credit_items: list[dict] = []
         class_ids = self._scan_class_ids()
 
@@ -415,17 +420,12 @@ class ClassManagerController(QObject):
                 with db_manager.get_sub_session_by_class_id(cid) as ss:
                     try:
                         from sqlmodel import select
+
                         # 统一过滤：仅加载未软删除的记录
-                        records = ss.exec(
-                            select(ScoreRecord).where(ScoreRecord.is_deleted == False)
-                        ).all()
+                        records = ss.exec(select(ScoreRecord).where(ScoreRecord.is_deleted == False)).all()
                     except Exception:
                         try:
-                            records = (
-                                ss.query(ScoreRecord)
-                                .filter(ScoreRecord.is_deleted == False)
-                                .all()
-                            )
+                            records = ss.query(ScoreRecord).filter(ScoreRecord.is_deleted == False).all()
                         except Exception:
                             records = ss.query(ScoreRecord).all()
 
@@ -446,6 +446,7 @@ class ClassManagerController(QObject):
                                     except Exception:
                                         try:
                                             from sqlmodel import select as _select
+
                                             s_obj = ss.exec(_select(Student).where(Student.id == sid)).first()
                                         except Exception:
                                             s_obj = ss.query(Student).filter(Student.id == sid).first()
@@ -469,7 +470,11 @@ class ClassManagerController(QObject):
                             val = 0
 
                         # 时间格式化
-                        dt = getattr(r, "occurred_at", None) or getattr(r, "recorded_at", None) or getattr(r, "applied_at", None)
+                        dt = (
+                            getattr(r, "occurred_at", None)
+                            or getattr(r, "recorded_at", None)
+                            or getattr(r, "applied_at", None)
+                        )
                         if dt is not None:
                             try:
                                 date_str = dt.strftime("%Y-%m-%d")
@@ -478,20 +483,22 @@ class ClassManagerController(QObject):
                         else:
                             date_str = ""
 
-                        credit_items.append({
-                            "id": getattr(r, "id", None),
-                            "studentId": getattr(r, "student_id", None),
-                            "studentName": s_name or "",
-                            "classId": cid,
-                            "className": cfg.class_name,
-                            "category": getattr(r, "category", "") or "",
-                            "subcategory": getattr(r, "subcategory", "") or "",
-                            "title": getattr(r, "title", "") or "",
-                            "description": getattr(r, "description", "") or getattr(r, "reason", "") or "",
-                            "points": val,
-                            "status": str(getattr(r, "status", RecordStatus.PENDING)),
-                            "date": date_str,
-                        })
+                        credit_items.append(
+                            {
+                                "id": getattr(r, "id", None),
+                                "studentId": getattr(r, "student_id", None),
+                                "studentName": s_name or "",
+                                "classId": cid,
+                                "className": cfg.class_name,
+                                "category": getattr(r, "category", "") or "",
+                                "subcategory": getattr(r, "subcategory", "") or "",
+                                "title": getattr(r, "title", "") or "",
+                                "description": getattr(r, "description", "") or getattr(r, "reason", "") or "",
+                                "points": val,
+                                "status": str(getattr(r, "status", RecordStatus.PENDING)),
+                                "date": date_str,
+                            }
+                        )
             except Exception as e:
                 logger.warning(f"⚠️ 读取班级({cid})积分记录失败（忽略）: {e}")
                 continue
@@ -515,7 +522,6 @@ class ClassManagerController(QObject):
             print(f"❌ 数据加载失败: {e}")
 
     # 已替换为文件存储版映射方法：_map_student_record、_achievement_to_dict
-
 
     # 属性定义
     @Property("QVariant", notify=statsChanged)
@@ -625,15 +631,14 @@ class ClassManagerController(QObject):
                 except Exception:
                     stu = ss.query(Student).filter(Student.student_number == num).first()
                 if stu:
-                    return int(getattr(stu, "id"))
+                    return int(stu.id)
                 # 如果没有匹配学号，当作主键ID
                 return num
-            else:
-                # 非纯数字，尝试作为主键ID
-                try:
-                    return int(s_val)
-                except Exception:
-                    return None
+            # 非纯数字，尝试作为主键ID
+            try:
+                return int(s_val)
+            except Exception:
+                return None
         except Exception:
             return None
 
@@ -646,7 +651,8 @@ class ClassManagerController(QObject):
         """
         try:
             from datetime import datetime
-            from core.models.score_record import ScoreRecord, RecordStatus, RecordSource
+
+            from core.models.score_record import RecordSource, RecordStatus, ScoreRecord
 
             class_id = str(data.get("classId") or self._current_class_id)
             if not class_id:
@@ -726,7 +732,9 @@ class ClassManagerController(QObject):
         """
         try:
             from datetime import datetime
+
             from core.models.score_record import ScoreRecord
+
             class_id = str(data.get("classId") or self._current_class_id)
             rec_id = data.get("id")
             if not class_id or rec_id is None:
@@ -739,6 +747,7 @@ class ClassManagerController(QObject):
                 except Exception:
                     try:
                         from sqlmodel import select
+
                         obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(rec_id))).first()
                     except Exception:
                         obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(rec_id)).first()
@@ -792,6 +801,7 @@ class ClassManagerController(QObject):
         """
         try:
             from core.models.score_record import ScoreRecord
+
             class_id = str(data.get("classId") or self._current_class_id)
             rec_id = data.get("id")
             if not class_id or rec_id is None:
@@ -804,6 +814,7 @@ class ClassManagerController(QObject):
                 except Exception:
                     try:
                         from sqlmodel import select
+
                         obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(rec_id))).first()
                     except Exception:
                         obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(rec_id)).first()
@@ -819,7 +830,7 @@ class ClassManagerController(QObject):
                     ss.add(obj)
                 except Exception:
                     # 兼容没有混入方法的情况，直接标记字段
-                    setattr(obj, "is_deleted", True)
+                    obj.is_deleted = True
                     ss.add(obj)
                 ss.commit()
                 print("✅ 积分记录已软删除")
@@ -833,6 +844,7 @@ class ClassManagerController(QObject):
         """审核通过积分记录"""
         try:
             from core.models.score_record import ScoreRecord
+
             class_id = str(classId or self._current_class_id)
             if not class_id:
                 print("❌ 未选择班级")
@@ -844,13 +856,13 @@ class ClassManagerController(QObject):
                 except Exception:
                     try:
                         from sqlmodel import select
+
                         obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
                     except Exception:
                         obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
                 if obj is None:
                     print("⚠️ 记录不存在")
                     return
-                from core.models.score_record import RecordStatus
                 if not obj.can_be_approved():
                     print("❌ 当前状态不允许审核")
                     return
@@ -868,6 +880,7 @@ class ClassManagerController(QObject):
         """审核拒绝积分记录"""
         try:
             from core.models.score_record import ScoreRecord
+
             class_id = str(classId or self._current_class_id)
             if not class_id:
                 print("❌ 未选择班级")
@@ -879,6 +892,7 @@ class ClassManagerController(QObject):
                 except Exception:
                     try:
                         from sqlmodel import select
+
                         obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
                     except Exception:
                         obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
@@ -888,7 +902,7 @@ class ClassManagerController(QObject):
                 if not obj.can_be_approved():
                     print("❌ 当前状态不允许审核拒绝")
                     return
-                obj.reject(str("approver"), str(reason or ""))
+                obj.reject("approver", str(reason or ""))
                 ss.add(obj)
                 ss.commit()
                 print("✅ 已审核拒绝")
@@ -902,6 +916,7 @@ class ClassManagerController(QObject):
         """应用积分记录（会同步更新学生当前分数）"""
         try:
             from core.models.score_record import ScoreRecord
+
             class_id = str(classId or self._current_class_id)
             if not class_id:
                 print("❌ 未选择班级")
@@ -913,6 +928,7 @@ class ClassManagerController(QObject):
                 except Exception:
                     try:
                         from sqlmodel import select
+
                         obj = ss.exec(select(ScoreRecord).where(ScoreRecord.id == int(recordId))).first()
                     except Exception:
                         obj = ss.query(ScoreRecord).filter(ScoreRecord.id == int(recordId)).first()
@@ -963,12 +979,14 @@ class ClassManagerController(QObject):
             student_num = int(studentNumber)
             cfg = ClassConfigManager.get_config(class_id)
             from uuid import UUID
+
             registry_uuid = UUID(class_id)
             with db_manager.get_sub_session_by_class_id(class_id) as ss:
                 # 检查学号是否重复（未软删除）
                 existing = None
                 try:
                     from sqlmodel import select
+
                     existing = ss.exec(
                         select(Student).where(
                             Student.is_deleted == False,
@@ -1051,6 +1069,7 @@ class ClassManagerController(QObject):
                 # 尝试按UUID删除
                 try:
                     from sqlmodel import select
+
                     db_obj = ss.exec(select(Student).where(Student.uuid == str(student_uuid))).first()
                 except Exception:
                     try:
@@ -1062,6 +1081,7 @@ class ClassManagerController(QObject):
                     num = int(student_uuid)
                     try:
                         from sqlmodel import select as _select
+
                         db_obj = ss.exec(_select(Student).where(Student.student_number == num)).first()
                     except Exception:
                         db_obj = ss.query(Student).filter(Student.student_number == num).first()
@@ -1152,7 +1172,8 @@ class ClassManagerController(QObject):
                 self.studentsChanged.emit()
                 return
             self._students = [
-                s for s in self._students_all
+                s
+                for s in self._students_all
                 if t in (s.get("name", "").lower())
                 or t in (s.get("student_id", "").lower())
                 or t in (str(s.get("className", "")).lower())

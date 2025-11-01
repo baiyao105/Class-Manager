@@ -4,23 +4,23 @@
 - 子库会话工厂（按班级路径）
 - 子库建表初始化（checkfirst）
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict
-from uuid import UUID
 
 from loguru import logger
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, create_engine
 
-from utils.basic_dirs import DATA, ensure_dirs
+from core.models.achievement import Achievement, AchievementTemplate
+
 # 模型导入（子库）
 from core.models.class_ import Classroom
-from core.models.student import Student, StudentStatus
-from core.models.score_template import ScoreTemplate
 from core.models.score_record import ScoreRecord
-from core.models.tag import Tag, StudentTagLink
-from core.models.achievement import Achievement, AchievementTemplate
+from core.models.score_template import ScoreTemplate
+from core.models.student import Student
+from core.models.tag import StudentTagLink, Tag
+from utils.basic_dirs import DATA, ensure_dirs
 
 
 class DatabaseManager:
@@ -28,7 +28,7 @@ class DatabaseManager:
 
     def __init__(self):
         ensure_dirs()
-        self._sub_engines: Dict[str, any] = {}
+        self._sub_engines: dict[str, any] = {}
 
     # 已移除主库相关接口：initialize_database、get_master_session
 
@@ -76,6 +76,7 @@ class DatabaseManager:
     # 已移除示例数据创建（主库依赖）
 
     # 已移除：旧版文件名迁移逻辑，避免混淆
+
 
 # 提供一个模块级单例，兼容现有 main.py 的导入方式
 db_manager = DatabaseManager()

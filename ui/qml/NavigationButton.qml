@@ -9,7 +9,7 @@ Item {
     property bool isSelected: false
     property bool collapsed: false
     property alias text: buttonText.text
-    signal clicked()
+    signal clicked
 
     width: parent.width
     height: collapsed ? 50 : 48
@@ -18,14 +18,18 @@ Item {
         id: background
         anchors.fill: parent
         color: {
-            if (isSelected) return "#3b82f6"
-            if (mouseArea.containsMouse) return "#334155"
-            return "transparent"
+            if (isSelected)
+                return "#3b82f6";
+            if (mouseArea.containsMouse)
+                return "#334155";
+            return "transparent";
         }
         radius: 8
 
         Behavior on color {
-            ColorAnimation { duration: 150 }
+            ColorAnimation {
+                duration: 150
+            }
         }
     }
 
@@ -39,14 +43,18 @@ Item {
             text: icon
             font.pixelSize: collapsed ? 20 : 16
             color: {
-                if (isSelected) return "#ffffff"
-                if (mouseArea.containsMouse) return "#f1f5f9"
-                return "#94a3b8"
+                if (isSelected)
+                    return "#ffffff";
+                if (mouseArea.containsMouse)
+                    return "#f1f5f9";
+                return "#94a3b8";
             }
             anchors.verticalCenter: parent.verticalCenter
 
             Behavior on color {
-                ColorAnimation { duration: 150 }
+                ColorAnimation {
+                    duration: 150
+                }
             }
         }
 
@@ -56,15 +64,19 @@ Item {
             font.pixelSize: 14
             font.weight: isSelected ? Font.Medium : Font.Normal
             color: {
-                if (isSelected) return "#ffffff"
-                if (mouseArea.containsMouse) return "#f1f5f9"
-                return "#cbd5e1"
+                if (isSelected)
+                    return "#ffffff";
+                if (mouseArea.containsMouse)
+                    return "#f1f5f9";
+                return "#cbd5e1";
             }
             anchors.verticalCenter: parent.verticalCenter
             visible: !collapsed && text !== ""
 
             Behavior on color {
-                ColorAnimation { duration: 150 }
+                ColorAnimation {
+                    duration: 150
+                }
             }
         }
     }
@@ -89,7 +101,9 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
 
         Behavior on opacity {
-            NumberAnimation { duration: 150 }
+            NumberAnimation {
+                duration: 150
+            }
         }
     }
 

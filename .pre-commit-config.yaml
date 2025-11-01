@@ -66,6 +66,11 @@ repos:
           - "prettier@3.6.2"
           - "@prettier/plugin-xml"
 
+  - repo: https://github.com/baiyao105/qml-formatter
+    rev: v1.0.1
+    hooks:
+      - id: qml-format
+
   # - repo: https://github.com/rhysd/actionlint
   #   rev: v1.7.7
   #   hooks:

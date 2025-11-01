@@ -6,8 +6,9 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .settings import AppSettings
 from utils.basic_dirs import DATA
+
+from .settings import AppSettings
 
 
 class SystemConfig(BaseModel):

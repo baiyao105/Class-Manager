@@ -112,10 +112,34 @@ FluentPage {
 
                                 Repeater {
                                     model: [
-                                        {title: "学生总数", value: "156", subtitle: "本学期新增 12 人", icon: "👥", color: "#3b82f6"},
-                                        {title: "男生人数", value: "82", subtitle: "占比 52.6%", icon: "👦", color: "#10b981"},
-                                        {title: "女生人数", value: "74", subtitle: "占比 47.4%", icon: "👧", color: "#f59e0b"},
-                                        {title: "平均年龄", value: "16.8", subtitle: "年龄范围 15-18", icon: "📊", color: "#8b5cf6"}
+                                        {
+                                            title: "学生总数",
+                                            value: "156",
+                                            subtitle: "本学期新增 12 人",
+                                            icon: "👥",
+                                            color: "#3b82f6"
+                                        },
+                                        {
+                                            title: "男生人数",
+                                            value: "82",
+                                            subtitle: "占比 52.6%",
+                                            icon: "👦",
+                                            color: "#10b981"
+                                        },
+                                        {
+                                            title: "女生人数",
+                                            value: "74",
+                                            subtitle: "占比 47.4%",
+                                            icon: "👧",
+                                            color: "#f59e0b"
+                                        },
+                                        {
+                                            title: "平均年龄",
+                                            value: "16.8",
+                                            subtitle: "年龄范围 15-18",
+                                            icon: "📊",
+                                            color: "#8b5cf6"
+                                        }
                                     ]
 
                                     Rectangle {
@@ -207,7 +231,9 @@ FluentPage {
                                         height: 36
                                     }
 
-                                    Item { Layout.fillWidth: true }
+                                    Item {
+                                        Layout.fillWidth: true
+                                    }
 
                                     Button {
                                         text: "重置筛选"
@@ -237,12 +263,60 @@ FluentPage {
 
                                         Repeater {
                                             model: [
-                                                {name: "张三", id: "2024001", class: "高一(1)班", gender: "男", age: 16, status: "在读", avatar: "👦"},
-                                                {name: "李四", id: "2024002", class: "高一(1)班", gender: "女", age: 16, status: "在读", avatar: "👧"},
-                                                {name: "王五", id: "2024003", class: "高一(2)班", gender: "男", age: 17, status: "在读", avatar: "👦"},
-                                                {name: "赵六", id: "2024004", class: "高一(2)班", gender: "女", age: 16, status: "休学", avatar: "👧"},
-                                                {name: "钱七", id: "2024005", class: "高一(3)班", gender: "男", age: 17, status: "在读", avatar: "👦"},
-                                                {name: "孙八", id: "2024006", class: "高一(3)班", gender: "女", age: 16, status: "在读", avatar: "👧"}
+                                                {
+                                                    name: "张三",
+                                                    id: "2024001",
+                                                    class: "高一(1)班",
+                                                    gender: "男",
+                                                    age: 16,
+                                                    status: "在读",
+                                                    avatar: "👦"
+                                                },
+                                                {
+                                                    name: "李四",
+                                                    id: "2024002",
+                                                    class: "高一(1)班",
+                                                    gender: "女",
+                                                    age: 16,
+                                                    status: "在读",
+                                                    avatar: "👧"
+                                                },
+                                                {
+                                                    name: "王五",
+                                                    id: "2024003",
+                                                    class: "高一(2)班",
+                                                    gender: "男",
+                                                    age: 17,
+                                                    status: "在读",
+                                                    avatar: "👦"
+                                                },
+                                                {
+                                                    name: "赵六",
+                                                    id: "2024004",
+                                                    class: "高一(2)班",
+                                                    gender: "女",
+                                                    age: 16,
+                                                    status: "休学",
+                                                    avatar: "👧"
+                                                },
+                                                {
+                                                    name: "钱七",
+                                                    id: "2024005",
+                                                    class: "高一(3)班",
+                                                    gender: "男",
+                                                    age: 17,
+                                                    status: "在读",
+                                                    avatar: "👦"
+                                                },
+                                                {
+                                                    name: "孙八",
+                                                    id: "2024006",
+                                                    class: "高一(3)班",
+                                                    gender: "女",
+                                                    age: 16,
+                                                    status: "在读",
+                                                    avatar: "👧"
+                                                }
                                             ]
 
                                             Rectangle {
@@ -257,12 +331,12 @@ FluentPage {
                                                     anchors.fill: parent
                                                     hoverEnabled: true
                                                     onEntered: {
-                                                        parent.color = "#f8fafc"
-                                                        parent.border.color = "#3b82f6"
+                                                        parent.color = "#f8fafc";
+                                                        parent.border.color = "#3b82f6";
                                                     }
                                                     onExited: {
-                                                        parent.color = "#ffffff"
-                                                        parent.border.color = "#e2e8f0"
+                                                        parent.color = "#ffffff";
+                                                        parent.border.color = "#e2e8f0";
                                                     }
                                                     onClicked: openDetailModal(modelData)
                                                 }
@@ -299,21 +373,21 @@ FluentPage {
                                                             }
                                                         }
 
-                                                        Item { Layout.fillWidth: true }
+                                                        Item {
+                                                            Layout.fillWidth: true
+                                                        }
 
                                                         Rectangle {
                                                             width: 50
                                                             height: 20
                                                             radius: 10
-                                                            color: modelData.status === "在读" ? "#dcfce7" :
-                                                                   modelData.status === "休学" ? "#fef3c7" : "#f3f4f6"
+                                                            color: modelData.status === "在读" ? "#dcfce7" : modelData.status === "休学" ? "#fef3c7" : "#f3f4f6"
 
                                                             Text {
                                                                 text: modelData.status
                                                                 anchors.centerIn: parent
                                                                 font.pixelSize: 10
-                                                                color: modelData.status === "在读" ? "#166534" :
-                                                                       modelData.status === "休学" ? "#92400e" : "#374151"
+                                                                color: modelData.status === "在读" ? "#166534" : modelData.status === "休学" ? "#92400e" : "#374151"
                                                             }
                                                         }
                                                     }
@@ -403,10 +477,26 @@ FluentPage {
 
                                 Repeater {
                                     model: [
-                                        {title: "学生档案", desc: "查看和编辑学生详细信息", icon: "📋"},
-                                        {title: "成绩录入", desc: "批量录入学生考试成绩", icon: "📝"},
-                                        {title: "考勤管理", desc: "记录学生出勤情况", icon: "📅"},
-                                        {title: "家长联系", desc: "管理家长联系方式", icon: "📞"}
+                                        {
+                                            title: "学生档案",
+                                            desc: "查看和编辑学生详细信息",
+                                            icon: "📋"
+                                        },
+                                        {
+                                            title: "成绩录入",
+                                            desc: "批量录入学生考试成绩",
+                                            icon: "📝"
+                                        },
+                                        {
+                                            title: "考勤管理",
+                                            desc: "记录学生出勤情况",
+                                            icon: "📅"
+                                        },
+                                        {
+                                            title: "家长联系",
+                                            desc: "管理家长联系方式",
+                                            icon: "📞"
+                                        }
                                     ]
 
                                     Rectangle {
@@ -421,12 +511,12 @@ FluentPage {
                                             anchors.fill: parent
                                             hoverEnabled: true
                                             onEntered: {
-                                                parent.color = "#f1f5f9"
-                                                parent.border.color = "#3b82f6"
+                                                parent.color = "#f1f5f9";
+                                                parent.border.color = "#3b82f6";
                                             }
                                             onExited: {
-                                                parent.color = "#f8fafc"
-                                                parent.border.color = "#e2e8f0"
+                                                parent.color = "#f8fafc";
+                                                parent.border.color = "#e2e8f0";
                                             }
                                         }
 
@@ -712,14 +802,14 @@ FluentPage {
 
     // 刷新视图函数
     function refreshView() {
-        console.log("刷新学生数据")
-        statusText.text = "共 156 名学生 · 已选择 0 项 · 已刷新"
+        console.log("刷新学生数据");
+        statusText.text = "共 156 名学生 · 已选择 0 项 · 已刷新";
     }
 
     // 打开详情模态框函数
     function openDetailModal(data) {
-        detailModal.itemData = data
-        statusText.text = "已选择：" + data.name + "（学号 " + data.id + "）"
-        detailModal.open()
+        detailModal.itemData = data;
+        statusText.text = "已选择：" + data.name + "（学号 " + data.id + "）";
+        detailModal.open();
     }
 }

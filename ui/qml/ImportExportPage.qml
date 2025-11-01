@@ -30,7 +30,9 @@ ScrollView {
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Row {
                 spacing: 12
@@ -283,7 +285,9 @@ ScrollView {
                         color: "#111827"
                     }
 
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
 
                     Button {
                         text: "清空历史"
@@ -657,10 +661,22 @@ ScrollView {
                             anchors.margins: 8
                             spacing: 4
 
-                            Text { text: "A: 学号"; font.pixelSize: 12 }
-                            Text { text: "B: 姓名"; font.pixelSize: 12 }
-                            Text { text: "C: 性别"; font.pixelSize: 12 }
-                            Text { text: "D: 班级"; font.pixelSize: 12 }
+                            Text {
+                                text: "A: 学号"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "B: 姓名"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "C: 性别"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "D: 班级"
+                                font.pixelSize: 12
+                            }
                         }
                     }
                 }
@@ -684,10 +700,22 @@ ScrollView {
                             anchors.margins: 8
                             spacing: 4
 
-                            Text { text: "student_id"; font.pixelSize: 12 }
-                            Text { text: "name"; font.pixelSize: 12 }
-                            Text { text: "gender"; font.pixelSize: 12 }
-                            Text { text: "class_name"; font.pixelSize: 12 }
+                            Text {
+                                text: "student_id"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "name"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "gender"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "class_name"
+                                font.pixelSize: 12
+                            }
                         }
                     }
                 }

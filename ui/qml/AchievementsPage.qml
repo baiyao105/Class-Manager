@@ -10,15 +10,24 @@ FluentPage {
 
     // 顶部分段控制器
     segmentedItems: [
-        { text: "成就概览", value: "overview" },
-        { text: "成就模板", value: "templates" },
-        { text: "学生成就", value: "student_achievements" }
+        {
+            text: "成就概览",
+            value: "overview"
+        },
+        {
+            text: "成就模板",
+            value: "templates"
+        },
+        {
+            text: "学生成就",
+            value: "student_achievements"
+        }
     ]
 
     property string currentSegment: "overview"
 
     onSegmentChanged: {
-        currentSegment = value
+        currentSegment = value;
     }
 
     // 状态卡片数据
@@ -58,17 +67,23 @@ FluentPage {
         {
             text: "创建成就模板",
             icon: "ic_fluent_trophy_20_regular",
-            onClicked: function() { createTemplateDialog.open() }
+            onClicked: function () {
+                createTemplateDialog.open();
+            }
         },
         {
             text: "批量导入成就",
             icon: "ic_fluent_document_arrow_up_20_regular",
-            onClicked: function() { importAchievementsDialog.open() }
+            onClicked: function () {
+                importAchievementsDialog.open();
+            }
         },
         {
             text: "导出成就报告",
             icon: "ic_fluent_document_arrow_down_20_regular",
-            onClicked: function() { exportReport() }
+            onClicked: function () {
+                exportReport();
+            }
         }
     ]
 
@@ -141,7 +156,7 @@ FluentPage {
                             highlighted: true
                             width: parent.width
                             onClicked: {
-                                currentSegment = "templates"
+                                currentSegment = "templates";
                             }
                         }
                     }
@@ -200,7 +215,7 @@ FluentPage {
                             text: "查看成就"
                             width: parent.width
                             onClicked: {
-                                currentSegment = "student_achievements"
+                                currentSegment = "student_achievements";
                             }
                         }
                     }
@@ -260,7 +275,7 @@ FluentPage {
                             flat: true
                             width: parent.width
                             onClicked: {
-                                console.log("打开成就统计分析")
+                                console.log("打开成就统计分析");
                             }
                         }
                     }
@@ -291,13 +306,15 @@ FluentPage {
                             color: "#111827"
                         }
 
-                        Item { Layout.fillWidth: true }
+                        Item {
+                            Layout.fillWidth: true
+                        }
 
                         Button {
                             text: "查看全部"
                             flat: true
                             onClicked: {
-                                currentSegment = "student_achievements"
+                                currentSegment = "student_achievements";
                             }
                         }
                     }
@@ -307,11 +324,36 @@ FluentPage {
                         height: 240
 
                         model: [
-                            { student: "张三", achievement: "学霸", time: "2024-01-15 14:30", level: "gold" },
-                            { student: "李四", achievement: "全勤之星", time: "2024-01-15 09:00", level: "silver" },
-                            { student: "王五", achievement: "助人为乐", time: "2024-01-14 16:45", level: "bronze" },
-                            { student: "赵六", achievement: "进步之星", time: "2024-01-14 11:20", level: "silver" },
-                            { student: "钱七", achievement: "初来乍到", time: "2024-01-13 08:15", level: "bronze" }
+                            {
+                                student: "张三",
+                                achievement: "学霸",
+                                time: "2024-01-15 14:30",
+                                level: "gold"
+                            },
+                            {
+                                student: "李四",
+                                achievement: "全勤之星",
+                                time: "2024-01-15 09:00",
+                                level: "silver"
+                            },
+                            {
+                                student: "王五",
+                                achievement: "助人为乐",
+                                time: "2024-01-14 16:45",
+                                level: "bronze"
+                            },
+                            {
+                                student: "赵六",
+                                achievement: "进步之星",
+                                time: "2024-01-14 11:20",
+                                level: "silver"
+                            },
+                            {
+                                student: "钱七",
+                                achievement: "初来乍到",
+                                time: "2024-01-13 08:15",
+                                level: "bronze"
+                            }
                         ]
 
                         delegate: Rectangle {
@@ -330,14 +372,11 @@ FluentPage {
                                     width: 36
                                     height: 36
                                     radius: 18
-                                    color: modelData.level === "gold" ? "#fbbf24" :
-                                           modelData.level === "silver" ? "#9ca3af" :
-                                           "#cd7f32"
+                                    color: modelData.level === "gold" ? "#fbbf24" : modelData.level === "silver" ? "#9ca3af" : "#cd7f32"
                                     anchors.verticalCenter: parent.verticalCenter
 
                                     Text {
-                                        text: modelData.level === "gold" ? "🥇" :
-                                              modelData.level === "silver" ? "🥈" : "🥉"
+                                        text: modelData.level === "gold" ? "🥇" : modelData.level === "silver" ? "🥈" : "🥉"
                                         anchors.centerIn: parent
                                         font.pixelSize: 16
                                     }
@@ -361,7 +400,9 @@ FluentPage {
                                     }
                                 }
 
-                                Item { Layout.fillWidth: true }
+                                Item {
+                                    Layout.fillWidth: true
+                                }
 
                                 Button {
                                     text: "详情"
@@ -369,7 +410,7 @@ FluentPage {
                                     font.pixelSize: 12
                                     anchors.verticalCenter: parent.verticalCenter
                                     onClicked: {
-                                        console.log("查看成就详情:", modelData.achievement)
+                                        console.log("查看成就详情:", modelData.achievement);
                                     }
                                 }
                             }
@@ -495,7 +536,7 @@ FluentPage {
                 text: "选择文件"
                 width: parent.width
                 onClicked: {
-                    console.log("选择导入文件")
+                    console.log("选择导入文件");
                 }
             }
         }
@@ -505,6 +546,6 @@ FluentPage {
 
     // 导出报告函数
     function exportReport() {
-        console.log("导出成就报告")
+        console.log("导出成就报告");
     }
 }

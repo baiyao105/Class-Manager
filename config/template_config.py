@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
+
 from utils.basic_dirs import DATA
 
 

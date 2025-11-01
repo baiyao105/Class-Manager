@@ -150,18 +150,21 @@ ScrollView {
 
     // 页面动画效果
     Behavior on opacity {
-        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation {
+            duration: 200
+            easing.type: Easing.OutCubic
+        }
     }
 
     // 页面生命周期方法
-    signal pageActivated()
-    signal pageDeactivated()
+    signal pageActivated
+    signal pageDeactivated
 
     function refreshPage() {
-        // 刷新页面数据的方法，子页面可以重写
+    // 刷新页面数据的方法，子页面可以重写
     }
 
     function resetPage() {
-        // 重置页面状态的方法，子页面可以重写
+    // 重置页面状态的方法，子页面可以重写
     }
 }
