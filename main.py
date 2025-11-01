@@ -18,7 +18,7 @@ from RinUI import RinUIWindow
 from config.class_config import ClassConfigManager
 from config.global_config import GlobalConfigManager
 from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION
-from core.file_store import AchievementFileStore, StudentFileStore, StudentRecord
+from core.models.achievement import Achievement
 from core.database import db_manager
 from core.models.student import Student, StudentStatus
 from utils.basic_dirs import DATA, ensure_dirs
@@ -61,9 +61,7 @@ class ClassManagerController(QObject):
         ensure_dirs()
         self._current_class_id = self._select_default_class()
 
-        # 文件存储
-        self._student_store = StudentFileStore(self._current_class_id)
-        self._achievement_store = AchievementFileStore(self._current_class_id)
+        # 不使用文件存储，数据来源统一为数据库
 
         # 加载数据
         self._load_data()
@@ -85,9 +83,6 @@ class ClassManagerController(QObject):
             # 无班级 -> 创建演示班级
             new_id = str(uuid.uuid4())
             ClassConfigManager.create_config(new_id, class_name="演示班级", teacher_name="未设置")
-            # 确保学生/成就文件存在
-            StudentFileStore(new_id).save_all([])
-            AchievementFileStore(new_id).save_all([])
             GlobalConfigManager.update_setting("custom_settings.default_class_id", new_id)
             return new_id
         except Exception as e:
@@ -95,8 +90,6 @@ class ClassManagerController(QObject):
             # 兜底：仍然创建一个
             new_id = str(uuid.uuid4())
             ClassConfigManager.create_config(new_id, class_name="演示班级", teacher_name="未设置")
-            StudentFileStore(new_id).save_all([])
-            AchievementFileStore(new_id).save_all([])
             GlobalConfigManager.update_setting("custom_settings.default_class_id", new_id)
             return new_id
 
@@ -116,31 +109,33 @@ class ClassManagerController(QObject):
             print(f"⚠️ 扫描班级目录失败: {e}")
         return result
 
-    def _map_student_record(self, rec: StudentRecord, credits_map: dict[str, int], class_name: str | None = None) -> dict:
-        """将文件存储的学生记录映射为 QML 友好的字典结构"""
-        cname = class_name or rec.class_name or ""
-        return {
-            "id": rec.student_id,              # QML ClassPage.studentModel 使用 id 作为学号展示
-            "uuid": rec.id,                    # 内部唯一ID，用于删除/更新
-            "name": rec.name,
-            "student_id": rec.student_id,
-            "class_id": rec.class_id,
-            "class_name": cname,
-            "className": cname,               # 兼容 ClassPage 的字段命名
-            "is_active": rec.is_active,
-            "created_at": rec.created_at,
-            "credits": int(credits_map.get(rec.student_id, 0)),
-        }
+    
 
-    def _achievement_to_dict(self, achievement) -> dict:
-        """将成就对象转换为字典（文件存储版）"""
+    def _achievement_to_dict(self, achievement: Achievement) -> dict:
+        """将数据库成就对象转换为字典（QML友好）"""
+        tpl = getattr(achievement, "template", None)
+        title = getattr(tpl, "name", "") if tpl is not None else ""
+        desc = getattr(achievement, "notes", None) or (getattr(tpl, "description", "") if tpl is not None else "")
+        pts = getattr(tpl, "reward_score", 0.0) if tpl is not None else 0.0
+        try:
+            pts = round(float(pts), 2)
+        except Exception:
+            pts = 0
+        dt = getattr(achievement, "achieved_at", None)
+        if dt is not None:
+            try:
+                created_at = dt.strftime("%Y-%m-%d")
+            except Exception:
+                created_at = str(dt)
+        else:
+            created_at = ""
         return {
-            "id": achievement.id,
-            "student_id": achievement.student_id,
-            "title": getattr(achievement, "title", ""),
-            "description": getattr(achievement, "description", "") or "",
-            "points": int(getattr(achievement, "points", 0) or 0),
-            "created_at": getattr(achievement, "created_at", ""),
+            "id": getattr(achievement, "id", None),
+            "student_id": getattr(achievement, "student_id", None),
+            "title": title,
+            "description": desc,
+            "points": pts,
+            "created_at": created_at,
         }
 
     def _compute_students_and_stats(self) -> None:
@@ -156,13 +151,35 @@ class ClassManagerController(QObject):
 
         for cid in class_ids:
             cfg = ClassConfigManager.get_config(cid)
-            astore = AchievementFileStore(cid)
-            achievements = astore.list()
+            # 从子库读取成就（仅数据库，不使用文件存储）
+            achievements = []
+            try:
+                with db_manager.get_sub_session_by_class_id(cid) as ss:
+                    try:
+                        from sqlmodel import select
+                        achievements = ss.exec(
+                            select(Achievement).where(Achievement.is_deleted == False)
+                        ).all()
+                    except Exception:
+                        try:
+                            achievements = (
+                                ss.query(Achievement)
+                                .filter(Achievement.is_deleted == False)
+                                .all()
+                            )
+                        except Exception:
+                            achievements = ss.query(Achievement).all()
+            except Exception as e:
+                logger.warning(f"⚠️ 读取子库成就失败（忽略）: {e}")
 
             # 成就统计（积分不再通过成就累加）
             for a in achievements:
                 total_achievements += 1
-                points = int(getattr(a, "points", 0) or 0)
+                points = getattr(getattr(a, "template", None), "reward_score", 0) or 0
+                try:
+                    points = float(points)
+                except Exception:
+                    points = 0.0
                 total_points += points
 
             # 积分汇总：读取子库 ScoreRecord 中已应用(APPLIED)且未软删除的记录
@@ -223,7 +240,7 @@ class ClassManagerController(QObject):
             except Exception as e:
                 logger.warning(f"⚠️ 读取子库积分记录失败（忽略）: {e}")
 
-            # 读取学生（优先子库，其次文件存储）
+            # 读取学生（仅子库）
             student_count = 0
             try:
                 with db_manager.get_sub_session_by_class_id(cid) as ss:
@@ -239,7 +256,7 @@ class ClassManagerController(QObject):
                         sid_str = str(s_num) if s_num is not None else str(getattr(s, "id", ""))
                         students_list.append({
                             "id": sid_str,
-                            "uuid": str(getattr(s, "id", "")),
+                            "uuid": str(getattr(s, "uuid", "")),
                             "name": getattr(s, "name", ""),
                             "student_id": sid_str,
                             "class_id": cid,
@@ -251,16 +268,17 @@ class ClassManagerController(QObject):
                         })
                         total_students += 1
             except Exception as db_e:
-                logger.warning(f"⚠️ 读取子库学生失败（忽略，降级为文件存储）: {db_e}")
-                sstore = StudentFileStore(cid)
-                fs_students = sstore.list()
-                student_count = len(fs_students)
-                for rec in fs_students:
-                    students_list.append(self._map_student_record(rec, credits_map, cfg.class_name))
-                    total_students += 1
+                logger.warning(f"⚠️ 读取子库学生失败（忽略）: {db_e}")
 
             # 班级统计
-            class_points = sum(int(getattr(a, "points", 0) or 0) for a in achievements)
+            class_points = 0.0
+            for a in achievements:
+                p = getattr(getattr(a, "template", None), "reward_score", 0) or 0
+                try:
+                    p = float(p)
+                except Exception:
+                    p = 0.0
+                class_points += p
             class_avg = round(class_points / len(achievements), 2) if achievements else 0.0
             classes_list.append({
                 "id": cid,
@@ -933,40 +951,53 @@ class ClassManagerController(QObject):
 
     @Slot(str, str, "QVariant")
     def addStudent(self, name, studentNumber, registryId):
-        """添加学生（文件存储 + 子库同步）"""
+        """添加学生（仅数据库）"""
         try:
             class_id = str(registryId) if registryId is not None else self._current_class_id
             if not class_id:
                 print("❌ 未选择班级")
                 return
-
+            if not str(studentNumber).isdigit():
+                print("❌ 学号必须为数字")
+                return
+            student_num = int(studentNumber)
             cfg = ClassConfigManager.get_config(class_id)
-            store = StudentFileStore(class_id)
-            rec = store.add(name=name, student_id=studentNumber, class_name=cfg.class_name)
-
-            # 同步到每班级子库（Class_{uuid}.db）——尽力而为，不影响文件存储成功
-            try:
-                # 尝试转换为 UUID
-                from uuid import UUID
-                registry_uuid = UUID(class_id)
-                with db_manager.get_sub_session_by_class_id(class_id) as ss:
-                    db_student = Student(
-                        name=name,
-                        student_number=int(studentNumber) if str(studentNumber).isdigit() else None,
-                        registry_uuid=registry_uuid,
-                        status=StudentStatus.ACTIVE,
+            from uuid import UUID
+            registry_uuid = UUID(class_id)
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                # 检查学号是否重复（未软删除）
+                existing = None
+                try:
+                    from sqlmodel import select
+                    existing = ss.exec(
+                        select(Student).where(
+                            Student.is_deleted == False,
+                            Student.student_number == student_num,
+                        )
+                    ).first()
+                except Exception:
+                    existing = (
+                        ss.query(Student)
+                        .filter(Student.is_deleted == False, Student.student_number == student_num)
+                        .first()
                     )
-                    ss.add(db_student)
-                    ss.commit()
-            except Exception as db_e:
-                logger.warning(f"⚠️ 子库同步学生失败（忽略，不影响文件存储）: {db_e}")
-
+                if existing is not None:
+                    print(f"❌ 学号重复，已存在: {student_num}")
+                    return
+                db_student = Student(
+                    name=name,
+                    student_number=student_num,
+                    registry_uuid=registry_uuid,
+                    status=StudentStatus.ACTIVE,
+                )
+                ss.add(db_student)
+                ss.commit()
             # 重新计算并同步到QML
             self._compute_students_and_stats()
             self.studentsChanged.emit()
             self.classesChanged.emit()
             self.statsChanged.emit()
-            print(f"✅ 学生添加成功: {rec.name}({rec.student_id}) -> {cfg.class_name}")
+            print(f"✅ 学生添加成功: {name}({student_num}) -> {cfg.class_name}")
         except ValueError as ve:
             print(f"❌ 添加学生失败: {ve}")
         except Exception as e:
@@ -974,12 +1005,10 @@ class ClassManagerController(QObject):
 
     @Slot(str, str)
     def addClass(self, name, teacherName=""):
-        """添加班级（文件存储 + 预创建子库）"""
+        """添加班级（仅数据库/配置，预创建子库）"""
         try:
             class_id = str(uuid.uuid4())
             ClassConfigManager.create_config(class_id, class_name=name, teacher_name=teacherName)
-            StudentFileStore(class_id).save_all([])
-            AchievementFileStore(class_id).save_all([])
 
             # 预创建每班级子库文件并建表
             try:
@@ -1002,7 +1031,7 @@ class ClassManagerController(QObject):
 
     @Slot("QVariant")
     def deleteStudent(self, student):
-        """删除学生（文件存储 + 子库同步删除）"""
+        """删除学生（仅数据库，优先软删除）"""
         try:
             # 支持传入对象或UUID
             student_uuid = None
@@ -1017,44 +1046,47 @@ class ClassManagerController(QObject):
             if not student_uuid or not class_id:
                 print("❌ 删除学生缺少必要信息")
                 return
-
-            ok = StudentFileStore(class_id).delete(student_uuid)
-            if ok:
-                # 同步删除子库记录（尽力而为）
+            with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                db_obj = None
+                # 尝试按UUID删除
                 try:
-                    with db_manager.get_sub_session_by_class_id(class_id) as ss:
+                    from sqlmodel import select
+                    db_obj = ss.exec(select(Student).where(Student.uuid == str(student_uuid))).first()
+                except Exception:
+                    try:
+                        db_obj = ss.query(Student).filter(Student.uuid == str(student_uuid)).first()
+                    except Exception:
                         db_obj = None
-                        # 尝试按UUID删除
-                        try:
-                            from uuid import UUID
-                            uid = UUID(student_uuid)
-                            try:
-                                db_obj = ss.get(Student, uid)
-                            except Exception:
-                                db_obj = None
-                        except Exception:
-                            uid = None
-                        # 若未找到，尝试按学号删除
-                        if db_obj is None and str(student_uuid).isdigit():
-                            num = int(student_uuid)
-                            try:
-                                from sqlmodel import select
-                                db_obj = ss.exec(select(Student).where(Student.student_number == num)).first()
-                            except Exception:
-                                db_obj = ss.query(Student).filter(Student.student_number == num).first()
-                        if db_obj is not None:
-                            ss.delete(db_obj)
-                            ss.commit()
-                except Exception as db_e:
-                    logger.warning(f"⚠️ 子库删除学生失败（忽略）: {db_e}")
-
-                self._compute_students_and_stats()
-                self.studentsChanged.emit()
-                self.classesChanged.emit()
-                self.statsChanged.emit()
-                print(f"✅ 学生删除成功: {student_uuid}")
-            else:
-                print(f"⚠️ 未找到学生，无法删除: {student_uuid}")
+                # 若未找到，尝试按学号删除
+                if db_obj is None and str(student_uuid).isdigit():
+                    num = int(student_uuid)
+                    try:
+                        from sqlmodel import select as _select
+                        db_obj = ss.exec(_select(Student).where(Student.student_number == num)).first()
+                    except Exception:
+                        db_obj = ss.query(Student).filter(Student.student_number == num).first()
+                if db_obj is None:
+                    print(f"⚠️ 未找到学生，无法删除: {student_uuid}")
+                    return
+                # 软删除（优先）
+                try:
+                    db_obj.soft_delete()
+                    ss.add(db_obj)
+                    ss.commit()
+                except Exception:
+                    # 回退为硬删除
+                    try:
+                        ss.delete(db_obj)
+                        ss.commit()
+                    except Exception as db_e:
+                        logger.warning(f"⚠️ 删除学生失败: {db_e}")
+                        print(f"❌ 删除学生失败: {student_uuid}")
+                        return
+            self._compute_students_and_stats()
+            self.studentsChanged.emit()
+            self.classesChanged.emit()
+            self.statsChanged.emit()
+            print(f"✅ 学生删除成功: {student_uuid}")
         except Exception as e:
             print(f"❌ 删除学生时出错: {e}")
 
@@ -1098,11 +1130,10 @@ class ClassManagerController(QObject):
         """保存设置（全局配置）"""
         try:
             GlobalConfigManager.update_setting(key, value)
-            # 切换默认班级时，重置当前存储
+            # 切换默认班级时，刷新当前数据
             if key == "custom_settings.default_class_id":
                 self._current_class_id = str(value)
-                self._student_store = StudentFileStore(self._current_class_id)
-                self._achievement_store = AchievementFileStore(self._current_class_id)
+                # 不再使用文件存储，只需重新计算并刷新
                 self._compute_students_and_stats()
                 self.studentsChanged.emit()
                 self.classesChanged.emit()
