@@ -3,13 +3,12 @@
 仅管理子库（每班级独立数据库）：
 - 子库会话工厂（按班级路径）
 - 子库建表初始化（checkfirst）
-- 旧版文件名迁移（class.db -> Class_{uuid}.db）
 """
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from loguru import logger
 from sqlmodel import Session, create_engine, select
@@ -76,21 +75,7 @@ class DatabaseManager:
 
     # 已移除示例数据创建（主库依赖）
 
-    def migrate_legacy_db_name(self, class_uuid: str) -> Path | None:
-        """将旧版子库文件名 class.db 迁移为 Class_{uuid}.db。
-        
-        返回迁移后的路径（或 None 表示不需要迁移）。
-        """
-        legacy = DATA / f"Class_{class_uuid}" / "class.db"
-        target = self.get_class_db_path(class_uuid)
-        try:
-            if legacy.exists() and not target.exists():
-                legacy.rename(target)
-                logger.info(f"Legacy sub db renamed: {legacy} -> {target}")
-                return target
-        except Exception as e:
-            logger.warning(f"迁移旧版子库文件名失败: {e}")
-        return None
+    # 已移除：旧版文件名迁移逻辑，避免混淆
 
 # 提供一个模块级单例，兼容现有 main.py 的导入方式
 db_manager = DatabaseManager()

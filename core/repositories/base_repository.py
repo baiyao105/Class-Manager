@@ -79,7 +79,7 @@ class BaseRepository(ABC, Generic[T]):
 
         # 如果模型支持软删除且不包含已删除项
         if hasattr(self.model_class, "is_deleted") and not include_deleted:
-            query = query.where(not self.model_class.is_deleted)
+            query = query.where(self.model_class.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -103,7 +103,7 @@ class BaseRepository(ABC, Generic[T]):
 
         # 软删除过滤
         if hasattr(self.model_class, "is_deleted") and not include_deleted:
-            query = query.where(not self.model_class.is_deleted)
+            query = query.where(self.model_class.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -124,7 +124,7 @@ class BaseRepository(ABC, Generic[T]):
         # 构建查询
         query = select(self.model_class)
         if hasattr(self.model_class, "is_deleted") and not include_deleted:
-            query = query.where(not self.model_class.is_deleted)
+            query = query.where(self.model_class.is_deleted == False)
 
         # 获取总数
         total_query = query
@@ -153,7 +153,7 @@ class BaseRepository(ABC, Generic[T]):
         """
         query = select(self.model_class)
         if hasattr(self.model_class, "is_deleted") and not include_deleted:
-            query = query.where(not self.model_class.is_deleted)
+            query = query.where(self.model_class.is_deleted == False)
 
         result = self.session.exec(query)
         return len(result.all())

@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlmodel import Session, and_, or_, select
 
 from ..models.student import Student, StudentStatus
+from config.constants import StudentConstants
 from .base_repository import BaseRepository
 
 
@@ -38,9 +39,9 @@ class StudentRepository(BaseRepository[Student]):
         """
         # 设置默认值
         if "current_score" not in entity_data:
-            entity_data["current_score"] = 100.0
+            entity_data["current_score"] = StudentConstants.DEFAULT_SCORE
         if "base_score" not in entity_data:
-            entity_data["base_score"] = 100.0
+            entity_data["base_score"] = StudentConstants.DEFAULT_SCORE
         if "total_score" not in entity_data:
             entity_data["total_score"] = entity_data["current_score"]
         if "highest_score" not in entity_data:
@@ -65,7 +66,7 @@ class StudentRepository(BaseRepository[Student]):
         """
         query = select(Student).where(Student.id == entity_id)
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.first()
@@ -124,7 +125,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.first()
@@ -141,7 +142,7 @@ class StudentRepository(BaseRepository[Student]):
         query = select(Student).where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -158,7 +159,7 @@ class StudentRepository(BaseRepository[Student]):
         query = select(Student).where(Student.classroom_id == classroom_id)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -187,7 +188,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -207,7 +208,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -224,7 +225,7 @@ class StudentRepository(BaseRepository[Student]):
         query = select(Student).where(Student.group_id == group_id)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -248,7 +249,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -269,7 +270,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(not Student.is_deleted)
+            query = query.where(Student.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -355,7 +356,7 @@ class StudentRepository(BaseRepository[Student]):
 
         with self.transaction():
             for student in students:
-                reset_score = student.base_score if reset_to_base else 100.0
+                reset_score = student.base_score if reset_to_base else StudentConstants.DEFAULT_SCORE
 
                 update_data = {
                     "current_score": reset_score,

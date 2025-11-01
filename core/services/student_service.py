@@ -34,7 +34,7 @@ class StudentService:
         registry_uuid: UUID,
         classroom_id: int | None = None,
         group_id: int | None = None,
-        base_score: float = 100.0,
+        base_score: float = 0.0,
         status: StudentStatus = StudentStatus.ACTIVE,
     ) -> Student:
         """创建新学生
