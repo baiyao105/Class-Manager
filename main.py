@@ -1214,7 +1214,7 @@ def main():
         print(f"⚠️ 设置QML上下文属性失败: {e}")
 
     # 加载QML文件
-    main_window.load("ui/qml/main.qml")
+    main_window.load("view/qml/main.qml")
 
     # 设置窗口属性
     main_window.setTitle(f"{APP_NAME} v{APP_VERSION}")
