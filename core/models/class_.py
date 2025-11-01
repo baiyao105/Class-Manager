@@ -9,7 +9,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import field_validator
-from sqlmodel import Column, Field, Relationship, SQLModel, Text
+from sqlmodel import Field, Relationship, SQLModel
 
 from config.constants import ClassConstants
 
@@ -55,7 +55,6 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     #     back_populates="class_",
     #     sa_relationship_kwargs={"lazy": "select"}
     # )
-
 
     # 统计属性
     @property

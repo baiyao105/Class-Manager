@@ -66,10 +66,10 @@ FluentPage {
                             }
 
                             onClicked: {
-                                checked = true
-                                groupViewBtn.checked = false
-                                currentView = "student"
-                                refreshView()
+                                checked = true;
+                                groupViewBtn.checked = false;
+                                currentView = "student";
+                                refreshView();
                             }
                         }
 
@@ -96,10 +96,10 @@ FluentPage {
                             }
 
                             onClicked: {
-                                checked = true
-                                studentViewBtn.checked = false
-                                currentView = "class"
-                                refreshView()
+                                checked = true;
+                                studentViewBtn.checked = false;
+                                currentView = "class";
+                                refreshView();
                             }
                         }
                     }
@@ -183,12 +183,12 @@ FluentPage {
                                             anchors.fill: parent
                                             hoverEnabled: true
                                             onEntered: {
-                                                parent.border.color = "#0078d4"
-                                                parent.y -= 6
+                                                parent.border.color = "#0078d4";
+                                                parent.y -= 6;
                                             }
                                             onExited: {
-                                                parent.border.color = "#e9ecef"
-                                                parent.y += 6
+                                                parent.border.color = "#e9ecef";
+                                                parent.y += 6;
                                             }
                                             onClicked: openDetailModal(modelData)
                                         }
@@ -207,17 +207,13 @@ FluentPage {
                                             }
 
                                             Text {
-                                                text: currentView === "student" ?
-                                                      ("学号：" + (modelData.id || "")) :
-                                                      ("成员：" + (modelData.studentCount || 0))
+                                                text: currentView === "student" ? ("学号：" + (modelData.id || "")) : ("成员：" + (modelData.studentCount || 0))
                                                 font.pixelSize: 13
                                                 color: "#6c757d"
                                             }
 
                                             Text {
-                                                text: currentView === "student" ?
-                                                      ("学分：" + (modelData.credits || 0)) :
-                                                      ("平均分：" + (modelData.avgScore || 0))
+                                                text: currentView === "student" ? ("学分：" + (modelData.credits || 0)) : ("平均分：" + (modelData.avgScore || 0))
                                                 font.pixelSize: 13
                                                 color: "#6c757d"
                                             }
@@ -230,9 +226,7 @@ FluentPage {
 
                                                 Text {
                                                     anchors.centerIn: parent
-                                                    text: currentView === "student" ?
-                                                          ("班级 " + (modelData.className || "A")) :
-                                                          ("ID " + (modelData.id || ""))
+                                                    text: currentView === "student" ? ("班级 " + (modelData.className || "A")) : ("ID " + (modelData.id || ""))
                                                     color: "#0078d4"
                                                     font.weight: Font.DemiBold
                                                     font.pixelSize: 13
@@ -304,10 +298,10 @@ FluentPage {
                                 }
 
                                 onClicked: {
-                                    checked = true
-                                    tab2Btn.checked = false
-                                    tab3Btn.checked = false
-                                    currentTab = 1
+                                    checked = true;
+                                    tab2Btn.checked = false;
+                                    tab3Btn.checked = false;
+                                    currentTab = 1;
                                 }
                             }
 
@@ -331,10 +325,10 @@ FluentPage {
                                 }
 
                                 onClicked: {
-                                    checked = true
-                                    tab1Btn.checked = false
-                                    tab3Btn.checked = false
-                                    currentTab = 2
+                                    checked = true;
+                                    tab1Btn.checked = false;
+                                    tab3Btn.checked = false;
+                                    currentTab = 2;
                                 }
                             }
 
@@ -358,10 +352,10 @@ FluentPage {
                                 }
 
                                 onClicked: {
-                                    checked = true
-                                    tab1Btn.checked = false
-                                    tab2Btn.checked = false
-                                    currentTab = 3
+                                    checked = true;
+                                    tab1Btn.checked = false;
+                                    tab2Btn.checked = false;
+                                    currentTab = 3;
                                 }
                             }
                         }
@@ -516,8 +510,8 @@ FluentPage {
                             font.weight: Font.DemiBold
                             onClicked: {
                                 if (toolInput.text.trim()) {
-                                    console.log("添加工具：" + toolInput.text)
-                                    toolInput.clear()
+                                    console.log("添加工具：" + toolInput.text);
+                                    toolInput.clear();
                                 }
                             }
                         }
@@ -599,17 +593,13 @@ FluentPage {
                 }
 
                 Text {
-                    text: currentView === "student" ?
-                          ("学号：" + (detailModal.itemData ? detailModal.itemData.id : "")) :
-                          ("成员数：" + (detailModal.itemData ? detailModal.itemData.studentCount : ""))
+                    text: currentView === "student" ? ("学号：" + (detailModal.itemData ? detailModal.itemData.id : "")) : ("成员数：" + (detailModal.itemData ? detailModal.itemData.studentCount : ""))
                     font.pixelSize: 13
                     color: "#6c757d"
                 }
 
                 Text {
-                    text: currentView === "student" ?
-                          ("学分：" + (detailModal.itemData ? detailModal.itemData.credits : "")) :
-                          ("平均分：" + (detailModal.itemData ? detailModal.itemData.avgScore : ""))
+                    text: currentView === "student" ? ("学分：" + (detailModal.itemData ? detailModal.itemData.credits : "")) : ("平均分：" + (detailModal.itemData ? detailModal.itemData.avgScore : ""))
                     font.pixelSize: 13
                     color: "#6c757d"
                 }
@@ -622,8 +612,8 @@ FluentPage {
                     text: currentView === "student" ? "发消息" : "成员列表"
                     flat: true
                     onClicked: {
-                        console.log(currentView === "student" ? "发送消息" : "查看成员列表")
-                        detailModal.close()
+                        console.log(currentView === "student" ? "发送消息" : "查看成员列表");
+                        detailModal.close();
                     }
                 }
 
@@ -631,8 +621,8 @@ FluentPage {
                     text: currentView === "student" ? "查看成绩" : "导出报表"
                     flat: true
                     onClicked: {
-                        console.log(currentView === "student" ? "查看成绩" : "导出报表")
-                        detailModal.close()
+                        console.log(currentView === "student" ? "查看成绩" : "导出报表");
+                        detailModal.close();
                     }
                 }
             }
@@ -651,31 +641,73 @@ FluentPage {
     property int currentTab: 1
 
     property var studentModel: [
-        {name: "学生 1", id: "100", credits: 25, className: "A"},
-        {name: "学生 2", id: "101", credits: 28, className: "A"},
-        {name: "学生 3", id: "102", credits: 22, className: "B"},
-        {name: "学生 4", id: "103", credits: 30, className: "A"},
-        {name: "学生 5", id: "104", credits: 26, className: "B"},
-        {name: "学生 6", id: "105", credits: 24, className: "A"}
+        {
+            name: "学生 1",
+            id: "100",
+            credits: 25,
+            className: "A"
+        },
+        {
+            name: "学生 2",
+            id: "101",
+            credits: 28,
+            className: "A"
+        },
+        {
+            name: "学生 3",
+            id: "102",
+            credits: 22,
+            className: "B"
+        },
+        {
+            name: "学生 4",
+            id: "103",
+            credits: 30,
+            className: "A"
+        },
+        {
+            name: "学生 5",
+            id: "104",
+            credits: 26,
+            className: "B"
+        },
+        {
+            name: "学生 6",
+            id: "105",
+            credits: 24,
+            className: "A"
+        }
     ]
 
     property var classModel: [
-        {name: "班级 1", id: "G1", studentCount: 4, avgScore: 12.5},
-        {name: "班级 2", id: "G2", studentCount: 5, avgScore: 14.2},
-        {name: "班级 3", id: "G3", studentCount: 3, avgScore: 11.3}
+        {
+            name: "班级 1",
+            id: "G1",
+            studentCount: 4,
+            avgScore: 12.5
+        },
+        {
+            name: "班级 2",
+            id: "G2",
+            studentCount: 5,
+            avgScore: 14.2
+        },
+        {
+            name: "班级 3",
+            id: "G3",
+            studentCount: 3,
+            avgScore: 11.3
+        }
     ]
 
     function refreshView() {
         // 刷新视图逻辑
-        console.log("切换到：" + currentView + " 视图")
+        console.log("切换到：" + currentView + " 视图");
     }
 
     function openDetailModal(data) {
-        detailModal.itemData = data
-        statusText.text = "已选：" + data.name +
-                         (currentView === "student" ?
-                          ("（学号 " + data.id + "）· 学分 " + data.credits) :
-                          (" · 成员 " + data.studentCount))
-        detailModal.open()
+        detailModal.itemData = data;
+        statusText.text = "已选：" + data.name + (currentView === "student" ? ("（学号 " + data.id + "）· 学分 " + data.credits) : (" · 成员 " + data.studentCount));
+        detailModal.open();
     }
 }

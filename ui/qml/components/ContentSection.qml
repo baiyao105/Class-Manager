@@ -26,7 +26,10 @@ Rectangle {
 
     // 动画效果
     Behavior on height {
-        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation {
+            duration: 200
+            easing.type: Easing.OutCubic
+        }
     }
 
     Column {
@@ -71,7 +74,9 @@ Rectangle {
                 }
 
                 // 弹性空间
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 // 区块操作按钮
                 Row {
@@ -98,7 +103,7 @@ Rectangle {
                     }
 
                     onClicked: {
-                        collapsed = !collapsed
+                        collapsed = !collapsed;
                     }
 
                     background: Rectangle {
@@ -118,7 +123,10 @@ Rectangle {
             opacity: collapsed ? 0 : 1
 
             Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation {
+                    duration: 200
+                    easing.type: Easing.OutCubic
+                }
             }
         }
     }
@@ -128,31 +136,37 @@ Rectangle {
         State {
             name: "collapsed"
             when: collapsed
-            PropertyChanges { target: contentArea; visible: false }
+            PropertyChanges {
+                target: contentArea
+                visible: false
+            }
         },
         State {
             name: "expanded"
             when: !collapsed
-            PropertyChanges { target: contentArea; visible: true }
+            PropertyChanges {
+                target: contentArea
+                visible: true
+            }
         }
     ]
 
     // 区块方法
     function toggleCollapse() {
         if (collapsible) {
-            collapsed = !collapsed
+            collapsed = !collapsed;
         }
     }
 
     function expand() {
         if (collapsible) {
-            collapsed = false
+            collapsed = false;
         }
     }
 
     function collapse() {
         if (collapsible) {
-            collapsed = true
+            collapsed = true;
         }
     }
 }

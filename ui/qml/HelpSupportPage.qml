@@ -30,7 +30,9 @@ ScrollView {
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Row {
                 spacing: 12
@@ -915,12 +917,76 @@ ScrollView {
     }
 
     // 简化其他对话框定义...
-    Dialog { id: featuresDialog; title: "功能介绍"; width: 600; height: 500; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Close }
-    Dialog { id: changelogDialog; title: "更新日志"; width: 600; height: 500; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Close }
-    Dialog { id: checkUpdateDialog; title: "检查更新"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Close }
-    Dialog { id: systemDiagnosisDialog; title: "系统诊断"; width: 500; height: 400; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Close }
-    Dialog { id: exportLogsDialog; title: "导出日志"; width: 400; height: 300; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: featureSuggestionDialog; title: "功能建议"; width: 500; height: 400; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: bugReportDialog; title: "问题反馈"; width: 500; height: 400; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
-    Dialog { id: surveyDialog; title: "用户体验调研"; width: 500; height: 400; anchors.centerIn: parent; modal: true; standardButtons: Dialog.Ok | Dialog.Cancel }
+    Dialog {
+        id: featuresDialog
+        title: "功能介绍"
+        width: 600
+        height: 500
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Close
+    }
+    Dialog {
+        id: changelogDialog
+        title: "更新日志"
+        width: 600
+        height: 500
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Close
+    }
+    Dialog {
+        id: checkUpdateDialog
+        title: "检查更新"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Close
+    }
+    Dialog {
+        id: systemDiagnosisDialog
+        title: "系统诊断"
+        width: 500
+        height: 400
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Close
+    }
+    Dialog {
+        id: exportLogsDialog
+        title: "导出日志"
+        width: 400
+        height: 300
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: featureSuggestionDialog
+        title: "功能建议"
+        width: 500
+        height: 400
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: bugReportDialog
+        title: "问题反馈"
+        width: 500
+        height: 400
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
+    Dialog {
+        id: surveyDialog
+        title: "用户体验调研"
+        width: 500
+        height: 400
+        anchors.centerIn: parent
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+    }
 }

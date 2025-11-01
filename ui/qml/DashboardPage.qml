@@ -19,8 +19,14 @@ FluentPage {
             anchors.fill: parent
             radius: 12
             gradient: Gradient {
-                GradientStop { position: 0.0; color: "#3b82f6" }
-                GradientStop { position: 1.0; color: "#1d4ed8" }
+                GradientStop {
+                    position: 0.0
+                    color: "#3b82f6"
+                }
+                GradientStop {
+                    position: 1.0
+                    color: "#1d4ed8"
+                }
             }
 
             RowLayout {
@@ -55,7 +61,7 @@ FluentPage {
                         icon.name: "ic_fluent_person_add_20_regular"
                         onClicked: {
                             // 切换到学生管理页面
-                            window.currentPageIndex = 1
+                            window.currentPageIndex = 1;
                         }
                     }
 
@@ -64,7 +70,7 @@ FluentPage {
                         icon.name: "ic_fluent_building_add_20_regular"
                         onClicked: {
                             // 切换到班级管理页面
-                            window.currentPageIndex = 2
+                            window.currentPageIndex = 2;
                         }
                     }
                 }
@@ -357,7 +363,9 @@ FluentPage {
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
 
-                                            Item { Layout.fillWidth: true }
+                                            Item {
+                                                Layout.fillWidth: true
+                                            }
 
                                             Text {
                                                 text: (85.5 - index * 2.1).toFixed(1)
@@ -374,7 +382,6 @@ FluentPage {
                 }
             ]
         },
-
         ContentSection {
             sectionTitle: "最近活动"
             sectionSubtitle: "系统最新动态和重要通知"
@@ -492,9 +499,9 @@ FluentPage {
 
         onAccepted: {
             if (classNameField.text && teacherNameField.text) {
-                controller.addClass(classNameField.text, teacherNameField.text)
-                classNameField.clear()
-                teacherNameField.clear()
+                controller.addClass(classNameField.text, teacherNameField.text);
+                classNameField.clear();
+                teacherNameField.clear();
             }
         }
     }
@@ -519,9 +526,9 @@ FluentPage {
 
             Button {
                 text: "选择文件"
-                onClicked: {
-                    // 文件选择逻辑
-                }
+                onClicked:
+                // 文件选择逻辑
+                {}
             }
         }
 

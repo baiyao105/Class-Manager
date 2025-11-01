@@ -9,8 +9,9 @@ from uuid import UUID
 
 from sqlmodel import Session, and_, or_, select
 
-from ..models.student import Student, StudentStatus
 from config.constants import StudentConstants
+
+from ..models.student import Student, StudentStatus
 from .base_repository import BaseRepository
 
 

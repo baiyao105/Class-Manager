@@ -15,7 +15,7 @@ Rectangle {
     property bool enabled: true
 
     // 信号
-    signal clicked()
+    signal clicked
 
     width: 200
     height: 120
@@ -32,18 +32,18 @@ Rectangle {
         enabled: parent.enabled
 
         onEntered: {
-            parent.color = "#f8fafc"
-            parent.border.color = "#d1d5db"
+            parent.color = "#f8fafc";
+            parent.border.color = "#d1d5db";
         }
 
         onExited: {
-            parent.color = quickActionCard.enabled ? "#ffffff" : "#f9fafb"
-            parent.border.color = "#e5e7eb"
+            parent.color = quickActionCard.enabled ? "#ffffff" : "#f9fafb";
+            parent.border.color = "#e5e7eb";
         }
 
         onClicked: {
             if (quickActionCard.enabled) {
-                quickActionCard.clicked()
+                quickActionCard.clicked();
             }
         }
     }
@@ -100,14 +100,20 @@ Rectangle {
 
     // 点击动画效果
     Behavior on scale {
-        NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+        NumberAnimation {
+            duration: 100
+            easing.type: Easing.OutCubic
+        }
     }
 
     states: [
         State {
             name: "pressed"
             when: mouseArea.pressed && quickActionCard.enabled
-            PropertyChanges { target: quickActionCard; scale: 0.98 }
+            PropertyChanges {
+                target: quickActionCard
+                scale: 0.98
+            }
         }
     ]
 }

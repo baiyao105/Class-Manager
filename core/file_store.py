@@ -14,14 +14,16 @@
       - Score/*.json            # 积分模板
       - Achievement/*.json      # 成就模板
 """
+
 from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass, asdict
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from utils.basic_dirs import DATA
 
@@ -40,7 +42,7 @@ class StudentRecord:
     created_at: str = ""
 
     @classmethod
-    def create(cls, name: str, student_id: str, class_id: str, class_name: str | None = None) -> "StudentRecord":
+    def create(cls, name: str, student_id: str, class_id: str, class_name: str | None = None) -> StudentRecord:
         now = datetime.now().isoformat()
         return cls(
             id=str(uuid.uuid4()),
@@ -63,14 +65,22 @@ class AchievementRecord:
     created_at: str = ""
 
     @classmethod
-    def create(cls, student_id: str, title: str, description: str | None = None, points: int = 0) -> "AchievementRecord":
+    def create(cls, student_id: str, title: str, description: str | None = None, points: int = 0) -> AchievementRecord:
         now = datetime.now().isoformat()
-        return cls(id=str(uuid.uuid4()), student_id=student_id, title=title, description=description, points=points, created_at=now)
+        return cls(
+            id=str(uuid.uuid4()),
+            student_id=student_id,
+            title=title,
+            description=description,
+            points=points,
+            created_at=now,
+        )
 
 
 # -------------------------------
 # 通用文件存取
 # -------------------------------
+
 
 def _class_dir(class_id: str) -> Path:
     return DATA / f"Class_{class_id}"
@@ -86,7 +96,7 @@ def _read_json_array(file_path: Path) -> list[dict[str, Any]]:
     if not file_path.exists():
         return []
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, list):
             return data
@@ -177,8 +187,8 @@ class AchievementFileStore:
 
 
 __all__ = [
-    "StudentRecord",
+    "AchievementFileStore",
     "AchievementRecord",
     "StudentFileStore",
-    "AchievementFileStore",
+    "StudentRecord",
 ]

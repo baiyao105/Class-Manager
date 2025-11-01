@@ -270,9 +270,7 @@ class AchievementService:
             reward = achievement.template.reward_score if achievement.template else 0.0
             name = achievement.template.name if achievement.template else "成就"
             if reward != 0:
-                self.student_repository.update_student_score(
-                    str(achievement.student_id), -reward, f"删除成就: {name}"
-                )
+                self.student_repository.update_student_score(str(achievement.student_id), -reward, f"删除成就: {name}")
 
         return success
 

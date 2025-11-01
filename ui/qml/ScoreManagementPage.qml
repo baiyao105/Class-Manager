@@ -226,7 +226,9 @@ FluentPage {
                                 anchors.verticalCenter: parent.verticalCenter
                             }
 
-                            Item { Layout.fillWidth: true }
+                            Item {
+                                Layout.fillWidth: true
+                            }
 
                             Button {
                                 text: "添加积分"
@@ -353,8 +355,8 @@ FluentPage {
                                             onEntered: parent.color = "#e0f2fe"
                                             onExited: parent.color = index % 2 === 0 ? "#ffffff" : "#f8fafc"
                                             onClicked: {
-                                                selectedCredit = modelData
-                                                creditDetailModal.open()
+                                                selectedCredit = modelData;
+                                                creditDetailModal.open();
                                             }
                                         }
 
@@ -399,9 +401,7 @@ FluentPage {
                                                 text: (modelData.score || 85).toString()
                                                 font.pixelSize: 16
                                                 font.weight: Font.Bold
-                                                color: (modelData.score || 85) >= 90 ? "#10b981" :
-                                                       (modelData.score || 85) >= 80 ? "#3b82f6" :
-                                                       (modelData.score || 85) >= 60 ? "#f59e0b" : "#ef4444"
+                                                color: (modelData.score || 85) >= 90 ? "#10b981" : (modelData.score || 85) >= 80 ? "#3b82f6" : (modelData.score || 85) >= 60 ? "#f59e0b" : "#ef4444"
                                                 width: 80
                                                 anchors.verticalCenter: parent.verticalCenter
                                             }
@@ -410,21 +410,15 @@ FluentPage {
                                                 width: 40
                                                 height: 24
                                                 radius: 12
-                                                color: (modelData.score || 85) >= 90 ? "#dcfce7" :
-                                                       (modelData.score || 85) >= 80 ? "#dbeafe" :
-                                                       (modelData.score || 85) >= 60 ? "#fef3c7" : "#fee2e2"
+                                                color: (modelData.score || 85) >= 90 ? "#dcfce7" : (modelData.score || 85) >= 80 ? "#dbeafe" : (modelData.score || 85) >= 60 ? "#fef3c7" : "#fee2e2"
                                                 anchors.verticalCenter: parent.verticalCenter
 
                                                 Text {
-                                                    text: (modelData.score || 85) >= 90 ? "优" :
-                                                          (modelData.score || 85) >= 80 ? "良" :
-                                                          (modelData.score || 85) >= 60 ? "及格" : "不及格"
+                                                    text: (modelData.score || 85) >= 90 ? "优" : (modelData.score || 85) >= 80 ? "良" : (modelData.score || 85) >= 60 ? "及格" : "不及格"
                                                     anchors.centerIn: parent
                                                     font.pixelSize: 12
                                                     font.weight: Font.Bold
-                                                    color: (modelData.score || 85) >= 90 ? "#166534" :
-                                                           (modelData.score || 85) >= 80 ? "#1e40af" :
-                                                           (modelData.score || 85) >= 60 ? "#92400e" : "#dc2626"
+                                                    color: (modelData.score || 85) >= 90 ? "#166534" : (modelData.score || 85) >= 80 ? "#1e40af" : (modelData.score || 85) >= 60 ? "#92400e" : "#dc2626"
                                                 }
                                             }
 
@@ -445,8 +439,8 @@ FluentPage {
                                                     flat: true
                                                     font.pixelSize: 12
                                                     onClicked: {
-                                                        selectedCredit = modelData
-                                                        editCreditDialog.open()
+                                                        selectedCredit = modelData;
+                                                        editCreditDialog.open();
                                                     }
                                                 }
 
@@ -456,8 +450,8 @@ FluentPage {
                                                     font.pixelSize: 12
                                                     palette.buttonText: "#dc2626"
                                                     onClicked: {
-                                                        selectedCredit = modelData
-                                                        deleteCreditDialog.open()
+                                                        selectedCredit = modelData;
+                                                        deleteCreditDialog.open();
                                                     }
                                                 }
                                             }
@@ -686,31 +680,63 @@ FluentPage {
 
                     Row {
                         spacing: 16
-                        Text { text: "姓名:"; width: 80; color: "#374151" }
-                        Text { text: selectedCredit ? selectedCredit.studentName || "张三" : "张三"; color: "#111827" }
+                        Text {
+                            text: "姓名:"
+                            width: 80
+                            color: "#374151"
+                        }
+                        Text {
+                            text: selectedCredit ? selectedCredit.studentName || "张三" : "张三"
+                            color: "#111827"
+                        }
                     }
 
                     Row {
                         spacing: 16
-                        Text { text: "班级:"; width: 80; color: "#374151" }
-                        Text { text: selectedCredit ? selectedCredit.className || "高一(1)班" : "高一(1)班"; color: "#111827" }
+                        Text {
+                            text: "班级:"
+                            width: 80
+                            color: "#374151"
+                        }
+                        Text {
+                            text: selectedCredit ? selectedCredit.className || "高一(1)班" : "高一(1)班"
+                            color: "#111827"
+                        }
                     }
 
                     Row {
                         spacing: 16
-                        Text { text: "科目:"; width: 80; color: "#374151" }
-                        Text { text: selectedCredit ? selectedCredit.subcategory || "项目" : "项目"; color: "#111827" }
+                        Text {
+                            text: "科目:"
+                            width: 80
+                            color: "#374151"
+                        }
+                        Text {
+                            text: selectedCredit ? selectedCredit.subcategory || "项目" : "项目"
+                            color: "#111827"
+                        }
                     }
 
                     Row {
                         spacing: 16
-                        Text { text: "类型:"; width: 80; color: "#374151" }
-                        Text { text: selectedCredit ? selectedCredit.category || "积分类别" : "积分类别"; color: "#111827" }
+                        Text {
+                            text: "类型:"
+                            width: 80
+                            color: "#374151"
+                        }
+                        Text {
+                            text: selectedCredit ? selectedCredit.category || "积分类别" : "积分类别"
+                            color: "#111827"
+                        }
                     }
 
                     Row {
                         spacing: 16
-                        Text { text: "分数:"; width: 80; color: "#374151" }
+                        Text {
+                            text: "分数:"
+                            width: 80
+                            color: "#374151"
+                        }
                         Text {
                             text: selectedCredit ? (selectedCredit.score || 85).toString() : "85"
                             color: "#111827"
@@ -720,8 +746,15 @@ FluentPage {
 
                     Row {
                         spacing: 16
-                        Text { text: "日期:"; width: 80; color: "#374151" }
-                        Text { text: "2024-01-15"; color: "#111827" }
+                        Text {
+                            text: "日期:"
+                            width: 80
+                            color: "#374151"
+                        }
+                        Text {
+                            text: "2024-01-15"
+                            color: "#111827"
+                        }
                     }
                 }
             }
@@ -745,7 +778,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "学生:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "学生:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["张三", "李四", "王五", "赵六", "钱七"]
                     width: 200
@@ -754,7 +791,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "班级:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "班级:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["高一(1)班", "高一(2)班", "高一(3)班"]
                     width: 200
@@ -763,7 +804,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "科目:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "科目:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["语文", "数学", "英语", "物理", "化学", "生物"]
                     width: 200
@@ -772,7 +817,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "类型:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "类型:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["平时成绩", "作业成绩", "考试成绩", "课堂表现"]
                     width: 200
@@ -781,7 +830,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "分数:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "分数:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 SpinBox {
                     from: 0
                     to: 100
@@ -792,7 +845,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "备注:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "备注:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 TextField {
                     placeholderText: "可选备注信息"
                     width: 200
@@ -818,7 +875,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "学生:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "学生:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["张三", "李四", "王五", "赵六", "钱七"]
                     width: 200
@@ -827,7 +888,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "班级:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "班级:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["高一(1)班", "高一(2)班", "高一(3)班"]
                     width: 200
@@ -836,7 +901,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "科目:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "科目:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["语文", "数学", "英语", "物理", "化学", "生物"]
                     width: 200
@@ -845,7 +914,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "类型:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "类型:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["平时成绩", "作业成绩", "考试成绩", "课堂表现"]
                     width: 200
@@ -854,7 +927,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "分数:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "分数:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 SpinBox {
                     from: 0
                     to: 100
@@ -865,7 +942,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "备注:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "备注:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 TextField {
                     placeholderText: "可选备注信息"
                     text: selectedCredit ? selectedCredit.note || "" : ""
@@ -994,7 +1075,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "格式:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "格式:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["Excel (.xlsx)", "CSV (.csv)", "PDF报表"]
                     width: 200
@@ -1003,7 +1088,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "范围:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "范围:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["全部数据", "当前筛选结果", "选中记录"]
                     width: 200
@@ -1012,7 +1101,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "班级:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "班级:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["全部班级", "高一(1)班", "高一(2)班", "高一(3)班"]
                     width: 200
@@ -1021,7 +1114,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "科目:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "科目:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["全部科目", "语文", "数学", "英语", "物理", "化学"]
                     width: 200
@@ -1054,7 +1151,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "类型:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "类型:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["班级成绩单", "学生个人报告", "科目统计报告", "成绩趋势分析"]
                     width: 200
@@ -1063,7 +1164,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "班级:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "班级:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["全部班级", "高一(1)班", "高一(2)班", "高一(3)班"]
                     width: 200
@@ -1072,7 +1177,11 @@ FluentPage {
 
             Row {
                 spacing: 16
-                Text { text: "时间:"; width: 80; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "时间:"
+                    width: 80
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 ComboBox {
                     model: ["本学期", "本月", "最近一周", "自定义"]
                     width: 200
@@ -1086,7 +1195,7 @@ FluentPage {
     // 刷新数据函数
     function refreshCredits() {
         if (controller) {
-            controller.refreshCredits()
+            controller.refreshCredits();
         }
     }
 }

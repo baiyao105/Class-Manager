@@ -84,8 +84,14 @@ Rectangle {
         height: 3
         radius: parent.radius
         gradient: Gradient {
-            GradientStop { position: 0.0; color: statCard.cardColor }
-            GradientStop { position: 1.0; color: statCard.cardColor + "60" }
+            GradientStop {
+                position: 0.0
+                color: statCard.cardColor
+            }
+            GradientStop {
+                position: 1.0
+                color: statCard.cardColor + "60"
+            }
         }
     }
 }
