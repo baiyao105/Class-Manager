@@ -7,7 +7,9 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from ..models.achievement import Achievement, AchievementLevel, AchievementType
+from sqlmodel import select
+
+from ..models.achievement import Achievement, AchievementLevel, AchievementTemplate, AchievementType
 from ..repositories.achievement_repository import AchievementRepository
 from ..repositories.student_repository import StudentRepository
 
@@ -31,57 +33,75 @@ class AchievementService:
     def create_achievement(
         self,
         student_id: int,
-        registry_uuid: UUID,
-        title: str,
-        description: str,
-        points: float = 10.0,
-        achievement_type: AchievementType = AchievementType.BEHAVIOR,
-        level: AchievementLevel = AchievementLevel.BRONZE,
+        template_id: int | None = None,
         template_key: str | None = None,
+        achieved_score: float | None = None,
+        notes: str | None = None,
     ) -> Achievement:
         """创建新成就
 
         Args:
             student_id: 学生ID
-            registry_uuid: 班级UUID
-            title: 成就标题
-            description: 成就描述
-            points: 积分
-            achievement_type: 成就类型
-            level: 成就等级
-            template_key: 成就模板键（可选）
+            template_id: 成就模板ID（可选，与 template_key 二选一）
+            template_key: 成就模板标识（可选，与 template_id 二选一）
+            achieved_score: 获得时的分数（默认取学生当前分数）
+            notes: 备注信息
 
         Returns:
             创建的成就对象
 
         Raises:
-            ValueError: 当学生不存在时
+            ValueError: 当学生不存在或模板不存在时
         """
         # 验证学生是否存在（如果提供了student_repository）
+        student = None
         if self.student_repository:
             student = self.student_repository.get_by_id(str(student_id))
             if not student:
                 raise ValueError(f"学生 {student_id} 不存在")
 
+        # 查找模板
+        template: AchievementTemplate | None = None
+        if template_id is not None:
+            tpl_query = select(AchievementTemplate).where(AchievementTemplate.id == template_id)
+            tpl_query = tpl_query.where(AchievementTemplate.is_deleted == False)
+            template = self.achievement_repository.session.exec(tpl_query).first()
+        elif template_key is not None:
+            tpl_query = select(AchievementTemplate).where(AchievementTemplate.key == template_key)
+            tpl_query = tpl_query.where(AchievementTemplate.is_deleted == False)
+            template = self.achievement_repository.session.exec(tpl_query).first()
+        else:
+            raise ValueError("必须提供 template_id 或 template_key 之一")
+
+        if not template:
+            raise ValueError("成就模板不存在或已删除")
+
+        # 如果有学生对象，检查模板是否可授予
+        if student and not template.can_be_awarded_to(student):
+            raise ValueError("该成就模板当前不可授予该学生（可能已达到次数或未启用）")
+
+        # 计算获得时的分数
+        if achieved_score is None:
+            achieved_score = student.current_score if student else 0.0
+
         # 准备成就数据
         achievement_data = {
             "student_id": student_id,
-            "registry_uuid": registry_uuid,
-            "title": title,
-            "description": description,
-            "points": points,
-            "achievement_type": achievement_type,
-            "level": level,
-            "template_key": template_key,
-            "earned_at": datetime.utcnow(),
+            "template_id": template.id,
+            "achieved_score": achieved_score,
+            "achieved_at": datetime.utcnow(),
+            "achieved_rank": student.get_rank_in_class() if student else None,
+            "notes": notes,
         }
 
         # 通过Repository创建成就
         achievement = self.achievement_repository.create(achievement_data)
 
         # 更新学生积分（如果提供了student_repository）
-        if self.student_repository and points > 0:
-            self.student_repository.update_student_score(str(student_id), points, f"获得成就: {title}")
+        if self.student_repository and template.reward_score != 0:
+            self.student_repository.update_student_score(
+                str(student_id), template.reward_score, f"获得成就: {template.name}"
+            )
 
         return achievement
 
@@ -204,37 +224,25 @@ class AchievementService:
     def update_achievement(
         self,
         achievement_id: str,
-        title: str | None = None,
-        description: str | None = None,
-        points: float | None = None,
-        achievement_type: AchievementType | None = None,
-        level: AchievementLevel | None = None,
+        achieved_score: float | None = None,
+        notes: str | None = None,
     ) -> Achievement | None:
         """更新成就信息
 
         Args:
             achievement_id: 成就ID
-            title: 新标题
-            description: 新描述
-            points: 新积分
-            achievement_type: 新类型
-            level: 新等级
+            achieved_score: 获得时分数（仅允许修改为合理范围）
+            notes: 备注
 
         Returns:
             更新后的成就对象或None
         """
         # 准备更新数据
         update_data = {}
-        if title is not None:
-            update_data["title"] = title
-        if description is not None:
-            update_data["description"] = description
-        if points is not None:
-            update_data["points"] = points
-        if achievement_type is not None:
-            update_data["achievement_type"] = achievement_type
-        if level is not None:
-            update_data["level"] = level
+        if achieved_score is not None:
+            update_data["achieved_score"] = achieved_score
+        if notes is not None:
+            update_data["notes"] = notes
 
         # 执行更新
         return self.achievement_repository.update(achievement_id, update_data)
@@ -258,10 +266,13 @@ class AchievementService:
         success = self.achievement_repository.delete(achievement_id, soft_delete)
 
         # 回退学生积分（如果提供了student_repository）
-        if success and self.student_repository and achievement.points > 0:
-            self.student_repository.update_student_score(
-                str(achievement.student_id), -achievement.points, f"删除成就: {achievement.title}"
-            )
+        if success and self.student_repository:
+            reward = achievement.template.reward_score if achievement.template else 0.0
+            name = achievement.template.name if achievement.template else "成就"
+            if reward != 0:
+                self.student_repository.update_student_score(
+                    str(achievement.student_id), -reward, f"删除成就: {name}"
+                )
 
         return success
 
@@ -321,10 +332,10 @@ class AchievementService:
         Returns:
             创建的成就列表
         """
-        # 为每个成就数据添加默认的earned_at时间
+        # 为每个成就数据添加默认的 achieved_at 时间
         for data in achievements_data:
-            if "earned_at" not in data:
-                data["earned_at"] = datetime.utcnow()
+            if "achieved_at" not in data:
+                data["achieved_at"] = datetime.utcnow()
 
         achievements = self.achievement_repository.batch_create_achievements(achievements_data)
 
@@ -332,12 +343,14 @@ class AchievementService:
         if self.student_repository:
             score_updates = []
             for achievement in achievements:
-                if achievement.points > 0:
+                reward = achievement.template.reward_score if achievement.template else 0.0
+                name = achievement.template.name if achievement.template else "成就"
+                if reward != 0:
                     score_updates.append(
                         {
                             "student_id": str(achievement.student_id),
-                            "score_change": achievement.points,
-                            "reason": f"获得成就: {achievement.title}",
+                            "score_change": reward,
+                            "reason": f"获得成就: {name}",
                         }
                     )
 

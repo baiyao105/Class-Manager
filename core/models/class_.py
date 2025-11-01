@@ -28,11 +28,10 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     """子库班级表 - 存储班级业务数据
 
     注意：班级基础信息(名称、班主任、描述等)已迁移到配置文件中
-    此模型仅保留业务相关的数据库字段
+    此模型仅保留业务相关的数据库字段（移除积分设置字段）
 
     核心字段：
     - 关联信息：总库班级索引UUID
-    - 积分设置：基础积分、积分规则
     - 统计信息：学生数量、总分、平均分
     - 管理信息：创建时间、状态等
     """
@@ -44,10 +43,6 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
 
     # 关联总库
     registry_uuid: UUID = Field(description="总库班级索引UUID")
-
-    # 积分设置
-    base_score: float = Field(default=100.0, description="基础积分")
-    score_rules: str | None = Field(default=None, sa_column=Column(Text), description="积分规则JSON")
 
     # 关系字段
     students: list["Student"] = Relationship(
@@ -61,14 +56,6 @@ class Classroom(SubDBModel, ArchiveMixin, OrderMixin, table=True):
     #     sa_relationship_kwargs={"lazy": "select"}
     # )
 
-    # 验证器 (移除已迁移字段的验证器)
-    @field_validator("base_score")
-    @classmethod
-    def validate_base_score(cls, v):
-        """验证基础积分"""
-        if v < 0:
-            raise ValueError("基础积分不能为负数")
-        return v
 
     # 统计属性
     @property
@@ -410,8 +397,6 @@ class ClassroomCreate(SQLModel):
     academic_year: str = Field(default="2024-2025", description="学年", max_length=20)
     semester: int = Field(default=1, description="学期")
     max_students: int = Field(default=ClassConstants.MAX_CLASS_SIZE, description="最大学生数量")
-    base_score: float = Field(default=100.0, description="基础积分")
-    score_rules: str | None = Field(default=None, description="积分规则JSON")
 
 
 class ClassroomUpdate(SQLModel):
@@ -424,8 +409,7 @@ class ClassroomUpdate(SQLModel):
     class_type: str | None = Field(default=None, max_length=50, description="班级类型")
     is_active: bool | None = Field(default=None, description="是否活跃")
     max_students: int | None = Field(default=None, description="最大学生数量")
-    base_score: float | None = Field(default=None, description="基础积分")
-    score_rules: str | None = Field(default=None, description="积分规则JSON")
+    # 已移除：基础积分与积分规则字段
 
 
 class ClassroomRead(SQLModel):
@@ -443,8 +427,7 @@ class ClassroomRead(SQLModel):
     academic_year: str
     semester: int
     max_students: int
-    base_score: float
-    score_rules: str | None
+    # 已移除：基础积分与积分规则字段
     created_at: datetime
     updated_at: datetime | None
 

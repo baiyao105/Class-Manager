@@ -9,7 +9,8 @@ from uuid import UUID
 
 from sqlmodel import Session, and_, func, select
 
-from ..models.achievement import Achievement, AchievementLevel, AchievementType
+from ..models.achievement import Achievement, AchievementLevel, AchievementTemplate, AchievementType
+from ..models.student import Student
 from .base_repository import BaseRepository
 
 
@@ -37,10 +38,8 @@ class AchievementRepository(BaseRepository[Achievement]):
             创建的Achievement对象
         """
         # 设置默认值
-        if "earned_at" not in entity_data:
-            entity_data["earned_at"] = datetime.utcnow()
-        if "points" not in entity_data:
-            entity_data["points"] = 0.0
+        if "achieved_at" not in entity_data:
+            entity_data["achieved_at"] = datetime.utcnow()
 
         achievement = self._create_entity(entity_data)
         self.session.add(achievement)
@@ -59,7 +58,7 @@ class AchievementRepository(BaseRepository[Achievement]):
         """
         query = select(Achievement).where(Achievement.id == entity_id)
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query)
         return result.first()
@@ -108,15 +107,19 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             成就列表
         """
-        query = select(Achievement).where(Achievement.student_id == student_id)
+        query = (
+            select(Achievement)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(Achievement.student_id == student_id)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
-        query = query.order_by(Achievement.earned_at.desc())
+        query = query.order_by(Achievement.achieved_at.desc())
         result = self.session.exec(query)
         return result.all()
 
@@ -130,13 +133,18 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             成就列表
         """
-        query = select(Achievement).where(Achievement.template_key == template_key)
+        query = (
+            select(Achievement)
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(AchievementTemplate.key == template_key)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -151,13 +159,18 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             匹配的成就列表
         """
-        query = select(Achievement).where(Achievement.title.contains(title))
+        query = (
+            select(Achievement)
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(AchievementTemplate.name.contains(title))
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -172,13 +185,18 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             指定类型的成就列表
         """
-        query = select(Achievement).where(Achievement.achievement_type == achievement_type)
+        query = (
+            select(Achievement)
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(AchievementTemplate.achievement_type == achievement_type)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -193,13 +211,18 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             指定等级的成就列表
         """
-        query = select(Achievement).where(Achievement.level == level)
+        query = (
+            select(Achievement)
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(AchievementTemplate.level == level)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -216,15 +239,20 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             高价值成就列表
         """
-        query = select(Achievement).where(Achievement.points >= min_points)
+        query = (
+            select(Achievement)
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(AchievementTemplate.reward_score >= min_points)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
-        query = query.order_by(Achievement.points.desc())
+        query = query.order_by(AchievementTemplate.reward_score.desc())
         result = self.session.exec(query)
         return result.all()
 
@@ -238,13 +266,18 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             最近的成就列表
         """
-        query = select(Achievement).order_by(Achievement.earned_at.desc()).limit(limit)
+        query = (
+            select(Achievement)
+            .join(Student, Student.id == Achievement.student_id)
+            .order_by(Achievement.achieved_at.desc())
+            .limit(limit)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query)
         return result.all()
@@ -262,15 +295,19 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             日期范围内的成就列表
         """
-        query = select(Achievement).where(and_(Achievement.earned_at >= start_date, Achievement.earned_at <= end_date))
+        query = (
+            select(Achievement)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(and_(Achievement.achieved_at >= start_date, Achievement.achieved_at <= end_date))
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
-        query = query.order_by(Achievement.earned_at.desc())
+        query = query.order_by(Achievement.achieved_at.desc())
         result = self.session.exec(query)
         return result.all()
 
@@ -284,13 +321,18 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             学生总积分
         """
-        query = select(func.sum(Achievement.points)).where(Achievement.student_id == student_id)
+        query = (
+            select(func.sum(AchievementTemplate.reward_score))
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
+            .where(Achievement.student_id == student_id)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query).first()
         return float(result or 0.0)
@@ -305,13 +347,17 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             成就数量
         """
-        query = select(func.count(Achievement.id)).where(Achievement.student_id == student_id)
+        query = (
+            select(func.count(Achievement.id))
+            .join(Student, Student.id == Achievement.student_id)
+            .where(Achievement.student_id == student_id)
+        )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query).first()
         return int(result or 0)
@@ -329,19 +375,21 @@ class AchievementRepository(BaseRepository[Achievement]):
         query = (
             select(
                 Achievement.student_id,
-                func.sum(Achievement.points).label("total_points"),
+                func.sum(AchievementTemplate.reward_score).label("total_points"),
                 func.count(Achievement.id).label("achievement_count"),
             )
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
             .group_by(Achievement.student_id)
-            .order_by(func.sum(Achievement.points).desc())
+            .order_by(func.sum(AchievementTemplate.reward_score).desc())
             .limit(limit)
         )
 
         if registry_uuid:
-            query = query.where(Achievement.registry_uuid == registry_uuid)
+            query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            query = query.where(not Achievement.is_deleted)
+            query = query.where(Achievement.is_deleted == False)
 
         result = self.session.exec(query)
         return [
@@ -362,23 +410,27 @@ class AchievementRepository(BaseRepository[Achievement]):
         Returns:
             统计信息字典
         """
-        base_query = select(Achievement)
+        base_query = select(Achievement).join(Student, Student.id == Achievement.student_id)
 
         if registry_uuid:
-            base_query = base_query.where(Achievement.registry_uuid == registry_uuid)
+            base_query = base_query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Achievement, "is_deleted"):
-            base_query = base_query.where(not Achievement.is_deleted)
+            base_query = base_query.where(Achievement.is_deleted == False)
 
         # 总成就数量
         total_count = len(self.session.exec(base_query).all())
 
         # 总积分
-        total_points_query = select(func.sum(Achievement.points))
+        total_points_query = (
+            select(func.sum(AchievementTemplate.reward_score))
+            .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+            .join(Student, Student.id == Achievement.student_id)
+        )
         if registry_uuid:
-            total_points_query = total_points_query.where(Achievement.registry_uuid == registry_uuid)
+            total_points_query = total_points_query.where(Student.registry_uuid == registry_uuid)
         if hasattr(Achievement, "is_deleted"):
-            total_points_query = total_points_query.where(not Achievement.is_deleted)
+            total_points_query = total_points_query.where(Achievement.is_deleted == False)
 
         total_points = self.session.exec(total_points_query).first() or 0.0
 
@@ -388,11 +440,16 @@ class AchievementRepository(BaseRepository[Achievement]):
         # 按类型统计
         type_stats = {}
         for achievement_type in AchievementType:
-            type_query = select(func.count(Achievement.id)).where(Achievement.achievement_type == achievement_type)
+            type_query = (
+                select(func.count(Achievement.id))
+                .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+                .join(Student, Student.id == Achievement.student_id)
+                .where(AchievementTemplate.achievement_type == achievement_type)
+            )
             if registry_uuid:
-                type_query = type_query.where(Achievement.registry_uuid == registry_uuid)
+                type_query = type_query.where(Student.registry_uuid == registry_uuid)
             if hasattr(Achievement, "is_deleted"):
-                type_query = type_query.where(not Achievement.is_deleted)
+                type_query = type_query.where(Achievement.is_deleted == False)
 
             count = self.session.exec(type_query).first() or 0
             type_stats[achievement_type.value] = int(count)
@@ -400,11 +457,16 @@ class AchievementRepository(BaseRepository[Achievement]):
         # 按等级统计
         level_stats = {}
         for level in AchievementLevel:
-            level_query = select(func.count(Achievement.id)).where(Achievement.level == level)
+            level_query = (
+                select(func.count(Achievement.id))
+                .join(AchievementTemplate, AchievementTemplate.id == Achievement.template_id)
+                .join(Student, Student.id == Achievement.student_id)
+                .where(AchievementTemplate.level == level)
+            )
             if registry_uuid:
-                level_query = level_query.where(Achievement.registry_uuid == registry_uuid)
+                level_query = level_query.where(Student.registry_uuid == registry_uuid)
             if hasattr(Achievement, "is_deleted"):
-                level_query = level_query.where(not Achievement.is_deleted)
+                level_query = level_query.where(Achievement.is_deleted == False)
 
             count = self.session.exec(level_query).first() or 0
             level_stats[level.value] = int(count)

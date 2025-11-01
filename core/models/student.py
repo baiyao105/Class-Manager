@@ -59,7 +59,7 @@ class Student(SubDBModel, ArchiveMixin, OrderMixin, table=True):
 
     # 分数信息
     current_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="当前分数")
-    base_score: float = Field(default=100.0, description="基础积分")
+    base_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="基础积分")
     total_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="总分(包含历史分数)")
     highest_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="历史最高分")
     lowest_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="历史最低分")
@@ -268,7 +268,7 @@ class StudentCreate(SQLModel):
     classroom_id: int | None = Field(default=None, description="所属班级ID")
     group_id: int | None = Field(default=None, description="所属小组ID")
     current_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="初始分数")
-    base_score: float = Field(default=100.0, description="基础积分")
+    base_score: float = Field(default=StudentConstants.DEFAULT_SCORE, description="基础积分")
 
 
 class StudentUpdate(SQLModel):
