@@ -50,7 +50,7 @@ repos:
       - id: zizmor
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.1
+    rev: v0.14.5
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes", "--exit-zero"]
@@ -66,10 +66,10 @@ repos:
           - "prettier@3.6.2"
           - "@prettier/plugin-xml"
 
-  - repo: https://github.com/baiyao105/qml-formatter
-    rev: v1.0.1
-    hooks:
-      - id: qml-format
+  # - repo: https://github.com/baiyao105/qml-formatter
+  #   rev: v1.0.1
+  #   hooks:
+  #     - id: qml-format
 
   # - repo: https://github.com/rhysd/actionlint
   #   rev: v1.7.7

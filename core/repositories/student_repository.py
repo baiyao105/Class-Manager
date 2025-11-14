@@ -67,7 +67,7 @@ class StudentRepository(BaseRepository[Student]):
         """
         query = select(Student).where(Student.id == entity_id)
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.first()
@@ -126,7 +126,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.first()
@@ -143,7 +143,7 @@ class StudentRepository(BaseRepository[Student]):
         query = select(Student).where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.all()
@@ -160,7 +160,7 @@ class StudentRepository(BaseRepository[Student]):
         query = select(Student).where(Student.classroom_id == classroom_id)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.all()
@@ -189,7 +189,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.all()
@@ -209,7 +209,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.all()
@@ -226,7 +226,7 @@ class StudentRepository(BaseRepository[Student]):
         query = select(Student).where(Student.group_id == group_id)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.all()
@@ -250,7 +250,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.all()
@@ -271,7 +271,7 @@ class StudentRepository(BaseRepository[Student]):
             query = query.where(Student.registry_uuid == registry_uuid)
 
         if hasattr(Student, "is_deleted"):
-            query = query.where(Student.is_deleted == False)
+            query = query.where(not Student.is_deleted)
 
         result = self.session.exec(query)
         return result.all()

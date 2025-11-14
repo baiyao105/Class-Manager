@@ -64,11 +64,11 @@ class AchievementService:
         template: AchievementTemplate | None = None
         if template_id is not None:
             tpl_query = select(AchievementTemplate).where(AchievementTemplate.id == template_id)
-            tpl_query = tpl_query.where(AchievementTemplate.is_deleted == False)
+            tpl_query = tpl_query.where(not AchievementTemplate.is_deleted)
             template = self.achievement_repository.session.exec(tpl_query).first()
         elif template_key is not None:
             tpl_query = select(AchievementTemplate).where(AchievementTemplate.key == template_key)
-            tpl_query = tpl_query.where(AchievementTemplate.is_deleted == False)
+            tpl_query = tpl_query.where(not AchievementTemplate.is_deleted)
             template = self.achievement_repository.session.exec(tpl_query).first()
         else:
             raise ValueError("必须提供 template_id 或 template_key 之一")
