@@ -1,7 +1,6 @@
 [dependency-groups]
 dev = [
   "memory_profiler>=0.61.0",
-  "pre-commit>=4.3.0",
   "prek>=0.2.10",
   "pylint>=3.3.8",
   "pyright>=1.1.405",
