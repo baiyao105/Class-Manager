@@ -3,6 +3,7 @@
 现代化的班级管理系统, 基于Rinui框架和PySide6构建
 """
 
+import contextlib
 import shutil
 import sys
 import time
@@ -156,10 +157,10 @@ class ClassManagerController(QObject):
                     try:
                         from sqlmodel import select
 
-                        achievements = ss.exec(select(Achievement).where(Achievement.is_deleted == False)).all()
+                        achievements = ss.exec(select(Achievement).where(not Achievement.is_deleted)).all()
                     except Exception:
                         try:
-                            achievements = ss.query(Achievement).filter(Achievement.is_deleted == False).all()
+                            achievements = ss.query(Achievement).filter(not Achievement.is_deleted).all()
                         except Exception:
                             achievements = ss.query(Achievement).all()
             except Exception as e:
@@ -191,7 +192,7 @@ class ClassManagerController(QObject):
                             # 统一过滤：只统计未软删除且状态为 APPLIED 的记录
                             records = ss.exec(
                                 select(ScoreRecord).where(
-                                    ScoreRecord.is_deleted == False,
+                                    not ScoreRecord.is_deleted,
                                     ScoreRecord.status == RecordStatus.APPLIED,
                                 )
                             ).all()
@@ -199,7 +200,7 @@ class ClassManagerController(QObject):
                         if ScoreRecord:
                             # 兼容不同 ORM：降级查询并至少过滤未软删除
                             try:
-                                records = ss.query(ScoreRecord).filter(ScoreRecord.is_deleted == False).all()
+                                records = ss.query(ScoreRecord).filter(not ScoreRecord.is_deleted).all()
                             except Exception:
                                 records = ss.query(ScoreRecord).all()
                     for r in records:
@@ -422,10 +423,10 @@ class ClassManagerController(QObject):
                         from sqlmodel import select
 
                         # 统一过滤：仅加载未软删除的记录
-                        records = ss.exec(select(ScoreRecord).where(ScoreRecord.is_deleted == False)).all()
+                        records = ss.exec(select(ScoreRecord).where(not ScoreRecord.is_deleted)).all()
                     except Exception:
                         try:
-                            records = ss.query(ScoreRecord).filter(ScoreRecord.is_deleted == False).all()
+                            records = ss.query(ScoreRecord).filter(not ScoreRecord.is_deleted).all()
                         except Exception:
                             records = ss.query(ScoreRecord).all()
 
@@ -781,10 +782,8 @@ class ClassManagerController(QObject):
                         try:
                             obj.occurred_at = datetime.strptime(v[:19], "%Y-%m-%d%H:%M:%S")
                         except Exception:
-                            try:
+                            with contextlib.suppress(Exception):
                                 obj.occurred_at = datetime.strptime(v[:10], "%Y-%m-%d")
-                            except Exception:
-                                pass
                 obj.update_timestamp()
                 ss.add(obj)
                 ss.commit()
@@ -989,15 +988,13 @@ class ClassManagerController(QObject):
 
                     existing = ss.exec(
                         select(Student).where(
-                            Student.is_deleted == False,
+                            not Student.is_deleted,
                             Student.student_number == student_num,
                         )
                     ).first()
                 except Exception:
                     existing = (
-                        ss.query(Student)
-                        .filter(Student.is_deleted == False, Student.student_number == student_num)
-                        .first()
+                        ss.query(Student).filter(not Student.is_deleted, Student.student_number == student_num).first()
                     )
                 if existing is not None:
                     print(f"❌ 学号重复，已存在: {student_num}")
@@ -1120,10 +1117,8 @@ class ClassManagerController(QObject):
                 shutil.rmtree(p, ignore_errors=True)
 
             # 从缓存移除
-            try:
+            with contextlib.suppress(Exception):
                 ClassConfigManager.reload_config(class_id)
-            except Exception:
-                pass
 
             # 如果删除的是默认班级，重新选择
             default_id = GlobalConfigManager.get_setting("custom_settings.default_class_id", None)
