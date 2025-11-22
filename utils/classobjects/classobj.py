@@ -17,22 +17,23 @@ from types import TracebackType
 from typing import Literal
 
 import dill as pickle
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QMessageBox
-
-from utils.algorithm import Mutex, OrderedKeyList
-from utils.basetypes import Base
-from utils.functions.prompts import question_yes_no
-from utils.update_check import CORE_VERSION, CORE_VERSION_CODE
+from ..algorithm import Mutex, OrderedKeyList
+from ..basetypes import Base
+from ..qtconfig import QColor, QMessageBox
+from ..functions.prompts import question_yes_no
+from ..update_check import CORE_VERSION, CORE_VERSION_CODE
 
 from .classdataobj import *
+
 from .dataloader import Chunk, UserDataBase
 from .default import *
 from .objects import *
+
 from .observers.achievementstatobs import AchievementStatusObserver
 
 # 添加类型检查导入
 from .observers.classstatobs import ClassStatusObserver
+
 
 
 class ClassObj(ClassDataObj, Base):

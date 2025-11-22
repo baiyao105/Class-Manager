@@ -33,6 +33,7 @@ class ClassDataObj:
     @staticmethod
     def LoadUUID(uuid: ClassDataTypeUUID[UUIDType], type: type[UUIDType]) -> UUIDType:
         "以一个ClassDataTypeUUID加载数据类型。"
+        raise NotImplementedError("ClassDataObj.LoadUUID在没有被设置的时候被调用")
 
     @staticmethod
     def get_archive_uuid():

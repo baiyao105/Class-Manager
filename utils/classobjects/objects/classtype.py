@@ -4,9 +4,9 @@ import copy
 import json
 from typing import TYPE_CHECKING, Literal
 
-from utils.algorithm import OrderedKeyList, SupportsKeyOrdering
-from utils.basetypes import Base
-from utils.consts import inf
+from ...algorithm import OrderedKeyList, SupportsKeyOrdering
+from ...basetypes import Base
+from ...consts import inf
 
 from ..basetype import ClassDataType
 from ..classdataobj import ClassDataObj

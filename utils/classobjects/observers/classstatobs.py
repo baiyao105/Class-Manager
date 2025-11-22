@@ -4,8 +4,8 @@ import time
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-from utils.algorithm import Stack, Thread
-from utils.basetypes import Base
+from ...algorithm import Stack, Thread
+from ...basetypes import Base
 
 from ..classdataobj import ClassDataObj
 

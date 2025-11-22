@@ -3,6 +3,7 @@
 """
 
 import inspect
+from io import TextIOWrapper
 import os
 import sys
 import time
@@ -14,9 +15,10 @@ from typing import Literal, TextIO, final, Optional, List, Callable
 import colorama
 from loguru import logger
 
-from utils import consts
-from utils.consts import LOG_FILE_PATH, cwd, log_style, stderr_orig, stdout_orig
-from utils.system import SystemLogger
+from . import consts
+from .consts import LOG_FILE_PATH, cwd, log_style, stderr_orig, stdout_orig
+from .system import SystemLogger
+
 
 
 def get_function_namespace(func) -> str:
@@ -124,7 +126,7 @@ class LoggerSettings:
         fast_log_file_path: str | None = None,
         console_wrapper: TextIO | None = stdout_orig,
         log_mode: Literal["write_instantly", "write_buffered"] = "write_instantly",
-        log_level: Literal["I", "W", "E", "F", "D", "C"] = "D",
+        log_level: Literal["I", "W", "E", "F", "D", "C", "OFF"] = "D",
         draw_color: bool = True,
         use_mutex: bool = True,
         encoding: str | None = "utf-8",
@@ -170,6 +172,8 @@ LIGHT_CYAN_CLOSE = "</light-cyan>" if log_settings.draw_color else ""
 LIGHT_GREEN_CLOSE = "</light-green>" if log_settings.draw_color else ""
 BLUE_CLOSE = "</blue>" if log_settings.draw_color else ""
 LEVEL_CLOSE = "</level>" if log_settings.draw_color else ""
+
+
 
 # 初始化日志配置
 logger.remove()
@@ -243,6 +247,7 @@ class Color:
         return f"\033[38;2;{r};{g};{b}m" if log_settings.draw_color else ""
 
 
+
 class Logger:
     "日志记录器"
 
@@ -272,7 +277,7 @@ class Logger:
     )
     "快速日志文件"
 
-    log_settings = log_settings
+    config = log_settings
     "日志配置"
 
     stdout_orig = stdout_orig
@@ -281,14 +286,15 @@ class Logger:
     stderr_orig = stderr_orig
     "原始的错误输出"
 
-    captured_stdout = SystemLogger(
+    stdout_redirector = SystemLogger(
         stdout_orig,
         logger_name="sys.stdout",
         function=lambda m: Logger.log("I", m, "sys.stdout"),
     )
     "经过处理的输出"
 
-    captured_stderr = SystemLogger(
+
+    stderr_redirector = SystemLogger(
         stderr_orig,
         logger_name="sys.stderr",
         function=lambda m: Logger.log("E", m, "sys.stderr"),
@@ -297,6 +303,23 @@ class Logger:
 
     log_mutex = Lock()
     "日志互斥锁"
+
+    @staticmethod
+    def set_capture_stdstream(stdout: bool = True, stderr: bool = True):
+        "设置是否捕获标准输出和错误输出"
+        if stdout:
+            sys.stdout = Logger.stdout_redirector
+            consts.stdout = Logger.stdout_redirector
+        else:
+            sys.stdout = Logger.stdout_orig
+            consts.stdout = Logger.stdout_orig
+
+        if stderr:
+            sys.stderr = Logger.stdout_redirector
+            consts.stderr = Logger.stdout_redirector
+        else:
+            sys.stderr = Logger.stderr_orig
+            consts.stderr = Logger.stderr_orig
 
     @staticmethod
     def reopen_log_file():
@@ -345,13 +368,12 @@ class Logger:
             """
             # 如果日志等级太低就不记录
             if (
-                (msg_type == "D" and Logger.log_settings.log_level not in ("D"))
-                or (msg_type == "I" and Logger.log_settings.log_level not in ("D", "I"))
-                or (msg_type == "W" and Logger.log_settings.log_level not in ("D", "I", "W"))
-                or (msg_type == "E" and Logger.log_settings.log_level not in ("D", "I", "W", "E"))
+                    (msg_type == "D" and Logger.config.log_level not in ("D"))
+                or (msg_type == "I" and Logger.config.log_level not in ("D", "I"))
+                or (msg_type == "W" and Logger.config.log_level not in ("D", "I", "W"))
+                or (msg_type == "E" and Logger.config.log_level not in ("D", "I", "W", "E"))
                 or (
-                    msg_type == "F"
-                    or (msg_type == "C" and Logger.log_settings.log_level not in ("D", "I", "W", "E", "F", "C"))
+                    (msg_type == "F" or msg_type == "C") and Logger.config.log_level not in ("D", "I", "W", "E", "F", "C")
                 )
             ):
                 return
@@ -426,7 +448,17 @@ class Logger:
             :param send: 发送者
             :return: None
             """
-            if Logger.log_settings.use_mutex:
+            if (
+                    (msg_type == "D" and Logger.config.log_level not in ("D"))
+                or (msg_type == "I" and Logger.config.log_level not in ("D", "I"))
+                or (msg_type == "W" and Logger.config.log_level not in ("D", "I", "W"))
+                or (msg_type == "E" and Logger.config.log_level not in ("D", "I", "W", "E"))
+                or (
+                    (msg_type == "F" or msg_type == "C") and Logger.config.log_level not in ("D", "I", "W", "E", "F", "C")
+                )
+            ):
+                return
+            if Logger.config.use_mutex:
                 Logger.log_mutex.acquire()
 
             if not isinstance(msg, str):
@@ -482,7 +514,8 @@ class Logger:
                 Logger.short_log_info.append(short_info)
                 Logger.short_log_info = Logger.short_log_info[-Logger.short_log_keep_length :]
                 Logger.logged_count += 1
-            if Logger.log_settings.use_mutex:
+
+            if Logger.config.use_mutex:
                 Logger.log_mutex.release()
 
     @staticmethod
@@ -545,7 +578,8 @@ class Logger:
         level: Literal["I", "W", "E", "F", "D", "C"] = "E",
         exc: Optional[BaseException] = None,
     ):
-        """向控制台和日志报错。
+        """
+        向控制台和日志报错。
 
         :param info: 信息
         :param sender: 发送者
@@ -588,6 +622,9 @@ class Logger:
         Logger.log(level, f"{info} [{exc.__class__.__qualname__}] {exc}", sender)
 
 
+
+
+
 if log_style == "old" and log_settings.log_mode == "write_buffered":
     # 性能能省一点是一点
     Logger.console_log_thread.start()
@@ -603,8 +640,6 @@ if log_style == "new":
     # 启用loguru的异常捕获
     logger.catch(onerror=lambda exc: Logger.log_exc("logger捕获到异常", exc=exc))
 
-consts.stdout = Logger.captured_stdout
-consts.stderr = Logger.captured_stderr
-
+Logger.set_capture_stdstream()
 
 __all__ = ["Color", "Logger", "LoggerSettings", "log_settings"]

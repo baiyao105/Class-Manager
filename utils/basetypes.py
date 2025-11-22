@@ -2,11 +2,10 @@
 基本类型
 """
 
+import os
 import copy
 import ctypes
-import os
 import random
-import sys
 import threading
 import time
 
@@ -18,7 +17,6 @@ from typing import Dict, Any
 
 from .logger import Logger
 
-__all__ = ["Base", "DataObject", "ModifyingError", "Object", "stderr_orig", "stdout_orig"]
 
 
 def gen_uuid(length: int = 32) -> str:
@@ -36,7 +34,7 @@ class ModifyingError(Exception):
     "修改出现错误。"
 
 
-class DataObject:
+class Object:
     def copy(self):
         "给自己复制一次，两个对象不会互相影响"
         return copy.deepcopy(self)
@@ -50,29 +48,7 @@ class DataObject:
         # 我个人认为不要把下划线开头的变量输出出来（不过只以一个下划线开头的还得考虑考虑）
 
 
-class Object(DataObject):
-    "一个基础类"
 
-    @property
-    def uuid(self):
-        "获取对象的UUID"
-        if not hasattr(self, "_uuid") or not self._uuid:
-            self._uuid = gen_uuid()
-
-        return self._uuid
-
-    @uuid.setter
-    def uuid(self, value: str):
-        "设置对象的UUID"
-        self._uuid = value
-
-    @uuid.deleter
-    def uuid(self):
-        "删除对象的UUID"
-        raise AttributeError("不能删除对象的UUID")
-
-    def refresh_uuid(self):
-        self._uuid = gen_uuid()
 
 
 class Base(Logger, Object):
@@ -116,7 +92,6 @@ class SysMemTracer:
         :param trace_interval: 追踪间隔
         :param record_data: 是否记录数据
         """
-
         self.trace_interval = trace_interval
         "追踪间隔"
         self.record_data = record_data
@@ -137,7 +112,6 @@ class SysMemTracer:
         "开始追踪"
         if self._running:
             return
-
         self._running = True
         self._thread = threading.Thread(target=self._trace, name=f"SysMemTracer_{id(self):x}")
         self._thread.start()
@@ -159,11 +133,8 @@ class SysMemTracer:
         return psutil.Process().memory_info().rss
 
 
-stdout_orig = sys.stdout
-stderr_orig = sys.stderr
 
-sys.stdout = Base.captured_stdout
-sys.stderr = Base.captured_stderr
+__all__ = ["Base", "Object", "ModifyingError"]
 
 if __name__ == "__main__":
     print("你闲的没事跑这玩意干啥")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from utils.algorithm import SupportsKeyOrdering
+from ...algorithm import SupportsKeyOrdering
 
 from ..basetype import ClassDataType
 from ..classdataobj import ClassDataObj

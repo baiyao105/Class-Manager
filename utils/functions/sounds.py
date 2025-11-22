@@ -5,16 +5,17 @@
 import os
 from threading import Thread
 
-from utils.logger import Logger
+from ..logger import Logger
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514"  # 可以让pygame闭嘴
 
-
 import pygame
-
 pygame.mixer.init()
 
-# 初始化pygame的混音器
+# 初始化pygame的混音器（会耗费启动时间）
+# TODO: 用别的库换掉这东西
+# 比如arcade（？？疑似仍旧游戏开发引擎当音频播放器
+# 而且好像变慢了
 
 __all__ = [
     "play_music",

@@ -36,7 +36,6 @@ class AlgorithmMultiTest(unittest.TestCase):
         test_range2 = steprange(1.75, -25, 5)
         self.assertEqual(list(test_range2), [1.75, -4.9375, -11.625, -18.3125, -25], 
                             "steprange应当正确生成指定元素数均匀分布的序列")
-        
 
         uuid1 = gen_uuid()
         uuid2 = gen_uuid()
@@ -71,7 +70,6 @@ class AlgorithmMultiTest(unittest.TestCase):
         self.assertEqual(thread.return_value, "我是返回值", "Thread应当正确实现返回值处理")
 
         mutex = Mutex()
-
         mutex.acquire()
         def test_thread2():
             nonlocal mutex

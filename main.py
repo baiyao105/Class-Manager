@@ -8,9 +8,9 @@ import time
 from pathlib import Path
 
 from loguru import logger
-from PySide6.QtCore import Property, QObject, QSize, Signal, Slot
-from PySide6.QtQml import qmlRegisterType
-from PySide6.QtWidgets import QApplication
+from utils.qtconfig import Property, QObject, QSize, Signal, Slot
+from utils.qtconfig import qmlRegisterType
+from utils.qtconfig import QApplication
 
 from config import get_settings
 from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION

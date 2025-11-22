@@ -21,6 +21,7 @@ from .student import Student
 from .dayrecord import DayRecord
 from .history import History
 from .attendanceinfo import AttendanceInfo
+from .datatag import DataTag, TagSigned
 
 __all__ = [
     "Achievement",
@@ -35,4 +36,6 @@ __all__ = [
     "DayRecord",
     "History",
     "AttendanceInfo",
+    "DataTag",
+    "TagSigned"
 ]

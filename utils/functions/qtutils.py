@@ -1,11 +1,14 @@
 """
 关于Qt的函数
 """
-import cv2
+from __future__ import annotations
 import time
-from typing import Callable, Literal
-from PySide6.QtGui import QPixmap, QImage
-from PySide6.QtCore import QTimer, QEventLoop
+from typing import Callable, Literal, TYPE_CHECKING
+from ..qtconfig import QPixmap, QImage
+from ..qtconfig import QTimer, QEventLoop
+
+if TYPE_CHECKING:
+    import cv2  # 导入要卡好一会，所以只在类型检查的时候导入
 
 
 def mat_to_pixmap(mat: cv2.Mat) -> QPixmap:

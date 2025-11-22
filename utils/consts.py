@@ -7,7 +7,7 @@ import math
 import os
 import sys
 import time
-from typing import Any, Literal
+from typing import Any, Literal, TYPE_CHECKING
 
 debug: bool = True
 "是否为调试模式"
@@ -22,7 +22,9 @@ default_user = "测试用户1"
 app_style: Literal["windowsvista", "Windows", "Fusion", "windows11"] = "windowsvista"
 "软件的样式"
 
-qt_version: Literal["PyQt5", "PyQt6", "PySide2", "PySide6"] = "PySide6"
+
+qt_version: Literal["PySide6"] = "PySide6"
+
 "使用的Qt版本"
 
 

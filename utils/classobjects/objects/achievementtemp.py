@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import dill as pickle
 
-from utils.algorithm import SupportsKeyOrdering
-from utils.basetypes import Base
-from utils.consts import inf, runtime_flags
+from ...algorithm import SupportsKeyOrdering
+from ...basetypes import Base
+from ...consts import inf, runtime_flags
 
 from ..basetype import ClassDataType
 from ..classdataobj import ClassDataObj

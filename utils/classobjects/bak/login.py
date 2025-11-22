@@ -5,7 +5,7 @@ import sys
 import traceback
 
 try:
-    from utils.basetypes import Base, stderr_orig, stdout_orig
+    from utils.basetypes import Base
 except ImportError as e:
     print(traceback.format_exc())
     from basetypes import Base

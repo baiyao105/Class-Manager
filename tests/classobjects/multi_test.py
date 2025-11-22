@@ -4,11 +4,7 @@ from utils.classobjects import *
 from utils.classobjects.dataloader import DataObject
 
 
-
-
 class ClassObjectMultiTest(unittest.TestCase):
-
-
 
 
     def test_default_data(self):
@@ -107,6 +103,29 @@ class ClassObjectMultiTest(unittest.TestCase):
             self.assertEqual(getattr(action_1, attr), getattr(action_3, attr), 
                                 "字符串序列化与反序列化应当不会影响对象属性; "
                                 f"当前不同的属性：{attr}, action1的为{getattr(action_1, attr)!r}, action3的为{getattr(action_3, attr)!r}")
+            
+    def test_groups(self):
+        stu_1 = Student("名称1", 114,  114, "class_id")
+        stu_2 = Student("名称2", 514,  514, "class_id")
+        stu_3 = Student("名称3", 1919, 1919, "class_id")
+
+        grp_1 = Group("group_id", "小组1", stu_1, [stu_1, stu_2, stu_3], "class_1")
+
+        self.assertIs(grp_1.leader, stu_1, "小组的组长应当符合原设置")
+        self.assertEqual(grp_1.name, "小组1", "小组名称应当符合原设置")
+        self.assertEqual(grp_1.members, [stu_1, stu_2, stu_3], "小组学生应当符合原设置")
+        self.assertEqual(grp_1.belongs_to, "class_1", "小组班级应当符合原设置")
+
+        self.assertEqual(grp_1.total_score, 114 + 514 + 1919, "小组数据结构应正确计算总分")
+        self.assertEqual(grp_1.average_score, (114 + 514 + 1919) / 3, "小组数据结构应正确计算平均分")
+        self.assertEqual(grp_1.average_score_without_lowest, (514 + 1919) / 2, "小组数据结构应正确计算不含最低分的平均分")
+
+        stu_4 = Student("名称4", 810, -1919810, "class_id")
+
+        self.assertEqual(grp_1.has_member(stu_1), True, "小组数据结构应正确判断是否包含某学生")
+        self.assertEqual(grp_1.has_member(stu_3), True, "小组数据结构应正确判断是否包含某学生")
+        self.assertEqual(grp_1.has_member(stu_4), False, "小组数据结构应正确判断是否包含某学生")
+
 
     def __init__(self):
         super().__init__()
@@ -118,6 +137,7 @@ class ClassObjectMultiTest(unittest.TestCase):
         self.test_default_data()
         self.test_student()
         self.test_score_mods()
+        self.test_groups()
 
 
 

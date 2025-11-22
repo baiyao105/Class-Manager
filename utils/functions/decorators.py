@@ -5,7 +5,7 @@
 import functools
 from threading import Thread
 
-from utils.logger import Logger as Base
+from ..logger import Logger as Base
 
 __all__ = [
     "canbe",

@@ -3,16 +3,17 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Literal
 
-from utils.algorithm import SupportsKeyOrdering
+from ...algorithm import SupportsKeyOrdering
 
 from ..basetype import ClassDataType
 from ..classdataobj import ClassDataObj
+from .datatag import DataTag, TagSigned
 
 if TYPE_CHECKING:
     from .student import Student
 
 
-class Group(ClassDataType, SupportsKeyOrdering):
+class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
     "一个小组"
 
     chunk_type_name: Literal["Group"] = "Group"
@@ -36,6 +37,7 @@ class Group(ClassDataType, SupportsKeyOrdering):
         members: list[Student],
         belongs_to: str,
         further_desc: str = "这个小组的组长还没有为这个小组提供详细描述",
+        tags: list[DataTag] | None = None,
     ) -> None:
         """
         小组的构造函数。
@@ -62,6 +64,7 @@ class Group(ClassDataType, SupportsKeyOrdering):
         "所属班级"
         self.archive_uuid = ClassDataObj.get_archive_uuid()
         "归档uuid"
+        self.tags = tags or []
 
     @property
     def total_score(self):
@@ -105,6 +108,7 @@ class Group(ClassDataType, SupportsKeyOrdering):
                 "members": [str(s.uuid) for s in self.members],
                 "belongs_to": self.belongs_to,
                 "further_desc": self.further_desc,
+                "tags": [str(t.uuid) for t in self.tags],
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
@@ -125,6 +129,7 @@ class Group(ClassDataType, SupportsKeyOrdering):
             members=[ClassDataObj.LoadUUID(s, Student) for s in data["members"]],
             belongs_to=data["belongs_to"],
             further_desc=data["further_desc"],
+            tags=[ClassDataObj.LoadUUID(t, DataTag) for t in data["tags"]]
         )
         obj.uuid = data["uuid"]
         obj.archive_uuid = data["archive_uuid"]

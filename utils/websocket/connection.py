@@ -9,7 +9,7 @@ from typing import Any, Literal, Union, overload
 
 from rich.console import Console
 
-from utils.basetypes import Base
+from ..basetypes import Base
 
 console = Console()
 

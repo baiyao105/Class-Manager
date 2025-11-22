@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Literal
 
-from utils.basetypes import Base
+from ...basetypes import Base
 
 from ..basetype import ClassDataType
 from ..classdataobj import ClassDataObj

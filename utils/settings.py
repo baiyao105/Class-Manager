@@ -6,8 +6,8 @@ from typing import Any, Literal
 import dill as pickle
 from typing import Any, Dict
 from types import MethodType, FunctionType
-from utils.basetypes import Base
-from utils.update_check import CLIENT_VERSION, CLIENT_VERSION_CODE
+from .basetypes import Base
+from .update_check import CLIENT_VERSION, CLIENT_VERSION_CODE
 
 
 class SettingsInfo:

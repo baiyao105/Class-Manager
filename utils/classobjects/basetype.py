@@ -3,7 +3,7 @@
 
 （类型检查写的我炸掉了）
 """
-
+from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
 from typing import Generic, Self, TypeVar
@@ -25,7 +25,7 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
     """
 
     def __init__(self, dt: type[_DataType], _uuid: UUID | None = None):
-        super().__init__(int=_uuid.int if _uuid else uuid4().int)
+        super().__init__(str(_uuid) if _uuid else str(uuid4()))
         self.dtype = dt
 
     def __setattr__(self, name, value):  # 为了去掉UUID的限制
@@ -158,12 +158,17 @@ class ClassDataType(ABC):
     def to_dict(self) -> dict:
         """
         将该班级数据类型转换为字典。
+
+        允许这个方法不被实现。
+
         """
         raise NotImplementedError(f"该数据类型({self.__class__.__name__})的to_dict方法未实现")
 
     def from_dict(self, data: dict) -> "ClassDataType":
         """
         从字典解析该班级数据类型。
+
+        允许这个方法不被实现。
         """
         raise NotImplementedError(f"该数据类型({self.__class__.__name__})的from_dict方法未实现")
 

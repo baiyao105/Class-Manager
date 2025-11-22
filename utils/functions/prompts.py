@@ -4,8 +4,8 @@
 
 import random
 from typing import Literal
-from PySide6.QtWidgets import QWidget, QMessageBox
-from PySide6.QtGui import QPixmap, QIcon
+from ..qtconfig import QWidget, QMessageBox
+from ..qtconfig import QPixmap, QIcon, QColor    # type: ignore
 
 
 
@@ -160,4 +160,3 @@ def messagebox(
         box = QMessageBox(QMessageBox.Icon.Critical, title, text, parent=master)
         box.setWindowIcon(pixmap or QPixmap("./img/logo/favicon-error.png"))
     box.exec()
-

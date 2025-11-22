@@ -17,25 +17,38 @@ __all__ = ["CommandOutput", "SystemLogger", "output_list", "stderr_queue", "stdo
 
 
 class SystemLogger(TextIOWrapper):
-    """用于重定向标准输出的日志记录类
+    """
+    用于重定向标准输出的日志记录类
 
     该类通过继承TextIOWrapper实现对标准输出流的捕获和重定向
+
+    （警告：在反复对一个TextIO[Wrapper]使用过这个类后，该TextIO[Wrapper]将无法正常使用）
     """
 
     def __init__(
         self,
-        *args,
+        stream: Any,
         logger_name: str = "sys.stdout",
         function: Optional[Callable[[str], Any]] = None,
-        **kwargs
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__(stream)
         self.line = ""
         self.function = function
         self.logger_name = logger_name
+        self.enabled = True
+
+    def set_enable(self, enable: bool):
+        """
+        设置是否启用日志记录
+
+        :param enable: 是否启用日志记录
+        """
+        self.enabled = enable
+
 
     def write(self, s: str):
-        """写入数据到日志
+        """
+        写入数据到日志
 
         :param s: 要写入的字符串
         :return: 写入的字符数
@@ -45,7 +58,7 @@ class SystemLogger(TextIOWrapper):
         self.line += s
         if "\n" in self.line:
             try:
-                log_content = self.line.rsplit("\n", 1)[0].strip()
+                log_content = self.line.rsplit("\n", 1)[0]
                 if self.function:
                     self.function(log_content)
                 if self.logger_name == "sys.stdout":
@@ -63,7 +76,7 @@ class SystemLogger(TextIOWrapper):
         try:
             self.line += "\n".join(lines)
             if "\n" in self.line:
-                log_content = self.line.rsplit("\n", 1)[0].strip()
+                log_content = self.line.rsplit("\n", 1)[0]
                 if self.function:
                     self.function(log_content)
                 elif self.logger_name == "sys.stdout":
@@ -82,7 +95,8 @@ class SystemLogger(TextIOWrapper):
 
 
 class CommandOutput(NamedTuple):
-    """系统命令执行结果的数据结构
+    """
+    系统命令执行结果的数据结构
 
     包含命令执行的标准输出、标准错误、返回码等信息
     """
@@ -106,17 +120,8 @@ def system(
     cwd: str | None = None,
     sync_update_bit: int = 1,
 ) -> CommandOutput:
-    """执行系统命令并返回结果
-
-    :param args: 命令字符串或参数列表
-    :param show_output: 是否显示命令输出
-    :param stdin: 标准输入流
-    :param stdout: 标准输出流
-    :param stderr: 标准错误流
-    :param encoding: 字符编码
-    :param cwd: 工作目录
-    :param sync_update_bit: 同步更新位
-    :return: 命令执行结果
+    """
+    执行系统命令并返回结果
 
     :param args: 命令
     :param show_output: 是否显示输出，默认为True
@@ -126,6 +131,7 @@ def system(
     :param encoding: 编码，默认为gbk
     :param cwd: 工作目录，默认为None
     :param sync_update_bit: 同步更新位数，默认为1（每次从输出里面读取的字节数）
+    :return: 命令执行结果
     """
     st = time.time()
     stdin  = stdin  or sys.stdin
@@ -206,7 +212,7 @@ def system(
     sys.stdout.flush()
     sys.stderr.flush()
     while t.is_alive():
-        "等待直到输出线程结束"
+        time.sleep(0.001)
     return CommandOutput(_stdout_sb, _stderr_sb, _final_output, returncode, pid, time.time() - st, _popen)
 
 
@@ -219,7 +225,8 @@ def system_lined(
     encoding: str = "gbk",
     cwd: str | None = None,
 ) -> CommandOutput:
-    """执行命令，但是输出按行
+    """
+    执行命令，但是输出按行
 
     :param args: 命令
     :param show_output: 是否显示输出，默认为True
@@ -228,7 +235,6 @@ def system_lined(
     :param stderr: 标准错误，默认为None
     :param encoding: 编码，默认为gbk
     :param cwd: 工作目录，默认为None
-    :param sync_update_bit: 同步更新位数，默认为1（每次从输出里面读取的字节数）
     """
     st = time.time()
     stdin = stdin or sys.stdin

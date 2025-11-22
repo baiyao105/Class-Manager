@@ -5,8 +5,8 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Literal
 
-from utils.basetypes import Base
-from utils.consts import debug
+from ...basetypes import Base
+from ...consts import debug
 
 from ..basetype import ClassDataType
 from ..classdataobj import ClassDataObj

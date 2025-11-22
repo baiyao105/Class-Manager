@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from utils.basetypes import Object
+from ...basetypes import Object
 
 if TYPE_CHECKING:
     from ..observers.achievementstatobs import AchievementStatusObserver

@@ -6,8 +6,8 @@ from collections.abc import Callable
 from queue import Queue
 from typing import TYPE_CHECKING, Any
 
-from utils.algorithm import Thread
-from utils.basetypes import Base
+from ...algorithm import Thread
+from ...basetypes import Base
 
 from ..objects.achievement import Achievement
 

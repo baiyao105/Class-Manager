@@ -5,9 +5,9 @@ import json
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
-from utils.algorithm import SupportsKeyOrdering
-from utils.basetypes import Base
-
+from ...algorithm import SupportsKeyOrdering
+from ...basetypes import Base
+from .datatag import TagSigned, DataTag
 from ..basetype import ClassDataType, DataProperty
 from ..classdataobj import ClassDataObj
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .scoremod import ScoreModification
 
 
-class Student(ClassDataType, SupportsKeyOrdering):
+class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     "一个学牲"
 
     chunk_type_name: Literal["Student"] = "Student"
@@ -60,6 +60,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
         lowest_score_cause_time: float | None = None,
         belongs_to_group: str | None = None,
         last_reset_info: Student | None = None,
+        tags: list[DataTag] | None = None,
     ):
         """
         一个学生。
@@ -78,6 +79,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
         :param lowest_score_cause_time: 最低分产生时间
         :param belongs_to_group: 所属小组对应key
         :param last_reset_info: 上次重置的信息
+        :param tags: 携带的标签
         """
         super().__init__()
         self._name = name
@@ -102,6 +104,8 @@ class Student(ClassDataType, SupportsKeyOrdering):
         "上次重置的信息"
         self.archive_uuid = ClassDataObj.get_archive_uuid()
         "归档uuid"
+        self.tags: list[DataTag] = tags or []
+        "标签"
 
     @DataProperty
     def last_reset(self) -> float | None:
@@ -113,7 +117,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
         self._last_reset = value
 
     @DataProperty
-    def last_reset_info(self):
+    def last_reset_info(self) -> Student | None:
         "上次重置的信息"
         return self._last_reset_info if self._last_reset_info is not None else self.new_dummy()
 
@@ -429,6 +433,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
                 "belongs_to_group": self.belongs_to_group,
                 "total_score": self.total_score,
                 "last_reset_info": (str(self.last_reset_info.uuid) if self._last_reset_info else None),
+                "tags": [str(t.uuid) for t in self.tags],
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
@@ -458,6 +463,7 @@ class Student(ClassDataType, SupportsKeyOrdering):
             lowest_score_cause_time=data["lowest_score_cause_time"],
             belongs_to_group=data["belongs_to_group"],
             last_reset_info=ClassDataObj.LoadUUID(data["last_reset_info"], Student),
+            tags=[ClassDataObj.LoadUUID(t, DataTag) for t in data["tags"]],
         )
 
         obj.uuid = data["uuid"]

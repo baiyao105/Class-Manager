@@ -1,21 +1,18 @@
 import contextlib
 import enum
-from typing import Literal, Union, Dict, Tuple, Any
+from typing import Literal, Dict, Any
 import requests
 import json
 import os
 import shutil
 import signal
-import sys
 import zipfile
 from typing import Literal
 
 import requests
 
-from utils.basetypes import Base
+from .basetypes import Base
 
-sys.stdout = Base.captured_stdout
-sys.stderr = Base.captured_stderr
 
 
 TOKEN = "9bde0e6b1c0fca0ff36408665fb75306"
