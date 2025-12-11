@@ -50,3 +50,4 @@ memory_profiler    >= 0.61.0
 
 loguru             >= 0.7.3
 # 用于日志记录和管理
+urllib3>=2.6.0 # not directly required, pinned by Snyk to avoid a vulnerability
