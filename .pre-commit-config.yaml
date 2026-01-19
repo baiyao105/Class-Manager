@@ -29,7 +29,7 @@ repos:
         args: ["--all", "--in-place"]
 
   - repo: https://github.com/tox-dev/tox-ini-fmt
-    rev: 1.7.0
+    rev: 1.7.1
     hooks:
       - id: tox-ini-fmt
 
@@ -39,18 +39,18 @@ repos:
       - id: validate-pyproject
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: [--py311-plus]
 
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.15.2
+    rev: v1.22.0
     hooks:
       - id: zizmor
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.5
+    rev: v0.14.13
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes", "--exit-zero"]
