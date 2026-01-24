@@ -96,6 +96,7 @@ class UserDataBase(Object):
     self.weekday_record = weekday_record or {}
     self.current_day_attendance = current_day_attendance or {}
     self.loaded = user is not None  # 任一参数非空即视为已加载
+    self.uuid = None
 
   def set(
     self,
@@ -202,9 +203,10 @@ class DataObject:
     self.chunk = chunk
 
   @staticmethod
-  def static_save(obj: ClassDataType, chunk: "Chunk") -> ClassDataType:
+  def static_save(obj: ClassDataType, chunk: "Chunk", path: str | None = None) -> ClassDataType:
+    path = path or chunk.get_current_save_dir()
     dobj = DataObject(obj, chunk)
-    dobj.save()
+    dobj.save(path)
     return obj
 
   def save(self, path: str | None = None, max_retry: int = 3):
@@ -353,6 +355,8 @@ class Chunk:
     self.path = path
     self.bound_db = bound_database or UserDataBase()
     self.is_saving = False
+    self.operating_history_uuid: ClassDataTypeUUID[History] | None = None
+    "正在操作的存档UUID，None表示为当前存档"
     os.makedirs(
       self.path if not path.endswith(".datas") else os.path.dirname(self.path),
       exist_ok=True,
@@ -383,12 +387,22 @@ class Chunk:
       raise ValueError("数据不存在")
     return result[0]
   
+  def get_current_save_dir(self):
+    "根据当前的操作uuid获取数据库的存储路径。"
+    history_uuid = self.operating_history_uuid
+    if history_uuid is None:
+      path = os.path.join(self.path, "Current")
+    else:
+      path = os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:])
+    return path
+  
   def set_uuid_loader(self, history_uuid: ClassDataTypeUUID[History] | None):
     """
     设置uuid加载器。
 
     :param uuid: uuid
     """
+    self.operating_history_uuid = history_uuid
     if history_uuid is None:
       path = os.path.join(self.path, "Current")
     else:

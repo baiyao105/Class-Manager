@@ -4,7 +4,7 @@ import unittest
 
 from .classobjects import ClassObjectMultiTest, ClassObjectStudentTest
 from .algorithm import AlgorithmMultiTest
-from .events import TaskTest
+from .events import TaskTest, BroadcastTest
 
 
 def test_suite():
@@ -16,6 +16,7 @@ def test_suite():
     suite.addTest(ClassObjectMultiTest())
     suite.addTest(AlgorithmMultiTest())
     suite.addTest(TaskTest())
+    suite.addTest(BroadcastTest())
     return suite
 
 __all__ = [

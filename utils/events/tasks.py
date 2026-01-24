@@ -7,6 +7,7 @@ import time
 import threading
 from typing import Callable, Any
 from ..basetypes import Object
+from ..algorithm.numeric import addrof
 
 
 class Task(Object):
@@ -82,6 +83,14 @@ class Task(Object):
         "设置任务函数的参数。"
         self.set_pargs(args)
         self.set_kwargs(kwargs)
+
+    def set_func(self, func: Callable[..., Any]) -> None:
+        "设置任务函数。"
+        self._func = func
+
+    def get_func(self) -> Callable[..., Any]:
+        "获取任务函数，如果是Task对象，则一直迭代到最内层的函数。"
+        return self._func if not isinstance(self._func, Task) else self._func.get_func()
 
     def enable_multi_threading(self, blocks: bool = False):
         """
@@ -197,7 +206,7 @@ class Task(Object):
         "启动任务。"
         if (not self._multi_threaded) and self.is_running():
             raise RuntimeError("任务正在运行中")
-        threading.Thread(target=self.run, args=args, kwargs=kwargs, name="Task(" + (self._name or "Unnamed") + ")").start()
+        threading.Thread(target=self.run, args=args, kwargs=kwargs, name="Task(" + (self._name or "Unnamed_" + addrof(self)) + ")").start()
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         "等效于Task.start。"
@@ -217,6 +226,15 @@ class Task(Object):
             if timeout >= 0 and time.time() - st >= timeout:
                 raise RuntimeError("任务超时")
             time.sleep(recheck_interval)
+
+    def force_run_signle(self, *args: Any, **kwargs: Any) -> None:
+        "强制单线程执行任务，不计入或考虑限制。"
+        self._func(*args, **kwargs)(*args, **kwargs)
+
+    def force_run_async(self, *args: Any, **kwargs: Any) -> None:
+        "强制异步执行任务，不计入或考虑限制"
+        threading.Thread(target=self.force_run_signle, args=args, kwargs=kwargs, 
+                            name="Task(" + (self._name or "Unnamed_" + addrof(self)) + ")").start()
 
 
 __all__ = ["Task"]

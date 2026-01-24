@@ -169,6 +169,7 @@ def system(
                 if show_output and stderr:
                     stderr.write(_stderr_sb[_errprt_pointer:_written])
                 _errprt_pointer = _written
+            time.sleep(0.001)
 
     t = Thread(target=_write)
     t.start()
@@ -206,6 +207,7 @@ def system(
     out_reader.start()
     err_reader.start()
     while (_popen.poll() is None) or (out_reader.is_alive() and err_reader.is_alive()):
+        time.sleep(0.001)
         "就这等着吧"
     pid = _popen.pid
     returncode = _popen.returncode
@@ -287,6 +289,7 @@ def system_lined(
     out_reader.start()
     err_reader.start()
     while (_popen.poll() is None) or (out_reader.is_alive() and err_reader.is_alive()):
+        time.sleep(0.001)
         "就这等着吧"
     pid = _popen.pid
     returncode = _popen.returncode

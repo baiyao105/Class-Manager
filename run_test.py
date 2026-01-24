@@ -14,8 +14,6 @@ print(f"全包导入用时: {time.time() - st:.3f}秒") # 目测很慢是因为p
 
 Logger.set_capture_stdstream(False, False)
 
-
 if __name__ == "__main__":
-    Logger.config.log_level = "OFF"
     suite = test_suite()
     unittest.TextTestRunner(verbosity=2, tb_locals=True).run(suite)

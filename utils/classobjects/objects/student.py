@@ -117,7 +117,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         self._last_reset = value
 
     @DataProperty
-    def last_reset_info(self) -> Student | None:
+    def last_reset_info(self) -> Student:
         "上次重置的信息"
         return self._last_reset_info if self._last_reset_info is not None else self.new_dummy()
 
@@ -338,10 +338,12 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         return class_obs.classes[self._belongs_to].groups[self.belongs_to_group]
 
     def get_dumplicated_ranking(self, class_obs: ClassStatusObserver) -> int:
-        """获取学生在班级中计算重复名次的排名。
+        """
+        获取学生在班级中计算重复名次的排名。
 
         :param class_obs: 班级侦测器
-        :return: 排名"""
+        :return: 排名
+        """
         if self._belongs_to != class_obs.class_id:
             raise ValueError(
                 f"但是从理论层面来讲你不应该把{class_obs.class_id!r}的侦测器给一个{self._belongs_to!r}的学生"
@@ -354,10 +356,12 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         raise ValueError(f"你确定这个学生({self.belongs_to})在这个班({class_obs.class_id})？")
 
     def get_non_dumplicated_ranking(self, class_obs: ClassStatusObserver) -> int:
-        """获取学生在班级中计算非重复名次的排名。
+        """
+        获取学生在班级中计算非重复名次的排名。
 
         :param class_obs: 班级侦测器
-        :return: 排名"""
+        :return: 排名
+        """
         if self._belongs_to != class_obs.class_id:
             raise ValueError(
                 f"但是从理论层面来讲你不应该把{class_obs.class_id!r}的侦测器给一个{self._belongs_to!r}的学生"

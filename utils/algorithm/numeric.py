@@ -5,7 +5,7 @@
 import time
 import math
 import random
-from typing import Union, Optional, Type, SupportsInt
+from typing import Union, Optional, Type, SupportsInt, Any
 from ctypes import (
     c_int,
     c_int8,
@@ -504,7 +504,7 @@ def steprange(start: int | float, stop: int | float, step: int) -> list[float]:
     return [start + diff * i for i in range(step)]
 
 
-def addrof(obj) -> str:
+def addrof(obj: Any) -> str:
     """获取对象的内存地址
 
     :param obj: 任意Python对象
