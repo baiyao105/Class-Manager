@@ -14,6 +14,7 @@ import threading
 import ctypes
 import copy
 from typing import Dict, Any
+from loguru import logger
 
 from .logger import Logger
 
