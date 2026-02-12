@@ -37,7 +37,7 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         self.dtype = dt
 
     def __setattr__(self, name, value):  # 为了去掉UUID的限制
-        # Logger.log("T", f"setattr: {name} = {value} ({self})")
+        Logger.log("T", f"setattr: {name} = {value} ({self})")
         return object.__setattr__(self, name, value)
 
     def __eq__(self, other: object) -> bool:

@@ -194,7 +194,7 @@ class ClassObj(ClassDataObj, Base):
         """
         广播事件，分发到缓冲区。
         """
-        Logger.log("D", f"广播数据变更事件: {event_key}", "ClassObj.broadcast_data_changed")
+        Logger.log("T", f"广播数据变更事件: {event_key}", "ClassObj.broadcast_data_changed")
         self._event_submit_count += 1
         if self._event_buffer is not None:
             self._event_buffer.submit(Event(event_key))
@@ -218,6 +218,9 @@ class ClassObj(ClassDataObj, Base):
         event_count = len(events)
         Logger.log("D", f"防抖结束/缓冲区溢出，已经缓存了{event_count}个数据变更事件，发送成就更新广播", "ClassObj._process_all_events")
         self._event_buffer.clear_buffer()
+        if (not self.achievement_obs.on_active):
+            Logger.log("D", "成就侦测器未激活，还是别发了，大概率是要退出了", "ClassObj._process_all_events")
+            return
         self._achievement_dispatcher.broadcast("UPDATE_ACHIEVEMENT_DATA")
         elapsed = time.perf_counter() - start_time
         if elapsed > 0.01:  # 超过10ms就记录

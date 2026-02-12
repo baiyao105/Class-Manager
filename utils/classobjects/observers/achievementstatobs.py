@@ -88,6 +88,8 @@ class AchievementStatusObserver:
         "是否应该检查成就（由事件触发）"
         self._update_listener: BroadcastReceiver | None = None
         "更新事件监听器"
+        self._is_first_frame: bool = True
+        "是否是第一帧"
 
     def next_frame(
         self, recheck_achievement: bool = True, recheck_interval: float = 0.1, handle_overloading: bool = True
@@ -99,14 +101,14 @@ class AchievementStatusObserver:
         :param recheck_interval: 重新检查成就的间隔
         :param handle_overloading: 是否需要处理过载
         """
-        if not self._should_check_achievements:
+        self._should_check_achievements = False
+        self.total_frame_count += 1
+        last_opreate_time = time.time()
+        if not self._should_check_achievements and not self._is_first_frame:
             time.sleep(1 / self.limited_tps)
         else:
             Logger.log("I", "检查成就是否需要更新", "AchievementStatusObserver.next_frame")
-            self._should_check_achievements = False
-            self.total_frame_count += 1
-            last_opreate_time = time.time()
-
+            self._is_first_frame = False
             if time.time() - self.last_update > 1:
                 self.last_update = time.time()
             if self.limited_tps:
@@ -180,6 +182,8 @@ class AchievementStatusObserver:
         
         self.total_frame_count = 0
         self.on_active = True
+        self._is_first_frame = True
+
         t = Thread(target=self._display_thread, name="DisplayAchievement", daemon=True)
         t.start()
         self.start_time = time.time()
