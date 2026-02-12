@@ -36,7 +36,7 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         super().__init__(str(_uuid) if _uuid else str(uuid4()))
         self.dtype = dt
 
-    def __setattr__(self, name, value):  # 为了去掉UUID的限制
+    def __setattr__(self, name: str, value: Any):  # 为了去掉UUID的限制
         Logger.log("T", f"setattr: {name} = {value} ({self})")
         return object.__setattr__(self, name, value)
 
@@ -197,13 +197,11 @@ class ClassDataType(ABC):
         返回该班级数据类型的空对象。
         """
 
-    def get_class_obj(self) -> ClassObj:
+    def get_class_obj(self) -> ClassObj | None:
         """通过单例模式获取ClassObj引用"""
         from .classobj import ClassObj
-        ret = ClassObj.get_current_instance()
-        if ret is None:
-            raise ValueError("ClassObj未初始化")
-        return ret
+        return ClassObj.get_current_instance()
+    
     
 
 

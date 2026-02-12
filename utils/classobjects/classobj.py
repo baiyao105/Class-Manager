@@ -219,7 +219,7 @@ class ClassObj(ClassDataObj, Base):
         Logger.log("D", f"防抖结束/缓冲区溢出，已经缓存了{event_count}个数据变更事件，发送成就更新广播", "ClassObj._process_all_events")
         self._event_buffer.clear_buffer()
         if (not self.achievement_obs.on_active):
-            Logger.log("D", "成就侦测器未激活，还是别发了，大概率是要退出了", "ClassObj._process_all_events")
+            Logger.log("D", "成就侦测器未激活，还是别发了，大概率是要退出或者手动停了", "ClassObj._process_all_events")
             return
         self._achievement_dispatcher.broadcast("UPDATE_ACHIEVEMENT_DATA")
         elapsed = time.perf_counter() - start_time

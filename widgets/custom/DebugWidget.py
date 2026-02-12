@@ -80,7 +80,7 @@ print(math.sqrt(114514))""",
 DataObject.saved_objects = 0
 c = Chunk("chunks/test_chunk/example", self.database)
 t = time.time()
-c.save()
+c.save_data()
 print("时间:", time.time() - t)
 print("数量:", DataObject.saved_objects)
 print("速率:", (DataObject.saved_objects / (time.time() - t)))""",

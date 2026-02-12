@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import enum
 from typing import Literal, Dict, Any
 import requests
@@ -9,6 +8,7 @@ import os
 import shutil
 import signal
 import zipfile
+import contextlib
 from typing import Literal
 
 

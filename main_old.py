@@ -11,14 +11,34 @@ import sys
 import time
 import math
 import enum
+import copy
+import json
+import uuid
+import errno
+import base64
+import ctypes
+import socket
 import random
 import pickle
+import dill as pickle
+import pickle as pickle_orig
+import shutil
 import signal
-# import locale
+import sqlite3
+import hashlib
+import inspect
+import logging
+import zipfile
+import colorama
 import warnings
+import requests
+import functools
+import ipaddress
 import traceback
 import threading
 import functools
+import contextlib
+import customtkinter
 from queue import Queue
 from typing import Optional, Union, List, Tuple, Dict, Callable, Literal, Type, Any
 from shutil import copytree, rmtree, copy as shutil_copy
@@ -44,6 +64,7 @@ import requests
 import dill as pickle  # pylint: disable=shadowed-import
 
 import pyqtgraph as pg
+import numpy as np
 from qfluentwidgets.common import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.components import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.window import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -53,8 +74,6 @@ from widgets.ui.pyside6 import (
     MainClassWindow,
     NoticeViewer
 )
-
-
 
 from utils.basetypes import logger, SysMemTracer # pylint: disable=wrong-import-position
 
@@ -1289,7 +1308,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def save_settings(self):
         """保存当前的全局设置对象到设置存档文件"""
         Base.log("I", "保存设置到文件", "MainWindow.save_settings")
-        os.makedirs(os.path.abspath(f"chunks/{self.current_user})"), exist_ok=True)
+        os.makedirs(os.path.abspath(f"chunks/{self.current_user}"), exist_ok=True)
         settings.save_to(
             os.path.abspath(f"chunks/{self.current_user}/settings.dat")
         )

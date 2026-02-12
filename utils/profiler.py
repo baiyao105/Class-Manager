@@ -1,14 +1,19 @@
 """
 性能分析工具
 """
+import functools
 import time
 import threading
 from collections import defaultdict
-from typing import Callable, Any, Literal
-from functools import wraps
+from typing import Callable, Literal, TypeVar
+from typing_extensions import ParamSpec
 from dataclasses import dataclass
 from utils.consts import inf
 from utils.logger import Logger
+
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
 @dataclass
@@ -59,11 +64,11 @@ class PerformanceProfiler:
         
         :param func_name: 自定义函数名称（默认使用函数名）
         """
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[_P, _R]) -> Callable[_P, _R]:
             name = func_name or f"{func.__module__}.{func.__qualname__}"
             
-            @wraps(func)
-            def wrapper(*args, **kwargs) -> Any:
+            @functools.wraps(func)
+            def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
                 if not self._enabled:
                     return func(*args, **kwargs)
                 
@@ -179,6 +184,7 @@ class PerformanceProfiler:
 
 # 全局性能分析器实例
 _global_profiler = PerformanceProfiler("Global")
+
 
 
 def profile(func_name: str | None = None):

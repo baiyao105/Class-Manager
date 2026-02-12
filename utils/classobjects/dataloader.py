@@ -670,8 +670,10 @@ class Chunk:
           while h.time in histories:
             h.time += 0.000001 # 这个是真没招了
           histories[h.time] = h
-        except FileNotFoundError as e:
-          Base.log_exc(f"历史记录{history_uuid}加载失败，将跳过", "Chunk.load_data", "E", e)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+          Base.log_exc(f"历史记录{history_uuid}加载失败，将跳过", "Chunk.load_data", "W", e)
+          continue
+
       h2 = sorted(histories.items(), key=lambda i: i[0])
       histories = dict(h2)
     
@@ -718,6 +720,7 @@ class Chunk:
     :param clear_histories: 是否清理历史数据
     """
     with Chunk.save_task_mutex:
+      DataObject.commit_changes(False)
       Chunk.loading_info["total_percentage"] = 0.0
 
       try:
