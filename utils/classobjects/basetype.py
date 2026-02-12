@@ -5,9 +5,17 @@
 """
 from __future__ import annotations
 import copy
+import time
 from abc import ABC, abstractmethod
-from typing import Generic, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Optional, Self, TypeVar
 from uuid import UUID, uuid4
+
+from utils.logger import Logger
+from utils.profiler import profile
+
+if TYPE_CHECKING:
+  from .dataloader import UserDataBase
+  from .classobj import ClassObj
 
 _StringDataType = TypeVar("_StringDataType")
 
@@ -29,6 +37,7 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         self.dtype = dt
 
     def __setattr__(self, name, value):  # 为了去掉UUID的限制
+        # Logger.log("T", f"setattr: {name} = {value} ({self})")
         return object.__setattr__(self, name, value)
 
     def __eq__(self, other: object) -> bool:
@@ -64,6 +73,7 @@ class ClassDataType(ABC):
     "该班级数据类型是否与其它班级数据类型无关。"
 
     def __init__(self, uuid: ClassDataTypeUUID[Self] | UUID | None = None):
+        self._user_db_ref: Optional[UserDataBase] = None
         self._uuid: ClassDataTypeUUID[Self]
         if uuid is None:
             self._uuid = ClassDataTypeUUID(self.__class__, uuid4())
@@ -73,6 +83,8 @@ class ClassDataType(ABC):
 
         elif isinstance(uuid, UUID):
             self._uuid = ClassDataTypeUUID(self.__class__, uuid)
+
+        self._user_db_ref = None
 
     @property
     def uuid(self) -> ClassDataTypeUUID[Self]:
@@ -185,24 +197,94 @@ class ClassDataType(ABC):
         返回该班级数据类型的空对象。
         """
 
+    def get_class_obj(self) -> ClassObj:
+        """通过单例模式获取ClassObj引用"""
+        from .classobj import ClassObj
+        ret = ClassObj.get_current_instance()
+        if ret is None:
+            raise ValueError("ClassObj未初始化")
+        return ret
+    
+
 
 class DataProperty(property):
-    "数据属性，用于ClassDataType的属性"
+    """
+    数据属性，用于ClassDataType的属性
+    
+    扩展功能：
+    1. 自动检测属性值变化
+    2. 变化时立即触发事件
+    3. 支持配置是否触发事件
+    """
 
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
+    def __init__(
+        self,
+        fget=None,
+        fset=None,
+        fdel=None,
+        doc=None,
+        trigger_event: bool = True,
+        event_name_override: str | None = None,
+    ):
+        """
+        构造函数
+        
+        :param fget: getter函数
+        :param fset: setter函数
+        :param fdel: deleter函数
+        :param doc: 文档字符串
+        :param trigger_event: 是否在值变化时触发事件
+        :param event_name_override: 自定义事件名称（覆盖默认命名）
+        """
         super().__init__(fget, fset, fdel, doc)
+        
+        self.trigger_event = trigger_event
+        self.event_name_override = event_name_override
 
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
+    def __get__(self, instance: ClassDataType, owner: type[ClassDataType]):
         return super().__get__(instance, owner)
 
-    def __set__(self, instance, value):
-        if instance is None:
-            return None
-        return super().__set__(instance, value)
+    def __set__(self, instance: ClassDataType, value: Any):
+        old_value = None
+        try:
+            old_value = super().__get__(instance, type(instance))
+        except (AttributeError, TypeError):
+            pass
+        super().__set__(instance, value)
+        new_value = value
+        if old_value != new_value:
+            self._on_value_changed(instance, old_value, new_value)
+
 
     def __delete__(self, instance):
-        if instance is None:
-            return None
-        return super().__delete__(instance)
+        raise AttributeError("不能删除数据属性")
+
+    def _get_full_event_name(self, instance: Any) -> str:
+        """
+        获取完整的事件名称
+        
+        :param instance: 实例对象
+        :return: 完整事件名称
+        """
+        property_name = self.fget.__qualname__
+        return f"DATA_CHANGED_{property_name}"
+
+    @profile("DataProperty._on_value_changed")
+    def _on_value_changed(self, instance: ClassDataType, old_value: Any, new_value: Any):
+        """
+        值变化时的处理
+        
+        立即触发事件，不延迟
+        """
+        if not self.trigger_event:
+            return
+        start_time = time.perf_counter()
+        class_obj = instance.get_class_obj()
+        if class_obj is None:
+            return
+
+        event_key = self._get_full_event_name(instance)
+        class_obj.broadcast_data_changed(event_key)
+        elapsed = time.perf_counter() - start_time
+        if elapsed > 0.001:  # 超过1ms就记录
+            Logger.log("D", f"DataProperty._on_value_changed for {event_key} took {elapsed*1000:.2f}ms")

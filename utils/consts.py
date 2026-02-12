@@ -1,13 +1,13 @@
 """
 常量文件
 """
-
+from __future__ import annotations
 import datetime
 import math
 import os
 import sys
 import time
-from typing import Any, Literal, TYPE_CHECKING
+from typing import Any, Literal
 
 debug: bool = True
 "是否为调试模式"

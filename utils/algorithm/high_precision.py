@@ -1,8 +1,9 @@
-import sys
 
 """
 NoneColdWind做的一个高精度运算类
 """
+from __future__ import annotations
+import sys
 from typing import Union
 
 

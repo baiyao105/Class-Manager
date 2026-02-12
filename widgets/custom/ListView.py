@@ -87,6 +87,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.data = data
         self.args = args
         self.title = title
+        self.commands = commands
         self.allow_pre_action = allow_pre_action
         self.setWindowTitle(title)
         self.main_window = main_window
@@ -99,7 +100,6 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.pushButton_2.clicked.connect(self.listWidget.scrollToTop)
         self.pushButton_3.clicked.connect(self.listWidget.scrollToBottom)
         self.item_update.connect(self.update_item_color)
-        self.commands = commands
         self.verticalLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.verticalLayout.setSpacing(0)
         self.btn_list: List[QPushButton] = []
@@ -107,22 +107,20 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.ready = False
         self.setting_command = False
         self.setCommands(commands, force=True)
-        self.commands = commands
         self.select_once_then_exit = select_once_then_exit
         self.widget_items: List[QListWidgetItem] = []
 
     @Slot()
     def setCommands(self, commands: List[Tuple[str, Callable]] = None, *, force=False):
         while self.setting_command and not force:
-            """"""
+            time.sleep(0.001)
+        if commands is None:
+            return
         self.commands = commands
         self.setting_command = True
-        commands = self.commands
         for btn in self.btn_list:
             btn.deleteLater()
         self.btn_list = []
-        if commands is None:
-            return
         for string, _callable in commands:
             btn = QPushButton(string)
             self.btn_list.append(btn)

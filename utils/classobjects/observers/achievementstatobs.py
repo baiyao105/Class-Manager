@@ -6,9 +6,12 @@ from collections.abc import Callable
 from queue import Queue
 from typing import TYPE_CHECKING, Any
 
+from utils.logger import Logger
+
 from ...algorithm import Thread
 from ...basetypes import Base
 
+from ...events.broadcast import BroadcastDispatcher, BroadcastReceiver
 from ..objects.achievement import Achievement
 
 if TYPE_CHECKING:
@@ -81,6 +84,10 @@ class AchievementStatusObserver:
         "上一帧时间"
         self.overload_count = 0
         "过载帧数"
+        self._should_check_achievements: bool = False
+        "是否应该检查成就（由事件触发）"
+        self._update_listener: BroadcastReceiver | None = None
+        "更新事件监听器"
 
     def next_frame(
         self, recheck_achievement: bool = True, recheck_interval: float = 0.1, handle_overloading: bool = True
@@ -92,56 +99,61 @@ class AchievementStatusObserver:
         :param recheck_interval: 重新检查成就的间隔
         :param handle_overloading: 是否需要处理过载
         """
-        self.total_frame_count += 1
-        last_opreate_time = time.time()
+        if not self._should_check_achievements:
+            time.sleep(1 / self.limited_tps)
+        else:
+            Logger.log("I", "检查成就是否需要更新", "AchievementStatusObserver.next_frame")
+            self._should_check_achievements = False
+            self.total_frame_count += 1
+            last_opreate_time = time.time()
 
-        if time.time() - self.last_update > 1:
-            self.last_update = time.time()
-        if self.limited_tps:
-            time.sleep(max((1 / self.limited_tps) - (time.time() - self.last_frame_time), 0))
-        self.last_frame_time = time.time()
-        opreated = False
-        # 性能优化点：O(n²)复杂度(?)
-        for s in list(self.classes[self.class_id].students.values()):
-            for a in list(self.achievement_templates.keys()):
-                if self.achievement_templates[a].achieved_by(s, self.class_obs) and (
-                    self.achievement_templates[a].key
-                    not in [  # 判断成就是否已经达成过
-                        a.temp.key for a in self.classes[self.class_id].students[s.num].achievements.values()
-                    ]
+            if time.time() - self.last_update > 1:
+                self.last_update = time.time()
+            if self.limited_tps:
+                time.sleep(max((1 / self.limited_tps) - (time.time() - self.last_frame_time), 0))
+            self.last_frame_time = time.time()
+            opreated = False
+            # 性能优化点：O(n²)复杂度(?)
+            for s in list(self.classes[self.class_id].students.values()):
+                for a in list(self.achievement_templates.keys()):
+                    if self.achievement_templates[a].achieved_by(s, self.class_obs) and (
+                        self.achievement_templates[a].key
+                        not in [  # 判断成就是否已经达成过
+                            a.temp.key for a in self.classes[self.class_id].students[s.num].achievements.values()
+                        ]
+                    ):
+                        opreated = True
+                        if recheck_achievement and recheck_interval > 0:
+                            time.sleep(recheck_interval)  # 等待操作完成，避免竞态条件
+                        if self.achievement_templates[a].achieved_by(s, self.class_obs) or not recheck_achievement:
+                            Base.log(
+                                "I",
+                                f"[{s.name}] 达成了成就 [{self.achievement_templates[a].name}]",
+                            )
+                            a2 = Achievement(self.achievement_templates[a], s)
+                            a2.give()
+                            self.display_achievement_queue.put((a, s))
+
+            cur_time = time.time()
+            self.mspt = (cur_time - self.last_frame_time) * 1000
+            overload_before = self.overloaded
+            if not opreated:  # 只在空扫描的时候才检测是否过载
+                if self.mspt > 1000 / self.limited_tps * self.overload_ratio:
+                    self.overloaded = True
+                    self.overload_count += 1
+                else:
+                    self.overloaded = False
+                    self.overload_count = 0
+                if (
+                    self.overloaded
+                    and self.overload_count > self.overload_warning_frame_limit
+                    and (cur_time - self.start_time) > 1
+                    and not overload_before
                 ):
-                    opreated = True
-                    if recheck_achievement and recheck_interval > 0:
-                        time.sleep(recheck_interval)  # 等待操作完成，避免竞态条件
-                    if self.achievement_templates[a].achieved_by(s, self.class_obs) or not recheck_achievement:
-                        Base.log(
-                            "I",
-                            f"[{s.name}] 达成了成就 [{self.achievement_templates[a].name}]",
-                        )
-                        a2 = Achievement(self.achievement_templates[a], s)
-                        a2.give()
-                        self.display_achievement_queue.put((a, s))
-
-        cur_time = time.time()
-        self.mspt = (cur_time - self.last_frame_time) * 1000
-        overload_before = self.overloaded
-        if not opreated:  # 只在空扫描的时候才检测是否过载
-            if self.mspt > 1000 / self.limited_tps * self.overload_ratio:
-                self.overloaded = True
-                self.overload_count += 1
-            else:
-                self.overloaded = False
-                self.overload_count = 0
-            if (
-                self.overloaded
-                and self.overload_count > self.overload_warning_frame_limit
-                and (cur_time - self.start_time) > 1
-                and not overload_before
-            ):
-                # 刚才才开始过载并且已经开了有一段时间了
-                if handle_overloading:
-                    self.on_observer_overloaded(self.last_frame_time, last_opreate_time, self.mspt)
-            time.sleep((self.mspt * (1 / self.overload_ratio)) / 1000)
+                    # 刚才才开始过载并且已经开了有一段时间了
+                    if handle_overloading:
+                        self.on_observer_overloaded(self.last_frame_time, last_opreate_time, self.mspt)
+                time.sleep((self.mspt * (1 / self.overload_ratio)) / 1000)
         self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
 
     def on_observer_overloaded(
@@ -157,16 +169,43 @@ class AchievementStatusObserver:
             "AchievementStatusObserver._start",
         )
 
+    def _on_update_achievement_data(self):
+        """收到更新成就数据的信号"""
+        Base.log("D", "收到UPDATE_ACHIEVEMENT_DATA信号，准备检查成就更新", "AchievementStatusObserver._on_update_achievement_data")
+        self._should_check_achievements = True
+
     def run(self):
         "内部启动用函数"
+        Base.log("I", "开始启动成就侦测器...", "AchievementStatusObserver.run")
+        
         self.total_frame_count = 0
         self.on_active = True
         t = Thread(target=self._display_thread, name="DisplayAchievement", daemon=True)
         t.start()
         self.start_time = time.time()
+        
+        # 注册更新事件监听器
+        Base.log("I", "开始注册UPDATE_ACHIEVEMENT_DATA监听器...", "AchievementStatusObserver.run")
+        dispatcher = self.base.get_achievement_event_dispatcher()
+        self._update_listener = BroadcastReceiver(
+            "UPDATE_ACHIEVEMENT_DATA",
+            self._on_update_achievement_data,
+            name="AchievementUpdateListener"
+        )
+        dispatcher.register(self._update_listener)
+        Base.log("I", "UPDATE_ACHIEVEMENT_DATA 监听器注册完成", "AchievementStatusObserver.run")
+        
+        Base.log("I", "开始侦测器主循环...", "AchievementStatusObserver.run")
         while self.on_active:
             self.next_frame()
+        
+        # 注销监听器
+        Base.log("I", "开始注销监听器...", "AchievementStatusObserver.run")
+        if self._update_listener:
+            dispatcher.unregister(self._update_listener)
+        Base.log("I", "侦听器已注销", "AchievementStatusObserver.run")
         t.join()
+        Base.log("I", "成就侦测器已停止", "AchievementStatusObserver.run")
 
     def _display_thread(self):
         "显示成就的线程"

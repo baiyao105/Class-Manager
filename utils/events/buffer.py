@@ -4,6 +4,9 @@ from abc import ABC, abstractmethod
 
 
 from typing import Callable, Any, final
+from typing_extensions import override
+
+from utils.logger import Logger
 from ..algorithm.datatypes import Thread
 from ..algorithm.numeric import addrof
 from .event import Event
@@ -129,7 +132,7 @@ class FilteredEventBuffer(EventBuffer, ABC):
         self._filter = filter
 
 
-class TimedEventBuffer(EventBuffer, ABC):
+class TimedEventBuffer(EventBuffer):
     """
     定时事件缓冲区。
 
@@ -139,6 +142,7 @@ class TimedEventBuffer(EventBuffer, ABC):
     def __init__(self, callback: Callable[..., Any], 
                     interval: float = 1.0, 
                     recheck_time: float = 0.01,
+                    max_events: int = 65535,
                     name: str | None = None):
         """
         构造函数。
@@ -147,6 +151,10 @@ class TimedEventBuffer(EventBuffer, ABC):
         :type callback: Callable[..., Any]
         :param interval: 事件缓冲区中事件的最大未更新间隔
         :type interval: float
+        :param recheck_time: 监听线程检查缓冲区是否过期的时间间隔
+        :type recheck_time: float
+        :param max_events: 事件缓冲区中事件的最大数量
+        :type max_events: int
         :param name: 缓冲区名称
         :type name: str | None
         """ 
@@ -154,7 +162,7 @@ class TimedEventBuffer(EventBuffer, ABC):
         self._interval = interval
         self._last_event_time: float | None = None
         self._recheck_time = recheck_time
-        self.start_listening()
+        self._max_events = max_events
 
     def __del__(self):
         """
@@ -162,10 +170,24 @@ class TimedEventBuffer(EventBuffer, ABC):
         """
         self.stop_listening()
 
+    @override
+    def submit(self, event: Event):
+        """
+        提交事件到缓冲区。
+
+        :param event: 要提交的事件
+        :type event: Event
+        """
+        super().submit(event)
+        self._last_event_time = time.time()
+
     def listen(self):
         "监听事件。用来检测缓冲区是否过期。"
         self._listening = True
         while not self._should_stop:
+            # Logger.log("T", f"监听事件缓冲区 {self.name}，当前事件数量：{len(self.buffer)}", "TimedEventBuffer.listen")
+            if len(self.buffer) >= self._max_events:
+                self.deal_with_buffer()
             if self._last_event_time and time.time() - self._last_event_time >= self._interval:
                 self.deal_with_buffer()
             time.sleep(self._recheck_time)
@@ -202,12 +224,14 @@ class TimedEventBuffer(EventBuffer, ABC):
         "设置事件缓冲区中事件的最大未更新处理间隔。"
         self._recheck_time = recheck_time
 
-    @abstractmethod
     def process(self):
-        ...
+        """处理缓冲区中的事件。子类可以重写此方法来自定义处理逻辑。"""
+        while self.buffer:
+            event = self.buffer.pop(0)
+            self.execute(event=event)
     
 
-class CountedEventBuffer(EventBuffer, ABC):
+class CountedEventBuffer(EventBuffer):
     """
     计数事件缓冲区。
 
@@ -252,8 +276,10 @@ class CountedEventBuffer(EventBuffer, ABC):
         "设置事件缓冲区中事件的最大数量。"
         self._max_buffer_size = max_buffer_size
 
-    @abstractmethod
     def process(self):
-        ...
+        """处理缓冲区中的事件，子类可以重写此方法来自定义处理逻辑。"""
+        while self.buffer:
+            event = self.buffer.pop(0)
+            self.execute(event=event)
 
 

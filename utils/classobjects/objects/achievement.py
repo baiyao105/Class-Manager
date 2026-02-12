@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from ...basetypes import Base
 
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, DataProperty
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -53,12 +53,30 @@ class Achievement(ClassDataType):
             reach_time = Base.gettime()
         if reach_time_key is None:
             reach_time_key = Base.utc()
-        self.time = reach_time
-        self.time_key = reach_time_key
+        self._time = reach_time
+        self._time_key = reach_time_key
         self.temp = template
         self.target = target
         self.sound = self.temp.sound
         self.archive_uuid = ClassDataObj.get_archive_uuid()
+
+    @DataProperty
+    def time(self):
+        "达成时间"
+        return self._time
+
+    @time.setter
+    def time(self, value: str):
+        self._time = value
+
+    @DataProperty
+    def time_key(self):
+        "达成时间键值"
+        return self._time_key
+
+    @time_key.setter
+    def time_key(self, value: int):
+        self._time_key = value
 
     def give(self):
         "发放成就"

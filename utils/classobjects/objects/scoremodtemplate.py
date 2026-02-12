@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from ...algorithm import SupportsKeyOrdering
 
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, DataProperty
 from ..classdataobj import ClassDataObj
 
 
@@ -43,12 +43,39 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
         :param is_visible: 是否可见
         """
         self.key = key
-        self.mod = modification
-        self.title = title
+        self._mod = modification
+        self._title = title
         self.desc = description
         self.cant_replace = cant_replace
-        self.is_visible = is_visible
+        self._is_visible = is_visible
         self.archive_uuid = ClassDataObj.get_archive_uuid()
+
+    @DataProperty
+    def mod(self):
+        "模板修改分数"
+        return self._mod
+
+    @mod.setter
+    def mod(self, value: float):
+        self._mod = value
+
+    @DataProperty
+    def title(self):
+        "模板标题"
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
+
+    @DataProperty
+    def is_visible(self):
+        "是否可见"
+        return self._is_visible
+
+    @is_visible.setter
+    def is_visible(self, value: bool):
+        self._is_visible = value
 
     def __repr__(self):
         return (

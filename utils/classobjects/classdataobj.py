@@ -20,6 +20,8 @@ default_user = "default"
 current_archive_uuid: UUID | None = None
 "当前存档的UUID，全局的"
 
+
+
 UUIDType = TypeVar("UUIDType", bound=ClassDataType)
 
 
@@ -48,3 +50,4 @@ class ClassDataObj:
         "设置当前存档的UUID。"
         global current_archive_uuid
         current_archive_uuid = value
+

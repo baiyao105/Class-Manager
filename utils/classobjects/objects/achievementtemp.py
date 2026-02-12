@@ -163,13 +163,13 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                 self.modify_ranges: list[dict[str, str | int | float]] = [
                     {"key": item[0], "lowest": item[1], "highest": item[2]} for item in self.modify_ranges_orig
                 ]
-
+        self.other: list[Callable[[ClassData], bool]] = []
         if others is not None:
             if not isinstance(others, list):
-                self.other: list[Callable[[ClassData], bool]] = [others]
+                self.other = [others]
             else:
-                self.other: list[Callable[[ClassData], bool]] = others
-
+                self.other = others
+        
         self.when_triggered = when_triggered if isinstance(when_triggered, list) else [when_triggered]
         self.sound = sound
         self.icon = icon

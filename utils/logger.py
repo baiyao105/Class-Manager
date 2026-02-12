@@ -1,16 +1,15 @@
 """
 日志记录器
 """
-
+from __future__ import annotations
 import inspect
-from io import TextIOWrapper
 import os
 import sys
 import time
 import traceback
 from queue import Queue
 from threading import Lock, Thread
-from typing import Literal, TextIO, final, Optional, List, Callable
+from typing import Any, Dict, Literal, NamedTuple, TextIO, final, Optional, List, Callable
 
 import colorama
 from loguru import logger
@@ -126,7 +125,7 @@ class LoggerSettings:
         fast_log_file_path: str | None = None,
         console_wrapper: TextIO | None = stdout_orig,
         log_mode: Literal["write_instantly", "write_buffered"] = "write_instantly",
-        log_level: Literal["I", "W", "E", "F", "D", "C", "OFF"] = "D",
+        log_level: Literal["T", "I", "W", "E", "F", "D", "C", "OFF"] = "T",
         draw_color: bool = True,
         use_mutex: bool = True,
         encoding: str | None = "utf-8",
@@ -350,173 +349,191 @@ class Logger:
     logged_count: int = 0
     "自启动以来记录过的日志条数"
 
-    if log_style == "new":
+    TRACE: str = "TRACE"
+    DEBUG: str = "DEBUG"
+    INFO: str = "INFO"
+    WARN: str = "WARNING"
+    ERROR: str = "ERROR"
+    CRITICAL: str = "CRITICAL"
+    FATAL: str = CRITICAL
 
-        @staticmethod
-        def log(
-            msg_type: Literal["I", "W", "E", "F", "D", "C"],
-            msg: str,
-            source: str = "MainThread",
-        ):
-            """
-            向控制台和日志输出信息
+    @staticmethod
+    def get_fullname(level: str):
+        "获取日志等级的完整名称"
+        return {
+            "T": Logger.TRACE,
+            "D": Logger.DEBUG,
+            "I": Logger.INFO,
+            "W": Logger.WARN,
+            "E": Logger.ERROR,
+            "F": Logger.FATAL,
+            "C": Logger.CRITICAL
+        }.get(level, level)
+    
+    @staticmethod
+    def get_shortname(level: str):
+        "获取日志等级的短名"
+        return {
+            Logger.TRACE: "T",
+            Logger.DEBUG: "D",
+            Logger.INFO: "I",
+            Logger.WARN: "W",
+            Logger.ERROR: "E",
+            Logger.FATAL: "C",
+            Logger.CRITICAL: "F"
+        }.get(level, level)
+    
+    @staticmethod
+    def get_level_index(level: str):
+        "获取日志等级的索引"
+        return {
+            Logger.TRACE: -1,
+            Logger.DEBUG: 0,
+            Logger.INFO: 1,
+            Logger.WARN: 2,
+            Logger.ERROR: 3,
+            Logger.CRITICAL: 4,
+            Logger.FATAL: 4
+        }.get(Logger.get_fullname(level), 1145)
 
-            :param level: 日志级别 (I=INFO, W=WARNING,
-            E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
-            :param msg: 日志消息
-            :param source: 日志来源
-            """
-            # 如果日志等级太低就不记录
-            if (
-                    (msg_type == "D" and Logger.config.log_level not in ("D"))
-                or (msg_type == "I" and Logger.config.log_level not in ("D", "I"))
-                or (msg_type == "W" and Logger.config.log_level not in ("D", "I", "W"))
-                or (msg_type == "E" and Logger.config.log_level not in ("D", "I", "W", "E"))
-                or (
-                    (msg_type == "F" or msg_type == "C") and Logger.config.log_level not in ("D", "I", "W", "E", "F", "C")
-                )
-            ):
-                return
+    @staticmethod
+    def get_level_color(level: str):
+        return {
+            Logger.TRACE: Color.BLUE,
+            Logger.DEBUG: Color.CYAN,
+            Logger.INFO: Color.GREEN,
+            Logger.WARN: Color.YELLOW,
+            Logger.ERROR: Color.RED,
+            Logger.CRITICAL: Color.MAGENTA,
+            Logger.FATAL: Color.MAGENTA
+        }.get(Logger.get_fullname(level), Color.WHITE)
+    
+    class LogInfo(NamedTuple):
+        "一个日志的信息。"
+        level: str
+        source: str
+        file: str
+        file_basename: str
+        lineno: int
+        message: str
 
-            if not isinstance(msg, str):
-                msg = repr(msg)
-            for m in msg.splitlines():
-                if not m.strip():
-                    continue
+    LogHandler = Callable[[LogInfo], Any]
+
+
+    @staticmethod
+    def _new_logger(context: LogInfo) -> None:
+        logger.bind(
+            file=context.file_basename,
+            source=context.source,
+            lineno=context.lineno,
+            full_file=context.file,
+            source_with_lineno=f"{context.source}:{context.lineno}",
+        ).log(context.level, context.message)
+
+
+    @staticmethod
+    def _old_logger(context: LogInfo) -> None:
+        color = Logger.get_level_color(context.level)
+        msg_type = Logger.get_shortname(context.level)
+        cm = (
+            f"{Color.BLUE}{get_time()}{Color.END} {color}{msg_type}{Color.END} "
+            f"{Color.from_rgb(50, 50, 50)}{context.source.ljust(35)}{color} {context.message}{Color.END}"
+        )
+        lfm = f"{get_time()} {msg_type} {(context.source + f' -> {context.file}:{context.lineno}').ljust(60)} {context.message}"
+
+        if Logger.fast_log_file:
+            Logger.fast_log_file.write(lfm + "\n")
+            Logger.fast_log_file.flush()
+
+        if log_settings.log_mode == "write_instantly":
+            print(cm, file=Logger.stdout_orig)
+            if Logger.log_file:
+                Logger.log_file.write(lfm + "\n")
+                Logger.log_file.flush()
+
+        elif log_settings.log_mode == "write_buffered":
+            Logger.console_log_queue.put(cm)
+            Logger.logfile_log_queue.put(lfm)
+
+
+    log_handlers: Dict[str, LogHandler] = {
+        "new": _new_logger,
+        "old": _old_logger
+    }
+
+    @staticmethod
+    def _handle_log(context: LogInfo):
+        handler = Logger.log_handlers.get(log_style)
+        if handler:
+            handler(context)
+
+    @staticmethod
+    def log(
+        msg_type: Literal["T", "I", "W", "E", "F", "D", "C"],
+        msg: Any,
+        source: str = "MainThread",
+    ):
+        """
+        向控制台和日志输出信息
+
+        :param level: 日志级别 (I=INFO, W=WARNING,
+        E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
+        :param msg: 日志消息
+        :param source: 日志来源
+        """
+        # 如果日志等级太低就不记录
+        if Logger.get_level_index(msg_type) < Logger.get_level_index(log_settings.log_level):
+            return
+        
+        log_level = Logger.get_fullname(msg_type)
+        
+        if log_settings.use_mutex:
+            Logger.log_mutex.acquire()
+        
+        if not isinstance(msg, str):
+            msg = repr(msg)
+            
+        for m in msg.splitlines():
+            if not m.strip():
+                continue
+            frame = inspect.currentframe()
+            caller_frame = frame.f_back if frame else None
+            if frame and frame.f_back and caller_frame:
+                file = frame.f_back.f_code.co_filename.replace(cwd, "")
+                if file == "<string>":
+                    lineno = 0
+                while file.startswith(("/", "\\")):
+                    file = file[1:]
                 frame = inspect.currentframe()
-                if not frame:
-                    file = "<unknown>"
-                    lineno = 0
-                    caller_frame = frame
-                else:
-                    if frame.f_back:
-                        file = frame.f_back.f_code.co_filename.replace(cwd, "")
-                    else:
-                        file = "<unknown>"
-                    if file == "<string>":
-                        lineno = 0
-                    if file.startswith(("/", "\\")):
-                        file = file[1:]
-                    frame = inspect.currentframe()
-                    if frame:
-                        caller_frame = frame.f_back
-                    else:
-                        caller_frame = None
-                log_level = {
-                    "I": "INFO",
-                    "W": "WARNING",
-                    "E": "ERROR",
-                    "F": "CRITICAL",
-                    "C": "CRITICAL",
-                    "D": "DEBUG",
-                }.get(msg_type, "INFO")
+                
+                filename = caller_frame.f_code.co_filename
+                file_basename = os.path.basename(filename)
+                lineno = caller_frame.f_lineno
+            else:
+                file_basename = "unknown"
+                source = "unknown"
+                lineno = -1
+                file = "unknown"
 
-                if caller_frame:
-                    filename = caller_frame.f_code.co_filename
-                    file_basename = os.path.basename(filename)
-                    lineno = caller_frame.f_lineno
-                else:
-                    filename = "<unknown>"
-                    file_basename = "<unknown>"
-                    lineno = 0
+            context = Logger.LogInfo(
+                level=log_level,
+                source=source,
+                file=file,
+                file_basename=file_basename,
+                lineno=lineno,
+                message=m
+            )
 
-                logger.bind(
-                    file=file_basename,
-                    source=source,
-                    lineno=lineno,
-                    full_file=file,
-                    source_with_lineno=f"{source}:{lineno}",
-                ).log(log_level, m)
-                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
-                Logger.short_log_info.append(short_info)
-                short_info = short_info[-Logger.short_log_keep_length :]
-                Logger.logged_count += 1
-
-    else:
-
-        @staticmethod
-        def log(
-            msg_type: Literal["I", "W", "E", "F", "D", "C"],
-            msg: str,
-            source: str = "MainThread",
-        ):
-            """
-            向控制台和日志输出信息
-
-            :param type: 类型
-            :param msg: 信息
-            :param send: 发送者
-            :return: None
-            """
-            if (
-                    (msg_type == "D" and Logger.config.log_level not in ("D"))
-                or (msg_type == "I" and Logger.config.log_level not in ("D", "I"))
-                or (msg_type == "W" and Logger.config.log_level not in ("D", "I", "W"))
-                or (msg_type == "E" and Logger.config.log_level not in ("D", "I", "W", "E"))
-                or (
-                    (msg_type == "F" or msg_type == "C") and Logger.config.log_level not in ("D", "I", "W", "E", "F", "C")
-                )
-            ):
-                return
-            if Logger.config.use_mutex:
-                Logger.log_mutex.acquire()
-
-            if not isinstance(msg, str):
-                msg = repr(msg)
-            for m in msg.splitlines():
-                if msg_type == "I":
-                    color = Color.GREEN
-                elif msg_type == "W":
-                    color = Color.YELLOW
-                elif msg_type == "E":
-                    color = Color.RED
-                elif msg_type in {"F", "C"}:
-                    color = Color.MAGENTA
-                elif msg_type == "D":
-                    color = Color.CYAN
-                else:
-                    color = Color.WHITE
-
-                if not m.strip():
-                    continue
-                frame = inspect.currentframe()
-                if frame and frame.f_back:
-                    lineno = frame.f_back.f_lineno
-                    file = frame.f_back.f_code.co_filename.replace(cwd, "")
-                    if file == "<string>":
-                        lineno = 0
-                    if file.startswith(("/", "\\")):
-                        file = file[1:]
-                else:
-                    file = "<unknown>"
-                    lineno = 0
-                cm = (
-                    f"{Color.BLUE}{get_time()}{Color.END} {color}{msg_type}{Color.END} "
-                    f"{Color.from_rgb(50, 50, 50)}{source.ljust(35)}{color} {m}{Color.END}"
-                )
-                lfm = f"{get_time()} {msg_type} {(source + f' -> {file}:{lineno}').ljust(60)} {m}"
-
-                if Logger.fast_log_file:
-                    Logger.fast_log_file.write(lfm + "\n")
-                    Logger.fast_log_file.flush()
-
-                if log_settings.log_mode == "write_instantly":
-                    print(cm, file=Logger.stdout_orig)
-                    if Logger.log_file:
-                        Logger.log_file.write(lfm + "\n")
-                        Logger.log_file.flush()
-
-                elif log_settings.log_mode == "write_buffered":
-                    Logger.console_log_queue.put(cm)
-                    Logger.logfile_log_queue.put(lfm)
-
-                short_info = f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
-                Logger.short_log_info.append(short_info)
-                Logger.short_log_info = Logger.short_log_info[-Logger.short_log_keep_length :]
-                Logger.logged_count += 1
-
-            if Logger.config.use_mutex:
-                Logger.log_mutex.release()
+            Logger._handle_log(context)
+                
+            short_info = (
+                f"{time.strftime('%H:%M:%S', time.localtime())} {msg_type} {m}"
+            )
+            Logger.short_log_info.append(short_info)
+            Logger.short_log_info = Logger.short_log_info[-Logger.short_log_keep_length :]
+            Logger.logged_count += 1
+        if Logger.config.use_mutex:
+            Logger.log_mutex.release()
 
     @staticmethod
     def log_thread_logfile():

@@ -2,9 +2,11 @@ from __future__ import annotations
 import re
 import threading
 import inspect
+import time
 from typing import Any, Callable, List, Union
 from ..logger import Logger
 from ..algorithm.numeric import addrof
+from ..profiler import profile
 from .tasks import Task
 from .event import Event
 
@@ -250,30 +252,50 @@ class BroadcastDispatcher:
     register = add_listener
     unregister = remove_listener
 
-    def broadcast(self, tag: str | Event, *args: Any, **kwargs: Any):
+    @profile("BroadcastDispatcher.broadcast")
+    def broadcast(self, tag: str | Event, *args: Any, **kwargs: Any) -> None:
         """
         广播消息。
 
         :param tag: 消息标签
         """
+        start_time = time.perf_counter()
+        
         if isinstance(tag, Event):
             args = tag.args + args
             kwargs = tag.kwargs | kwargs
             tag = tag.event_key
 
+        listener_count = 0
+        dispatch_count = 0
+        
         with self._lock:
+            lock_time = time.perf_counter()
+            
             for key in list(self.listeners.keys()):
                 if key.startswith(BroadcastReceiver.RE_PATTERN_PREFIX):
                     pattern = key[len(BroadcastReceiver.RE_PATTERN_PREFIX):]
+                    match_start = time.perf_counter()
                     if re.match(pattern, tag):
+                        match_time = time.perf_counter() - match_start
                         for listener in self.listeners[key]:
                             self._dispatch_to(listener, tag, *args, **kwargs)
+                            dispatch_count += 1
+                            listener_count += 1
                 elif key == BroadcastReceiver.RECIEVE_ALL:
                     for listener in self.listeners[key]:
                         self._dispatch_to(listener, tag, *args, **kwargs)
+                        dispatch_count += 1
+                        listener_count += 1
                 elif key == tag:
                     for listener in self.listeners[key]:
                         self._dispatch_to(listener, tag, *args, **kwargs)
+                        dispatch_count += 1
+                        listener_count += 1
+        
+        total_time = time.perf_counter() - start_time
+        if total_time > 0.01:  # 超过10ms就记录
+            Logger.log("D", f"Broadcast '{tag}' took {total_time*1000:.2f}ms, dispatched to {dispatch_count} listeners, {listener_count} total checks")
 
     def _dispatch_to(self, listener: BroadcastReceiver, tag: str, *args: Any, **kwargs: Any):
         "分发消息到指定监听器。"

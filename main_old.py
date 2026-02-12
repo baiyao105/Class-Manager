@@ -11,7 +11,6 @@ import sys
 import time
 import math
 import enum
-import locale
 import random
 import pickle
 import signal
@@ -41,7 +40,6 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
 
 import psutil
 import requests
-import numpy as np
 import dill as pickle  # pylint: disable=shadowed-import
 
 import pyqtgraph as pg

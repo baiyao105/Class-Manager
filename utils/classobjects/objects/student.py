@@ -279,7 +279,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         self.highest_score_cause_time = 0.0
         self.lowest_score_cause_time = 0.0
         self.last_reset = time.time()
-        self.history: dict[int, ScoreModification] = dict()
+        self.history = dict()
         self.achievements = dict()
         return returnval
 

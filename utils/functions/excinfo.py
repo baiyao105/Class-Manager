@@ -8,7 +8,7 @@
 
 （后续想想怎么改吧）
 """
-
+from __future__ import annotations
 import inspect
 from typing import List, Callable
 

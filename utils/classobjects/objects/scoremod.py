@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Literal
 from ...basetypes import Base
 from ...consts import debug
 
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, DataProperty
 from ..classdataobj import ClassDataObj
 from .scoremodtemplate import ScoreModificationTemplate  # 可以直接导入，这个没有依赖
 
@@ -74,11 +74,29 @@ class ScoreModification(ClassDataType):
         else:
             self.mod = mod
         self.target = target
-        self.execute_time = execute_time
+        self._execute_time = execute_time
         self.create_time = create_time
-        self.executed = executed
+        self._executed = executed
         self.archive_uuid = ClassDataObj.get_archive_uuid()
         self.execute_time_key = 0
+
+    @DataProperty
+    def executed(self):
+        "是否已执行"
+        return self._executed
+
+    @executed.setter
+    def executed(self, value: bool):
+        self._executed = value
+
+    @DataProperty
+    def execute_time(self):
+        "执行时间"
+        return self._execute_time
+
+    @execute_time.setter
+    def execute_time(self, value: str | None):
+        self._execute_time = value
 
     def __repr__(self):
         return (
@@ -148,7 +166,7 @@ class ScoreModification(ClassDataType):
                     lowesttimekey = 0
                     # 重新计算最高分和最低分
                     for i in self.target.history:
-                        tmp: ScoreModification = self.target.history[i]
+                        tmp = self.target.history[i]
 
                         if tmp.execute_time_key != self.execute_time_key and tmp.executed:  # 排除自身
                             findscore += tmp.mod
@@ -171,7 +189,7 @@ class ScoreModification(ClassDataType):
                     highestscore = 0.0
                     highesttimekey = 0
                     for i in self.target.history:
-                        tmp: ScoreModification = self.target.history[i]
+                        tmp = self.target.history[i]
                         if tmp.execute_time_key != self.execute_time_key and tmp.executed:
                             findscore += tmp.mod
 

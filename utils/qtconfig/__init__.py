@@ -8,8 +8,8 @@ if qt_version == "PyQt5":
     from PyQt5.QtWidgets import *     # type: ignore
     from PyQt5.QtCore import *        # type: ignore
     from PyQt5.QtGui import *         # type: ignore
-    Signal = pyqtSignal
-    Property = pyqtProperty
+    Signal = pyqtSignal               # type: ignore
+    Property = pyqtProperty           # type: ignore
 
 elif qt_version == "PyQt6":
     from PyQt6.QtWidgets import *     # type: ignore

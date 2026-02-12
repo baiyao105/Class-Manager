@@ -10,9 +10,9 @@
 
 # 然后就给我报了一堆
 
-# 无法将“Student | None”类型的参数分配给函数“append”中类型为“Student”的参数“object”
-#   类型“Student | None”不可分配给类型“Student”
-#     “None”不可分配给“Student”
+# 无法将"Student | None"类型的参数分配给函数"append"中类型为"Student"的参数"object"
+#   类型"Student | None"不可分配给类型"Student"
+#     "None"不可分配给"Student"
 
 # 密码的我改了几个小时的注释啊
 # 另外, 因为看着太难受了我给空格缩进改成两格了
@@ -30,7 +30,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import Iterable
-from typing import Any, TypeVar, Union
+from typing import Any, TYPE_CHECKING, TypeVar, Union
 
 from ..algorithm import Mutex
 from ..basetypes import Base, Object
@@ -41,6 +41,9 @@ from ..functions.prompts import question_yes_no
 from .basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
 from .classdataobj import *
 from .classdataobj import ClassDataObj
+
+if TYPE_CHECKING:
+  from .classobj import ClassObj
 
 # 数据加载器
 
@@ -671,6 +674,8 @@ class Chunk:
           Base.log_exc(f"历史记录{history_uuid}加载失败，将跳过", "Chunk.load_data", "E", e)
       h2 = sorted(histories.items(), key=lambda i: i[0])
       histories = dict(h2)
+    
+    
     return UserDataBase(
       info["user"],
       info["save_time"],
@@ -685,6 +690,7 @@ class Chunk:
       current_record.weekdays,
       current_day_attendance,
     )
+
 
   @staticmethod
   def commit_changes(clear_dataobj_connections: bool = True) -> None:

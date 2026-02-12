@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 import base64
 import copy
 import enum
@@ -14,9 +15,12 @@ import traceback
 from abc import abstractmethod
 from collections.abc import Callable
 from types import TracebackType
-from typing import Literal
+from typing import Any, Literal, Optional, OrderedDict
+from typing_extensions import override
 
 import dill as pickle
+
+from utils.logger import Logger
 from ..algorithm import Mutex, OrderedKeyList
 from ..basetypes import Base
 from ..qtconfig import QColor, QMessageBox
@@ -34,7 +38,17 @@ from .observers.achievementstatobs import AchievementStatusObserver
 # 添加类型检查导入
 from .observers.classstatobs import ClassStatusObserver
 
+# 事件系统导入
+from ..events.broadcast import BroadcastDispatcher
+from ..events.buffer import TimedEventBuffer
+from ..events.event import Event
+from ..profiler import profile
 
+ACHIEVEMENT_UPDATE_DEBOUNCE = 0.5
+"成就侦测器更新防抖时间"
+
+ExcInfo = tuple[type[BaseException], BaseException, TracebackType]
+OptExcInfo = ExcInfo | tuple[None, None, None]
 
 class ClassObj(ClassDataObj, Base):
     "班级对象类"
@@ -45,6 +59,19 @@ class ClassObj(ClassDataObj, Base):
     _saving_task_mutex: Mutex = Mutex()
     "保存任务互斥锁"
 
+    _instance: Optional[ClassObj] = None
+    "当前的全局实例"
+
+    @staticmethod
+    def set_current_instance(value: ClassObj | None):
+        "设置当前正在操作的班级数据对象。"
+        ClassObj._instance = value
+
+    @staticmethod
+    def get_current_instance() -> ClassObj | None:
+        "获取当前正在操作的班级数据对象。"
+        return ClassObj._instance
+
     def __init__(self, user: str = default_user, save_path: str | None = None):
         """
         构造一个新的用户班级对象。
@@ -53,11 +80,11 @@ class ClassObj(ClassDataObj, Base):
         :param saving_path: 保存路径
         """
         super().__init__()
+        ClassObj.set_current_instance(self)
         self.current_user = user
         if save_path is None:
             save_path = os.path.join(os.getcwd(), "chunks", user)
 
-        self.config_data(save_path)
 
         self.target_class = None
         "目标班级"
@@ -75,18 +102,33 @@ class ClassObj(ClassDataObj, Base):
         "历史数据"
         self.save_path: str = save_path
         "保存路径"
-        self.modify_templates: dict[str, ScoreModificationTemplate]
+        self.modify_templates: OrderedDict[str, ScoreModificationTemplate] = OrderedDict()
         "分数修改模板"
-        self.achievement_templates: dict[str, AchievementTemplate]
+        self.achievement_templates: OrderedDict[str, AchievementTemplate] = OrderedDict()
         "成就模板"
         self.current_day_attendance: dict[str, AttendanceInfo]
         "当前日考勤信息"
-        self.classes: dict[str, Class]
+        self.classes: dict[str, Class] = {}
         "班级"
         self.weekday_record: dict[str, dict[float, DayRecord]]
         "每日记录"
         self.auto_saving: bool = False
         "是否正在进行自动保存"
+        
+        self._achievement_dispatcher = BroadcastDispatcher(name="ClassObjEventDispatcher")
+        self._event_buffer: Optional[TimedEventBuffer] = None
+        self._unstaged_changes: set[tuple[int, ClassDataTypeUUID]] = set()
+        self._setup_event_buffers()
+        self._event_submit_count: int = 0
+        "事件提交总次数"
+        self._event_submit_start_time: float = time.time()
+        "事件提交统计开始时间"
+        self._last_event_submit_display_time: float = time.time()
+        "上次显示事件提交速率的时间"
+        self._event_submit_display_interval: float = 60.0
+        "显示事件提交速率的时间间隔（秒）"
+        self.config_data(save_path)
+        
         Base.log(
             "W",
             "警告：当前仅加载完成数据，需具体设置详细用户/班级信息（self.init_class_data）",
@@ -95,9 +137,9 @@ class ClassObj(ClassDataObj, Base):
 
     def init_class_data(
         self,
-        current_user: str | None = None,
-        class_name: str | None = None,
-        class_id: str | None = None,
+        current_user: str,
+        class_name: str,
+        class_id: str,
         class_obs_tps: int = 10,
         achievement_obs_tps: int = 10,
     ):
@@ -110,12 +152,28 @@ class ClassObj(ClassDataObj, Base):
         :param class_obs_tps: 班级侦测器刻速率
         :param achievement_obs_tps: 成就侦测器刻速率
         """
+        Base.log("I", "开始初始化班级数据...", "ClassObj.init_class_data")
+        
         self.current_user = current_user
         self.target_class = self.classes[class_id]
+        Base.log("I", f"目标班级已设置: {self.target_class.name}", "ClassObj.init_class_data")
+        
         self.class_obs = ClassStatusObserver(self, class_id, class_obs_tps)
+        Base.log("I", "班级侦测器已创建", "ClassObj.init_class_data")
+        
         self.achievement_obs = AchievementStatusObserver(self, class_id, tps=achievement_obs_tps)
+        Base.log("I", "成就侦测器已创建", "ClassObj.init_class_data")
+        
         self.class_obs.start()
+        Base.log("I", "班级侦测器已启动", "ClassObj.init_class_data")
+        
         self.achievement_obs.start()
+        Base.log("I", "成就侦测器已启动", "ClassObj.init_class_data")
+        
+        if self._event_buffer is not None:
+            self._event_buffer.start_listening()
+        Base.log("I", "事件缓冲区已启动", "ClassObj.init_class_data")
+        
         if self.current_day_attendance is None:
             self.current_day_attendance = {}
         if self.target_class_id not in self.current_day_attendance:
@@ -130,21 +188,76 @@ class ClassObj(ClassDataObj, Base):
             "ClassObjects.init_class_data",
         )
 
+
+    @profile("ClassObj.broadcast_event")
+    def broadcast_data_changed(self, event_key: str):
+        """
+        广播事件，分发到缓冲区。
+        """
+        Logger.log("D", f"广播数据变更事件: {event_key}", "ClassObj.broadcast_data_changed")
+        self._event_submit_count += 1
+        if self._event_buffer is not None:
+            self._event_buffer.submit(Event(event_key))
+        if time.time() - self._last_event_submit_display_time >= self._event_submit_display_interval:
+            elapsed_time = time.time() - self._event_submit_start_time
+            rate = self._event_submit_count / elapsed_time if elapsed_time > 0 else 0
+            Base.log(
+                "I",
+                f"事件提交速率: {rate:.2f} 次/秒 (总计: {self._event_submit_count} 次, 运行时间: {elapsed_time:.1f}秒)",
+                "ClassObj.broadcast_event"
+            )
+            self._last_event_submit_display_time = time.time()
+
+    @profile("ClassObj._process_all_events")
+    def _process_data_events(self):
+        """处理所有事件"""
+        start_time = time.perf_counter()
+        if self._event_buffer is None:
+            return
+        events = self._event_buffer.get_buffer()    
+        event_count = len(events)
+        Logger.log("D", f"防抖结束/缓冲区溢出，已经缓存了{event_count}个数据变更事件，发送成就更新广播", "ClassObj._process_all_events")
+        self._event_buffer.clear_buffer()
+        self._achievement_dispatcher.broadcast("UPDATE_ACHIEVEMENT_DATA")
+        elapsed = time.perf_counter() - start_time
+        if elapsed > 0.01:  # 超过10ms就记录
+            Logger.log("D", f"_process_all_events花费了{elapsed*1000:.2f}ms")
+
+    def _setup_event_buffers(self):
+        """设置事件缓冲区"""
+        Base.log("I", "开始设置事件缓冲区...", "ClassObj._setup_event_buffers")
+        
+        class UpdateBuffer(TimedEventBuffer):
+            "用来更新成就检测器的事件缓冲区。"
+            def __init__(self, classobj: ClassObj):
+                super().__init__(callback=lambda: None, interval=ACHIEVEMENT_UPDATE_DEBOUNCE, name="DefaultEventBuffer")
+                self.classobj = classobj
+
+            @override
+            def process(self):
+                self.classobj._process_data_events()
+                self.clear_buffer()
+
+        self._event_buffer = UpdateBuffer(self)
+        Base.log("I", "事件缓冲区设置完成", "ClassObj._setup_event_buffers")
+
+    def get_achievement_event_dispatcher(self) -> BroadcastDispatcher:
+        """获取事件分发器"""
+        return self._achievement_dispatcher
+
     @property
     def target_class_id(self):
         "目标班级id"
-        try:
-            return self.target_class.key
-        except AttributeError as unused:
-            return None
+        if not self.target_class:
+            raise RuntimeError("还没有设置目标班级")
+        return self.target_class.key
 
     @property
     def target_class_name(self):
         "目标班级名称"
-        try:
-            return self.target_class.name
-        except AttributeError as unused:
-            return None
+        if not self.target_class:
+            raise RuntimeError("还没有设置目标班级")
+        return self.target_class.name
 
     @staticmethod
     def load_data(
@@ -391,6 +504,7 @@ class ClassObj(ClassDataObj, Base):
         :param reset_current: 加载数据时覆盖本周的数据
         """
         data = ClassObj.load_data(path, silent, strict, mode, load_full_histories)
+
         self.save_version = data.version
         self.save_version_code = data.version_code
         self.currrent_core_version = CORE_VERSION
@@ -411,19 +525,19 @@ class ClassObj(ClassDataObj, Base):
             )
 
         if reset_current:
-            self.classes: dict[str, Class] = data.classes
+            self.classes = data.classes
             if isinstance(self.classes, OrderedKeyList):
-                self.classes = self.classes.to_dict()  # 转换为字典解决类型问题
+                self.classes = self.classes.to_ordered_dict()  # 转换为字典解决类型问题
 
             if hasattr(self, "target_class") and self.target_class is not None:
                 self.target_class = self.classes[self.target_class.key]
             else:
                 self.target_class = None
 
-            self.achievement_templates: dict[str, AchievementTemplate] = OrderedKeyList(
+            self.achievement_templates = OrderedKeyList(
                 data.achievements
-            ).to_dict()  # 转换为字典
-            self.modify_templates = OrderedKeyList(data.templates).to_dict()
+            ).to_ordered_dict()  # 转换为字典
+            self.modify_templates = OrderedKeyList(data.templates).to_ordered_dict()
 
             achievements = copy.deepcopy(self.achievement_templates)
             for key, achievement in achievements.items():
@@ -571,7 +685,7 @@ class ClassObj(ClassDataObj, Base):
         templates: dict[str, ScoreModificationTemplate],
         achievements: dict[str, AchievementTemplate],
         last_start_time: float,
-        weekday_record: dict[str, list[DayRecord]],
+        weekday_record: dict[str, dict[float, DayRecord]],
         current_day_attendance: dict[str, AttendanceInfo],
         *,
         path: str = os.path.abspath(f"chunks/{default_user}/"),
@@ -590,7 +704,7 @@ class ClassObj(ClassDataObj, Base):
                     Base.log("I", "路径不存在，尝试创建...", "MainThread.save_data_strict")
                     p = os.path.dirname(path)
                     os.makedirs(p, exist_ok=True)
-                obj = {
+                obj: dict[str, Any] = {
                     "user": user,
                     "time": save_time,
                     "version": version,
@@ -737,8 +851,8 @@ class ClassObj(ClassDataObj, Base):
             CORE_VERSION_CODE,
             time.time(),
             {},
-            DEFAULT_CLASSES.copy(),
-            DEFAULT_SCORE_TEMPLATES.copy(),
+            DEFAULT_CLASSES.copy().to_ordered_dict(),
+            DEFAULT_SCORE_TEMPLATES.copy().to_ordered_dict(),
             DEFAULT_ACHIEVEMENTS.copy(),
             time.time(),
             {DEFAULT_CLASS_KEY: {}},
@@ -757,12 +871,6 @@ class ClassObj(ClassDataObj, Base):
 
     class ObserverError(RuntimeError):
         "侦测器出现错误"
-
-    achievement_obs: AchievementStatusObserver
-    "成就侦测器"
-
-    class_obs: ClassStatusObserver
-    "班级侦测器"
 
     class EditingError(Exception):
         "编辑列表出现错误"
@@ -1128,7 +1236,7 @@ class ClassObj(ClassDataObj, Base):
     def send_modify(
         self,
         key: str,
-        send_to: list[Student] | Student,
+        to: list[Student] | Student,
         extra_title: str | None = None,
         extra_desc: str | None = None,
         extra_mod: float | None = None,
@@ -1137,7 +1245,7 @@ class ClassObj(ClassDataObj, Base):
         """发送点评。
 
         :param key: 模板标识符
-        :param send_to: 发送至的学生
+        :param to: 发送至的学生
         :param extra_title: 额外标题
         :param extra_desc: 额外描述
         :param extra_mod: 额外分数
@@ -1146,8 +1254,10 @@ class ClassObj(ClassDataObj, Base):
         :raise SendModifyError: 发送点评出现错误
         """
 
-        if isinstance(send_to, Student):
-            send_to = [send_to]
+        if isinstance(to, Student):
+            send_to = [to]
+        else:
+            send_to = to
 
         if send_to is None:
             Base.log("W", "传参为None，疑似初始化，return", "MainThread.send_modify")
@@ -1172,7 +1282,7 @@ class ClassObj(ClassDataObj, Base):
             f"开始发送点评\n模板： {self.modify_templates[key].__repr__()}\n发送至：\n---------------------",
             "MainThread.send_modify",
         )
-        result = []
+        result: list[ScoreModification] = []
         succeed: list[ScoreModification] = []
 
         for stu in send_to:
@@ -1197,43 +1307,32 @@ class ClassObj(ClassDataObj, Base):
             "MainThread.send_modify",
         )
         self.class_obs.opreation_record.push(succeed)
-        info_list: list[tuple[str, Callable]] = []
+        info_list: list[tuple[str, Callable[[], None], tuple[QColor, QColor]]] = []
         index = 0
         for s in succeed:
-            info_list.append(
-                (
-                    f"{s.target.name} {s.temp.title} {s.execute_time.rsplit('.')[0]} {s.mod:+.1f}",
-                    lambda s=s, index=index: self.history_window(s, index, None, False, None, False),
-                    (
-                        (
-                            QColor(202, 255, 222)
-                            if s.mod > 0
+            desc = f"{s.target.name} {s.temp.title} " + \
+                    f"{s.execute_time.rsplit('.')[0] if s.execute_time is not None else '执行时间未知'} " + \
+                    f"{s.mod:+.1f}"
+            func = lambda s=s, index=index: self.history_window(s, index, None, False, None, False)
+            begin_color = QColor(202, 255, 222) \
+                            if s.mod > 0 \
                             else (QColor(255, 202, 202) if s.mod < 0 else QColor(201, 232, 255))
-                        ),
-                        (
-                            QColor(232, 255, 232)
-                            if s.mod > 0
+            end_color = QColor(232, 255, 232) \
+                            if s.mod > 0 \
                             else (QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255))
-                        ),
-                    ),
-                )
-            )
+            info_list.append((desc, func, (begin_color, end_color)))
             index += 1
-        self.insert_action_history_info(
-            "发送了点评"
-            + " "
-            + (
-                f"成功{len(succeed)}" + f" [{succeed[0].target.num}号{'等' if len(succeed) > 1 else ''}] "
+        action_desc = ("发送了点评  "
+            + (f"成功{len(succeed)}" + f" [{succeed[0].target.num}号{'等' if len(succeed) > 1 else ''}] "
                 if len(succeed) != 0
-                else ""
-            )
-            + (
-                f"失败{len(send_to) - len(succeed)}" + f" [{send_to[0].num}号{'等' if len(send_to) > 1 else ''}] "
+                else "")
+            + (f"失败{len(send_to) - len(succeed)}" + f" [{send_to[0].num}号{'等' if len(send_to) > 1 else ''}] "
                 if len(send_to) != len(succeed)
-                else ""
-            )
-            + f"<{a.title} {a.mod:.1f}分>"
-            + (" " + info if info is not None else ""),
+                else "")
+            + f"<{a.title} {a.mod:.1f}分>" + (" " + info if info is not None else "")
+        )
+        self.insert_action_history_info(
+            action_desc,
             lambda: self.list_view(info_list, "点评记录" + (" " + info if info is not None else "")),
             (127, 225, 195, 224, 255, 255),
         )
@@ -1289,12 +1388,12 @@ class ClassObj(ClassDataObj, Base):
             "MainThread.send_modify",
         )
         self.class_obs.opreation_record.push(succeed)
-        info_list: list[tuple[str, Callable]] = []
+        info_list: list[tuple[str, Callable[[], None], tuple[QColor, QColor]]] = []
         index = 0
         for s in succeed:
             info_list.append(
                 (
-                    f"{s.target.name} {s.temp.title} {s.execute_time.rsplit('.')[0]} {s.mod:+.1f}",
+                    f"{s.target.name} {s.temp.title} {s.execute_time.rsplit('.')[0] if s.execute_time is not None else '执行时间未知'} {s.mod:+.1f}",
                     lambda s=s, index=index: self.history_window(s, index, None, False, None, False),
                     (
                         (
@@ -1306,8 +1405,8 @@ class ClassObj(ClassDataObj, Base):
                             QColor(232, 255, 232)
                             if s.mod > 0
                             else (QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255))
-                        ),
-                    ),
+                        )
+                    )
                 )
             )
             index += 1
@@ -1458,7 +1557,7 @@ class ClassObj(ClassDataObj, Base):
             Base.log("W", "没有可撤回的点评", "MainThread.retract_last")
             return True, "没有需要的点评"
 
-        lastest = self.class_obs.opreation_record.pop()
+        lastest: list[ScoreModification] = list(self.class_obs.opreation_record.pop())
 
         Base.log(
             "I",
@@ -1474,6 +1573,7 @@ class ClassObj(ClassDataObj, Base):
 
     def reset_scores(self) -> dict[str, Class]:
         "结算所有数据"
+        assert self.target_class is not None, "尝试结算所有数据时目标班级为空"
         history = History(copy.deepcopy(self.classes), self.weekday_record, time.time())
         Base.log("W", "正在重置所有班级...", "ClassObjects.reset")
 
@@ -1506,6 +1606,7 @@ class ClassObj(ClassDataObj, Base):
         :return: 学生列表
         :raises ValueError: 要选择的数量小于1/必选项的长度大于了要选择的数量
         """
+        assert self.target_class is not None, "尝试随机选择学生时目标班级为空"
         stus = list(from_students) if from_students else list(self.classes[self.target_class.key].students.values())
         if count < 1:
             raise ValueError(f"要选择的数量 ({count}) 不能小于1")
@@ -1526,7 +1627,7 @@ class ClassObj(ClassDataObj, Base):
         return result if len(result) > 1 else result[0]
 
     @abstractmethod
-    def show_all_history(self, history: History = None):
+    def show_all_history(self, history: Optional[History] = None):
         "展示所有历史记录（接口，没实现）"
 
     @abstractmethod
@@ -1534,7 +1635,7 @@ class ClassObj(ClassDataObj, Base):
         self,
         text: str,
         func: Callable,
-        color: tuple[int, int, int, int],
+        color: tuple[int, int, int, int, int, int],
         stepcount: int = 0,
     ):
         """
@@ -1542,8 +1643,8 @@ class ClassObj(ClassDataObj, Base):
 
         :param name: 文本
         :param func: 指令
-        :param color: 颜色
-        :param stepcount: 步数
+        :param color: 颜色，格式为(rbegin, gbegin, bbegin, rend, gend, bend)
+        :param stepcount: 步数，渐变的帧数，帧率不知道
         """
 
     @abstractmethod
@@ -1570,7 +1671,7 @@ class ClassObj(ClassDataObj, Base):
     @abstractmethod
     def list_view(
         self,
-        data: list[tuple[str, Callable]],
+        data: list[tuple[str, Callable]] | list[tuple[str, Callable, tuple]],
         title: str,
         master=None,
         commands: list[tuple[str, Callable]] | None = None,
@@ -1584,7 +1685,7 @@ class ClassObj(ClassDataObj, Base):
         :param commands: 在列表视图右侧的命令列表，格式为[显示信息，回调函数]
         """
 
-    def on_auto_save_failure(self, exc_info: tuple[type[BaseException], BaseException, TracebackType]):
+    def on_auto_save_failure(self, exc_info: OptExcInfo):
         """
         当自动保存失败时执行的操作。
 
@@ -1633,7 +1734,7 @@ class ClassObj(ClassDataObj, Base):
             "group",
             "any",
         ],
-    ) -> ScoreModification | ScoreModificationTemplate | Student | Group | Achievement | AchievementTemplate:
+    ) -> ClassDataType:
         def find_in_modify(uuid: str):
             for _class in self.classes.values():
                 for student in _class.students.values():
@@ -1643,7 +1744,7 @@ class ClassObj(ClassDataObj, Base):
             raise ValueError(f"找不到对应的分数记录，uuid: {uuid}")
 
         def find_in_modify_template(uuid: str):
-            for template in self.modify_templates:
+            for template in self.modify_templates.values():
                 if template.uuid == uuid:
                     return template
             raise ValueError(f"找不到对应的分数模板，uuid: {uuid}")

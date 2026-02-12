@@ -1,7 +1,7 @@
 """
 数据类型
 """
-
+from __future__ import annotations
 import ctypes
 import time
 from collections.abc import Callable, Iterable, Mapping

@@ -1,13 +1,13 @@
 """
 键值排序类所在文件
 """
-
+from __future__ import annotations
 import copy
 import sys
 from abc import ABC
 from collections import OrderedDict
 from collections.abc import Iterable, Iterator
-from typing import TypeVar, Union
+from typing import TypeVar, Union, List
 
 __all__ = ["OrderedKeyList", "SupportsKeyOrdering"]
 
@@ -84,8 +84,12 @@ _Template = TypeVar("_Template", bound=SupportsKeyOrdering)
 （但是对于写类型注释的人并不方便）
 """
 
+if sys.version_info >= (3, 10):
+    IterableType = Iterable[_Template]
+else:
+    IterableType = Iterable
 
-class OrderedKeyList(list, Iterable[_Template]):
+class OrderedKeyList(List[_Template], IterableType):
     """有序的key列表，可以用方括号来根据SupportsKeyOrdering对象的key，索引值或者对象本身来获取对象
 
     举个例子
@@ -245,7 +249,7 @@ class OrderedKeyList(list, Iterable[_Template]):
         "返回列表的迭代器"
         return super().__iter__()
 
-    def __contains__(self, item: _Template) -> bool:
+    def __contains__(self, item: _Template | str) -> bool:
         "判断列表中是否包含指定模板"
         return super().__contains__(item) or [getattr(obj, self.keyattr) for obj in self].count(item) > 0
 
@@ -316,6 +320,13 @@ class OrderedKeyList(list, Iterable[_Template]):
     def to_dict(self) -> dict[str, _Template]:
         "返回列表的字典表示"
         return dict(self.items())
+
+    def to_ordered_dict(self) -> OrderedDict[str, _Template]:
+        "返回列表的有序字典表示"
+        ord_dict: OrderedDict[str, _Template] = OrderedDict()
+        for item in self:
+            ord_dict[getattr(item, self.keyattr)] = item
+        return ord_dict
 
     def __repr__(self) -> str:
         "返回列表的表达式"

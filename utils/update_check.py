@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import enum
 from typing import Literal, Dict, Any
@@ -9,7 +11,6 @@ import signal
 import zipfile
 from typing import Literal
 
-import requests
 
 from .basetypes import Base
 
@@ -346,10 +347,6 @@ bug修复：
 # 获取本地版本信息
 try:
     VERSION_INFO = json.loads(open("version", encoding="utf-8").read())
-    CORE_VERSION = VERSION_INFO["core_version"]
-    CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
-    CLIENT_VERSION = VERSION_INFO["client_version"]
-    CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
 except Exception:
     Base.log("W", "警告：获取本地版本信息失败", "update_check")
     VERSION_INFO: Dict[str, Any] = {
@@ -357,11 +354,12 @@ except Exception:
         "core_version_code": 0,
         "client_version": "unknown",
         "client_version_code": 0,
-    }
-    CORE_VERSION = VERSION_INFO["core_version"]
-    CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
-    CLIENT_VERSION = VERSION_INFO["client_version"]
-    CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
+    } 
+
+CORE_VERSION = VERSION_INFO["core_version"]
+CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
+CLIENT_VERSION = VERSION_INFO["client_version"]
+CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
 
 
 url = f"https://gitee.com/{AUTHOR}/{REPO_NAME}/raw/{MASTER}/version"
@@ -374,7 +372,7 @@ class UpdateInfo(enum.IntEnum):
     ERROR = 3
 
 
-def update_check(current_core_version: int, current_gui_version: int) -> tuple[int, str | BaseException | dict]:
+def update_check(current_core_version: int, current_gui_version: int) -> tuple[int, str | BaseException]:
     """获取更新信息。
 
     Args:
@@ -401,7 +399,7 @@ def update_check(current_core_version: int, current_gui_version: int) -> tuple[i
         return UpdateInfo.ERROR, e
 
 
-def get_update_zip(path: str = "update.zip") -> Literal[True] | Exception | dict:
+def get_update_zip(path: str = "update.zip") -> Literal[True] | Exception:
     """下载更新包"""
     try:
         response = requests.get(DOWNLOAD_URL)
@@ -430,7 +428,7 @@ def update(dir: str = "update"):
     try:
         shutil.copytree(os.path.join(dir, f"{REPO_NAME}-{MASTER}"), os.getcwd(), dirs_exist_ok=True)
 
-    except Exception as e:
+    except Exception:
         Base.log_exc("更新失败，请手动更新", "update_check.update")
         raise
     finally:
@@ -438,7 +436,7 @@ def update(dir: str = "update"):
             os.remove("update.zip")
             Base.log("I", "更新包删除成功", "update_check.update")
             shutil.rmtree(dir)
-        except Exception as e:
+        except Exception:
             Base.log_exc("更新包删除失败", "update_check.update", "W")
             
     Base.log("I", "更新成功，趋势", "update_check.update")

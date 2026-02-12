@@ -8,7 +8,7 @@ from ...algorithm import OrderedKeyList, SupportsKeyOrdering
 from ...basetypes import Base
 from ...consts import inf
 
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, DataProperty
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -51,14 +51,41 @@ class Class(ClassDataType, SupportsKeyOrdering):
         :param cleaning_mapping: 打扫卫生人员的映射
         :param homework_rules: 作业规则
         """
-        self.name = name
-        self.owner = owner
+        self._name = name
+        self._owner = owner
         self.groups = groups if isinstance(groups, dict) else groups.to_dict()
         self.students = students if isinstance(students, dict) else students.to_dict()
-        self.key = key
+        self._key = key
         self.cleaning_mapping = cleaning_mapping or {}
         self.homework_rules = OrderedKeyList(homework_rules or [])
         self.archive_uuid = ClassDataObj.get_archive_uuid()
+
+    @DataProperty
+    def name(self):
+        "班级名称"
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @DataProperty
+    def owner(self):
+        "班主任"
+        return self._owner
+
+    @owner.setter
+    def owner(self, value: str):
+        self._owner = value
+
+    @DataProperty
+    def key(self):
+        "在self.classes中对应的key"
+        return self._key
+
+    @key.setter
+    def key(self, value: str):
+        self._key = value
 
     def __repr__(self):
         return (

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal
 
 from ...algorithm import SupportsKeyOrdering
 
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, DataProperty
 from ..classdataobj import ClassDataObj
 from .datatag import DataTag, TagSigned
 
@@ -50,14 +50,10 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         :param further_desc: 详细描述
         """
 
-        self.key = key
-        "在dict中对应的key"
-        self.name = name
-        "名称"
-        self.leader = leader
-        "组长"
-        self.members = members
-        "所有成员（包括组长）"
+        self._key = key
+        self._name = name
+        self._leader = leader
+        self._members = members
         self.further_desc = further_desc
         "详细描述"
         self.belongs_to = belongs_to
@@ -65,6 +61,42 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         self.archive_uuid = ClassDataObj.get_archive_uuid()
         "归档uuid"
         self.tags = tags or []
+
+    @DataProperty
+    def key(self):
+        "在dict中对应的key"
+        return self._key
+
+    @key.setter
+    def key(self, value: str):
+        self._key = value
+
+    @DataProperty
+    def name(self):
+        "名称"
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @DataProperty
+    def leader(self):
+        "组长"
+        return self._leader
+
+    @leader.setter
+    def leader(self, value: Student):
+        self._leader = value
+
+    @DataProperty
+    def members(self):
+        "所有成员（包括组长）"
+        return self._members
+
+    @members.setter
+    def members(self, value: list[Student]):
+        self._members = value
 
     @property
     def total_score(self):
