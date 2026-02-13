@@ -28,7 +28,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        master: Optional[WidgetType] = None,
+        master: Optional[QWidget] = None,
         main_window: Optional[ClassObj] = None,
         target_class: Class = None,
         target_students: Dict[int, Student] = None,
@@ -258,9 +258,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             self.anims[num].start()
 
         if mode == "sub":
-            self.list_view = ListView(
-                self.main_window, self, "已发送的作业等第点评", None
-            )
+            self.list_view = ListView(self, "已发送的作业等第点评", None)
 
             self.list_view.setData(
                 [
@@ -303,9 +301,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             self.list_view.show()
 
         if mode == "info":
-            self.list_view = ListView(
-                self.main_window, self, "已发送的作业等第点评", None
-            )
+            self.list_view = ListView(self, "已发送的作业等第点评", None)
             self.list_view.setData(
                 [
                     (text, func, args)

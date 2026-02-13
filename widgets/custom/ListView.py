@@ -51,8 +51,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
 
     def __init__(
         self,
-        main_window: ClassWindow = None,
-        master_widget: Optional[WidgetType] = None,
+        master: Optional[QWidget] = None,
         title: str = "列表",
         data: List[
             Union[
@@ -81,7 +80,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             data = [("空", lambda: None)]
         if commands is None:
             commands = []
-        super().__init__(master=main_window)
+        super().__init__(master=master)
         self.setupui(self)
         self.orig_height = self.height()
         self.data = data
@@ -90,8 +89,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.commands = commands
         self.allow_pre_action = allow_pre_action
         self.setWindowTitle(title)
-        self.main_window = main_window
-        self.master_widget = master_widget
+        self.master_widget = master
         self.listWidget.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )  # 双击编辑有点逆天（这里禁了）
@@ -175,10 +173,10 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             (
                 self.master.geometry().topLeft()
                 + QPoint(
-                    self.master.geometry().width() / 2,
-                    self.master.geometry().height() / 2,
+                    self.master.geometry().width() // 2,
+                    self.master.geometry().height() // 2,
                 )
-                - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
                 + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
             )
         )

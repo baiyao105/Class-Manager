@@ -22,7 +22,7 @@ class GroupWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         main_window: Optional[ClassObj]= None,
-        master_widget: Optional[WidgetType] = None,
+        master_widget: Optional[QWidget] = None,
         group: Group = None,
         readonly: bool = False,
     ):

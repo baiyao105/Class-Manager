@@ -12,7 +12,6 @@ from utils.update_check import (
     CORE_VERSION, 
     CORE_VERSION_CODE
 )
-from widgets.custom.ListView import ListView
 from widgets.basic import *
 from widgets.ui.pyside6.About import Ui_Form
 
@@ -25,11 +24,11 @@ class AboutWidget(Ui_Form, MyWidget):
     """
 
     def __init__(
-        self, master: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
+        self, master: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
     ):
 
         super().__init__(master)
-        self.setupUi(self)
+        self.setupUi(self) # type: ignore
         self.main_window = main_window
         self.master = master
         self.versioninfo.setText(

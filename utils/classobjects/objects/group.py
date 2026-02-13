@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Self
 
-from ...algorithm import SupportsKeyOrdering
+from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
-from ..basetype import ClassDataType, DataProperty
+from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 from .datatag import DataTag, TagSigned
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
     "一个小组"
 
-    chunk_type_name: Literal["Group"] = "Group"
+    chunk_type_name: str = "Group"
     "类型名"
 
     is_unrelated_data_type = False
@@ -129,9 +129,9 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         "查看一个学生是否在这个小组。"
         return any([s.num == student.num for s in self.members])
 
-    def to_string(self):
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将小组对象转化为字符串。"
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "key": self.key,
@@ -144,7 +144,7 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
     def from_string(string: str):
@@ -171,7 +171,7 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
     def inst_from_string(self, string: str):
         "将字符串转化为小组对象。"
         obj = Group.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self
 
     def __repr__(self):

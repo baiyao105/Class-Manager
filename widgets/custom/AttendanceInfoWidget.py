@@ -20,7 +20,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        master: Optional[WidgetType] = None,
+        master: Optional[QWidget] = None,
         main_window: ClassObj = None,
         attendanceinfo: AttendanceInfo = None,
     ):
@@ -124,7 +124,6 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
             QMessageBox.information(self, "提示", f"当前班级（{self.target_class.name}）没有考勤记录")
             return
         self.listview = ListView(
-            self.main_window,
             self,
             "考勤记录",
             [

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Self
 
-from ..basetype import ClassDataType
+from ...algorithm.types import update_object_mapping
+
+from ..basetype import ClassDataType, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -14,7 +16,7 @@ if TYPE_CHECKING:
 class AttendanceInfo(ClassDataType):
     "考勤信息"
 
-    chunk_type_name: Literal["AttendanceInfo"] = "AttendanceInfo"
+    chunk_type_name: str = "AttendanceInfo"
     "类型名"
 
     is_unrelated_data_type = False
@@ -83,9 +85,9 @@ class AttendanceInfo(ClassDataType):
         self.archive_uuid = ClassDataObj.get_archive_uuid()
         "存档UUID"
 
-    def to_string(self) -> str:
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将考勤记录对象转为字符串。"
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "target_class": self.target_class,
@@ -99,7 +101,7 @@ class AttendanceInfo(ClassDataType):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
     def from_string(string: str) -> AttendanceInfo:
@@ -139,5 +141,5 @@ class AttendanceInfo(ClassDataType):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self

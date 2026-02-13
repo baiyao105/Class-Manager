@@ -6,6 +6,7 @@ from typing import Union
 
 from .basic.MyMainWindow import MyMainWindow
 from .basic.MyWidget import MyWidget
+from .basic.widgets import ObjectButton, ProgressAnimatedListWidgetItem, SideNotice
 from .custom.AboutWidget import AboutWidget
 from .custom.AchievementWidget import AchievementWidget
 from .custom.AttendanceInfoViewWidget import AttendanceInfoViewWidget
@@ -32,6 +33,13 @@ from .custom.ExceptionHandler import ExceptionHandler
 
 from .basic import *
 
-WidgetType = Union[
-    QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
+__all__ = [
+    "MyMainWindow", "MyWidget", "AboutWidget", "AchievementWidget",
+    "AttendanceInfoViewWidget", "AttendanceInfoWidget", "CleaningScoreSumUpWidget",
+    "DebugWidget", "EditTemplateWidget",  "GroupWidget", "HistoryWidget",
+    "HomeworkScoreSumUpWidget", "ListView", "NewTemplateWidget",
+    "NoiseDetectorWidget", "RandomSelectWidget", "SelectTemplateWidget",
+    "SettingWidget", "StudentSelectorWidget", "StudentWidget", "WTFWidget",
+    "LoadingScreenWidget", "ExceptionHandler",
+    "ObjectButton", "ProgressAnimatedListWidgetItem", "SideNotice"
 ]

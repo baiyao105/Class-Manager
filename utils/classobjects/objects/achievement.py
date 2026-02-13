@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Self
+
+from ...algorithm.types import update_object_mapping
 
 from ...basetypes import Base
 
-from ..basetype import ClassDataType, DataProperty
+from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
 class Achievement(ClassDataType):
     "一个真实被达成的成就"
 
-    chunk_type_name: Literal["Achievement"] = "Achievement"
+    chunk_type_name: str = "Achievement"
     "类型名"
 
     is_unrelated_data_type = False
@@ -94,9 +96,9 @@ class Achievement(ClassDataType):
         )
         del self
 
-    def to_string(self):
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将成就对象转换为字符串。"
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "time": self.time,
@@ -107,7 +109,7 @@ class Achievement(ClassDataType):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
     def from_string(string: str):
@@ -132,5 +134,5 @@ class Achievement(ClassDataType):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self

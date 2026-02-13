@@ -12,7 +12,7 @@ class NewTemplateWidget(Ui_Form, MyWidget):
     """创建新模板的窗口"""
 
     def __init__(
-        self, main_window: ClassWindow = None, master_widget: Optional[WidgetType] = None
+        self, main_window: ClassWindow = None, master_widget: Optional[QWidget] = None
     ):
         """
         初始化

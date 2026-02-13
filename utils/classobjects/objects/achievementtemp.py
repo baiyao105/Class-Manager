@@ -4,15 +4,15 @@ import base64
 import json
 import pickle
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 
-import dill as pickle
+import dill as pickle # type: ignore
 
-from ...algorithm import SupportsKeyOrdering
+from ...algorithm import SupportsKeyOrdering, update_object_mapping
 from ...basetypes import Base
 from ...consts import inf, runtime_flags
 
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 from .classdata import ClassData
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
     "成就模板"
 
-    chunk_type_name: Literal["AchievementTemplate"] = "AchievementTemplate"
+    chunk_type_name: str = "AchievementTemplate"
     "类型名"
 
     is_unrelated_data_type = True
@@ -243,9 +243,13 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         :param student: 学生
         :param class_obs: 班级状态侦测器
         :raise ObserverError: lambda或者function爆炸了
-        :return: 是否达成"""
+        :return: 是否达成
+        """
 
         # 反人类写法又出现了
+
+        assert class_obs is not None, "没有传入班级侦测器/班级侦测器还没有初始化完成"
+        assert class_obs.base.achievement_obs is not None, "班级侦测器的成就侦测器还没有初始化完成"
 
         if not self.active:
             return False
@@ -284,12 +288,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                 )
                 if not (l <= next(i[0] for i in class_obs.rank_dumplicate if i[1].num == student.num) <= r):
                     return False
-        except (
-            KeyError,
-            IndexError,
-            TypeError,
-            AttributeError,
-        ) as unused:  # pylint: disable=unused-variable
+        except (KeyError, IndexError, TypeError, AttributeError):
             return False
 
         if hasattr(self, "highest_score_down_limit") and (
@@ -331,12 +330,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                 ]
             ):
                 return False
-        except (
-            KeyError,
-            IndexError,
-            TypeError,
-            AttributeError,
-        ) as unused:  # pylint: disable=unused-variable
+        except (KeyError, IndexError, TypeError, AttributeError):
             return False
 
         if hasattr(self, "other"):
@@ -378,12 +372,12 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     "AchievementTemplate.achieved",
                 )
                 if self.key in class_obs.base.default_achievements:
-                    if isinstance(self.other, list):
-                        if not isinstance(self.other[0], Callable):
+                    if isinstance(self.other, list): # type: ignore
+                        if not isinstance(self.other[0], Callable): # type: ignore
                             # 还没加载，先跳过
                             return False
                         # 还没加载，先跳过
-                    elif isinstance(self.other, str):
+                    elif isinstance(self.other, str): # type: ignore
                         return False
                     self.other = class_obs.base.default_achievements[self.key].other
                     Base.log("I", "已经重置为默认值", "AchievementTemplate.achieved")
@@ -510,15 +504,17 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         return_str += "\n" * 2 + self.condition_info
         return return_str
 
-    def to_string(self):
+    def to_string(self) -> StringObjectDataKind[Self]:
         "从字符串加载成就模板对象。"
         obj = {"type": self.chunk_type_name}
         obj.update(self.kwargs)
         if "others" in obj:
-            obj["others"] = base64.b64encode(pickle.dumps(obj["others"], protocol=pickle.HIGHEST_PROTOCOL)).decode()
+            obj["others"] = base64.b64encode(
+                pickle.dumps(obj["others"], protocol=pickle.HIGHEST_PROTOCOL)  # pyright: ignore[reportUnknownMemberType]
+            ).decode()
         obj["uuid"] = str(self.uuid)
         obj["archive_uuid"] = str(self.archive_uuid)
-        return json.dumps(obj)
+        return StringObjectDataKind(json.dumps(obj))
 
     @staticmethod
     def from_string(string: str):
@@ -528,7 +524,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             raise ValueError(f"类型不匹配：{d['type']} != {AchievementTemplate.chunk_type_name}")
         try:
             if "others" in d:
-                d["others"] = pickle.loads(base64.b64decode(d["others"]))
+                d["others"] = pickle.loads(base64.b64decode(d["others"]))  # pyright: ignore[reportUnknownMemberType]
         except SystemError as e:
             if e.args[0] == "unknown opcode":
                 Base.log(
@@ -551,5 +547,5 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self

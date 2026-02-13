@@ -2,7 +2,9 @@
 创建模板窗口
 """
 
-from widgets.basic import *
+from typing import Optional
+from widgets.basic import MyWidget
+from utils.qtconfig import QWidget, QMessageBox
 from widgets.ui.pyside6.WTF import Ui_Form
 
 __all__ = ["WTFWidget"]
@@ -11,7 +13,7 @@ __all__ = ["WTFWidget"]
 class WTFWidget(Ui_Form, MyWidget):
     "我愿称之为世界上最抽象的UI"
 
-    def __init__(self, master_widget: WidgetType = None):
+    def __init__(self, master_widget: Optional[QWidget] = None):
         """
         初始化
 
@@ -19,7 +21,7 @@ class WTFWidget(Ui_Form, MyWidget):
         :param master_widget: 这个窗口的父窗口
         """
         super().__init__(master=master_widget)
-        self.setupUi(self)
+        self.setupUi(self)   # type: ignore
         self.pushButton_18.clicked.connect(
             lambda: QMessageBox.information(self, "6", "恭喜你发现了一个没什么用的彩蛋")
         )

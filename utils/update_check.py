@@ -349,7 +349,7 @@ try:
     VERSION_INFO = json.loads(open("version", encoding="utf-8").read())
 except Exception:
     Base.log("W", "警告：获取本地版本信息失败", "update_check")
-    VERSION_INFO: Dict[str, Any] = {
+    VERSION_INFO: Dict[str, Any] = {    # type: ignore
         "core_version": "unknown",
         "core_version_code": 0,
         "client_version": "unknown",

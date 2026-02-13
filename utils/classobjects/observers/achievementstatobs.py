@@ -11,7 +11,7 @@ from utils.logger import Logger
 from ...algorithm import Thread
 from ...basetypes import Base
 
-from ...events.broadcast import BroadcastDispatcher, BroadcastReceiver
+from ...events.broadcast import BroadcastReceiver
 from ..objects.achievement import Achievement
 
 if TYPE_CHECKING:
@@ -101,12 +101,13 @@ class AchievementStatusObserver:
         :param recheck_interval: 重新检查成就的间隔
         :param handle_overloading: 是否需要处理过载
         """
-        self._should_check_achievements = False
+        assert self.class_obs is not None, "班级侦测器未初始化"
         self.total_frame_count += 1
         last_opreate_time = time.time()
         if not self._should_check_achievements and not self._is_first_frame:
             time.sleep(1 / self.limited_tps)
         else:
+            self._should_check_achievements = False
             Logger.log("I", "检查成就是否需要更新", "AchievementStatusObserver.next_frame")
             self._is_first_frame = False
             if time.time() - self.last_update > 1:
@@ -115,7 +116,6 @@ class AchievementStatusObserver:
                 time.sleep(max((1 / self.limited_tps) - (time.time() - self.last_frame_time), 0))
             self.last_frame_time = time.time()
             opreated = False
-            # 性能优化点：O(n²)复杂度(?)
             for s in list(self.classes[self.class_id].students.values()):
                 for a in list(self.achievement_templates.keys()):
                     if self.achievement_templates[a].achieved_by(s, self.class_obs) and (
@@ -173,7 +173,8 @@ class AchievementStatusObserver:
 
     def _on_update_achievement_data(self):
         """收到更新成就数据的信号"""
-        Base.log("D", "收到UPDATE_ACHIEVEMENT_DATA信号，准备检查成就更新", "AchievementStatusObserver._on_update_achievement_data")
+        Base.log("D", "收到UPDATE_ACHIEVEMENT_DATA信号，准备检查成就更新", 
+                    "AcievementObs._on_update_..._data")
         self._should_check_achievements = True
 
     def run(self):

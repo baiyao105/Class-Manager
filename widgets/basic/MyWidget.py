@@ -1,18 +1,17 @@
 """
 我的主窗口
 """
-
-import time
+from __future__ import annotations
 import platform
 import warnings
-from typing import Union, Any
+from typing import Optional, Union, Any
 
 from utils.settings import SettingsInfo
 from utils.basetypes import Base
 
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
+from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import Qt, QGuiApplication, QCloseEvent
+from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QPoint, QEventLoop, QByteArray
 from widgets.basic.MyMainWindow import MyMainWindow
 
 
@@ -21,7 +20,7 @@ __all__ = ["MyWidget"]
 class MyWidget(QWidget):
     "自定义子窗口基类，包含动画效果"
 
-    def __init__(self, master: Union["MyMainWindow", "MyWidget"] = None):
+    def __init__(self, master: Optional[QWidget] = None):
         """
         初始化
 
@@ -45,9 +44,9 @@ class MyWidget(QWidget):
             )
         )
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
-        self.startanimation: QPropertyAnimation = None
-        self.closeanimation_1: QPropertyAnimation = None
-        self.closeanimation_2: QPropertyAnimation = None
+        self.startanimation: Optional[QPropertyAnimation] = None
+        self.closeanimation_1: Optional[QPropertyAnimation] = None
+        self.closeanimation_2: Optional[QPropertyAnimation] = None
 
 
 
@@ -60,7 +59,7 @@ class MyWidget(QWidget):
 
     def create_animation(
         self,
-        property_name: Union[QByteArray, bytes, bytearray, "memoryview[int]"],
+        property_name: Union[QByteArray, bytes, bytearray, memoryview[int]],
         duration: int,
         start_value: Any,
         end_value: Any,
@@ -84,9 +83,9 @@ class MyWidget(QWidget):
         animation = QPropertyAnimation(self, property_name)
         animation.setEasingCurve(easing_curve)
         animation.setDuration(
-            duration / SettingsInfo.current.animation_speed
+            int(duration / SettingsInfo.current.animation_speed
             if SettingsInfo.current.animation_speed > 0
-            else duration
+            else duration)
         )
         animation.setStartValue(start_value)
         animation.setEndValue(end_value)
@@ -101,10 +100,10 @@ class MyWidget(QWidget):
                 endpoint = (
                     self.master.geometry().topLeft()
                     + QPoint(
-                        self.master.geometry().width() / 2,
-                        self.master.geometry().height() / 2,
+                        self.master.geometry().width() // 2,
+                        self.master.geometry().height() // 2,
                     )
-                    - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                    - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
                     + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
                 )
 
@@ -119,10 +118,10 @@ class MyWidget(QWidget):
                 # 如果没有父窗口就默认以屏幕中心为最终位置
                 endpoint = (
                     QPoint(
-                        QGuiApplication.primaryScreen().availableGeometry().width() / 2,
-                        QGuiApplication.primaryScreen().availableGeometry().height() / 2,
+                        QGuiApplication.primaryScreen().availableGeometry().width() // 2,
+                        QGuiApplication.primaryScreen().availableGeometry().height() // 2,
                     )
-                    - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                    - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
                     + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
                     )
                 
@@ -204,19 +203,19 @@ class MyWidget(QWidget):
             pos = (
                 self.master.geometry().topLeft()
                 + QPoint(
-                    self.master.geometry().width() / 2,
-                    self.master.geometry().height() / 2,
+                    self.master.geometry().width() // 2,
+                    self.master.geometry().height() // 2,
                 )
-                - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
                 + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
             )
 
         else:
             pos = (QPoint(
-                QGuiApplication.primaryScreen().availableGeometry().width() / 2,
-                QGuiApplication.primaryScreen().availableGeometry().height() / 2,
+                QGuiApplication.primaryScreen().availableGeometry().width() // 2,
+                QGuiApplication.primaryScreen().availableGeometry().height() // 2,
             )
-                - QPoint(self.geometry().width() / 2, self.geometry().height() / 2)
+                - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
                 + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
             )
         
@@ -245,7 +244,7 @@ class MyWidget(QWidget):
         screen = QGuiApplication.primaryScreen().availableGeometry()
         size = self.geometry()
         self.move(
-            (screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2
+            (screen.width() - size.width()) // 2, (screen.height() - size.height()) // 2
         )
 
     def setTopmost(self, topmost: bool = True):

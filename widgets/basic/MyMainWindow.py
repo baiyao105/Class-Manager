@@ -1,11 +1,12 @@
 """
 我的主窗口
 """
+from __future__ import annotations
 from typing import Optional
 from utils.logger import Logger
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
+from PySide6.QtWidgets import QMainWindow
+from PySide6.QtGui import Qt, QCloseEvent
+from PySide6.QtCore import QTimer, Slot
 from utils.functions.prompts import question_yes_no
 
 __all__ = ["MyMainWindow"]
@@ -13,7 +14,7 @@ __all__ = ["MyMainWindow"]
 class MyMainWindow(QMainWindow):
     """主应用程序窗口类"""
 
-    main_instance: Optional["MyMainWindow"] = None
+    main_instance: Optional[MyMainWindow] = None
     "主实例"
 
 
@@ -63,7 +64,7 @@ class MyMainWindow(QMainWindow):
                     "提示",
                     "确定退出？" if self.close_count <= 5 else "确认退出程序？",
                 )
-                # 判断返回结果处理相应事项w
+                # 判断返回结果处理相应事项
                 if reply:
                     Logger.log("I", "确认退出", "MyMainWindow")
                     event.accept()

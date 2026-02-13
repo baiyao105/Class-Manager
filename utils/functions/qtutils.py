@@ -58,5 +58,5 @@ def wait_until(
     loop.exec()
     timer.stop()
     if timeout_handling == "raise" and not result:
-        raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} /{timeout} ms)")
+        raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} / {timeout} ms)")
     return result

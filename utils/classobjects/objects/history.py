@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING, Literal, Self
+from typing import TYPE_CHECKING, Self
 from uuid import UUID
 
-from ..basetype import ClassDataType, ClassDataTypeUUID
+from ...algorithm.types import update_object_mapping
+
+from ..basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
 class History(ClassDataType):
     "每次重置保留的历史记录"
 
-    chunk_type_name: Literal["History"] = "History"
+    chunk_type_name: str = "History"
     "类型名"
 
     is_unrelated_data_type = False
@@ -29,7 +31,7 @@ class History(ClassDataType):
         save_time: float | None = None,
     ):
         super().__init__()
-        self._uuid: ClassDataTypeUUID[Self] | None = None
+        self._uuid_priv: ClassDataTypeUUID[Self] | None = None
         self.classes = dict(classes)
         self.time = save_time or time.time()
         weekdays = weekdays.copy()
@@ -49,31 +51,30 @@ class History(ClassDataType):
 
         特别的是，History类型的uuid可以为None。
         """
-        if not hasattr(self, "_uuid"):
-            self._uuid = ClassDataTypeUUID(self.__class__)
-        return self._uuid
+        if not hasattr(self, "_uuid_priv"):
+            self._uuid_priv = ClassDataTypeUUID(self.__class__)
+        return self._uuid_priv
 
     @uuid.setter
     def uuid(self, value: UUID | ClassDataTypeUUID[Self] | str | None):
         if isinstance(value, ClassDataTypeUUID):
-            self._uuid = value
+            self._uuid_priv = value
 
         elif isinstance(value, UUID):
-            self._uuid = ClassDataTypeUUID(self.__class__, value)
+            self._uuid_priv = ClassDataTypeUUID(self.__class__, value)
 
         elif isinstance(value, str):
-            self._uuid = ClassDataTypeUUID(self.__class__, UUID(value.replace("-", "")))
+            self._uuid_priv = ClassDataTypeUUID(self.__class__, UUID(value.replace("-", "")))
 
         elif value is None:
-            self._uuid = None
+            self._uuid_priv = None
 
         else:
             raise TypeError(f"uuid.setter需要提供UUID，ClassDataTypeUUID或者str， 但提供了{type(value)}")
 
-    def to_string(self):
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将历史记录转换为字符串。"
-
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "classes": {k: str(v.uuid) for k, v in self.classes.items()},
                 "time": self.time,
@@ -84,15 +85,15 @@ class History(ClassDataType):
                 "uuid": str(self.uuid),
                 "archive_uuid": self.archive_uuid,
             }
-        )
+        ))
 
     @staticmethod
-    def from_string(s: str) -> History:
+    def from_string(string: str) -> History:
         "从字符串加载历史记录。"
         from .classtype import Class
         from .dayrecord import DayRecord
 
-        d = json.loads(s)
+        d = json.loads(string)
         if d["type"] != History.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {History.chunk_type_name}")
         obj = History(
@@ -107,14 +108,14 @@ class History(ClassDataType):
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
         assert obj.uuid == obj.archive_uuid, (
-            f"对于一个历史记录, 它的对象uuid和归档uuid必须保持一致（当前一个是{obj.uuid}, 另一个是{obj.archive_uuid}）"
+            f"对于一个历史记录, 它的对象uuid和归档uuid必须保持一致（当前uuid是{obj.uuid}, archive_uuid是{obj.archive_uuid}）"
         )
         return obj
 
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self
 
     @staticmethod

@@ -4,7 +4,6 @@
 
 from typing import Optional
 from utils import Achievement, AchievementTemplate, ClassObj
-from widgets.custom.ListView import ListView
 from widgets.basic import *
 from widgets.ui.pyside6.AchievementWindow import Ui_Form
 
@@ -15,7 +14,7 @@ class AchievementWidget(Ui_Form, MyWidget):
     "成就信息展示窗口"
     def __init__(
         self,
-        master_widget: Optional[WidgetType] = None,
+        master_widget: Optional[QWidget] = None,
         main_window: Optional[ClassObj] = None,
         achievement: Union[Achievement, AchievementTemplate] = None,
     ):

@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Literal
+from typing import Any, Self
 
-from ...algorithm import SupportsKeyOrdering
+from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
-from ..basetype import ClassDataType, DataProperty
+from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 
 
 class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
     "分数加减操作的模板。"
 
-    chunk_type_name: Literal["ScoreModificationTemplate"] = "ScoreModificationTemplate"
+    chunk_type_name: str = "ScoreModificationTemplate"
     "类型名"
 
     is_unrelated_data_type = True
@@ -88,9 +88,9 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
             f"is_visible={self.is_visible.__repr__()})"
         )
 
-    def to_string(self):
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将分数修改记录对象转为字符串。"
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "key": self.key,
@@ -102,7 +102,7 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
     def from_string(string: str):
@@ -126,5 +126,5 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self

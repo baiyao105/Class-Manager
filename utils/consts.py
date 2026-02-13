@@ -2,12 +2,14 @@
 常量文件
 """
 from __future__ import annotations
-import datetime
 import math
 import os
 import sys
-import time
-from typing import Any, Literal
+from typing import Any, Literal, TYPE_CHECKING, Optional
+
+
+if TYPE_CHECKING:
+    from .events import BroadcastDispatcher
 
 debug: bool = True
 "是否为调试模式"
@@ -24,9 +26,7 @@ app_style: Literal["windowsvista", "Windows", "Fusion", "windows11"] = "windowsv
 
 
 qt_version: Literal["PySide6"] = "PySide6"
-
 "使用的Qt版本"
-
 
 app_stylesheet: str = """
 QMainWindow {
@@ -65,20 +65,15 @@ nan = -math.nan
 
 cwd = os.getcwd()
 
-LOG_FILE_PATH = (
-    f"log/ClassManager_log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-    + f"_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log"
-)
+LOG_PATH = "log"
 "日志文件路径"
 
 
 runtime_flags: dict[Any, Any] = {}
 "全局变量字典"
 
-
 # 为了防止发行包输出被覆盖掉，
 # 如果检测到没有输出流，就打开一个文件作为输出流
-
 if sys.stdout is None:
     if sys.__stdout__ is None:
         sys.stdout = open(os.path.join(os.getcwd(), "stdout"), "w", encoding="utf-8")
@@ -102,3 +97,15 @@ stdout = sys.stdout
 
 stderr = sys.stderr
 "当前标准错误流（可能被覆盖过）"
+
+
+dispatcher: Optional[BroadcastDispatcher] = None
+
+
+def get_global_dispatcher() -> BroadcastDispatcher:
+    global dispatcher
+    from .events.broadcast import BroadcastDispatcher
+    if not dispatcher:
+        dispatcher = BroadcastDispatcher(name="GlobalDispatcher")
+    return dispatcher
+    

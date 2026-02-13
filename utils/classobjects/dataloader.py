@@ -30,7 +30,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import Iterable
-from typing import Any, TYPE_CHECKING, TypeVar, Union
+from typing import Any, TypeVar, Union, Optional, Dict
 
 from ..algorithm import Mutex
 from ..basetypes import Base, Object
@@ -40,12 +40,8 @@ from ..functions.prompts import question_yes_no
 
 from .basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
 from .classdataobj import *
-from .classdataobj import ClassDataObj
 
-if TYPE_CHECKING:
-  from .classobj import ClassObj
 
-# 数据加载器
 
 
 BaseDataType = Union[int, float, bool, str]
@@ -145,7 +141,7 @@ class UserDataBase(Object):
     self.current_day_attendance = current_day_attendance or {}
     self.loaded = user is not None  # 任一参数非空即视为已加载
 
-  def __contains__(self, key):
+  def __contains__(self, key: str) -> bool:
     return key in self.__dict__ and self.__dict__[key] is not None and self.__dict__[key] is not None
 
 
@@ -216,6 +212,7 @@ class DataObject:
     "在数据分组中保存这个对象。"
     DataObject.save_task_running = True
     uuid = self.object.uuid
+    assert uuid is not None, "无法保存uuid为None的对象，是不是把不应该保存的History也传进来了？"
     string = self.object.to_string()
     if isinstance(self.object, TagSigned):
       for tag in self.object.tags:
@@ -223,6 +220,7 @@ class DataObject:
 
     type_name = self.object.chunk_type_name
     path = path or self.chunk.path
+    conn: Optional[sqlite3.Connection] = None
     while max_retry:
       max_retry -= 1
       if type_name not in self.cur_list:
@@ -290,7 +288,7 @@ class DataObject:
             exc=e
           )
           try:
-            conn.rollback()
+            if conn: conn.rollback()
           except sqlite3.Error:
             self.commit_changes()
             Base.log("W", "操作回滚失败，已重置所有连接，将会重试", "DataObject.save")
@@ -424,7 +422,7 @@ class Chunk:
       if uuid is None:
         if "noticed_uuid_is_none" not in runtime_flags:
           Base.log("W", "加载时遇到uuid为None，将会返回None", "Chunk.load_history._load_object")
-          call_fr = sys._getframe(2)
+          call_fr = sys._getframe(2) # pyright: ignore[reportPrivateUsage]
           Base.log(
             "W",
             f"调用者：{call_fr.f_code.co_name}({call_fr.f_code.co_filename}:{call_fr.f_lineno})",
@@ -573,7 +571,7 @@ class Chunk:
     #     weekday_uuids[index] = [DEFAULT_CLASS_KEY, *item]
     #   index += 1
 
-    classes = {}
+    classes: Dict[str, Class] = {}
     for _, class_uuid in class_uuids:
       _class: Class | None = ClassDataObj.LoadUUID(class_uuid, Class)
       classes[_class.key] = _class
@@ -609,7 +607,7 @@ class Chunk:
     try:
       shutil.rmtree(os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:]))
       return True
-    except Exception as unused:  # pylint: disable=broad-exception-caught
+    except OSError:  # pylint: disable=broad-exception-caught
       return False
 
   def load_data(self, load_all: bool = False) -> UserDataBase:
@@ -624,7 +622,7 @@ class Chunk:
 
     templates: list[ScoreModificationTemplate] = []
     achievements: list[AchievementTemplate] = []
-    current_day_attendance = {}
+    current_day_attendance: dict[str, AttendanceInfo] = {}
 
     # 有个细节，这里的LoadUUID是刚刚加载完这周的，所以不用填默认参数
     template_uuids: list[tuple[str, ClassDataTypeUUID[ScoreModificationTemplate]]] = json.load(
@@ -764,19 +762,19 @@ class Chunk:
         history_percentage = 100 / max(1, total_history_count)
 
         def save_part(
-          uuid: ClassDataTypeUUID | None, current_history: History, clear: bool, index: int
+          history_uuid: ClassDataTypeUUID[History] | None, current_history: History, clear: bool, index: int
         ) -> None:
           """
           保存历史记录的一部分。
 
-          :param uuid: 历史记录的UUID，None则为当前周
+          :param history_uuid: 历史记录的UUID，None则为当前周
           :param current_history: 历史记录
           :param clear: 是否清理历史记录
           :param index: 当前保存的历史记录索引
           """
           Chunk.loading_info["history_stage"] = f"保存历史记录（{index}/{total_history_count}）"
-          if uuid:
-            path = os.path.join(self.path, "Histories", uuid[:2], uuid[2:])
+          if history_uuid:
+            path = os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:])
           else:
             path = os.path.join(self.path, "Current")
           if clear:
@@ -808,7 +806,7 @@ class Chunk:
               s = student
               for _ in range(Student.last_reset_info_keep_turns):  # 保留最近几次的重置信息
                 # TODO: 把这个废性能的方法改一下，last_reset_info改成动态查询
-                if s._last_reset_info:
+                if s._last_reset_info: # pyright: ignore[reportPrivateUsage]
                   students.append(student.last_reset_info)
                   modifies.extend(student.last_reset_info.history.values())
                   achievements.extend(student.last_reset_info.achievements.values())
@@ -828,7 +826,7 @@ class Chunk:
             groups.extend(_class.groups.values())
           Base.log(
             "D",
-            f"历史记录中的{uuid}的数据汇总完成，耗时{time.time() - t: .5f}秒",
+            f"历史记录中的{history_uuid}的数据汇总完成，耗时{time.time() - t: .5f}秒",
             "Chunk.save",
           )
           total_objects = (
@@ -857,7 +855,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的班级保存完成，"
+            f"历史记录中的{history_uuid}的班级保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -876,7 +874,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的学生保存完成，"
+            f"历史记录中的{history_uuid}的学生保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -895,7 +893,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的小组保存完成，"
+            f"历史记录中的{history_uuid}的小组保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -915,7 +913,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的分数修改记录保存完成，"
+            f"历史记录中的{history_uuid}的分数修改记录保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -934,7 +932,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的成就记录保存完成，"
+            f"历史记录中的{history_uuid}的成就记录保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -952,7 +950,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的分数修改模板保存完成，"
+            f"历史记录中的{history_uuid}的分数修改模板保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -971,7 +969,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的成就模板保存完成，"
+            f"历史记录中的{history_uuid}的成就模板保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -990,7 +988,7 @@ class Chunk:
           c = max(1, c)
           Base.log(
             "D",
-            f"历史记录中的{uuid}的每日记录保存完成，"
+            f"历史记录中的{history_uuid}的每日记录保存完成，"
             f"耗时{time.time() - t: .5f}秒，共{c}个，"
             f"速率{c / (time.time() - t if (time.time() - t) > 0 else 1): .3f}个/秒",
             "Chunk.save",
@@ -1008,7 +1006,7 @@ class Chunk:
             c += 1
           Base.log(
             "D",
-            f"历史记录中的{uuid}的当前出勤保存完成，时间耗时{time.time() - t}秒",
+            f"历史记录中的{history_uuid}的当前出勤保存完成，时间耗时{time.time() - t}秒",
             "Chunk.save",
           )
 
@@ -1018,7 +1016,7 @@ class Chunk:
           Base.log("D", "保存基本信息", "Chunk.save")
           json.dump(
             {
-              "uuid": str(uuid) if uuid else None,
+              "uuid": str(history_uuid) if history_uuid else None,
               "create_time": current_history.time,
               "save_time": self.bound_db.save_time,
               "version": self.bound_db.version,
@@ -1068,7 +1066,7 @@ class Chunk:
             indent=4,
           )
 
-          Base.log("I", f"{uuid}的存档信息保存完成({index}/{total})", "Chunk.save")
+          Base.log("I", f"{history_uuid}的存档信息保存完成({index}/{total})", "Chunk.save")
 
         i = 1
         for uuid, current_history, clear in save_tasks:
@@ -1081,28 +1079,9 @@ class Chunk:
         for dir_1 in os.listdir(os.path.join(self.path, "Histories")):
           for dir_2 in os.listdir(os.path.join(self.path, "Histories", dir_1)):
             history_uuids.append(dir_1 + dir_2)
-
-        json.dump(
-          {
-            "uuid": str(uuid) if uuid else None,
-            "user": self.bound_db.user,
-            "create_time": time.time(),
-            "save_time": self.bound_db.save_time,
-            "version": self.bound_db.version,
-            "version_code": self.bound_db.version_code,
-            "last_start_time": self.bound_db.last_start_time,
-            "last_reset": self.bound_db.last_reset,
-            "histories": history_uuids,
-            "python_version": (
-              sys.version_info.major,
-              sys.version_info.minor,
-              sys.version_info.micro,
-            ),
-          },
-          open(os.path.join(self.path, "info.json"), "w", encoding="utf-8"),
-          indent=4,
-        )
-      except Exception as e:
+        
+      except Exception:
+        Base.log_exc("保存数据时出现未处理的错误，保存操作中断", "Chunk.save", "E")
         self.commit_changes()
         self.is_saving = False
         raise

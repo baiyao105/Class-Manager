@@ -2,37 +2,20 @@
 基本类型
 """
 
-import os
 import copy
+import time
 import ctypes
+from types import TracebackType
+import psutil
 import random
 import threading
-import time
-
-import psutil
-import threading
-import ctypes
-import copy
 from typing import Dict, Any
-from loguru import logger
 
 from .logger import Logger
-
-
 
 def gen_uuid(length: int = 32) -> str:
     "生成一个长32位的uuid"
     return "".join([str(random.choice("0123456789abcdef")) for _ in range(length)])
-
-
-os.makedirs(os.path.abspath("log"), exist_ok=True)
-
-if not os.path.isdir("log"):
-    os.mkdir("log")
-
-
-class ModifyingError(Exception):
-    "修改出现错误。"
 
 
 class Object:
@@ -106,7 +89,7 @@ class SysMemTracer:
     def __enter__(self):
         self.start()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None):
         self.stop()
 
     def start(self):
@@ -135,7 +118,7 @@ class SysMemTracer:
 
 
 
-__all__ = ["Base", "Object", "ModifyingError"]
+__all__ = ["Base", "Object", "SysMemTracer"]
 
 if __name__ == "__main__":
     print("你闲的没事跑这玩意干啥")

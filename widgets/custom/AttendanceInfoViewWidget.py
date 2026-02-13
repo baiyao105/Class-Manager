@@ -16,7 +16,7 @@ class AttendanceInfoViewWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        master: Optional[WidgetType] = None,
+        master: Optional[QWidget] = None,
         main_window: Optional[ClassObj] = None,
         attendanceinfo: AttendanceInfo = None,
     ):

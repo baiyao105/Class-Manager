@@ -40,10 +40,16 @@ import functools
 import contextlib
 import customtkinter
 from queue import Queue
+from loguru import logger
 from typing import Optional, Union, List, Tuple, Dict, Callable, Literal, Type, Any
 from shutil import copytree, rmtree, copy as shutil_copy
 from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
+
+
+from utils.classobjects.objects.history import History
+a = History({}, {})
+a.to_string()
 
 from utils.consts import (
     enable_memory_tracing, 
@@ -69,13 +75,13 @@ from qfluentwidgets.common import *  # pylint: disable=wildcard-import, unused-w
 from qfluentwidgets.components import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.window import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.multimedia import *  # pylint: disable=wildcard-import, unused-wildcard-import
-
+from utils.qtconfig import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from widgets.ui.pyside6 import (
     MainClassWindow,
     NoticeViewer
 )
 
-from utils.basetypes import logger, SysMemTracer # pylint: disable=wrong-import-position
+from utils.basetypes import SysMemTracer # pylint: disable=wrong-import-position
 
 
 
@@ -231,6 +237,16 @@ def exception_handler(
     if show_exc_window_callback is not None:
         show_exc_window_callback((exc_type, exc_val, exc_tb))
     
+
+def set_show_exc_window_callback(
+    callback: Callable[[ExceptionInfoType], None]
+):
+    """设置显示异常窗口的回调函数
+
+    :param callback: 回调函数，接受一个异常信息元组作为参数
+    """
+    global show_exc_window_callback
+    show_exc_window_callback = callback
 
 sys.excepthook = exception_handler
 base_sys.excepthook = exception_handler
@@ -738,6 +754,15 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             )
         )
 
+        def _show_exc_window(
+            exc_info: ExceptionInfoType
+        ):
+            """显示异常窗口的默认实现"""
+            from widgets.custom.ExceptionHandler import ExceptionHandler
+            exc_window = ExceptionHandler(self, self, exc_info[1])
+            exc_window.show()
+
+        set_show_exc_window_callback(_show_exc_window)
 
         if self.auto_save_enabled:
             Thread(
@@ -788,8 +813,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         第一个元素是显示的文本，第二个元素是一个函数，会以按钮形式显示在列表一边，点击后执行
         """
         self.lastest_listview = ListView(
-            main_window=self,
-            master_widget=master,
+            master=master or self,
             data=data,
             title=title,
             commands=commands,
@@ -1885,6 +1909,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         self.setWindowIcon(self.icon)
         self.on_start_up_finished()
         self.refresh_hint_widget()
+
         self.show()
         self.updator_thread.start()
         Base.log("I", "线程启动完成，exec()", "MainWindow.mainloop")
@@ -2545,7 +2570,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         wait_until(lambda: finished)
         view = ListView(
             self,
-            self,
             "所有历史记录",
             [
                 (
@@ -2635,7 +2659,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """显示所有班级历史"""
         self.listview_history_classes = ListView(
             self,
-            self,
             "所有班级历史记录",
             [
                 (
@@ -2652,7 +2675,6 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def show_class_history(self, target_class: Class, groups: List[Group]):
         """显示单个班级历史"""
         self.listview_history_class = ListView(
-            self,
             self,
             f"{target_class.name}的历史记录",
             [("所有学生", lambda: None)]
@@ -3135,7 +3157,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             return
         Base.log("I", f"找到{len(music_list)}个音乐文件", "MainWindow.music_selector")
         Base.log("I", "正在选择音乐", "MainWindow.music_selector")
-        self.music_listview = ListView(self, self, "选择音乐", music_list)
+        self.music_listview = ListView(self, "选择音乐", music_list)
         self.music_listview.show()
 
     @Slot()

@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Generic, Optional, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, Generic, Optional, Self, TypeVar
 from uuid import UUID, uuid4
 
 from utils.logger import Logger
@@ -17,14 +17,15 @@ if TYPE_CHECKING:
   from .dataloader import UserDataBase
   from .classobj import ClassObj
 
-_StringDataType = TypeVar("_StringDataType")
+_StringDataType = TypeVar("_StringDataType", covariant=True)
 
 
-class StringObjectDataKind(Generic[_StringDataType], str):
-    "对象数据类型, ObjectDataKind[Student]代表这个字符串可以加载出一个学牲"
+class StringObjectDataKind(str, Generic[_StringDataType]):
+    "对象数据类型, ObjectDataDataKind[Student]代表这个字符串可以加载出一个学牲"
 
 
-_DataType = TypeVar("_DataType")
+
+_DataType = TypeVar("_DataType", covariant=True)
 
 
 class ClassDataTypeUUID(UUID, Generic[_DataType]):
@@ -48,8 +49,11 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __getitem__(self, item):
-        return str(self).replace("-", "")[item]
+    def __getitem__(self, item: int | slice) -> str:
+        s = str(self)
+        if isinstance(item, slice):
+            return s[item]
+        return s[item]
 
     def __hash__(self) -> int:
         return hash(self.dtype.__qualname__ + "_" + str(self))  # 防止不同类但UUID相同的情况
@@ -58,7 +62,7 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         return f"ClassDataTypeUUID(value={super().__repr__()}, dtype={self.dtype.__name__})"
 
     def __str__(self) -> str:
-        return super().__str__()
+        return super().__str__().replace("-", "")
 
 
 class ClassDataType(ABC):
@@ -80,14 +84,17 @@ class ClassDataType(ABC):
 
         elif isinstance(uuid, ClassDataTypeUUID):
             self._uuid = uuid
+        
+        elif isinstance(uuid, str):
+            self._uuid = ClassDataTypeUUID(self.__class__, UUID(uuid.replace("-", "")))
 
-        elif isinstance(uuid, UUID):
-            self._uuid = ClassDataTypeUUID(self.__class__, uuid)
+        else:
+            raise TypeError(f"uuid参数需要是UUID, ClassDataTypeUUID, str或None，但提供了{type(uuid)}")
 
         self._user_db_ref = None
 
     @property
-    def uuid(self) -> ClassDataTypeUUID[Self]:
+    def uuid(self) -> ClassDataTypeUUID[Self] | None:
         """
         该班级数据类型的唯一标识符。
         """
@@ -103,7 +110,7 @@ class ClassDataType(ABC):
         elif isinstance(value, UUID):
             self._uuid = ClassDataTypeUUID(self.__class__, value)
 
-        elif isinstance(value, str):
+        elif type(value) is str:
             self._uuid = ClassDataTypeUUID(self.__class__, UUID(value.replace("-", "")))
 
         else:
@@ -155,10 +162,11 @@ class ClassDataType(ABC):
             f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})"
         )
 
+    @staticmethod
     @abstractmethod
-    def from_string(self, string: str) -> StringObjectDataKind[Self]:
+    def from_string(string: str) -> ClassDataType:
         """
-        从字符串解析该班级数据类型。
+        从字符串解析该班级数据类型，并返回该类型的对象。
         """
 
     @abstractmethod
@@ -167,7 +175,7 @@ class ClassDataType(ABC):
         将该班级数据类型转换为字符串。
         """
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """
         将该班级数据类型转换为字典。
 
@@ -176,7 +184,7 @@ class ClassDataType(ABC):
         """
         raise NotImplementedError(f"该数据类型({self.__class__.__name__})的to_dict方法未实现")
 
-    def from_dict(self, data: dict) -> "ClassDataType":
+    def from_dict(self, data: Dict[str, Any]) -> "ClassDataType":
         """
         从字典解析该班级数据类型。
 
@@ -217,12 +225,12 @@ class DataProperty(property):
 
     def __init__(
         self,
-        fget=None,
-        fset=None,
-        fdel=None,
-        doc=None,
+        fget: Optional[Callable[..., Any]] = None,
+        fset: Optional[Callable[..., Any]] = None,
+        fdel: Optional[Callable[..., Any]] = None,
+        doc: Optional[str] = None,
         trigger_event: bool = True,
-        event_name_override: str | None = None,
+        event_name_override: Optional[str] = None,
     ):
         """
         构造函数
@@ -239,7 +247,7 @@ class DataProperty(property):
         self.trigger_event = trigger_event
         self.event_name_override = event_name_override
 
-    def __get__(self, instance: ClassDataType, owner: type[ClassDataType]):
+    def __get__(self, instance: Optional[ClassDataType], owner: Optional[type[ClassDataType]] = None) -> Any:
         return super().__get__(instance, owner)
 
     def __set__(self, instance: ClassDataType, value: Any):
@@ -254,7 +262,7 @@ class DataProperty(property):
             self._on_value_changed(instance, old_value, new_value)
 
 
-    def __delete__(self, instance):
+    def __delete__(self, instance: ClassDataType):
         raise AttributeError("不能删除数据属性")
 
     def _get_full_event_name(self, instance: Any) -> str:

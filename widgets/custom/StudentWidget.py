@@ -18,7 +18,7 @@ class StudentWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         main_window: ClassObj = None,
-        master_widget: Optional[WidgetType] = None,
+        master_widget: Optional[QWidget] = None,
         student: Student = None,
         readonly: bool = False,
     ):
@@ -157,7 +157,6 @@ class StudentWidget(Ui_Form, MyWidget):
 
                 index += 1
         self.history_list_window = ListView(
-            self.main_window,
             self,
             f"历史记录 - {self.student.name}",
             self.history_data,
@@ -225,7 +224,7 @@ class StudentWidget(Ui_Form, MyWidget):
             )
             index += 1
         self.achievement_list_window = ListView(
-            self.main_window, self, f"成就 - {self.student.name}", self.achievement_data
+            self, f"成就 - {self.student.name}", self.achievement_data
         )
         self.achievement_list_window.show()
 

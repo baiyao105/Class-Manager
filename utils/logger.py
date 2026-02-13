@@ -4,8 +4,10 @@
 from __future__ import annotations
 import inspect
 import os
+import re
 import sys
 import time
+import datetime
 import traceback
 from queue import Queue
 from threading import Lock, Thread
@@ -15,12 +17,12 @@ import colorama
 from loguru import logger
 
 from . import consts
-from .consts import LOG_FILE_PATH, cwd, log_style, stderr_orig, stdout_orig
+from .consts import LOG_PATH, cwd, log_style, stderr_orig, stdout_orig
 from .system import SystemLogger
 
 
 
-def get_function_namespace(func) -> str:
+def get_function_namespace(func: object) -> str:
     """
     获取函数的命名空间
 
@@ -31,21 +33,17 @@ def get_function_namespace(func) -> str:
     if not hasattr(func, "__module__"):
         try:
             return func.__qualname__    # type: ignore
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
+        except (AttributeError, TypeError, ValueError, NameError):
             try:
                 return func.__name__ # type: ignore
-            except (
-                BaseException
-            ) as unused:  # pylint: disable=broad-exception-caught
+            except (AttributeError, TypeError, ValueError, NameError):
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
                 elif isinstance(func, classmethod):
                     return str(func.__func__.__qualname__) # type: ignore
                 try:
                     return func.__class__.__qualname__ # type: ignore
-                except (
-                    BaseException
-                ) as unused_2:  # pylint: disable=broad-exception-caught
+                except (AttributeError, TypeError, ValueError, NameError):
                     return func.__class__.__name__ # type: ignore
     if module is None:
         module_name = ( # type: ignore
@@ -92,7 +90,7 @@ def format_exc_like_java(exc: BaseException) -> List[str]:
     return result
 
 
-def get_function_module(func: object | Callable) -> str:
+def get_function_module(func: object | Callable[..., Any]) -> str:
     "获取函数的模块"
     module = inspect.getmodule(func)
     if module is None:
@@ -114,6 +112,13 @@ def get_time():
     )
 
 
+LOG_FILE_PATH = os.path.join(
+    LOG_PATH,
+    f"ClassManager_log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        + f"_{str(int((time.time() % 1) * 1000000)).zfill(6)}.log"
+)    
+
+LOG_FILE_PATTERN = r"^ClassManager_log_.+.log$"
 
 
 class LoggerSettings:
@@ -160,7 +165,8 @@ class LoggerSettings:
 
 
 log_settings = LoggerSettings()
-
+default_encoding = "utf-8"
+"get_log_file没有指定encoding参数时使用的编码"
 
 LIGHT_CYAN = "<light-cyan>" if log_settings.draw_color else ""
 LIGHT_GREEN = "<light-green>" if log_settings.draw_color else ""
@@ -171,7 +177,6 @@ LIGHT_CYAN_CLOSE = "</light-cyan>" if log_settings.draw_color else ""
 LIGHT_GREEN_CLOSE = "</light-green>" if log_settings.draw_color else ""
 BLUE_CLOSE = "</blue>" if log_settings.draw_color else ""
 LEVEL_CLOSE = "</level>" if log_settings.draw_color else ""
-
 
 
 # 初始化日志配置
@@ -247,33 +252,20 @@ class Color:
 
 
 
+def get_log_file(path: Optional[str], encoding: Optional[str] = None) -> Optional[TextIO]:
+    if not path: return None
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    return open(path, "a", encoding=encoding or default_encoding, errors="ignore", buffering=1)
+
+    
+
 class Logger:
     "日志记录器"
 
-    log_file: TextIO | None = (
-        open(
-            log_settings.log_file_path,
-            "a",
-            encoding=log_settings.encoding,
-            errors="ignore",
-            buffering=1,
-        )
-        if log_settings.log_file_path
-        else None
-    )
+    log_file: TextIO | None = get_log_file(log_settings.log_file_path, log_settings.encoding)
     "日志文件"
 
-    fast_log_file: TextIO | None = (
-        open(
-            log_settings.fast_log_file_path,
-            "a",
-            encoding=log_settings.encoding,
-            errors="ignore",
-            buffering=1,
-        )
-        if log_settings.fast_log_file_path
-        else None
-    )
+    fast_log_file: TextIO | None = get_log_file(log_settings.fast_log_file_path, log_settings.encoding)
     "快速日志文件"
 
     config = log_settings
@@ -292,7 +284,6 @@ class Logger:
     )
     "经过处理的输出"
 
-
     stderr_redirector = SystemLogger(
         stderr_orig,
         logger_name="sys.stderr",
@@ -302,6 +293,30 @@ class Logger:
 
     log_mutex = Lock()
     "日志互斥锁"
+
+
+    TRACE: str = "TRACE"
+    DEBUG: str = "DEBUG"
+    INFO: str = "INFO"
+    WARN: str = "WARNING"
+    ERROR: str = "ERROR"
+    CRITICAL: str = "CRITICAL"
+    FATAL: str = CRITICAL
+
+    console_log_queue: Queue[str] = Queue()
+    "控制台日志队列"
+    logfile_log_queue: Queue[str] = Queue()
+    "日志文件日志队列"
+    log_file_keepcount = 20
+    "日志文件保留数量"
+    logger_running = True
+    "日志记录器是否在运行（我自己都不知道有没有用，忘了）"
+    short_log_info: list[str] = []
+    "给主界面用的简短日志信息列表"
+    short_log_keep_length: int = 150
+    "日志信息保留的条数"
+    logged_count: int = 0
+    "自启动以来记录过的日志条数"
 
     @staticmethod
     def set_capture_stdstream(stdout: bool = True, stderr: bool = True):
@@ -326,36 +341,19 @@ class Logger:
         if log_settings.log_file_path:
             if Logger.log_file:
                 Logger.log_file.close()
-            Logger.log_file = open(
-                log_settings.log_file_path,
-                "a",
-                encoding=log_settings.encoding,
-                errors="ignore",
-                buffering=1,
-            )
+            Logger.log_file = get_log_file(log_settings.log_file_path, log_settings.encoding)
 
-    console_log_queue: Queue[str] = Queue()
-    "控制台日志队列"
-    logfile_log_queue: Queue[str] = Queue()
-    "日志文件日志队列"
-    log_file_keepcount = 20
-    "日志文件保留数量"
-    logger_running = True
-    "日志记录器是否在运行（我自己都不知道有没有用，忘了）"
-    short_log_info: list[str] = []
-    "给主界面用的简短日志信息列表"
-    short_log_keep_length: int = 150
-    "日志信息保留的条数"
-    logged_count: int = 0
-    "自启动以来记录过的日志条数"
+    @staticmethod
+    def close_log_file():
+        if Logger.log_file:
+            Logger.log_file.close()
+    
+    @staticmethod
+    def close_fast_log_file():
+        if Logger.fast_log_file:
+            Logger.fast_log_file.close()
 
-    TRACE: str = "TRACE"
-    DEBUG: str = "DEBUG"
-    INFO: str = "INFO"
-    WARN: str = "WARNING"
-    ERROR: str = "ERROR"
-    CRITICAL: str = "CRITICAL"
-    FATAL: str = CRITICAL
+
 
     @staticmethod
     def get_fullname(level: str):
@@ -417,9 +415,6 @@ class Logger:
         lineno: int
         message: str
 
-    LogHandler = Callable[[LogInfo], Any]
-
-
     @staticmethod
     def _new_logger(context: LogInfo) -> None:
         logger.bind(
@@ -429,7 +424,6 @@ class Logger:
             full_file=context.file,
             source_with_lineno=f"{context.source}:{context.lineno}",
         ).log(context.level, context.message)
-
 
     @staticmethod
     def _old_logger(context: LogInfo) -> None:
@@ -455,6 +449,7 @@ class Logger:
             Logger.console_log_queue.put(cm)
             Logger.logfile_log_queue.put(lfm)
 
+    LogHandler = Callable[[LogInfo], Any]
 
     log_handlers: Dict[str, LogHandler] = {
         "new": _new_logger,
@@ -476,7 +471,7 @@ class Logger:
         """
         向控制台和日志输出信息
 
-        :param level: 日志级别 (I=INFO, W=WARNING,
+        :param level: 日志级别 (T=TRACE, I=INFO, W=WARNING,
         E=ERROR, F=CRITICAL, D=DEBUG, C=CRITICAL)
         :param msg: 日志消息
         :param source: 日志来源
@@ -575,23 +570,19 @@ class Logger:
     @staticmethod
     def clear_oldfile(keep_amount: int = 10):
         "清理日志文件"
-        if not os.path.exists("log/"):
+        if not os.path.isdir(LOG_PATH):
             return
         log_files = sorted(
-            [
-                f
-                for f in os.listdir(os.path.dirname(LOG_FILE_PATH))
-                if f.startswith("ClassManager_") and f.endswith(".log")
-            ],
-            reverse=True,
+            [f for f in os.listdir(LOG_PATH) if re.match(LOG_FILE_PATTERN, f)],
+            reverse=True
         )
         for f in log_files[keep_amount:]:
-            os.remove(os.path.join(os.path.dirname(LOG_FILE_PATH), f))
+            os.remove(os.path.join(LOG_PATH, f))
 
     @staticmethod
     def log_exc(
         info: str = "未知错误：",
-        sender="MainThread -> Unknown",
+        sender: str ="MainThread -> Unknown",
         level: Literal["I", "W", "E", "F", "D", "C"] = "E",
         exc: Optional[BaseException] = None,
     ):
@@ -619,7 +610,7 @@ class Logger:
     @staticmethod
     def log_exc_short(
         info: str = "未知错误：",
-        sender="MainThread -> Unknown",
+        sender: str ="MainThread -> Unknown",
         level: Literal["I", "W", "E", "F", "D", "C"] = "W",
         exc: Optional[BaseException] = None,
     ):
@@ -637,8 +628,6 @@ class Logger:
             if exc is None:
                 return
         Logger.log(level, f"{info} [{exc.__class__.__qualname__}] {exc}", sender)
-
-
 
 
 

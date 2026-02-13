@@ -16,7 +16,7 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
     "返回信号：(模板key，修改标题，修改描述，修改分数) (Tuple[str, str, str, float])"
 
     def __init__(
-        self, main_window: Optional[ClassObj] = None, master_widget: Optional[WidgetType] = None
+        self, main_window: Optional[ClassObj] = None, master_widget: Optional[QWidget] = None
     ):
         """
         初始化

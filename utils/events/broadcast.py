@@ -3,7 +3,7 @@ import re
 import threading
 import inspect
 import time
-from typing import Any, Callable, List, Union
+from typing import Any, Callable, Dict, List, Union
 from ..logger import Logger
 from ..algorithm.numeric import addrof
 from ..profiler import profile
@@ -175,6 +175,8 @@ class BroadcastDispatcher:
     广播分发器。
     用于在多个对象之间广播消息。
     """
+
+    dispatchers: Dict[str, BroadcastDispatcher] = {}
     
     def __init__(self, listeners: list[BroadcastReceiver] | None = None, name: str | None = None, is_async: bool = True):
         """
@@ -183,6 +185,8 @@ class BroadcastDispatcher:
         :param listeners: 初始监听器列表
         :param name: 分发器的名称
         """
+        if name in BroadcastDispatcher.dispatchers.keys():
+            raise RuntimeError(f"名字为{name}的广播分发器已经存在了")
         listeners = listeners or []
         self.listeners: dict[str, List[BroadcastReceiver]] = {}
         self.is_async = is_async
@@ -192,7 +196,7 @@ class BroadcastDispatcher:
         self.name = name or f"BroadcastDispatcher(Unnamed_{addrof(self)})"
 
     @staticmethod
-    def as_listener_of(dispatcher: BroadcastDispatcher, event_key: str  = BroadcastReceiver.RECIEVE_ALL, name: str | None = None) \
+    def as_listener_of(dispatcher: BroadcastDispatcher | str, event_key: str  = BroadcastReceiver.RECIEVE_ALL, name: str | None = None) \
             -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         将一个函数作为一个监听器注册到分发器上。
@@ -202,10 +206,14 @@ class BroadcastDispatcher:
         """
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             nonlocal dispatcher, event_key, name
+            if isinstance(dispatcher, str):
+                try:
+                    dispatcher = BroadcastDispatcher.dispatchers[dispatcher]
+                except (IndexError, KeyError) as e:
+                    raise RuntimeError(f"没有找到名字为{name}的广播分发器") from e
             dispatcher.add_listener(BroadcastReceiver(event_key, func, name))
             return func
         return decorator
-
 
 
     def listener_count(self, event_key: str | None = None) -> int:

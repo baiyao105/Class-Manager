@@ -32,12 +32,11 @@ class ExceptionHandler(Ui_Form, MyWidget):
     """
 
 
-
     def __init__(
         self,
-        master_widget: Optional[WidgetType] = None,
+        master_widget: Optional[QWidget] = None,
         main_window: Optional[ClassObj] = None,
-        exception: Optional[Exception] = None,
+        exception: Optional[BaseException] = None,
     ):
         """
         初始化
@@ -55,7 +54,7 @@ class ExceptionHandler(Ui_Form, MyWidget):
         self.setWindowTitle("出错啦！")
         self.setWindowIcon(QIcon("img/logo/favicon-error.ico"))
         self.checkBox.stateChanged.connect(self.on_checkbox_changed)
-        self.spinBox.setDisabled(1)
+        self.spinBox.setDisabled(True)
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update)
         self.set_text()
@@ -69,26 +68,15 @@ class ExceptionHandler(Ui_Form, MyWidget):
 
     def on_checkbox_changed(self, state: Qt.CheckState):
         if state == Qt.CheckState.Checked:
-            self.spinBox.setDisabled(0)
+            
+            self.spinBox.setDisabled(True)
         else:
-            self.spinBox.setDisabled(1)
+            self.spinBox.setEnabled(True)
 
     def closeEvent(self, event):
         if self.checkBox.isChecked():
             self.handled_exception[self.tbstr].expire_time = time.time() + self.spinBox.value() * 60.0
         super().closeEvent(event)
-
-
-    def run(self):
-        self.set_text()
-        if (self.tbstr not in self.handled_exception):
-            self.handled_exception[self.tbstr] = ExceptionInfo(self.tbstr, 1, 1145141919810114)
-        elif (time.time() - self.handled_exception[self.tbstr].expire_time > 0):
-            self.handled_exception[self.tbstr].repeats += 1
-        else: 
-            return
-        super().show()
-        
 
     def set_text(self):
         if self.exception:
@@ -98,6 +86,7 @@ class ExceptionHandler(Ui_Form, MyWidget):
                 self.label_5.setText(f"[+{self.handled_exception[self.tbstr].repeats}]")
             else:
                 self.label_5.setText("")
+            self.textBrowser.setText(self.tbstr)
         else:
             self.label_7.setText("不到啊")
             self.label_3.setText("怎么传了个None进来")
@@ -109,5 +98,12 @@ class ExceptionHandler(Ui_Form, MyWidget):
         super().update()
 
     def show(self):
-        self.update_timer.start(1000)
+        if (self.tbstr not in self.handled_exception):
+            self.handled_exception[self.tbstr] = ExceptionInfo(self.tbstr, 1, 1145141919810114)
+        elif (time.time() - self.handled_exception[self.tbstr].expire_time > 0):
+            self.handled_exception[self.tbstr].repeats += 1
+        else:
+            return
         super().show()
+        self.set_text()
+        self.update_timer.start(1000)

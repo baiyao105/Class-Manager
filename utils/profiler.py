@@ -5,15 +5,13 @@ import functools
 import time
 import threading
 from collections import defaultdict
+from types import TracebackType
 from typing import Callable, Literal, TypeVar
 from typing_extensions import ParamSpec
 from dataclasses import dataclass
 from utils.consts import inf
 from utils.logger import Logger
 
-
-_P = ParamSpec("_P")
-_R = TypeVar("_R")
 
 
 @dataclass
@@ -30,6 +28,10 @@ class FunctionStats:
         """平均耗时"""
         return self.total_time / self.call_count if self.call_count > 0 else 0.0
 
+
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 class PerformanceProfiler:
     """性能分析器"""
@@ -176,7 +178,7 @@ class PerformanceProfiler:
         """上下文管理器入口"""
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None):
         """上下文管理器出口"""
         self.stop_auto_display()
         self.print_stats()
@@ -190,6 +192,14 @@ _global_profiler = PerformanceProfiler("Global")
 def profile(func_name: str | None = None):
     """
     全局性能分析装饰器
+
+    示例:
+    ``` 
+    @profile("some_function")
+    def some_function():
+        time.sleep(0.1)
+        return 114514
+    ```
     
     :param func_name: 自定义函数名称
     """

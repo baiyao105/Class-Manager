@@ -16,7 +16,7 @@ __all__ = ["CleaningScoreSumUpWidget"]
 
 class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
     def __init__(
-        self, master_widget: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
+        self, master_widget: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
     ):
         """
         初始化

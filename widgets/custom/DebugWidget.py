@@ -25,7 +25,7 @@ class DebugWidget(Ui_Form, MyWidget):
     command_history = []
 
     def __init__(
-        self, master: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
+        self, master: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
     ):
         super().__init__(master)
         self.setupUi(self)

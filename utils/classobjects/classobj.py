@@ -15,10 +15,10 @@ import traceback
 from abc import abstractmethod
 from collections.abc import Callable
 from types import TracebackType
-from typing import Any, Literal, Optional, OrderedDict
+from typing import Any, Dict, List, Literal, Optional, OrderedDict, Sequence, Tuple, Union
 from typing_extensions import override
 
-import dill as pickle
+import dill as pickle  # pyright: ignore[reportMissingTypeStubs]
 
 from utils.logger import Logger
 from ..algorithm import Mutex, OrderedKeyList
@@ -48,7 +48,8 @@ ACHIEVEMENT_UPDATE_DEBOUNCE = 0.5
 "成就侦测器更新防抖时间"
 
 ExcInfo = tuple[type[BaseException], BaseException, TracebackType]
-OptExcInfo = ExcInfo | tuple[None, None, None]
+OptExcInfo = Union[ExcInfo, tuple[None, None, None]]
+ColorArgumentType = Union[Tuple[QColor, QColor], Tuple[QColor, QColor, int], Tuple[QColor, QColor, int, int]]
 
 class ClassObj(ClassDataObj, Base):
     "班级对象类"
@@ -86,19 +87,19 @@ class ClassObj(ClassDataObj, Base):
             save_path = os.path.join(os.getcwd(), "chunks", user)
 
 
-        self.target_class = None
+        self.target_class: Optional[Class] = None
         "目标班级"
-        self.achievement_obs: AchievementStatusObserver
+        self.achievement_obs: Optional[AchievementStatusObserver] = None
         "成就侦测器"
-        self.class_obs: ClassStatusObserver
+        self.class_obs: Optional[ClassStatusObserver] = None
         "班级侦测器"
         self.default_achievements = DEFAULT_ACHIEVEMENTS
         "默认成就"
         self.default_score_templates = DEFAULT_SCORE_TEMPLATES
         "默认分数模板"
-        self.last_reset: float
+        self.last_reset: float = 0.0
         "上次重置时间"
-        self.history_data: dict[float, History]
+        self.history_data: Dict[float, History] = {}
         "历史数据"
         self.save_path: str = save_path
         "保存路径"
@@ -106,18 +107,17 @@ class ClassObj(ClassDataObj, Base):
         "分数修改模板"
         self.achievement_templates: OrderedDict[str, AchievementTemplate] = OrderedDict()
         "成就模板"
-        self.current_day_attendance: dict[str, AttendanceInfo]
+        self.current_day_attendance: Dict[str, AttendanceInfo] = {}
         "当前日考勤信息"
-        self.classes: dict[str, Class] = {}
+        self.classes: Dict[str, Class] = {}
         "班级"
-        self.weekday_record: dict[str, dict[float, DayRecord]]
+        self.weekday_record: Dict[str, Dict[float, DayRecord]] = {}
         "每日记录"
         self.auto_saving: bool = False
         "是否正在进行自动保存"
         
         self._achievement_dispatcher = BroadcastDispatcher(name="ClassObjEventDispatcher")
         self._event_buffer: Optional[TimedEventBuffer] = None
-        self._unstaged_changes: set[tuple[int, ClassDataTypeUUID]] = set()
         self._setup_event_buffers()
         self._event_submit_count: int = 0
         "事件提交总次数"
@@ -174,8 +174,7 @@ class ClassObj(ClassDataObj, Base):
             self._event_buffer.start_listening()
         Base.log("I", "事件缓冲区已启动", "ClassObj.init_class_data")
         
-        if self.current_day_attendance is None:
-            self.current_day_attendance = {}
+
         if self.target_class_id not in self.current_day_attendance:
             self.current_day_attendance[self.target_class_id] = AttendanceInfo(self.target_class.key)
         Base.log(
@@ -218,7 +217,10 @@ class ClassObj(ClassDataObj, Base):
         event_count = len(events)
         Logger.log("D", f"防抖结束/缓冲区溢出，已经缓存了{event_count}个数据变更事件，发送成就更新广播", "ClassObj._process_all_events")
         self._event_buffer.clear_buffer()
-        if (not self.achievement_obs.on_active):
+        
+        if self.achievement_obs is None:
+            Logger.log("D", "还没有设置没有成就侦测器，跳过处理数据变更事件", "ClassObj._process_all_events")
+        elif (not self.achievement_obs.on_active):
             Logger.log("D", "成就侦测器未激活，还是别发了，大概率是要退出或者手动停了", "ClassObj._process_all_events")
             return
         self._achievement_dispatcher.broadcast("UPDATE_ACHIEVEMENT_DATA")
@@ -298,13 +300,15 @@ class ClassObj(ClassDataObj, Base):
                 f.write(b)
                 f.close()
                 try:
-                    data = pickle.load(open(path + ".tmp", "rb"))
+                    with open(path + ".tmp", "rb") as f:
+                        data = pickle.load(f) # pyright: ignore[reportUnknownMemberType]
                 except AttributeError:
-                    data = pickle_orig.load(open(path + ".tmp", "rb"))
+                    with open(path + ".tmp", "rb") as f:
+                        data = pickle_orig.load(f)
                 try:
                     os.remove(path + ".tmp")
-                except Exception as unused:  # pylint: disable=unused-variable, broad-exception-caught
-                    pass
+                except OSError:
+                    Base.log("W", "删除临时文件失败", "MainThread.load_data")
                 if not silent:
                     Base.log("I", f"耗时：{time.time() - start:.2f}", "MainThread.load_data")
                 return UserDataBase(**data)
@@ -319,7 +323,7 @@ class ClassObj(ClassDataObj, Base):
 
         except FileNotFoundError as exception:
             if strict:
-                raise
+                raise exception
             Base.log("W", "存档" + path + "不存在，重置所有数据", "MainThread.load_data")
             ClassObj.reset_data(path)
             Base.log("I", f"耗时：{time.time() - start:.2f}", "MainThread.load_data")
@@ -475,10 +479,10 @@ class ClassObj(ClassDataObj, Base):
 
     def reset_all_data(self, reset_students_and_groups: bool = False):
         "重置所有数据"
-        self.modify_templates = copy.deepcopy(DEFAULT_SCORE_TEMPLATES)
-        self.achievement_templates = copy.deepcopy(DEFAULT_ACHIEVEMENTS)
+        self.modify_templates = copy.deepcopy(DEFAULT_SCORE_TEMPLATES.to_ordered_dict())
+        self.achievement_templates = OrderedDict(copy.deepcopy(DEFAULT_ACHIEVEMENTS))
         if reset_students_and_groups:
-            self.classes = copy.deepcopy(DEFAULT_CLASSES)
+            self.classes = copy.deepcopy(DEFAULT_CLASSES.to_ordered_dict())
         else:
             self.reset_all_defaults()
 
@@ -490,11 +494,11 @@ class ClassObj(ClassDataObj, Base):
         self,
         path: str = os.path.abspath(f"chunks/{default_user}/"),
         silent: bool = False,
-        strict=False,
-        reset_missing=False,
+        strict: bool = False,
+        reset_missing: bool = False,
         mode: Literal["sqlite", "pickle", "auto"] = "sqlite",
-        load_full_histories=False,
-        reset_current=True,
+        load_full_histories: bool = False,
+        reset_current: bool = True,
     ) -> UserDataBase:
         """
         从文件加载存档并设置数据。
@@ -530,7 +534,7 @@ class ClassObj(ClassDataObj, Base):
         if reset_current:
             self.classes = data.classes
             if isinstance(self.classes, OrderedKeyList):
-                self.classes = self.classes.to_ordered_dict()  # 转换为字典解决类型问题
+                self.classes = self.classes.to_dict()
 
             if hasattr(self, "target_class") and self.target_class is not None:
                 self.target_class = self.classes[self.target_class.key]
@@ -543,8 +547,7 @@ class ClassObj(ClassDataObj, Base):
             self.modify_templates = OrderedKeyList(data.templates).to_ordered_dict()
 
             achievements = copy.deepcopy(self.achievement_templates)
-            for key, achievement in achievements.items():
-                for attr, default in [
+            default_achievement_attrs: List[Tuple[str, Any]] = [
                     ("icon", None),
                     ("when_triggered", "any"),
                     (
@@ -555,9 +558,10 @@ class ClassObj(ClassDataObj, Base):
                         "condition_info",
                         "因为这是老版本迁移过来的存档，所以暂时没有详细条件信息",
                     ),
-                ]:
+                ]
+            for key, achievement in achievements.items():
+                for attr, default in default_achievement_attrs:
                     # 补齐老版本缺失的属性
-
                     if not hasattr(achievement, attr):
                         try:
                             setattr(
@@ -568,9 +572,8 @@ class ClassObj(ClassDataObj, Base):
                         except (AttributeError, KeyError):
                             setattr(self.achievement_templates[key], attr, default)
 
-            if not isinstance(self.modify_templates, OrderedKeyList):
-                self.modify_templates = OrderedKeyList(self.modify_templates)
-                # 因为老版本用的是dict，所以需要转换一下
+            # 因为老版本用的是dict，所以需要转换一下
+            self.modify_templates = OrderedDict(self.modify_templates)
 
             templates = copy.deepcopy(self.modify_templates)
 
@@ -588,8 +591,9 @@ class ClassObj(ClassDataObj, Base):
                         except (AttributeError, KeyError):
                             setattr(self.modify_templates[key], attr, default)
 
+            
             for key_class, _class in self.classes.items():
-                for attr, default in [
+                default_class_attrs: List[Tuple[str, Any]] = [
                     (
                         "homework_rules",
                         ((DEFAULT_CLASSES[key_class].homework_rules) if key_class in DEFAULT_CLASSES else {}),
@@ -605,7 +609,9 @@ class ClassObj(ClassDataObj, Base):
                         ),
                     ),
                     # 因为以前的版本是写错了的，所以这里需要特殊处理
-                ]:
+                ]
+
+                for attr, default in default_class_attrs:
                     if not hasattr(_class, attr):
                         try:
                             setattr(
@@ -615,12 +621,15 @@ class ClassObj(ClassDataObj, Base):
                             )
                         except (AttributeError, KeyError):
                             setattr(self.classes[key_class], attr, default)
-
+                    
+                default_student_attrs: List[Tuple[str, Any]] = [
+                    ("last_reset_info", Student.new_dummy())
+                ]
                 for (
                     key,
                     student,
-                ) in _class.students.items():  # 性能优化点：当前为O(n^3)复杂度(?)
-                    for attr, default in [("last_reset_info", Student.new_dummy())]:
+                ) in _class.students.items():
+                    for attr, default in default_student_attrs:
                         if not hasattr(student, attr):
                             try:
                                 setattr(student, attr, default)
@@ -683,12 +692,12 @@ class ClassObj(ClassDataObj, Base):
         version: str,
         version_code: int,
         last_reset: float,
-        history_data: dict[float, History],
-        classes: dict[str, Class],
-        templates: dict[str, ScoreModificationTemplate],
-        achievements: dict[str, AchievementTemplate],
+        history_data: Dict[float, History],
+        classes: Dict[str, Class],
+        templates: Dict[str, ScoreModificationTemplate],
+        achievements: Dict[str, AchievementTemplate],
         last_start_time: float,
-        weekday_record: dict[str, dict[float, DayRecord]],
+        weekday_record: Dict[str, Dict[float, DayRecord]],
         current_day_attendance: dict[str, AttendanceInfo],
         *,
         path: str = os.path.abspath(f"chunks/{default_user}/"),
@@ -754,7 +763,7 @@ class ClassObj(ClassDataObj, Base):
 
                 if mode == "pickle":
                     t = time.time()
-                    b = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+                    b = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL) # pyright: ignore[reportUnknownMemberType]
                     Base.log(
                         "I",
                         f"读取内存完成 ({time.time() - t:.3f}s)",
@@ -786,7 +795,7 @@ class ClassObj(ClassDataObj, Base):
                     )
                     return database
 
-            except Exception as unused:  # pylint: disable=unused-variable, broad-exception-caught
+            except Exception:  # pylint: disable=unused-variable, broad-exception-caught
                 Base.log_exc("保存存档" + path + "失败：", "Mainhread.save_data_strict")
                 raise
 
@@ -867,36 +876,52 @@ class ClassObj(ClassDataObj, Base):
     def stop(self):
         "停止自己"
         Base.log("I", "停止所有侦测器...", "MainThread.stop")
-        self.class_obs.stop()
-        self.achievement_obs.stop()
+        if self._event_buffer is not None:
+            self._event_buffer.stop_listening()
+        if self.class_obs is not None:
+            self.class_obs.stop()
+        if self.achievement_obs is not None:
+            self.achievement_obs.stop()
         Base.log("I", "保存最后的数据....", "MainThread.stop")
         self.save_data()
 
-    class ObserverError(RuntimeError):
-        "侦测器出现错误"
 
-    class EditingError(Exception):
+    class ClassObjectError(Exception):
         "编辑列表出现错误"
+        def __init__(self, message: str, error_code: Optional[int] = None):
+            super().__init__(message)
+            self.error_code = error_code
 
-    class TemplateExistsError(EditingError):
+        def __str__(self):
+            return (super().__str__() + f" ({self.error_code})") \
+                if self.error_code is not None else super().__str__()
+        
+    class ExistenceError(ClassObjectError):
+        "与存在性错误"
+
+    class TemplateExistsError(ClassObjectError):
         "模板已存在且无法覆盖"
 
-    class TemplateNotExistError(EditingError):
+    class TemplateNotExistError(ClassObjectError):
         "模板不存在"
 
-    class ClassNotExistError(EditingError):
+    class ClassNotExistError(ClassObjectError):
         "班级不存在"
 
-    class ClassExistsError(EditingError):
+    class ClassExistsError(ClassObjectError):
         "班级已存在"
 
-    class StudentExistsError(EditingError):
+    class StudentExistsError(ClassObjectError):
         "学生已存在"
 
-    class StudentNotExistError(EditingError):
+    class StudentNotExistError(ClassObjectError):
         "学生不存在"
 
-    class EditErrInfo:
+
+    class SendModifyError(RuntimeError):
+        "发送点评出现错误"
+
+    class ErrorInfo:
         "执行错误信息"
 
         class FindStudent(enum.IntEnum):
@@ -906,7 +931,7 @@ class ClassObj(ClassDataObj, Base):
             "学生不存在。"
 
         class AddTemplate(enum.IntEnum):
-            TargetUnreplaceable = 3
+            TargetIrreplaceable = 3
             "尝试覆盖无法覆盖的模板。"
             SystemError = 4
             "系统内部错误。"
@@ -914,7 +939,7 @@ class ClassObj(ClassDataObj, Base):
         class DeleteTemplate(enum.IntEnum):
             TargetNotExists = 5
             "目标不存在。"
-            TargetUnreplaceable = 6
+            TargetIrreplaceable = 6
             "目标无法替换。"
             SystemError = 7
             "系统内部错误。"
@@ -924,29 +949,60 @@ class ClassObj(ClassDataObj, Base):
             "目标已存在。"
             SystemError = 9
             "系统内部错误。"
+        
+        class DeleteClass(enum.IntEnum):
+            TargetNotExists = 10
+            "目标不存在。"
+            SystemError = 11
+            "系统内部错误。"
+
+        class AddStudent(enum.IntEnum):
+            ClassNotExists = 12
+            "目标班级不存在。"
+            StudentExists = 13
+            "学生已存在。"
+            SystemError = 14
+            "系统内部错误。"
+        
+        class DeleteStudent(enum.IntEnum):
+            SystemError = 15
+            "系统内部错误。"
+
+        class SendModify(enum.IntEnum):
+            ClassStatusObserverNotInitialized = 16
+            "班级侦测器未初始化。"
+
+        class RetractModify(enum.IntEnum):
+            ClassStatusObserverNotInitialized = 17
+            "班级侦测器未初始化。"
+
+        class ResetData(enum.IntEnum):
+            ClassStatusObserverNotInitialized = 18
+            "班级侦测器未初始化。"
+            TargetClassNotSet = 19
+            "目标班级未设置。"
+
+
 
     def findstu(
         self,
         identifier: int | str,
-        from_class: str = DEFAULT_CLASS_KEY,
-        *,
-        strict: bool = False,
-    ) -> Student | int:
+        from_class: str = DEFAULT_CLASS_KEY) -> Student:
         """
         在from_class中找到一个匹配identifier（可以是学号或者名字）的人
 
         :param identifier: 学号或者名字
         :param from_class: 班级名
-        :return Union[Student, int]: 学生/错误信息
+        :return Student: 学生/错误信息
         :raise StudentNotExistError: 没找到
-        :raise ClassNotExistError: 班级不存在
+        :raise EditingError: 出现错误
         """
         try:
             real_class = self.classes[from_class]
         except KeyError as e:
-            if not strict:
-                return ClassObj.EditErrInfo.FindStudent.ClassNotExists
-            raise ClassObj.ClassNotExistError(f"班级{from_class!r}不存在") from e
+            raise ClassObj.ClassNotExistError(f"班级{from_class!r}不存在", 
+                    error_code=ClassObj.ErrorInfo.FindStudent.ClassNotExists
+                ) from e
         if isinstance(identifier, int):
             for k in real_class.students:
                 if real_class.students[k].num == identifier:
@@ -959,16 +1015,14 @@ class ClassObj(ClassDataObj, Base):
                         "MainThread.findstu",
                     )
                     return s
-            if not strict:
-                return ClassObj.EditErrInfo.FindStudent.StudentNotExists
-            raise ClassObj.StudentNotExistError("没有找到指定的学生")
-        if isinstance(identifier, str):
+            raise ClassObj.StudentNotExistError("没有找到指定的学生",
+             error_code=ClassObj.ErrorInfo.FindStudent.StudentNotExists)
+        if isinstance(identifier, str): # type: ignore[unreachable], 以防我脑子炸了
             for k in real_class.students:
                 if real_class.students[k].name == identifier:
                     return real_class.students[k]
-            if not strict:
-                return ClassObj.EditErrInfo.FindStudent.ClassNotExists
-            raise ClassObj.StudentNotExistError("没有找到指定的学生")
+            raise ClassObj.StudentNotExistError("没有找到指定的学生",
+                error_code=ClassObj.ErrorInfo.FindStudent.StudentNotExists)
         raise TypeError("传参错误")
 
     def student_exists(self, identifier: int | str, from_class: str = DEFAULT_CLASS_KEY):
@@ -978,12 +1032,11 @@ class ClassObj(ClassDataObj, Base):
         :param identifier: 学号或者名字
         :param from_class: 班级名
         :return: 是否存在
-        :raise ClassNotExistError: 班级不存在
         """
         try:
             self.findstu(identifier, from_class)
             return True
-        except ClassObj.EditingError as unused:  # pylint: disable=unused-variable
+        except ClassObj.ClassObjectError:
             return False
 
     def add_template(
@@ -993,9 +1046,7 @@ class ClassObj(ClassDataObj, Base):
         value: float,
         description: str,
         reason: str = "创建原因未知",
-        *,
-        strict: bool = False,
-    ) -> ScoreModificationTemplate | int:
+    ) -> ScoreModificationTemplate:
         """
         新建模板。
 
@@ -1004,8 +1055,8 @@ class ClassObj(ClassDataObj, Base):
         :param value: 模板修改值
         :param description: 模板描述
         :param reason: 创建原因
-        :return Union[ScoreModificationTemplate, int]: 新建的模板/错误信息
-        :raise TemplateExistsError: 模板存在了且无法覆盖（指的是key重复）
+        :return ScoreModificationTemplate: 新建的模板
+        :raise EditingError: 出现错误
         """
         Base.log("I", f"正在新建模板{key}, 原因：{reason}", "MainThread.add_template")
 
@@ -1014,12 +1065,12 @@ class ClassObj(ClassDataObj, Base):
             if self.modify_templates[key].cant_replace:
                 Base.log(
                     "E",
-                    "尝试覆盖一个无法修改的模板" + (", raise TemplateExistsError" if strict else ""),
+                    "尝试覆盖一个无法修改的模板, raise TemplateExistsError",
                     "MainThread.add_template",
                 )
-                if not strict:
-                    return ClassObj.EditErrInfo.AddTemplate.TargetUnreplaceable
-                raise ClassObj.TemplateExistsError(f'模板"{self.modify_templates[key].title}"({key})被设置为无法替换!')
+                raise ClassObj.TemplateExistsError(
+                    f'模板"{self.modify_templates[key].title}"({key})被设置为无法替换!',
+                    ClassObj.ErrorInfo.AddTemplate.TargetIrreplaceable)
             self.modify_templates[key].title = title
             self.modify_templates[key].mod = value
             self.modify_templates[key].desc = description
@@ -1032,13 +1083,12 @@ class ClassObj(ClassDataObj, Base):
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             Base.log_exc("新建模板失败:", "MainThread.add_template")
-            if strict:
-                raise ClassObj.EditingError(f"新建模板{key!r}失败") from e
-            return ClassObj.EditErrInfo.AddTemplate.SystemError
+            raise ClassObj.ClassObjectError(f"新建模板{key!r}失败", 
+                ClassObj.ErrorInfo.AddTemplate.SystemError) from e
 
     def del_template(
-        self, key: str, reason: str = "删除原因未知", *, strict: bool = False
-    ) -> ScoreModificationTemplate | int:
+        self, key: str, reason: str = "删除原因未知"
+    ) -> ScoreModificationTemplate:
         """
         删除模板。
 
@@ -1052,23 +1102,22 @@ class ClassObj(ClassDataObj, Base):
         Base.log("I", f"正在删除模板{key}, 原因：{reason}", "MainThread.del_template")
         if key not in self.modify_templates:
             Base.log(
-                "E" if strict else "W",
-                f"模板{key}本就不存在" + (", raise TemplateNotExistError" if strict else ""),
+                "E",
+                f"模板{key}本就不存在, raise TemplateNotExistError",
                 "MainThread.del_template",
             )
-            if not strict:
-                return ClassObj.EditErrInfo.DeleteTemplate.TargetNotExists
-            raise ClassObj.TemplateNotExistError("模版本不存在，无需操作")
+            raise ClassObj.TemplateNotExistError("模版本不存在，无需操作", 
+                ClassObj.ErrorInfo.DeleteTemplate.TargetNotExists)
 
         if self.modify_templates[key].cant_replace:
             Base.log(
-                "E" if strict else "W",
-                "尝试覆盖一个无法修改的模板" + (", raise TemplateExistsError" if strict else ""),
+                "E",
+                "尝试覆盖一个无法修改的模板, raise TemplateExistsError",
                 "MainThread.del_template",
             )
-            if not strict:
-                return ClassObj.EditErrInfo.DeleteTemplate.TargetUnreplaceable
-            raise ClassObj.TemplateExistsError(f'模板"{self.modify_templates[key].title}"({key})被设置为无法替换!')
+            raise ClassObj.TemplateExistsError(
+                f'模板"{self.modify_templates[key].title}"({key})被设置为无法替换!', 
+                ClassObj.ErrorInfo.DeleteTemplate.TargetIrreplaceable)
         try:
             orig = self.modify_templates[key]
             del self.modify_templates[key]
@@ -1077,9 +1126,9 @@ class ClassObj(ClassDataObj, Base):
 
         except (KeyError, RuntimeError) as e:  # pylint: disable=broad-exception-caught
             Base.log_exc("删除模板失败:", "MainThread.del_template")
-            if not strict:
-                return ClassObj.EditErrInfo.DeleteTemplate.SystemError
-            raise ClassObj.EditingError(f"删除模板{key!r}发生错误") from e
+            raise ClassObj.ClassObjectError(
+                f"删除模板{key!r}发生错误", 
+                ClassObj.ErrorInfo.DeleteTemplate.SystemError) from e
 
     def add_class(
         self,
@@ -1088,9 +1137,7 @@ class ClassObj(ClassDataObj, Base):
         owner: str,
         students: dict[int, Student],
         reason: str = "创建原因未知",
-        *,
-        strict: bool = False,
-    ) -> Class | int:
+    ) -> Class:
         """
         新建班级。
 
@@ -1110,23 +1157,21 @@ class ClassObj(ClassDataObj, Base):
             "MainThread.add_class",
         )
         if key in self.classes:
-            Base.log("E", "指定的班级已存在!", "MainThread.add_class")
-            if not strict:
-                return ClassObj.EditErrInfo.AddClass.TargetExists
-            raise ClassObj.ClassExistsError(f"指定班级{name}已存在! (标识: {key})")
+            Base.log("E", "指定的班级已存在", "MainThread.add_class")
+            raise ClassObj.ClassExistsError(f"指定班级{name}已存在! (标识: {key})", 
+                ClassObj.ErrorInfo.AddClass.TargetExists
+            )
 
         try:
             self.classes[key] = Class(name, owner, students, key, {})
-            Base.log("I", f"班级{name}新建完毕!", "MainThread.add_class")
+            Base.log("I", f"班级{name}新建完毕", "MainThread.add_class")
             return self.classes[key]
 
         except Exception as e:  # pylint: disable=broad-exception-caught
-            Base.log_exc("新建班级失败:", "MainThread.class")
-            if not strict:
-                return ClassObj.EditErrInfo.AddClass.SystemError
-            raise ClassObj.EditingError(f"新建班级失败{key!r}失败") from e
+            raise ClassObj.ClassObjectError(f"新建班级失败{key!r}失败",
+                ClassObj.ErrorInfo.AddClass.SystemError) from e
 
-    def del_class(self, key: str, reason: str = "删除原因未知", *, strict: bool = False) -> Class | bool:
+    def del_class(self, key: str, reason: str = "删除原因未知") -> Class | bool:
         """
         删除班级。
 
@@ -1140,17 +1185,16 @@ class ClassObj(ClassDataObj, Base):
 
         if key not in self.classes:
             Base.log("E", "指定的班级不存在,无需操作!", "MainThread.del_class")
-            if not strict:
-                return True
+            raise ClassObj.ClassNotExistError(f"指定班级{key!r}不存在!",
+                ClassObj.ErrorInfo.DeleteClass.TargetNotExists)
         try:
             del self.classes[key]
             Base.log("I", f"班级{key}删除完毕!", "MainThread.del_class")
             return class_orig
         except Exception as e:  # pylint: disable=broad-exception-caught
-            Base.log_exc("新建班级失败:", "MainThread.del_class")
-            if not strict:
-                return False
-            raise ClassObj.EditingError(f"删除班级{key!r}失败") from e
+            Base.log_exc("删除班级失败:", "MainThread.del_class")
+            raise ClassObj.ClassObjectError(f"删除班级{key!r}失败", 
+                ClassObj.ErrorInfo.DeleteClass.SystemError) from e
 
     def add_student(
         self,
@@ -1159,8 +1203,6 @@ class ClassObj(ClassDataObj, Base):
         num: int,
         init_score: float = 0.0,
         reason: str = "创建原因未知",
-        *,
-        strict: bool = False,
     ) -> bool:
         """
         新建学生。
@@ -1170,7 +1212,6 @@ class ClassObj(ClassDataObj, Base):
         :param num: 学号
         :param init_score: 初始分数
         :param reason: 创建原因
-        :param strict: 是否直接报错
         :return bool: 是否成功
         :raise ClassNotExistError: 指定的班级不存在
         :raise StudentExistsError: 指定的学生已存在
@@ -1178,27 +1219,24 @@ class ClassObj(ClassDataObj, Base):
         Base.log("I", f"正在新建学生{name!r}, 原因：{reason!r}", "MainThread.add_student")
         if to_class not in self.classes:
             Base.log("E", "指定的班级不存在!", "MainThread.add_student")
-            if not strict:
-                return False
-            raise ClassObj.ClassNotExistError(f"指定班级{to_class!r}不存在!")
+            raise ClassObj.ClassNotExistError(f"指定班级{to_class!r}不存在!", 
+                    ClassObj.ErrorInfo.AddStudent.ClassNotExists)
         if num in self.classes[to_class].students:
             Base.log(
                 "E",
                 f"指定学生{name!r}已存在! (学号{num!r}已占用)",
                 "MainThread.add_student",
             )
-            if not strict:
-                return False
-            raise ClassObj.StudentExistsError(f"指定学生{name!r}已存在! (学号{num!r}已占用)")
+            raise ClassObj.StudentExistsError(f"指定学生{name!r}已存在! (学号{num!r}已占用)", 
+                ClassObj.ErrorInfo.AddStudent.StudentExists)
         try:
             self.classes[to_class].students[num] = Student(name, num, init_score, to_class, {})
             Base.log("I", f"学生{name}新建完毕!", "MainThread.add_student")
             return True
         except Exception as e:  # pylint: disable=broad-exception-caught
             Base.log_exc("新建学生失败:", "MainThread.add_student")
-            if not strict:
-                return False
-            raise ClassObj.EditingError(f"新建学生{name!r}失败") from e
+            raise ClassObj.ClassObjectError(f"新建学生{name!r}失败", 
+                ClassObj.ErrorInfo.AddStudent.SystemError) from e
 
     def del_student(
         self,
@@ -1217,7 +1255,7 @@ class ClassObj(ClassDataObj, Base):
         Base.log("I", f"正在删除学生{identifier}, 原因：{reason}", "MainThread.del_student")
         try:
             stuobj = self.findstu(identifier, from_class)
-        except ClassObj.EditingError as unused:
+        except ClassObj.ClassObjectError:
             Base.log(
                 "W",
                 "指定的学生不存在, 无需操作! 信息：" + repr(sys.exc_info()[1]),
@@ -1231,10 +1269,9 @@ class ClassObj(ClassDataObj, Base):
             return orig
         except KeyError as e:  # pylint: disable=broad-exception-caught
             Base.log_exc("删除学生失败:", "MainThread.del_student")
-            raise ClassObj.EditingError(f"从{from_class!r}删除学生{identifier!r}失败") from e
+            raise ClassObj.ClassObjectError(f"从{from_class!r}删除学生{identifier!r}失败",
+                    ClassObj.ErrorInfo.DeleteStudent.SystemError) from e
 
-    class SendModifyError(RuntimeError):
-        "发送点评出现错误"
 
     def send_modify(
         self,
@@ -1245,7 +1282,8 @@ class ClassObj(ClassDataObj, Base):
         extra_mod: float | None = None,
         info: str | None = None,
     ) -> list[ScoreModification] | None:
-        """发送点评。
+        """
+        发送点评。
 
         :param key: 模板标识符
         :param to: 发送至的学生
@@ -1256,13 +1294,15 @@ class ClassObj(ClassDataObj, Base):
         :return: 发送的所有点评的实例
         :raise SendModifyError: 发送点评出现错误
         """
-
+        if self.class_obs is None:
+            raise ClassObj.ClassObjectError("ClassObj的class_obs未初始化", 
+                ClassObj.ErrorInfo.SendModify.ClassStatusObserverNotInitialized)
         if isinstance(to, Student):
             send_to = [to]
         else:
             send_to = to
 
-        if send_to is None:
+        if send_to is None: # type: ignore[unreachable]
             Base.log("W", "传参为None，疑似初始化，return", "MainThread.send_modify")
             return None
 
@@ -1274,7 +1314,7 @@ class ClassObj(ClassDataObj, Base):
             Base.log("W", "传参为[None]，疑似初始化，return", "MainThread.send_modify")
             return None
 
-        if key is None:
+        if key is None: # type: ignore[unreachable]
             Base.log("W", "key为None，疑似模板选择时取消，return", "MainThread.send_modify")
             return None
 
@@ -1288,6 +1328,7 @@ class ClassObj(ClassDataObj, Base):
         result: list[ScoreModification] = []
         succeed: list[ScoreModification] = []
 
+        a: Optional[ScoreModification] = None
         for stu in send_to:
             a = ScoreModification(self.modify_templates[key], stu, extra_title, extra_desc, extra_mod)
             success = a.execute()
@@ -1332,7 +1373,7 @@ class ClassObj(ClassDataObj, Base):
             + (f"失败{len(send_to) - len(succeed)}" + f" [{send_to[0].num}号{'等' if len(send_to) > 1 else ''}] "
                 if len(send_to) != len(succeed)
                 else "")
-            + f"<{a.title} {a.mod:.1f}分>" + (" " + info if info is not None else "")
+            + (f"<{a.title} {a.mod:.1f}分>" + (" " + info if info is not None else "") if a is not None else "")
         )
         self.insert_action_history_info(
             action_desc,
@@ -1355,10 +1396,15 @@ class ClassObj(ClassDataObj, Base):
         :raise SendModifyError: 发送点评出现错误
 
         """
+        if self.class_obs is None:
+            raise ClassObj.ClassObjectError("ClassObj的class_obs未初始化", 
+                ClassObj.ErrorInfo.SendModify.ClassStatusObserverNotInitialized)
+        
         if isinstance(modify, ScoreModification):
             modify = [modify]
 
         succeed: list[ScoreModification] = []
+        lastest: Optional[ScoreModification] = None
         for m in modify:
             success = m.execute()
             if not success:
@@ -1430,7 +1476,7 @@ class ClassObj(ClassDataObj, Base):
                 if len(modify) != len(succeed)
                 else ""
             )
-            + ("<多项类型可能不一>" if len(modify) > 1 else f"<{lastest.title} {lastest.mod:.1f}分>")
+            + ("<多项类型可能不一>" if len(modify) > 1 else f"<{lastest.title} {lastest.mod:.1f}分>" if lastest is not None else "")
             + (" " + info if info is not None else ""),
             lambda: self.list_view(info_list, "点评记录" + (" " + info if info is not None else "")),
             (127, 225, 195, 224, 255, 255),
@@ -1469,30 +1515,28 @@ class ClassObj(ClassDataObj, Base):
                 Base.log("I", f"撤回了{m.target.name}的点评", "MainThread.retract_modify")
                 succeed.append(m)
         index = 0
-        info_list = []
+        info_list: List[Union[
+            Tuple[str, Callable[[], None]],
+            Tuple[str, Callable[[], None], Tuple[QColor, QColor]]
+        ]] = []
         if succeed:
             if failure:
                 info_list += [("撤回成功的...", lambda: None)]
             index += 1
             for s in succeed:
-                info_list.append(
-                    (
-                        f"{s.target.name} {s.temp.title} {s.create_time.rsplit('.')[0]} {s.mod:+.1f}",
-                        lambda s=s, index=index: self.history_window(s, index, None, False, None, False),
-                        (
-                            (
-                                QColor(202, 255, 222)
-                                if s.mod > 0
-                                else (QColor(255, 202, 202) if s.mod < 0 else QColor(201, 232, 255))
-                            ),
-                            (
-                                QColor(232, 255, 232)
-                                if s.mod > 0
-                                else (QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255))
-                            ),
-                        ),
-                    )
+                desc =  f"{s.target.name} {s.temp.title} {s.create_time.rsplit('.')[0]} {s.mod:+.1f}"
+                func = lambda *, s=s, index=index: self.history_window(s, index, None, False, None, False)
+                begin_color = (
+                    QColor(202, 255, 222)
+                    if s.mod > 0
+                    else (QColor(255, 202, 202) if s.mod < 0 else QColor(201, 232, 255))
                 )
+                end_color = (
+                    QColor(232, 255, 232)
+                    if s.mod > 0
+                    else (QColor(255, 232, 232) if s.mod < 0 else QColor(233, 244, 255))
+                )
+                info_list.append((desc, func, (begin_color, end_color)))
                 index += 1
 
         if failure:
@@ -1556,6 +1600,11 @@ class ClassObj(ClassDataObj, Base):
 
         :return Tuple[bool, str]: 是否成功，执行信息
         """
+
+        if self.class_obs is None:
+            raise ClassObj.ClassObjectError("ClassObj的class_obs未初始化", 
+                ClassObj.ErrorInfo.RetractModify.ClassStatusObserverNotInitialized)
+        
         if self.class_obs.opreation_record.is_empty():
             Base.log("W", "没有可撤回的点评", "MainThread.retract_last")
             return True, "没有需要的点评"
@@ -1576,7 +1625,13 @@ class ClassObj(ClassDataObj, Base):
 
     def reset_scores(self) -> dict[str, Class]:
         "结算所有数据"
-        assert self.target_class is not None, "尝试结算所有数据时目标班级为空"
+
+        if self.class_obs is None:
+            raise ClassObj.ClassObjectError("ClassObj的班级侦测器未初始化",
+                ClassObj.ErrorInfo.ResetData.ClassStatusObserverNotInitialized)
+        if self.target_class is None:
+            raise ClassObj.ClassObjectError("ClassObj的目标班级未设置",
+                ClassObj.ErrorInfo.ResetData.TargetClassNotSet)
         history = History(copy.deepcopy(self.classes), self.weekday_record, time.time())
         Base.log("W", "正在重置所有班级...", "ClassObjects.reset")
 
@@ -1584,13 +1639,18 @@ class ClassObj(ClassDataObj, Base):
             _class.reset()
 
         Base.log("I", "重置完成", "ClassObjects.reset")
-        self.insert_action_history_info("分数结算", self.show_all_history, (216, 112, 112, 255, 202, 202), 40)
+        self.insert_action_history_info(
+            "分数结算", 
+            self.show_all_history, 
+            (216, 112, 112, 255, 202, 202), 
+            40
+        )
         self.history_data[time.time()] = history
         self.class_obs.opreation_record.clear()
         self.last_reset = time.time()
         self.weekday_record = {}
         self.current_day_attendance[self.target_class_id] = AttendanceInfo(self.target_class.key)
-        ClassObj.get_archive_uuid = uuid.uuid4()
+        ClassObj.archive_uuid = uuid.uuid4()
         return self.classes
 
     def random_choose_stu(
@@ -1637,7 +1697,7 @@ class ClassObj(ClassDataObj, Base):
     def insert_action_history_info(
         self,
         text: str,
-        func: Callable,
+        func: Callable[[], Any],
         color: tuple[int, int, int, int, int, int],
         stepcount: int = 0,
     ):
@@ -1655,10 +1715,10 @@ class ClassObj(ClassDataObj, Base):
         self,
         modify: ScoreModification,
         listbox_index: int,
-        listbox_widget=None,
+        listbox_widget: Any = None,
         readonly: bool = False,
-        master=None,
-        remove_in_listbox_when_retracted=True,
+        master: Optional[Any] =None,
+        remove_in_listbox_when_retracted: bool = True,
     ):
         """
         展示一个历史记录。
@@ -1674,10 +1734,10 @@ class ClassObj(ClassDataObj, Base):
     @abstractmethod
     def list_view(
         self,
-        data: list[tuple[str, Callable]] | list[tuple[str, Callable, tuple]],
+        data: Sequence[Tuple[str, Callable[[], Any]] | Tuple[str, Callable[[], Any], ColorArgumentType]],
         title: str,
-        master=None,
-        commands: list[tuple[str, Callable]] | None = None,
+        master: Optional[Any] = None,
+        commands: List[Tuple[str, Callable[[], Any]]] | None = None,
     ):
         """
         展示一个列表视图。
@@ -1700,9 +1760,10 @@ class ClassObj(ClassDataObj, Base):
         """
         自动保存的执行函数，会阻塞
 
-        timeout:自动保存间隔时间，单位为秒
+        timeout: 自动保存间隔时间，单位为秒
         """
         self.auto_saving = False
+        assert self.class_obs is not None, "ClassObj的班级侦测器还未初始化就开始自动保存了"
         try:
             while self.class_obs.on_active:
                 for _ in range(timeout * 10):
@@ -1716,13 +1777,13 @@ class ClassObj(ClassDataObj, Base):
                     self.save_data(self.save_path)
                     Base.log("I", "自动保存完成", "ClassObj.auto_save")
 
-                except Exception as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
+                except Exception:  # pylint: disable=broad-exception-caught, broad-exception-caught
                     exc_info = sys.exc_info()
                     self.on_auto_save_failure(exc_info)
 
                 self.auto_saving = False
 
-        except Exception as unused:  # pylint: disable=broad-exception-caught, broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught, broad-exception-caught
             Base.log_exc("自动保存因错误而停止", "ClassObj.auto_save", "E")
 
     def find_with_uuid(

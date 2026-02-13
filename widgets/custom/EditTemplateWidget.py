@@ -17,7 +17,7 @@ class EditTemplateWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         main_window: Optional[ClassObj] = None,
-        master_widget: Optional[WidgetType] = None,
+        master_widget: Optional[QWidget] = None,
         template: ScoreModificationTemplate = None,
         in_listview: ListView = None,
         listview_index: int = None,

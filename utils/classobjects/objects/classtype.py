@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import copy
 import json
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Self
 
-from ...algorithm import OrderedKeyList, SupportsKeyOrdering
-from ...basetypes import Base
 from ...consts import inf
+from ...basetypes import Base
+from ...algorithm import OrderedKeyList, SupportsKeyOrdering, update_object_mapping
 
-from ..basetype import ClassDataType, DataProperty
+from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class Class(ClassDataType, SupportsKeyOrdering):
     "一个班级"
 
-    chunk_type_name: Literal["Class"] = "Class"
+    chunk_type_name: str = "Class"
     "类型名"
 
     is_unrelated_data_type = False
@@ -54,7 +54,7 @@ class Class(ClassDataType, SupportsKeyOrdering):
         self._name = name
         self._owner = owner
         self.groups = groups if isinstance(groups, dict) else groups.to_dict()
-        self.students = students if isinstance(students, dict) else students.to_dict()
+        self.students = students
         self._key = key
         self.cleaning_mapping = cleaning_mapping or {}
         self.homework_rules = OrderedKeyList(homework_rules or [])
@@ -189,14 +189,14 @@ class Class(ClassDataType, SupportsKeyOrdering):
         self.refresh_uuid()
         return class_orig
 
-    def to_string(self) -> str:
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将班级对象转换为字符串。"
         if hasattr(self, "cleaing_mapping") and not hasattr(self, "cleaning_mapping"):
             # 也是因为之前的拼写错误
             self.cleaning_mapping: dict[int, dict[Literal["member", "leader"], list[Student]]] | None = (
-                self.cleaing_mapping
+                getattr(self, "cleaing_mapping")
             )
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "key": self.key,
@@ -214,7 +214,7 @@ class Class(ClassDataType, SupportsKeyOrdering):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
     def from_string(string: str) -> Class:
@@ -244,5 +244,5 @@ class Class(ClassDataType, SupportsKeyOrdering):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self

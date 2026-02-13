@@ -156,8 +156,8 @@ class OrderedKeyList(List[_Template], IterableType):
         objects: Union[
             Iterable[_Template],
             dict[str, _Template],
-            "OrderedDict[str, _Template]",
-            "OrderedKeyList[_Template]",
+            OrderedDict[str, _Template],
+            OrderedKeyList[_Template],
         ],
     ):
         """初始化OrderedKeyList
@@ -198,6 +198,7 @@ class OrderedKeyList(List[_Template], IterableType):
                 keys.append(getattr(v, self.keyattr))
                 self.append(v)
 
+
     def __getitem__(self, key: int | str | _Template) -> _Template:
         "返回指定索引或key的模板"
         if isinstance(key, int):
@@ -209,6 +210,7 @@ class OrderedKeyList(List[_Template], IterableType):
             if obj is key:
                 return obj
         raise KeyError(f"列表中不存在key为{key!r}的模板")
+
 
     def __setitem__(self, key: int | str | _Template, value: _Template):
         "设置指定索引或key的模板"
@@ -226,6 +228,7 @@ class OrderedKeyList(List[_Template], IterableType):
             else:
                 raise KeyError(f"列表中不存在key为{key!r}的模板")
 
+
     def __delitem__(self, key: int | str):
         "删除指定索引或key的模板"
         if isinstance(key, int):
@@ -237,21 +240,26 @@ class OrderedKeyList(List[_Template], IterableType):
                     return
             raise KeyError(f"列表中不存在key为{key!r}的模板")
 
+
     def __len__(self) -> int:
         "返回列表中模板的数量"
         return super().__len__()
+
 
     def __reversed__(self) -> Iterator[_Template]:
         "返回列表的反向迭代器"
         return super().__reversed__()
 
+
     def __iter__(self) -> Iterator[_Template]:
         "返回列表的迭代器"
         return super().__iter__()
 
+
     def __contains__(self, item: _Template | str) -> bool:
         "判断列表中是否包含指定模板"
         return super().__contains__(item) or [getattr(obj, self.keyattr) for obj in self].count(item) > 0
+
 
     def swaps(self, lh: int | str, rh: int | str):
         "交换指定索引或key的模板"
@@ -272,6 +280,7 @@ class OrderedKeyList(List[_Template], IterableType):
         self[lh], self[rh] = self[rh], self[lh]
         return self
 
+
     def append(self, obj: _Template):
         "添加到列表"
         if getattr(obj, self.keyattr) in self.keys():
@@ -287,35 +296,43 @@ class OrderedKeyList(List[_Template], IterableType):
         super().append(obj)
         return self
 
+
     def extend(self, templates: Iterable[_Template]):
         "扩展列表"
         for template in templates:
             self.append(template)
         return self
 
+
     def keys(self) -> list[str]:
         "返回列表中所有元素的key"
         return [getattr(obj, self.keyattr) for obj in self]
+
 
     def values(self) -> list[_Template]:
         "返回列表中所有模板"
         return [obj for obj in self]
 
+
     def items(self) -> list[tuple[str, _Template]]:
         "返回列表中所有模板的key和模板"
         return [(getattr(obj, self.keyattr), obj) for obj in self]
+
 
     def __copy__(self) -> "OrderedKeyList[_Template]":
         "返回列表的浅拷贝"
         return OrderedKeyList(self)
 
+
     def __deepcopy__(self, memo: dict | None) -> "OrderedKeyList[_Template]":
         "返回列表的深拷贝"
         return OrderedKeyList([copy.deepcopy(obj, memo) for obj in self])
 
+
     def copy(self) -> "OrderedKeyList[_Template]":
         "返回列表的拷贝"
         return self.__copy__()
+
 
     def to_dict(self) -> dict[str, _Template]:
         "返回列表的字典表示"

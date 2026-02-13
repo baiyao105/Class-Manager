@@ -4,23 +4,25 @@
 
 import functools
 from threading import Thread
+from typing import Any, Callable
 
 from ..logger import Logger as Base
 
 __all__ = [
     "canbe",
-    "pass_exceptions",
+    "skip_exceptions",
     "repeat",
     "run_async",
 ]
 
 
-def repeat(count):
+def repeat(count: int):
     """
     装饰器，用于重复执行函数指定次数
 
     :param count: 重复执行的次数
     :return: 装饰后的函数
+    Tip: 如果被装饰的函数有返回值，则返回最后一次执行的结果
 
     Demo:
     >>> @repeat(3)
@@ -32,15 +34,18 @@ def repeat(count):
     hello
     """
 
-    def executor(func):
-        def wrapper(*args, **kwargs):
+    def executor(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            res = None
             for _ in range(count):
-                func(*args, **kwargs)
+                res = func(*args, **kwargs)
+            return res
         return wrapper  # type: ignore
     return executor # type: ignore
 
 
-def run_async(func):
+def run_async(func: Callable[..., Any]) -> Callable[..., None]:
     """
     装饰器，用于将函数异步执行
 
@@ -55,12 +60,12 @@ def run_async(func):
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> None:
         Thread(target=func, args=args, kwargs=kwargs, daemon=True).start()
     return wrapper # type: ignore
 
 
-def canbe(value, _class: type):
+def canbe(value: Any, _class: type):
     """
     检查一个值是否可以转换为指定类型
 
@@ -73,18 +78,18 @@ def canbe(value, _class: type):
     try:
         _class(value)
         return True
-    except Exception as unused:  # pylint: disable=unused-argument, broad-exception-caught
+    except Exception:  # pylint: disable=unused-argument, broad-exception-caught
         return False
 
 
-def pass_exceptions(func):
+def skip_exceptions(func: Callable[..., Any]) -> Callable[..., Any]:
     """装饰器，用于捕获函数执行过程中抛出的异常
 
     :param func: 要装饰的函数
     :return: 装饰后的函数
 
     示例:
-    >>> @pass_exceptions
+    >>> @skip_exceptions
     ... def func():
     ...     raise Exception("错误示例")
 
@@ -101,21 +106,19 @@ def pass_exceptions(func):
     -----------------------------------------------------------------------
     builtins.Exception: 错误示例
     Stacktrace:
-     at __main__.pass_exceptions.<locals>.wrapper(main.py:114514)
+     at __main__.skip_exceptions.<locals>.wrapper(main.py:114514)
     -----------------------------------------------------------------------
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
-            return func(*args, **kwargs)    # type: ignore
-        except (
-            BaseException
-        ) as unused:  # pylint: disable=broad-exception-caught
+            return func(*args, **kwargs)
+        except Exception:  # pylint: disable=broad-exception-caught
             Base.log_exc(
-                f"执行函数{repr(func.__name__)}时捕获到异常",   # type: ignore
-                f"pass_exceptions -> {func.__name__}", # type: ignore
+                f"执行函数{repr(func.__name__)}时捕获到异常",
+                f"pass_exceptions -> {func.__name__}",
             )
-    return wrapper # type: ignore
+    return wrapper
 
 

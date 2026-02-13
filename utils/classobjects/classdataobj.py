@@ -22,7 +22,7 @@ current_archive_uuid: UUID | None = None
 
 
 
-UUIDType = TypeVar("UUIDType", bound=ClassDataType)
+UUIDDataType = TypeVar("UUIDDataType", bound=ClassDataType)
 
 
 class ClassDataObj:
@@ -33,9 +33,9 @@ class ClassDataObj:
         "侦测器错误。"
 
     @staticmethod
-    def LoadUUID(uuid: ClassDataTypeUUID[UUIDType], type: type[UUIDType]) -> UUIDType:
+    def LoadUUID(uuid: ClassDataTypeUUID[UUIDDataType], type: type[UUIDDataType]) -> UUIDDataType:
         "以一个ClassDataTypeUUID加载数据类型。"
-        raise NotImplementedError("ClassDataObj.LoadUUID在没有被设置的时候被调用")
+        raise NotImplementedError("ClassDataObj.LoadUUID在没有被设置的时候被调用了") # 防止我自己看不懂这个信息
 
     @staticmethod
     def get_archive_uuid():

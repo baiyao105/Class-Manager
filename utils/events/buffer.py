@@ -1,12 +1,11 @@
 
 import time
-from abc import ABC, abstractmethod
+from abc import ABC
 
 
 from typing import Callable, Any, final
 from typing_extensions import override
 
-from utils.logger import Logger
 from ..algorithm.datatypes import Thread
 from ..algorithm.numeric import addrof
 from .event import Event

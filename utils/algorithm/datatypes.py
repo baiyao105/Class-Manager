@@ -7,39 +7,13 @@ import time
 from collections.abc import Callable, Iterable, Mapping
 from threading import Lock
 from threading import Thread as OrigThread
-from typing import Any, Generic, TypeVar
-
-
-class NULLPTR:
-    "虽然没用"
-
-    def __eq__(self, value: object) -> bool:
-        return isinstance(value, NULLPTR)
-
-    def __ne__(self, value: object) -> bool:
-        return not isinstance(value, NULLPTR)
-
-    def __str__(self) -> str:
-        return "nullptr"
-
-    def __repr__(self) -> str:
-        return "nullptr"
-
-    def __hash__(self):
-        return -1
-
-    def __bool__(self):
-        return False
-
-
-null = NULLPTR()
-"空指针"
-
+from types import TracebackType
+from typing import Any, Generic, Optional, TypeVar
 
 class Node:
     "树节点"
 
-    def __init__(self, value: object, left: object = null, right: object = null):
+    def __init__(self, value: object, left: object = None, right: object = None):
         self.value = value
         self.left = left
         self.right = right
@@ -92,7 +66,7 @@ class Thread(OrigThread):
     def __init__(
         self,
         group: None = None,
-        target: Callable | None = None,
+        target: Callable[..., Any] | None = None,
         name: str | None = None,
         args: Iterable[Any] | None = None,
         kwargs: Mapping[str, Any] | None = None,
@@ -165,7 +139,7 @@ class Mutex:
         self.acquire()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None):
         "退出上下文管理器"
         self.release()
         return False

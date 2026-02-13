@@ -60,7 +60,7 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
         return peak_amplitude / 32768
 
     def __init__(
-        self, master: Optional[WidgetType] = None, main_window: Optional[ClassObj] = None
+        self, master: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
     ):
         """
         构造新窗口

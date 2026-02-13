@@ -17,7 +17,7 @@ class HistoryWidget(MyWidget, Ui_Form):
     def __init__(
         self,
         main_window: ClassObj = None,
-        master_widget: Optional[WidgetType] = None,
+        master_widget: Optional[QWidget] = None,
         history: ScoreModification = None,
         listview_widget: ListView = None,
         listview_index: int = None,

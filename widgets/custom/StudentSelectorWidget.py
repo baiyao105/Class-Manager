@@ -18,7 +18,7 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         main_window: ClassObj = None,
-        master: Optional[WidgetType] = None,
+        master: Optional[QWidget] = None,
         target_students: List[Student] = None,
         default_selection: List[Student] = None,
         allow_none: bool = False,

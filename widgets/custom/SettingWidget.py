@@ -15,7 +15,7 @@ class SettingWidget(Ui_Form, MyWidget):
     """设置窗口"""
 
     def __init__(
-        self, master_widget: Optional[WidgetType] = None, main_window: Optional[SettingsInfo] = None
+        self, master_widget: Optional[QWidget] = None, main_window: Optional[SettingsInfo] = None
     ):
         """初始化
 

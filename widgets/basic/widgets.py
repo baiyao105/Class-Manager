@@ -1,11 +1,15 @@
 import random
 import time
-from typing import Union, Tuple, Optional, Callable
+from typing import Any, Union, Tuple, Optional, Callable
 from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar
 
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
+from utils.qtconfig import (QPushButton, QWidget, QColor, Property, 
+                            QIcon, QPixmap, QGraphicsOpacityEffect, 
+                            QPropertyAnimation, QCoreApplication, 
+                            QMouseEvent, QPaintEvent, QPainter, 
+                            QRectF, QPen, Qt, QListWidget, 
+                            QListWidgetItem, QMainWindow, QVBoxLayout, 
+                            QMessageBox, QTimer, QEasingCurve)
 from utils.classobjects import Student, Group
 from utils.functions.sounds import play_sound
 
@@ -46,9 +50,9 @@ class ObjectButton(QPushButton):
     def __init__(
         self,
         text: str,
-        parent=None,
-        icon: Union[QIcon, QPixmap] = None,
-        object: Union[Student, Group] = None,
+        parent: Optional[QWidget] = None,
+        icon: Optional[Union[QIcon, QPixmap]] = None,
+        object: Optional[Union[Student, Group]] = None,
     ):
         """
         初始化学生按钮
@@ -58,12 +62,13 @@ class ObjectButton(QPushButton):
         :param icon: 按钮图标
         :param object: 按钮关联的学生或小组对象
         """
+        # TODO: 这里好像真的有问题（）
         if icon is not None:
-            super().__init__(icon=icon, text=text, parent=parent)
+            super().__init__(icon=icon, text=text, parent=parent) # type: ignore
         else:
-            super().__init__(text=text, parent=parent)
+            super().__init__(text=text, parent=parent) # type: ignore
         self.object = object
-        self.anim_border: QPropertyAnimation = None
+        self.anim_border: Optional[QPropertyAnimation] = None
         self.background_color = QColor(255, 255, 255)
         self._opacity = 162
         self.setStyleSheet(
@@ -128,13 +133,14 @@ class ObjectButton(QPushButton):
 class ProgressAnimatedItem(QWidget):
     def __init__(self, text, parent=None):
         super().__init__(parent)
-        self._progress = 0.0
-        self._color = QColor(0, 255, 0)
-        self._text = text
+        self._progress: float = 0.0
+        self._color: QColor = QColor(0, 255, 0)
+        self._text: str = text
         self.setAutoFillBackground(True)
         self._is_selected = False  # 选中状态标志
         self._hovered = False  # 鼠标悬浮状态标志
 
+    @property
     @Property(QColor)
     def color(self):
         return self._color
@@ -143,6 +149,7 @@ class ProgressAnimatedItem(QWidget):
     def color(self, value: QColor):
         self._color = value
 
+    @property
     @Property(float)
     def progress(self):
         return self._progress
@@ -162,11 +169,13 @@ class ProgressAnimatedItem(QWidget):
         self.update()
 
     def startProgressAnimation(
-        self, start1, stop1, start2, stop2, duration, curve, loopCount
+        self, 
+        start1: float, stop1: float, 
+        start2: QColor, stop2: Optional[QColor], 
+        duration: int, curve: QEasingCurve.Type, loopCount: int
     ):
         self._progress = start1
         self._color = start2
-        # 创建 QPropertyAnimation 对象并绑定动画
         self._animation = QPropertyAnimation(self, b"progress")
         self._animation.setStartValue(start1)
         self._animation.setEndValue(stop1)
@@ -248,7 +257,7 @@ class ProgressAnimatedListWidgetItem(QListWidgetItem):
         startcolor: QColor = QColor(100, 255, 100, 127),
         endcolor: Optional[QColor] = None,
         duration: int = 1500,
-        curve: QEasingCurve = QEasingCurve.Type.OutCubic,
+        curve: QEasingCurve.Type = QEasingCurve.Type.OutCubic,
         loopCount: int = 1,
     ):
         """
@@ -345,7 +354,7 @@ class SideNotice:
         sound: Optional[str] = None,
         duration: int = 5000,
         closeable: bool = True,
-        click_command: Optional[Callable] = None,
+        click_command: Optional[Callable[[], Any]] = None,
         further_info: str = "该提示没有详细信息。",
     ):
         """
@@ -385,11 +394,11 @@ class SideNotice:
             self.showing -= 1
 
         QTimer.singleShot(self.duration + 200, _decrease)
-        infobar = InfoBar.new(
+        infobar = InfoBar.new( # type: ignore
             self.icon or InfoBarIcon.INFORMATION,
             self.title,
             self.content,
-            Qt.Horizontal,
+            Qt.Orientation.Horizontal,
             self.closeable,
             self.duration,
             InfoBarPosition.BOTTOM_RIGHT,

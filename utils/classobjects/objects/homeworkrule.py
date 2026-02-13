@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import Literal
+from typing import Self
 
-from ...algorithm import SupportsKeyOrdering
+from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 from .scoremodtemplate import ScoreModificationTemplate
 
@@ -13,7 +13,7 @@ from .scoremodtemplate import ScoreModificationTemplate
 class HomeworkRule(ClassDataType, SupportsKeyOrdering):
     "作业规则"
 
-    chunk_type_name: Literal["HomeworkRule"] = "HomeworkRule"
+    chunk_type_name: str = "HomeworkRule"
     "类型名"
 
     is_unrelated_data_type = False
@@ -45,9 +45,9 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         self.rule_mapping = rule_mapping
         self.archive_uuid = ClassDataObj.get_archive_uuid()
 
-    def to_string(self):
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将作业规则对象转为字符串。"
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "key": self.key,
@@ -57,12 +57,12 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
-    def from_string(s: str):
+    def from_string(string: str):
         "从字符串加载作业规则对象。"
-        d = json.loads(s)
+        d = json.loads(string)
         if d["type"] != HomeworkRule.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {HomeworkRule.chunk_type_name}")
         obj = HomeworkRule(
@@ -78,5 +78,5 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self

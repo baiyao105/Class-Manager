@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 from ...algorithm import Stack, Thread
 from ...basetypes import Base
@@ -31,7 +31,7 @@ class ClassStatusObserver:
             "侦测器是否正在运行"
             self.class_id: str = class_id
             "班级id"
-            self.stu_score_ord: dict = {}
+            self.stu_score_ord: Dict[int, Student] = {}
             "学生分数排序，不去重"
             self.classes = base.classes
             "班级数据"
@@ -51,12 +51,8 @@ class ClassStatusObserver:
             "侦测器每帧耗时"
             self.tps: float = 0
             "侦测器每秒帧数"
-        except (
-            KeyError,
-            ValueError,
-            AttributeError,
-            TypeError,
-        ) as unused:  # pylint: disable=unused-variable
+
+        except (KeyError, ValueError, AttributeError, TypeError):
             Base.log_exc("获取班级信息失败", "ClassStatusObserver.__init__")
             raise ClassDataObj.ObserverError("获取班级信息失败")
 

@@ -3,12 +3,12 @@ from __future__ import annotations
 import copy
 import json
 import time
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Self
 
-from ...algorithm import SupportsKeyOrdering
+from ...algorithm import SupportsKeyOrdering, update_object_mapping
 from ...basetypes import Base
 from .datatag import TagSigned, DataTag
-from ..basetype import ClassDataType, DataProperty
+from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     "一个学牲"
 
-    chunk_type_name: Literal["Student"] = "Student"
+    chunk_type_name: str = "Student"
     "类型名"
 
     is_unrelated_data_type = False
@@ -192,7 +192,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         raise ClassDataObj.OpreationError("不允许删除学生的名字")
 
     @DataProperty
-    def num(self):
+    def num(self) -> int:
         "学生的学号。"
         return self._num
 
@@ -255,7 +255,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         )
 
     @total_score.setter
-    def total_score(self, value):
+    def total_score(self, value: float):
         self._total_score = self.score_dtype(value)
 
     def reset_score(
@@ -418,9 +418,9 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         self.total_score += value
         return self
 
-    def to_string(self) -> str:
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将学生对象转换为JSON格式"
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "name": self.name,
@@ -441,7 +441,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
     def from_string(string: str) -> Student:
@@ -477,5 +477,5 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__) 
         return self

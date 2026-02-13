@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import time
 import traceback
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Self
+
+from ...algorithm.types import update_object_mapping
 
 from ...basetypes import Base
 from ...consts import debug
 
-from ..basetype import ClassDataType, DataProperty
+from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
 from ..classdataobj import ClassDataObj
 from .scoremodtemplate import ScoreModificationTemplate  # 可以直接导入，这个没有依赖
 
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
 class ScoreModification(ClassDataType):
     "分数修改记录。"
 
-    chunk_type_name: Literal["ScoreModification"] = "ScoreModification"
+    chunk_type_name: str = "ScoreModification"
     "类型名"
 
     is_unrelated_data_type = False
@@ -216,8 +218,8 @@ class ScoreModification(ClassDataType):
                 AttributeError,
                 ValueError,
                 OverflowError,
-                ZeroDivisionError,
-            ) as exception:
+                ZeroDivisionError
+            ):
                 if debug:
                     raise
                 Base.log(
@@ -230,9 +232,9 @@ class ScoreModification(ClassDataType):
             Base.log("W", "操作并未执行，无需撤回", "ScoreModification.retract")
             return False, "操作并未执行, 无需撤回"
 
-    def to_string(self):
+    def to_string(self) -> StringObjectDataKind[Self]:
         "将分数修改记录对象转为字符串。"
-        return json.dumps(
+        return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "template": str(self.temp.uuid),
@@ -247,7 +249,7 @@ class ScoreModification(ClassDataType):
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
-        )
+        ))
 
     @staticmethod
     def from_string(string: str):
@@ -275,5 +277,5 @@ class ScoreModification(ClassDataType):
     def inst_from_string(self, string: str):
         "将字符串加载与本身。"
         obj = self.from_string(string)
-        self.__dict__.update(obj.__dict__)
+        update_object_mapping(self, obj.__dict__)
         return self

@@ -11,9 +11,6 @@ from .widgets import *
 from utils.logger import Logger as Base
 
 
-WidgetType = Union[
-    QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
-]
 
 
 def handle_fatal_qt_error(msg: str):

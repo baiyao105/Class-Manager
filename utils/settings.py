@@ -3,7 +3,7 @@ import pickle
 from types import FunctionType, MethodType
 from typing import Any, Literal
 
-import dill as pickle
+import dill as pickle # pyright: ignore[reportMissingTypeStubs]
 from typing import Any, Dict
 from types import MethodType, FunctionType
 from .basetypes import Base
@@ -130,7 +130,7 @@ class SettingsInfo:
         return dict(
             (k, v)
             for k, v in self.__dict__.items()
-            if (not k.startswith("__")) and (not isinstance(k, (FunctionType, MethodType)))
+            if (not k.startswith("__")) and (not isinstance(v, (FunctionType, MethodType)))
         )
 
     def __repr__(self):

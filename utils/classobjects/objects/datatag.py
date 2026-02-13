@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import json
 
-from abc import ABC, abstractmethod
-from typing import Any, Literal, Callable
+from abc import ABC
+from typing import Any, Callable, Self
 from ...basetypes import Base
-from ..basetype import ClassDataType
+from ..basetype import ClassDataType, StringObjectDataKind
 
 
 
@@ -17,7 +17,7 @@ JsonLoadableTypes = JsonLoadableBasicTypes | list[JsonLoadableBasicTypes] | dict
 class DataTag(ClassDataType):
     "一个标签。"
 
-    chunk_type_name: Literal["DataTag"] = "DataTag"
+    chunk_type_name: str = "DataTag"
 
     is_unrelated_data_type = True
 
@@ -69,11 +69,11 @@ class DataTag(ClassDataType):
         DataTag.validate(self.key, self.data)
 
 
-    def to_string(self) -> str:
-        return json.dumps({
+    def to_string(self) -> StringObjectDataKind[Self]:
+        return StringObjectDataKind(json.dumps({
             "key": self.key,
             "data": json.dumps(self.data)
-        })
+        }))
     
     @staticmethod
     def validate(key: str, src: JsonLoadableTypes | None = None):

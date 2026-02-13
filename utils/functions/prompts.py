@@ -8,7 +8,6 @@ from ..qtconfig import QWidget, QMessageBox
 from ..qtconfig import QPixmap, QIcon
 
 
-
 def button_ok_text():
     "返回一个随机的按钮文本"
     return random.choice(
