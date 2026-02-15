@@ -4,7 +4,7 @@
 """
 
 from typing import Optional
-from utils.classobjects import ClassObj
+from utils.classobjects import ClassDataSet
 
 from utils.update_check import (
     CLIENT_VERSION, 
@@ -24,7 +24,7 @@ class AboutWidget(Ui_Form, MyWidget):
     """
 
     def __init__(
-        self, master: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
+        self, master: Optional[QWidget] = None, main_window: Optional[ClassDataSet] = None
     ):
 
         super().__init__(master)

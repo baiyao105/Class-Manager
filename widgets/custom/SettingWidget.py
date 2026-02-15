@@ -3,7 +3,7 @@
 """
 
 from typing import Optional
-from utils import ClassObj, question_yes_no, SettingsInfo
+from utils import ClassDataSet, question_yes_no, SettingsInfo
 from widgets.custom.ListView import ListView
 from widgets.basic import *
 from widgets.ui.pyside6.SettingWindow import Ui_Form

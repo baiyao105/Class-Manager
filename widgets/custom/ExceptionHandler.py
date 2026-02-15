@@ -5,7 +5,7 @@
 import time
 import traceback
 from typing import Optional, Tuple, List, Dict
-from utils.classobjects import ClassObj
+from utils.classobjects import ClassDataSet
 from widgets.custom.ListView import ListView
 from widgets.basic import *
 from widgets.ui.pyside6.ExceptionHandler import Ui_Form
@@ -35,7 +35,7 @@ class ExceptionHandler(Ui_Form, MyWidget):
     def __init__(
         self,
         master_widget: Optional[QWidget] = None,
-        main_window: Optional[ClassObj] = None,
+        main_window: Optional[ClassDataSet] = None,
         exception: Optional[BaseException] = None,
     ):
         """

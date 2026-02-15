@@ -7,7 +7,7 @@
 import traceback
 from widgets.basic import *
 from utils import (
-    ClassObj,
+    ClassDataSet,
     format_exc_like_java, 
     Thread,
     output_list
@@ -25,7 +25,7 @@ class DebugWidget(Ui_Form, MyWidget):
     command_history = []
 
     def __init__(
-        self, master: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
+        self, master: Optional[QWidget] = None, main_window: Optional[ClassDataSet] = None
     ):
         super().__init__(master)
         self.setupUi(self)
@@ -88,10 +88,8 @@ print("速率:", (DataObject.saved_objects / (time.time() - t)))""",
             ),
             (
                 """\
-self.achievement_obs.stop()
-for i in range(15):
-    for _ in range(114):
-        self.send_modify("wearing_bad", list(self.target_class.students.values()))
+for i in range(11451):
+    self.send_modify("wearing_bad", list(self.target_class.students.values()))
 """,
                 "大数据测试",
             ),
@@ -109,7 +107,7 @@ print("时间:", time.time() - t)
 for i in range(100):
     self.add_student(
     f"{max(*self.target_class.students) + 1}号学生",
-    default_class_key,
+    self.target_class_id,
     max(*self.target_class.students) + 1
 )
 """,

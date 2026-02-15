@@ -4,7 +4,7 @@
 """
 
 from typing import Optional
-from utils import AttendanceInfo, ClassObj
+from utils import AttendanceInfo, ClassDataSet
 from widgets.basic import *
 from widgets.ui.pyside6.AttendanceInfoView import Ui_Form
 
@@ -17,7 +17,7 @@ class AttendanceInfoViewWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master: Optional[QWidget] = None,
-        main_window: Optional[ClassObj] = None,
+        main_window: Optional[ClassDataSet] = None,
         attendanceinfo: AttendanceInfo = None,
     ):
         """

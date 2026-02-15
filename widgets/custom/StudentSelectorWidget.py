@@ -3,7 +3,7 @@
 """
 
 from typing import Optional, List, Dict
-from utils import ClassObj
+from utils import ClassDataSet
 from widgets.basic import *
 from widgets.ui.pyside6.MultiSelectWindow import Ui_Form
 
@@ -17,7 +17,7 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        main_window: ClassObj = None,
+        main_window: ClassDataSet = None,
         master: Optional[QWidget] = None,
         target_students: List[Student] = None,
         default_selection: List[Student] = None,

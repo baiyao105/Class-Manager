@@ -6,7 +6,7 @@ from typing import Self
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
 from ..basetype import ClassDataType, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 from .scoremodtemplate import ScoreModificationTemplate
 
 
@@ -43,7 +43,7 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         self.subject_name = subject_name
         self.ruler = ruler
         self.rule_mapping = rule_mapping
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
 
     def to_string(self) -> StringObjectDataKind[Self]:
         "将作业规则对象转为字符串。"
@@ -69,7 +69,7 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
             key=d["key"],
             subject_name=d["subject_name"],
             ruler=d["ruler"],
-            rule_mapping={n: ClassDataObj.LoadUUID(t, ScoreModificationTemplate) for n, t in d["rule_mapping"].items()},
+            rule_mapping={n: ClassDataLoader.LoadUUID(t, ScoreModificationTemplate) for n, t in d["rule_mapping"].items()},
         )
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]

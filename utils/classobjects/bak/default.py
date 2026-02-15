@@ -6,7 +6,7 @@ import copy
 import os
 from math import inf
 
-from utils.algorithm import OrderedKeyList
+from utils.algorithm import TemplateList
 from utils.consts import sound_file_path
 
 from ..objects import *
@@ -21,7 +21,7 @@ __all__ = [
 
 DEFAULT_CLASS_KEY = "CLASS_TEST"
 
-DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyList(
+DEFAULT_SCORE_TEMPLATES: TemplateList[ScoreModificationTemplate] = TemplateList(
     [
         ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃"),
         ScoreModificationTemplate("go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
@@ -257,7 +257,7 @@ DEFAULT_SCORE_TEMPLATES: OrderedKeyList[ScoreModificationTemplate] = OrderedKeyL
 """默认模板"""
 
 
-DEFAULT_CLASSES: OrderedKeyList[Class] = OrderedKeyList(
+DEFAULT_CLASSES: TemplateList[Class] = TemplateList(
     [
         Class(
             "测试班级",
@@ -1219,7 +1219,7 @@ DEFAULT_ACHIEVEMENTS: dict[str, AchievementTemplate] = {
         "这东西真就是随机给的",
         condition_info="每周随机选一个人给",
         further_info="幸运，但没用",
-        others=[lambda d: d.student.num == int(d.class_obs.base.last_reset) % len(d.class_obs.target_class.students)],
+        others=[lambda d: d.student.num == int(d.class_obs.dataset.last_reset) % len(d.class_obs.target_class.students)],
     ),
     "interrupts_cast": AchievementTemplate(
         "interrupts_cast",

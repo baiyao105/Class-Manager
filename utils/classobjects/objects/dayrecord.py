@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Self
 from utils.algorithm import update_object_mapping
 
 from ..basetype import ClassDataType, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
     from .attendanceinfo import AttendanceInfo
@@ -49,7 +49,7 @@ class DayRecord(ClassDataType):
         self.utc = create_utc
         self.attendance_info = attendance_info
         self.target_class = target_class
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
 
     def to_string(self) -> StringObjectDataKind[Self]:
         "将每日记录对象转为字符串。"
@@ -75,10 +75,10 @@ class DayRecord(ClassDataType):
         if data["type"] != DayRecord.chunk_type_name:
             raise ValueError(f"类型不匹配：{data['type']} != {DayRecord.chunk_type_name}")
         obj = DayRecord(
-            target_class=ClassDataObj.LoadUUID(data["target_class"], Class),
+            target_class=ClassDataLoader.LoadUUID(data["target_class"], Class),
             weekday=data["weekday"],
             create_utc=data["utc"],
-            attendance_info=ClassDataObj.LoadUUID(data["attendance_info"], AttendanceInfo),
+            attendance_info=ClassDataLoader.LoadUUID(data["attendance_info"], AttendanceInfo),
         )
         obj.uuid = data["uuid"]
         obj.archive_uuid = data["archive_uuid"]

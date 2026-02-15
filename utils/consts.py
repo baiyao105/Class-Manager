@@ -4,6 +4,7 @@
 from __future__ import annotations
 import math
 import os
+import random
 import sys
 from typing import Any, Literal, TYPE_CHECKING, Optional
 
@@ -69,8 +70,73 @@ LOG_PATH = "log"
 "日志文件路径"
 
 
+CONSOLE_TITLE = "班寄管理: 调试控制台     %s" % (
+    random.choice([
+        "也算是一种朝花夕拾?",
+        "Make class great again!",
+        "这个项目没救了罢（悲",
+        "你会喜欢严格类型检查的, 信我",
+        "是一种连AI都模仿不出来的神秘语录么, 有点意思",
+        "Python还是太神秘了"
+    ])
+)
+"调试控制台窗口标题"
+
+
 runtime_flags: dict[Any, Any] = {}
 "全局变量字典"
+
+if getattr(sys, 'frozen', False):
+    os.add_dll_directory(os.path.dirname(sys.executable))
+
+
+def _should_alloc_console() -> bool:
+    """
+    检查命令行参数是否包含调试命令。
+    """
+    if getattr(sys, 'frozen', False):
+        args = sys.argv[1:]
+        return '--debug' in args or '-d' in args
+    return False
+
+def _alloc_console() -> bool:
+    """
+    在Windows上分配控制台窗口。
+    """
+    if sys.platform != 'win32':
+        return False
+    
+    try:
+        import ctypes
+        from ctypes import wintypes
+        
+        kernel32 = ctypes.windll.kernel32
+        AllocConsole = kernel32.AllocConsole
+        AllocConsole.argtypes = []
+        AllocConsole.restype = wintypes.BOOL
+        SetStdHandle = kernel32.SetStdHandle
+        SetStdHandle.argtypes = [wintypes.DWORD, wintypes.HANDLE]
+        SetStdHandle.restype = wintypes.BOOL
+        SetConsoleTitle = kernel32.SetConsoleTitleW
+        SetConsoleTitle.argtypes = [wintypes.LPCWSTR]
+        SetConsoleTitle.restype = wintypes.BOOL
+        
+        if not AllocConsole():
+            return False
+        
+        SetConsoleTitle(CONSOLE_TITLE)
+        
+        sys.stdout = open('CONOUT$', 'w', encoding='utf-8')
+        sys.stderr = open('CONOUT$', 'w', encoding='utf-8')
+        sys.__stdout__ = sys.stdout
+        sys.__stderr__ = sys.stderr
+        
+        return True
+    except Exception:
+        return False
+
+if _should_alloc_console():
+    _alloc_console()
 
 # 为了防止发行包输出被覆盖掉，
 # 如果检测到没有输出流，就打开一个文件作为输出流

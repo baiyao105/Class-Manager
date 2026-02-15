@@ -1,15 +1,15 @@
 import random
 import time
 from typing import Any, Union, Tuple, Optional, Callable
-from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar
+from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar # type: ignore
 
 from utils.qtconfig import (QPushButton, QWidget, QColor, Property, 
                             QIcon, QPixmap, QGraphicsOpacityEffect, 
                             QPropertyAnimation, QCoreApplication, 
-                            QMouseEvent, QPaintEvent, QPainter, 
+                            QEvent, QPaintEvent, QPainter, 
                             QRectF, QPen, Qt, QListWidget, 
                             QListWidgetItem, QMainWindow, QVBoxLayout, 
-                            QMessageBox, QTimer, QEasingCurve)
+                            QMessageBox, QTimer, QEasingCurve, QEnterEvent)
 from utils.classobjects import Student, Group
 from utils.functions.sounds import play_sound
 
@@ -92,7 +92,7 @@ class ObjectButton(QPushButton):
         self.setGraphicsEffect(op)
         self.setAutoFillBackground(True)
 
-    def flash(self, start: Tuple[int, int, int], end: Tuple[int, int, int], duration):
+    def flash(self, start: Tuple[int, int, int], end: Tuple[int, int, int], duration: int):
         """
         创建按钮颜色闪烁动画效果
 
@@ -131,7 +131,7 @@ class ObjectButton(QPushButton):
 
 # 进度条动画控件
 class ProgressAnimatedItem(QWidget):
-    def __init__(self, text, parent=None):
+    def __init__(self, text: str, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self._progress: float = 0.0
         self._color: QColor = QColor(0, 255, 0)
@@ -140,22 +140,22 @@ class ProgressAnimatedItem(QWidget):
         self._is_selected = False  # 选中状态标志
         self._hovered = False  # 鼠标悬浮状态标志
 
-    @property
+
     @Property(QColor)
-    def color(self):
+    def color(self): # pyright: ignore[reportRedeclaration]
         return self._color
 
     @color.setter
     def color(self, value: QColor):
         self._color = value
 
-    @property
+
     @Property(float)
-    def progress(self):
+    def progress(self): # pyright: ignore[reportRedeclaration]
         return self._progress
 
     @progress.setter
-    def progress(self, value):
+    def progress(self, value: float):
         self._progress = value
         self.update()  # 进度改变时，通知重绘
 
@@ -192,7 +192,7 @@ class ProgressAnimatedItem(QWidget):
             self._animation2.start()
         self._animation.start()
 
-    def enterEvent(self, event: QMouseEvent):
+    def enterEvent(self, event: QEnterEvent):
         """
         处理鼠标进入控件区域的事件
 
@@ -201,7 +201,7 @@ class ProgressAnimatedItem(QWidget):
         self._hovered = True
         self.update()
 
-    def leaveEvent(self, event: QMouseEvent):
+    def leaveEvent(self, event: QEvent):
         """
         处理鼠标离开控件区域的事件
 
@@ -246,7 +246,7 @@ class ProgressAnimatedItem(QWidget):
 
 
 class ProgressAnimatedListWidgetItem(QListWidgetItem):
-    def __init__(self, text):
+    def __init__(self, text: str):
         super().__init__(text)
         self.animated_item = ProgressAnimatedItem(text)
 
@@ -333,8 +333,6 @@ class ProgressAnimationTest(QMainWindow):
             self, "选中项目", f"选中{text}，索引：{self.list_widget.row(item)}"
         )
 
-
-from qfluentwidgets import InfoBar, InfoBarPosition
 
 
 class SideNotice:

@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'RandomSelector.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.3
+## Created by: Qt User Interface Compiler version 6.10.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -55,14 +55,14 @@ class Ui_Form(object):
         self.line.setObjectName(u"line")
         self.line.setGeometry(QRect(510, 160, 178, 2))
         self.line.setStyleSheet(u"background: black")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
         self.line_2 = QFrame(Form)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setGeometry(QRect(510, 170, 178, 2))
         self.line_2.setStyleSheet(u"background: black")
-        self.line_2.setFrameShape(QFrame.HLine)
-        self.line_2.setFrameShadow(QFrame.Sunken)
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
         self.label_5 = QLabel(Form)
         self.label_5.setObjectName(u"label_5")
         self.label_5.setGeometry(QRect(480, 130, 91, 16))

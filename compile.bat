@@ -1,9 +1,7 @@
-:: Use GB2312 AND CRLF
-:: Commit by CRLF, not LF
 @echo off
-chcp 936 >nul
+chcp 65001 >nul
 setlocal enabledelayedexpansion
-title ClassManager_±àÒë
+title ClassManager_ç¼–è¯‘
 cd /d "%~dp0"
 
 set "DEFAULT_COMPILER=1"
@@ -29,48 +27,48 @@ if "%compiler%"=="1" (
 :main_menu
 cls
 echo ===================================
-echo      ClassManager ±àÒë v2.2
-echo        µ±Ç°±àÒëÆ÷£º!COMPILER_NAME!
+echo      ClassManager ç¼–è¯‘ v2.2
+echo        å½“å‰ç¼–è¯‘å™¨ï¼š!COMPILER_NAME!
 echo ===================================
-echo [µ±Ç°ÅäÖÃ]
-call :show_config create_venv       "´´½¨ÐéÄâ»·¾³"
-call :show_config install_requirements "°²×°ÒÀÀµ"
-call :show_config show_process      "ÏÔÊ¾½ø¶ÈÌõ"
-call :show_config build_zip         "Éú³É·¢ÐÐ°ü"
+echo [å½“å‰é…ç½®]
+call :show_config create_venv       "åˆ›å»ºè™šæ‹ŸçŽ¯å¢ƒ"
+call :show_config install_requirements "å®‰è£…ä¾èµ–"
+call :show_config show_process      "æ˜¾ç¤ºè¿›åº¦æ¡"
+call :show_config build_zip         "ç”Ÿæˆå‘è¡ŒåŒ…"
 echo ===================================
 set "modify="
-set /p "modify=ÊäÈëMÐÞ¸ÄÅäÖÃ£¬ÆäËû¼ü¿ªÊ¼±àÒë£º"
+set /p "modify=è¾“å…¥Mä¿®æ”¹é…ç½®ï¼Œå…¶ä»–é”®å¼€å§‹ç¼–è¯‘ï¼š"
 if /i "%modify%"=="M" call :modify_config
 
 call :check_dependencies || exit /b 1
 
 if not exist "ClassManager\Compile" (
     md "ClassManager\Compile" 2>nul || (
-        echo ÎÞ·¨´´½¨±àÒëÄ¿Â¼
+        echo æ— æ³•åˆ›å»ºç¼–è¯‘ç›®å½•
         pause
         exit /b 1
     )
 )
 if "%create_venv%"=="1" (
-    echo ÕýÔÚ³õÊ¼»¯ÐéÄâ»·¾³...
+    echo æ­£åœ¨åˆå§‹åŒ–è™šæ‹ŸçŽ¯å¢ƒ...
     rd /s /q .venv 2>nul
     python -m venv .venv || (
-        echo ÐéÄâ»·¾³´´½¨Ê§°Ü
+        echo è™šæ‹ŸçŽ¯å¢ƒåˆ›å»ºå¤±è´¥
         pause
         exit /b 1
     )
     call .venv\Scripts\activate
-    set "install_requirements=1"  :: Ç¿ÖÆ°²×°ÒÀÀµ
+    set "install_requirements=1"  :: å¼ºåˆ¶å®‰è£…ä¾èµ–
 )
 if "%install_requirements%"=="1" (
-    echo ÕýÔÚ°²×°»ù´¡ÒÀÀµ...
+    echo æ­£åœ¨å®‰è£…åŸºç¡€ä¾èµ–...
     if "%show_process%"=="1" (
-        python -m pip install -r requirements.txt --progress-bar pretty
+        python -m pip install -r requirements.txt
     ) else (
         python -m pip install -r requirements.txt -q
     )
     python -m pip install pillow >nul
-    echo ÕýÔÚ°²×°!COMPILER_NAME!...
+    echo æ­£åœ¨å®‰è£…!COMPILER_NAME!...
     if "%COMPILER_CMD%"=="nuitka" (
         python -m pip install nuitka >nul
     ) else (
@@ -89,33 +87,33 @@ if "%COMPILER_CMD%"=="pyinstaller" (
 if "%build_zip%"=="1" (
     call :package_release
 ) else (
-    echo ±àÒëÊä³öÒÑ±£´æÖÁ£º!OUTPUT_PATH!
+    echo ç¼–è¯‘è¾“å‡ºå·²ä¿å­˜è‡³ï¼š!OUTPUT_PATH!
 )
 
 echo.
-echo ===== ²Ù×÷ÒÑÍê³É =====
+echo ===== æ“ä½œå·²å®Œæˆ =====
 pause
 exit /b
 
 :first_run_config
 cls
-echo ===== Ê×´ÎÔËÐÐÅäÖÃ =====
-echo ÇëÍê³ÉÒÔÏÂ³õÊ¼»¯ÅäÖÃ£º
+echo ===== é¦–æ¬¡è¿è¡Œé…ç½® =====
+echo è¯·å®Œæˆä»¥ä¸‹åˆå§‹åŒ–é…ç½®ï¼š
 echo.
-choice /c 12 /n /m "Ñ¡Ôñ±àÒëÆ÷ (1.PyInstaller 2.Nuitka): "
+choice /c 12 /n /m "é€‰æ‹©ç¼–è¯‘å™¨ (1.PyInstaller 2.Nuitka): "
 set "compiler=!errorlevel!"
 echo.
-choice /c 01 /n /m "´´½¨ÐéÄâ»·¾³ (1=ÊÇ/0=·ñ): "
+choice /c 01 /n /m "åˆ›å»ºè™šæ‹ŸçŽ¯å¢ƒ (1=æ˜¯/0=å¦): "
 set "create_venv=!errorlevel!"
 set /a create_venv-=1
-choice /c 01 /n /m "ÏÔÊ¾½ø¶ÈÌõ (1=ÊÇ/0=·ñ): "
+choice /c 01 /n /m "æ˜¾ç¤ºè¿›åº¦æ¡ (1=æ˜¯/0=å¦): "
 set "show_process=!errorlevel!"
 set /a show_process-=1
-choice /c 01 /n /m "Éú³É·¢ÐÐ°ü (1=ÊÇ/0=·ñ): "
+choice /c 01 /n /m "ç”Ÿæˆå‘è¡ŒåŒ… (1=æ˜¯/0=å¦): "
 set "build_zip=!errorlevel!"
 set /a build_zip-=1
 
-:: ×Ô¶¯ÉèÖÃÒÀÀµ°²×°
+:: è‡ªåŠ¨è®¾ç½®ä¾èµ–å®‰è£…
 
 if "%create_venv%"=="1" (set "install_requirements=1") else (set "install_requirements=0")
 
@@ -128,24 +126,24 @@ exit /b
 
 :modify_config
 cls
-echo ===== ÐÞ¸ÄÅäÖÃ =====
-echo µ±Ç°±àÒëÆ÷£º!COMPILER_NAME!
+echo ===== ä¿®æ”¹é…ç½® =====
+echo å½“å‰ç¼–è¯‘å™¨ï¼š!COMPILER_NAME!
 echo.
-choice /c 12 /n /m "Ñ¡Ôñ±àÒëÆ÷ (1.PyInstaller 2.Nuitka): "
+choice /c 12 /n /m "é€‰æ‹©ç¼–è¯‘å™¨ (1.PyInstaller 2.Nuitka): "
 set "compiler=!errorlevel!"
 echo.
 
-rem set /p "create_venv=´´½¨ÐéÄâ»·¾³ (1=ÊÇ/0=·ñ): "
-rem set /p "show_process=ÏÔÊ¾½ø¶ÈÌõ (1=ÊÇ/0=·ñ): "
-rem set /p "build_zip=Éú³É·¢ÐÐ°ü (1=ÊÇ/0=·ñ): "
+rem set /p "create_venv=åˆ›å»ºè™šæ‹ŸçŽ¯å¢ƒ (1=æ˜¯/0=å¦): "
+rem set /p "show_process=æ˜¾ç¤ºè¿›åº¦æ¡ (1=æ˜¯/0=å¦): "
+rem set /p "build_zip=ç”Ÿæˆå‘è¡ŒåŒ… (1=æ˜¯/0=å¦): "
 
-choice /c 01 /n /m "´´½¨ÐéÄâ»·¾³ (1=ÊÇ/0=·ñ): "
+choice /c 01 /n /m "åˆ›å»ºè™šæ‹ŸçŽ¯å¢ƒ (1=æ˜¯/0=å¦): "
 set "create_venv=!errorlevel!"
 set /a create_venv-=1
-choice /c 01 /n /m "ÏÔÊ¾½ø¶ÈÌõ (1=ÊÇ/0=·ñ): "
+choice /c 01 /n /m "æ˜¾ç¤ºè¿›åº¦æ¡ (1=æ˜¯/0=å¦): "
 set "show_process=!errorlevel!"
 set /a show_process-=1
-choice /c 01 /n /m "Éú³É·¢ÐÐ°ü (1=ÊÇ/0=·ñ): "
+choice /c 01 /n /m "ç”Ÿæˆå‘è¡ŒåŒ… (1=æ˜¯/0=å¦): "
 set "build_zip=!errorlevel!"
 set /a build_zip-=1
 
@@ -156,7 +154,7 @@ if "%create_venv%"=="1" set "install_requirements=1"
  echo install_requirements=%install_requirements%
  echo show_process=%show_process%
  echo build_zip=%build_zip%) > compile.conf
-echo ÅäÖÃÒÑ¸üÐÂ£¡
+echo é…ç½®å·²æ›´æ–°ï¼
 timeout /t 2 >nul
 goto :main_menu
 
@@ -170,10 +168,10 @@ exit /b
 
 :check_dependencies
 python --version >nul 2>&1 || (
-    echo ´íÎó£ºPython»·¾³Î´ÕýÈ·ÅäÖÃ
-    echo ÇëÈ·ÈÏ£º
-    echo 1. ÒÑ°²×°Python 3.8+
-    echo 2. ÒÑÌí¼ÓÖÁÏµÍ³PATH
+    echo é”™è¯¯ï¼šPythonçŽ¯å¢ƒæœªæ­£ç¡®é…ç½®
+    echo è¯·ç¡®è®¤ï¼š
+    echo 1. å·²å®‰è£…Python 3.8+
+    echo 2. å·²æ·»åŠ è‡³ç³»ç»ŸPATH
     pause
     exit /b 1
 )
@@ -186,26 +184,27 @@ set "OUTPUT_PATH=dist\main"
 if "%build_zip%"=="0" set "OUTPUT_PATH=dist\main_%date_suffix%"
 
 if exist "!OUTPUT_PATH!" (
-    choice /m "Ä¿Â¼!OUTPUT_PATH!ÒÑ´æÔÚ£¬ÊÇ·ñ¸²¸Ç£¿(Y¸²¸Ç/NÈ¡Ïû)"
+    choice /m "ç›®å½•!OUTPUT_PATH!å·²å­˜åœ¨ï¼Œæ˜¯å¦è¦†ç›–ï¼Ÿ(Yè¦†ç›–/Nå–æ¶ˆ)"
     if errorlevel 2 exit /b 1
     rd /s /q "!OUTPUT_PATH!" 2>nul
 )
 if exist "img\favicon.ico" (
-    echo ÕýÔÚÑéÖ¤Í¼±êÎÄ¼þ...
+    echo æ­£åœ¨éªŒè¯å›¾æ ‡æ–‡ä»¶...
     python -c "from PIL import Image; img = Image.open('img/favicon.ico'); img.verify()" || (
-        echo ´íÎó£ºÍ¼±êÎÄ¼þËð»µ»ò¸ñÊ½²»ÕýÈ·
+        echo é”™è¯¯ï¼šå›¾æ ‡æ–‡ä»¶æŸåæˆ–æ ¼å¼ä¸æ­£ç¡®
         pause
         exit /b 1
     )
 ) else (
-    echo ´íÎó£ºÍ¼±êÎÄ¼þ²»´æÔÚÓÚimgÄ¿Â¼
+    echo é”™è¯¯ï¼šå›¾æ ‡æ–‡ä»¶ä¸å­˜åœ¨äºŽimgç›®å½•
     pause
     exit /b 1
 )
 exit /b
 
 :pyinstaller_compile
-set cmd=pyinstaller main.py -w ^
+set cmd=pyinstaller main_old.py -w ^
+        --clean ^
         --icon               "img/favicon.ico" ^
         -n                   "main" ^
         --contents-directory "." ^
@@ -216,41 +215,41 @@ set cmd=pyinstaller main.py -w ^
         --add-data           "LICENSE;." ^
         --add-data           "src;src" ^
         --add-data           "version;." ^
-        --add-data           "main_old.py;." ^
         --hidden-import      "PyQt6.QtWebEngine" ^
         --exclude-module     "PyQt5" ^
         --exclude-module     "PyQt6" ^
         --distpath           "dist" ^
         --workpath           "build" ^
-        --noconfirm
+        --noconfirm ^
+        --noupx
 
-echo ÕýÔÚÊ¹ÓÃPyInstaller±àÒë...
+echo æ­£åœ¨ä½¿ç”¨PyInstallerç¼–è¯‘...
 
 rem set "cmd=!cmd! --exclude-module _bootlocale"
-rem Õâ¸öÊÇ¸ÉÉ¶ÓÃµÄ£¬ÔÚÎÒÕâ±ß¼ÓÁËÕâ¸ödill»á±¬µô
+rem è¿™ä¸ªæ˜¯å¹²å•¥ç”¨çš„ï¼Œåœ¨æˆ‘è¿™è¾¹åŠ äº†è¿™ä¸ªdillä¼šçˆ†æŽ‰
 
 for /f %%i in ('powershell -Command "Get-Date -Uformat %%s"') do set "start_time=%%i"
 if "%show_process%"=="0" set "cmd=!cmd! >nul 2>&1"
 cmd /c "!cmd!" || (
-    echo PyInstaller±àÒëÊ§°Ü
+    echo PyInstallerç¼–è¯‘å¤±è´¥
     pause
     exit /b 1
 
 )
 for /f %%i in ('powershell -Command "Get-Date -Uformat %%s"') do set "end_time=%%i"
 for /f %%i in ('powershell -Command "[Math]::Round(!end_time! - !start_time!, 3)"') do set "time=%%i"
-echo ±àÒëºÄÊ±£º!time!Ãë
-echo ±àÒëÍê³É£¡
+echo ç¼–è¯‘è€—æ—¶ï¼š!time!ç§’
+echo ç¼–è¯‘å®Œæˆï¼
 timeout /t 3 >nul
 exit /b
 
 :nuitka_compile
-echo ÕýÔÚÊ¹ÓÃNuitka±àÒë(Âý)...
+echo æ­£åœ¨ä½¿ç”¨Nuitkaç¼–è¯‘(æ…¢)...
 pip freeze | findstr Nuitka >nul 2>&1 || (
-    echo NuitkaÎ´°²×°, ÕýÔÚ°²×°...
+    echo Nuitkaæœªå®‰è£…, æ­£åœ¨å®‰è£…...
     pip install nuitka -i https://pypi.tuna.tsinghua.edu.cn/simple
     if errorlevel 1 (
-        echo Nuitka°²×°Ê§°Ü
+        echo Nuitkaå®‰è£…å¤±è´¥
         pause
         exit /b 1
     )
@@ -269,32 +268,34 @@ set cmd=python -m nuitka ^
         --include-data-dir=src=./src ^
         --include-data-file=version=./version ^
         --include-data-file=LICENSE=./LICENSE ^
-        --windows-console-mode=disable ^
+        --windows-console-mode=attach ^
         --follow-imports main_old.py ^
-        --jobs=16
+        --jobs=24 ^
+        --lto=no ^
+        --assume-yes-for-downloads
 
 if "%show_process%"=="1" set "cmd=!cmd! --show-memory --show-progress"
 
 cmd /c "!cmd!" || (
-    echo Nuitka±àÒëÊ§°Ü
+    echo Nuitkaç¼–è¯‘å¤±è´¥
     pause
     exit /b 1
 )
 for /f %%i in ('powershell -Command "Get-Date -Uformat %%s"') do set "end_time=%%i"
 for /f %%i in ('powershell -Command "[Math]::Round(!end_time! - !start_time!, 3)"') do set "time=%%i"
-echo ±àÒëºÄÊ±£º!time!Ãë
-echo ¸´ÖÆÎÄ¼þ...
+echo ç¼–è¯‘è€—æ—¶ï¼š!time!ç§’
+echo å¤åˆ¶æ–‡ä»¶...
 if exist "dist\main.dist" (
     ren "dist\main.dist" "main"
     move "dist\main" "!OUTPUT_PATH!" >nul
 )
-echo ±àÒëÍê³É£¡
+echo ç¼–è¯‘å®Œæˆï¼
 timeout /t 3 >nul
 exit /b
 
 :package_release
 timeout /t 2  >nul
-echo ÕýÔÚÉú³É·¢ÐÐ°ü...
+echo æ­£åœ¨ç”Ÿæˆå‘è¡ŒåŒ…...
 for /f %%i in ('powershell -Command "Get-Date -Uformat %%s"') do set "start_time=%%i"
 if not exist "ClassManager\Compile" md "ClassManager\Compile"
 set "temp_dir=ClassManager\Compile\temp"
@@ -306,12 +307,12 @@ powershell -Command "$zipPath='ClassManager\Compile\main_!formatted_date!.zip'; 
 rd /s /q "%temp_dir%"
 for /f %%i in ('powershell -Command "Get-Date -Uformat %%s"') do set "end_time=%%i"
 for /f %%i in ('powershell -Command "[Math]::Round(!end_time! - !start_time!, 3)"') do set "time=%%i"
-echo Ñ¹ËõºÄÊ±£º!time!Ãë
+echo åŽ‹ç¼©è€—æ—¶ï¼š!time!ç§’
 if exist "ClassManager\Compile\main_!formatted_date!.zip" (
-    echo | set /p "_dummy=·¢ÐÐ°üÒÑÉú³É£º"
+    echo | set /p "_dummy=å‘è¡ŒåŒ…å·²ç”Ÿæˆï¼š"
     powershell -Command "$date=(Get-Date -Format 'yyyyMMdd'); $zipPath='ClassManager\Compile\main_'+$date+'.zip'; $zippath"
     rd /s /q dist build 2>nul
 ) else (
-    echo Ñ¹Ëõ°üÉú³ÉÊ§°Ü
+    echo åŽ‹ç¼©åŒ…ç”Ÿæˆå¤±è´¥
 )
 exit /b

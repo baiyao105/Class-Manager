@@ -129,10 +129,10 @@ class LoggerSettings:
         log_file_path: str | None = LOG_FILE_PATH,
         fast_log_file_path: str | None = None,
         console_wrapper: TextIO | None = stdout_orig,
-        log_mode: Literal["write_instantly", "write_buffered"] = "write_instantly",
+        log_mode: Literal["write_instantly", "write_buffered"] = "write_buffered",
         log_level: Literal["T", "I", "W", "E", "F", "D", "C", "OFF"] = "D",
         draw_color: bool = True,
-        use_mutex: bool = True,
+        use_mutex: bool = False,
         encoding: str | None = "utf-8",
     ):
         """

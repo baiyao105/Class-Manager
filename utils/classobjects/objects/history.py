@@ -8,7 +8,7 @@ from uuid import UUID
 from ...algorithm.types import update_object_mapping
 
 from ..basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
     from .classtype import Class
@@ -38,14 +38,14 @@ class History(ClassDataType):
 
         self.weekdays: dict[str, dict[float, DayRecord]] = weekdays
 
-        self.uuid = self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.uuid = self.archive_uuid = ClassDataLoader.get_archive_uuid()
         # IMPORTANT: 这里的对象uuid和归档uuid是一样的
 
     def __repr__(self):
         return f"<History object at time {self.time:.3f}>"
 
     @property
-    def uuid(self) -> ClassDataTypeUUID[Self] | None:
+    def uuid(self) -> ClassDataTypeUUID[Self] | None: # pyright: ignore[reportIncompatibleMethodOverride]
         """
         该班级数据类型的唯一标识符。
 
@@ -83,7 +83,7 @@ class History(ClassDataType):
                     for _class, item in self.weekdays.items()
                 ],
                 "uuid": str(self.uuid),
-                "archive_uuid": self.archive_uuid,
+                "archive_uuid": str(self.archive_uuid),
             }
         ))
 
@@ -97,14 +97,14 @@ class History(ClassDataType):
         if d["type"] != History.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {History.chunk_type_name}")
         obj = History(
-            classes={k: ClassDataObj.LoadUUID(v, Class) for k, v in d["classes"].items()},
+            classes={k: ClassDataLoader.LoadUUID(v, Class) for k, v in d["classes"].items()},
             weekdays={},
             save_time=d["time"],
         )
         for _class, time_key, day_uuid in d["weekdays"]:
             if _class not in obj.weekdays:
                 obj.weekdays[_class] = {}
-            obj.weekdays[_class][time_key] = ClassDataObj.LoadUUID(day_uuid, DayRecord)
+            obj.weekdays[_class][time_key] = ClassDataLoader.LoadUUID(day_uuid, DayRecord)
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
         assert obj.uuid == obj.archive_uuid, (

@@ -3,7 +3,7 @@
 """
 from typing import List, Any, Union
 from concurrent.futures import ThreadPoolExecutor
-from utils import Thread, Base, ClassObj as ClassWindow, steprange
+from utils import Thread, Base, ClassDataSet as ClassWindow, steprange
 from utils.settings import SettingsInfo
 from widgets.basic import *
 

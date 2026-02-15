@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Self
 from ...algorithm.types import update_object_mapping
 
 from ..basetype import ClassDataType, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
     from .classtype import Class
@@ -82,7 +82,7 @@ class AttendanceInfo(ClassDataType):
         "早退的学生"
         self.is_leave_late = is_leave_late
         "晚退的学生"
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
         "存档UUID"
 
     def to_string(self) -> StringObjectDataKind[Self]:
@@ -113,13 +113,13 @@ class AttendanceInfo(ClassDataType):
             raise ValueError(f"类型不匹配：{d['type']} != {AttendanceInfo.chunk_type_name}")
         obj = AttendanceInfo(
             target_class=d["target_class"],
-            is_early=[ClassDataObj.LoadUUID(s, Student) for s in d["is_early"]],
-            is_late=[ClassDataObj.LoadUUID(s, Student) for s in d["is_late"]],
-            is_late_more=[ClassDataObj.LoadUUID(s, Student) for s in d["is_late_more"]],
-            is_absent=[ClassDataObj.LoadUUID(s, Student) for s in d["is_absent"]],
-            is_leave=[ClassDataObj.LoadUUID(s, Student) for s in d["is_leave"]],
-            is_leave_early=[ClassDataObj.LoadUUID(s, Student) for s in d["is_leave_early"]],
-            is_leave_late=[ClassDataObj.LoadUUID(s, Student) for s in d["is_leave_late"]],
+            is_early=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_early"]],
+            is_late=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_late"]],
+            is_late_more=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_late_more"]],
+            is_absent=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_absent"]],
+            is_leave=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_leave"]],
+            is_leave_early=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_leave_early"]],
+            is_leave_late=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_leave_late"]],
         )
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import copy
 import json
 from typing import TYPE_CHECKING, Literal, Self
 
 from ...consts import inf
 from ...basetypes import Base
-from ...algorithm import OrderedKeyList, SupportsKeyOrdering, update_object_mapping
+from ...algorithm import TemplateList, SupportsKeyOrdering, update_object_mapping
 
 from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
     from .group import Group
@@ -37,9 +36,9 @@ class Class(ClassDataType, SupportsKeyOrdering):
         owner: str,
         students: dict[int, Student],  # 学生不要用OrderedKeyList，有歧义
         key: str,
-        groups: dict[str, Group] | OrderedKeyList[Group],
+        groups: dict[str, Group] | TemplateList[Group],
         cleaning_mapping: dict[int, dict[Literal["member", "leader"], list[Student]]] | None = None,
-        homework_rules: dict[str, HomeworkRule] | OrderedKeyList[HomeworkRule] | None = None,
+        homework_rules: dict[str, HomeworkRule] | TemplateList[HomeworkRule] | None = None,
     ):
         """
         班级构造函数。
@@ -57,8 +56,8 @@ class Class(ClassDataType, SupportsKeyOrdering):
         self.students = students
         self._key = key
         self.cleaning_mapping = cleaning_mapping or {}
-        self.homework_rules = OrderedKeyList(homework_rules or [])
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.homework_rules = TemplateList(homework_rules or [])
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
 
     @DataProperty
     def name(self):
@@ -180,14 +179,12 @@ class Class(ClassDataType, SupportsKeyOrdering):
 
         return stu_list2
 
-    def reset(self) -> Class:
+    def reset(self):
         "重置班级"
-        class_orig = copy.deepcopy(self)
         Base.log("W", f" -> 重置班级：{self.name} ({self.key})")
         for s in self.students.values():
             s.reset()
         self.refresh_uuid()
-        return class_orig
 
     def to_string(self) -> StringObjectDataKind[Self]:
         "将班级对象转换为字符串。"
@@ -229,11 +226,11 @@ class Class(ClassDataType, SupportsKeyOrdering):
         obj = Class(
             name=d["name"],
             owner=d["owner"],
-            students={n: ClassDataObj.LoadUUID(s, Student) for n, s in d["students"]},
+            students={n: ClassDataLoader.LoadUUID(s, Student) for n, s in d["students"]},
             key=d["key"],
-            groups={k: ClassDataObj.LoadUUID(g, Group) for k, g in d["groups"]},
+            groups={k: ClassDataLoader.LoadUUID(g, Group) for k, g in d["groups"]},
             cleaning_mapping={
-                k: {t: [ClassDataObj.LoadUUID(d, Student) for d in s] for t, s in v} for k, v in d["cleaning_mapping"]
+                k: {t: [ClassDataLoader.LoadUUID(d, Student) for d in s] for t, s in v} for k, v in d["cleaning_mapping"]
             },
             homework_rules={n: HomeworkRule.from_string(h) for n, h in d["homework_rules"]},
         )

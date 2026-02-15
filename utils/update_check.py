@@ -9,7 +9,6 @@ import shutil
 import signal
 import zipfile
 import contextlib
-from typing import Literal
 
 
 from .basetypes import Base

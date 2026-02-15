@@ -9,7 +9,7 @@ from collections import OrderedDict
 from collections.abc import Iterable, Iterator
 from typing import TypeVar, Union, List
 
-__all__ = ["OrderedKeyList", "SupportsKeyOrdering"]
+__all__ = ["TemplateList", "SupportsKeyOrdering"]
 
 
 class SupportsKeyOrdering(ABC):
@@ -89,7 +89,7 @@ if sys.version_info >= (3, 10):
 else:
     IterableType = Iterable
 
-class OrderedKeyList(List[_Template], IterableType):
+class TemplateList(List[_Template], IterableType):
     """有序的key列表，可以用方括号来根据SupportsKeyOrdering对象的key，索引值或者对象本身来获取对象
 
     举个例子
@@ -157,7 +157,7 @@ class OrderedKeyList(List[_Template], IterableType):
             Iterable[_Template],
             dict[str, _Template],
             OrderedDict[str, _Template],
-            OrderedKeyList[_Template],
+            TemplateList[_Template],
         ],
     ):
         """初始化OrderedKeyList
@@ -177,7 +177,7 @@ class OrderedKeyList(List[_Template], IterableType):
                     )
                     setattr(v, self.keyattr, k)
                 self.append(v)
-        elif isinstance(objects, OrderedKeyList):
+        elif isinstance(objects, TemplateList):
             self.extend([t for t in objects])
         else:
             keys = []
@@ -319,17 +319,17 @@ class OrderedKeyList(List[_Template], IterableType):
         return [(getattr(obj, self.keyattr), obj) for obj in self]
 
 
-    def __copy__(self) -> "OrderedKeyList[_Template]":
+    def __copy__(self) -> "TemplateList[_Template]":
         "返回列表的浅拷贝"
-        return OrderedKeyList(self)
+        return TemplateList(self)
 
 
-    def __deepcopy__(self, memo: dict | None) -> "OrderedKeyList[_Template]":
+    def __deepcopy__(self, memo: dict | None) -> "TemplateList[_Template]":
         "返回列表的深拷贝"
-        return OrderedKeyList([copy.deepcopy(obj, memo) for obj in self])
+        return TemplateList([copy.deepcopy(obj, memo) for obj in self])
 
 
-    def copy(self) -> "OrderedKeyList[_Template]":
+    def copy(self) -> "TemplateList[_Template]":
         "返回列表的拷贝"
         return self.__copy__()
 

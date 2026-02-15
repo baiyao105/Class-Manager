@@ -8,7 +8,7 @@ from widgets.custom.ListView import ListView
 from widgets.custom.SelectTemplateWidget import SelectTemplateWidget
 from widgets.custom.HistoryWidget import HistoryWidget
 from widgets.custom.AchievementWidget import AchievementWidget
-from utils import Student, ClassObj, ScoreModification
+from utils import Student, ClassDataSet, ScoreModification
 
 __all__ = ["StudentWidget"]
 
@@ -17,7 +17,7 @@ class StudentWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        main_window: ClassObj = None,
+        main_window: ClassDataSet = None,
         master_widget: Optional[QWidget] = None,
         student: Student = None,
         readonly: bool = False,

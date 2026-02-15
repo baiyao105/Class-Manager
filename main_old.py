@@ -11,34 +11,17 @@ import sys
 import time
 import math
 import enum
-import copy
 import json
-import uuid
-import errno
-import base64
-import ctypes
-import socket
 import random
 import pickle
-import dill as pickle
-import pickle as pickle_orig
-import shutil
+import ctypes
+import dill as pickle # type: ignore
 import signal
-import sqlite3
-import hashlib
-import inspect
-import logging
-import zipfile
-import colorama
 import warnings
 import requests
 import functools
-import ipaddress
 import traceback
 import threading
-import functools
-import contextlib
-import customtkinter
 from queue import Queue
 from loguru import logger
 from typing import Optional, Union, List, Tuple, Dict, Callable, Literal, Type, Any
@@ -47,9 +30,6 @@ from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 
 
-from utils.classobjects.objects.history import History
-a = History({}, {})
-a.to_string()
 
 from utils.consts import (
     enable_memory_tracing, 
@@ -65,12 +45,13 @@ os.environ["PYQTGRAPH_QT_LIB"] = qt_version         # 必须在导入pyqtgraph�
 # locale.setlocale(locale.LC_CTYPE, "zh_CN.UTF-8")        # 防止诡异的编码错误
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "114514" # 可以让pygame闭嘴
 
+
+
 import psutil
 import requests
 import dill as pickle  # pylint: disable=shadowed-import
 
 import pyqtgraph as pg
-import numpy as np
 from qfluentwidgets.common import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.components import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from qfluentwidgets.window import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -100,7 +81,9 @@ from utils import (  # pylint: disable=unused-import, disable=wrong-import-posit
     DayRecord,
     Group,
     Base,
-    ClassObj,
+    ClassDataSet,
+    Chunk,
+    History,
     default_user,
     CORE_VERSION,
     CORE_VERSION_CODE,
@@ -108,6 +91,7 @@ from utils import (  # pylint: disable=unused-import, disable=wrong-import-posit
     CLIENT_UPDATE_LOG,
     DEFAULT_CLASS_KEY
 )
+
 
 from widgets import *
 from utils.functions import (
@@ -320,7 +304,7 @@ def as_command(
     return decorator
 
 
-class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
+class ClassWindow(ClassDataSet, MainClassWindow.Ui_MainWindow, MyMainWindow):
 
     """班级窗口实例化"""
 
@@ -754,15 +738,9 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             )
         )
 
-        def _show_exc_window(
-            exc_info: ExceptionInfoType
-        ):
-            """显示异常窗口的默认实现"""
-            from widgets.custom.ExceptionHandler import ExceptionHandler
-            exc_window = ExceptionHandler(self, self, exc_info[1])
-            exc_window.show()
+        self.exception_window: Optional[ExceptionHandler] = None
 
-        set_show_exc_window_callback(_show_exc_window)
+        set_show_exc_window_callback(lambda excinfo: self.show_exception(excinfo[1]))
 
         if self.auto_save_enabled:
             Thread(
@@ -784,7 +762,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             name="RefreshLogWindow",
         ).start()
 
-    def __repr__(self):  # 其实是因为直接继承ClassObjects的repr会导致无限递归
+    def __repr__(self):  # 其实是因为直接继承ClassDataSet的repr会导致无限递归
         return super(MyMainWindow, self).__repr__()
 
 
@@ -1085,15 +1063,15 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         return False
     
 
-    def show_exception(self, e: Exception):
+    def show_exception(self, e: BaseException):
         "显示异常"
         self.signal_show_exc_window.emit(e)
 
-    def _show_exception(self, e: Exception):
+    def _show_exception(self, e: BaseException):
         "展示异常信息的接口"
         Base.log("E", f"展示异常信息窗口：{e!r}", "MainWindow._show_exception")
         self.exception_window = ExceptionHandler(self, self, e)
-        self.exception_window.run()
+        self.exception_window.show()
 
 
     ###########################################################################
@@ -1928,7 +1906,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
         "当启动完成时调用，此时界面还没有展示"
         lt = time.localtime()
         if (lt.tm_mon, lt.tm_mday) == (4, 1):
-            e = ClassObj.ObserverError(
+            e = ClassDataSet.ObserverError(
                 f"数据加载失败，详情请查看日志[{random.randint(114514, 1919810)}]"
             )
             self.question_if_exec(
@@ -1944,7 +1922,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             )
 
     def on_auto_save_failure(self, exc_info: ExceptionInfoType):
-        """处理自动保存失败的情况"""
+        "处理自动保存失败的情况"
         self.show_tip(
             "警告",
             "自动保存失败，请查看日志",
@@ -1996,7 +1974,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @Slot()
     @as_command("retract_lastest", "撤回上步")
     def retract_lastest(self):
-        """撤回上步，覆写的是ClassObjects.retract_last"""
+        """撤回上步，覆写的是ClassDataSet.retract_last"""
         if self.class_obs.opreation_record.size() == 0:
             Base.log("I", "暂无可以撤回的操作", "MainWindow.retract_last")
             QMessageBox.information(self, "提示", "暂无可以撤回的操作")
@@ -2032,10 +2010,24 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
     @Slot()
     @as_command("reset_scores", "重置分数")
     def reset_scores(self):
-        """重置，覆写的是ClassObjects.reset"""
+        """重置，覆写的是ClassDataSet.reset"""
         Base.log("I", "询问是否重置", "MainWindow.reset")
         if question_yes_no(self, "提示", "是否进行周结算？"):
-            super().reset_scores()
+            assert self.achievement_obs is not None, "成就侦测器未初始化，无法重置分数"
+            loading_widget = LoadingScreenWidget(self, "indeterminate", stage_desc="重置分数中...")
+            # 这个不能关掉
+            loading_widget.setWindowFlag(loading_widget.windowFlags() & ~Qt.WindowType.WindowCloseButtonHint)
+            finished = False
+            self.achievement_obs.stop()
+            def _task():
+                nonlocal finished
+                self.reset_score_data()
+                finished = True
+            Thread(target=_task, name="ResetScoreThread").start()
+            loading_widget.show()
+            wait_until(lambda: finished)
+            self.achievement_obs.start()
+            loading_widget.close()
 
     def day_end(self, weekday: int, utc: float, show_msgbox: bool = True):
         """
@@ -2246,7 +2238,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
                             "这个操作会同时将默认成就，小组和班级补全，但是不会覆盖现有的数据。\n"
                             "（补充完了记得翻到底下看看！）",
                             lambda: (
-                                self.reset_missing(),
+                                self.reset_missing_defaults(),
                                 self.template_listbox.setData(_generate_action()),
                             ),
                         )
@@ -3120,6 +3112,7 @@ class ClassWindow(ClassObj, MainClassWindow.Ui_MainWindow, MyMainWindow):
             self, "另存为", self.save_path,
         )
         if path and path.strip() != "":
+            self.load_data(load_full_histories=True)
             self.save_data(path)
 
     @Slot()
@@ -3179,10 +3172,8 @@ class UpdateThread(QThread):
 
     def __init__(
         self, 
-        parent: Optional[Union[
-            QMainWindow, QWidget, QFrame, QStackedWidget, QScrollArea, MyMainWindow, MyWidget
-        ]] = None, 
-        main_window: ClassWindow = None
+        parent: Optional[QWidget] = None, 
+        main_window: Optional[ClassWindow] = None
     ):
         "初始化"
         super().__init__(parent=parent)
@@ -3782,7 +3773,7 @@ class RecoveryPoint:
 def main():
     "主函数"
     # 登录模块写在这里，用户名存在user里面就行
-    user = "default"
+    user = login()
     class_key = DEFAULT_CLASS_KEY
     app = QApplication(sys.argv)
     Base.log("I", "程序启动", "MainThread")

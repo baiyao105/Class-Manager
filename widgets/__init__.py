@@ -2,7 +2,6 @@
 所有的窗口文件
 """
 
-from typing import Union
 
 from .basic.MyMainWindow import MyMainWindow
 from .basic.MyWidget import MyWidget
@@ -24,8 +23,6 @@ from .custom.RandomSelectorWidget import RandomSelectWidget
 from .custom.SelectTemplateWidget import SelectTemplateWidget
 from .custom.SettingWidget import SettingWidget
 from .custom.StudentSelectorWidget import StudentSelectorWidget
-from .custom.SelectTemplateWidget import SelectTemplateWidget
-from .custom.SettingWidget import SettingWidget
 from .custom.StudentWidget import StudentWidget
 from .custom.WTFWidget import WTFWidget
 from .custom.LoadingScreen import LoadingScreenWidget

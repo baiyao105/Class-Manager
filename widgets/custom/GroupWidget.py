@@ -3,7 +3,7 @@
 """
 
 from typing import Optional, List
-from utils import Achievement, AchievementTemplate, ClassObj
+from utils import Achievement, AchievementTemplate, ClassDataSet
 from widgets.custom.StudentWidget import StudentWidget
 from widgets.custom.StudentSelectorWidget import StudentSelectorWidget
 from widgets.custom.SelectTemplateWidget import SelectTemplateWidget
@@ -21,7 +21,7 @@ class GroupWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        main_window: Optional[ClassObj]= None,
+        main_window: Optional[ClassDataSet]= None,
         master_widget: Optional[QWidget] = None,
         group: Group = None,
         readonly: bool = False,

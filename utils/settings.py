@@ -1,11 +1,8 @@
 import os
 import pickle
 from types import FunctionType, MethodType
-from typing import Any, Literal
-
-import dill as pickle # pyright: ignore[reportMissingTypeStubs]
-from typing import Any, Dict
-from types import MethodType, FunctionType
+from typing import Any, Literal, Dict
+import dill as pickle # pyright: ignore[reportMissingTypeStubs, reportDuplicateImport]
 from .basetypes import Base
 from .update_check import CLIENT_VERSION, CLIENT_VERSION_CODE
 
@@ -83,7 +80,8 @@ class SettingsInfo:
             except (FileNotFoundError, PermissionError) as e:
                 Base.log_exc("删除旧设置文件失败", "SettingsInfo.save_to", exc=e)
         try:
-            pickle.dump(self, open(file_path, "wb")) # pyright: ignore[reportUnknownMemberType]
+            with open(file_path, "wb") as f:
+                pickle.dump(self, f) # pyright: ignore[reportUnknownMemberType]
         except (OSError, pickle.PickleError, EOFError) as e:
             Base.log_exc("保存设置失败", "SettingsInfo.save_to", exc=e)
         return self
@@ -95,7 +93,8 @@ class SettingsInfo:
         :return: 加载后的设置信息对象
         """
         try:
-            obj: SettingsInfo = pickle.load(open(file_path, "rb")) # pyright: ignore[reportUnknownMemberType]
+            with open(file_path, "rb") as f:
+                obj: SettingsInfo = pickle.load(f) # pyright: ignore[reportUnknownMemberType]
             self.__dict__.update(obj.get_dict())
         except Exception as e:
             Base.log_exc("加载设置失败，将会返回默认", "SettingsInfo.load_from", exc=e)

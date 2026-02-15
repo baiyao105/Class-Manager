@@ -2,7 +2,8 @@
 创建模板窗口
 """
 
-from utils import Base, ClassObj as ClassWindow
+from utils import Base, ClassDataSet as ClassWindow
+from utils.algorithm.numeric import utc
 from widgets.basic import *
 from widgets.ui.pyside6.NewTemplateWindow import Ui_Form
 
@@ -12,7 +13,7 @@ class NewTemplateWidget(Ui_Form, MyWidget):
     """创建新模板的窗口"""
 
     def __init__(
-        self, main_window: ClassWindow = None, master_widget: Optional[QWidget] = None
+        self, main_window: ClassWindow, master_widget: Optional[QWidget] = None
     ):
         """
         初始化
@@ -22,7 +23,7 @@ class NewTemplateWidget(Ui_Form, MyWidget):
         :param student: 这个学生窗口对应的学生
         """
         super().__init__(master=master_widget)
-        self.setupUi(self)
+        self.setupUi(self) # type: ignore
         self.show()
         self.main_window = main_window
         self.master_widget = master_widget
@@ -46,7 +47,7 @@ class NewTemplateWidget(Ui_Form, MyWidget):
             return
 
         self.main_window.add_template(
-            "userset_" + str(Base.utc()),
+            "userset_" + str(utc()),
             self.lineEdit.text(),
             self.doubleSpinBox.value(),
             self.lineEdit_3.text(),

@@ -13,7 +13,7 @@ from ...basetypes import Base
 from ...consts import inf, runtime_flags
 
 from ..basetype import ClassDataType, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 from .classdata import ClassData
 
 if TYPE_CHECKING:
@@ -175,7 +175,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         self.icon = icon
         self.further_info = further_info
         self.condition_info = condition_info
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
 
     @property
     def kwargs(self):
@@ -245,11 +245,12 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         :raise ObserverError: lambda或者function爆炸了
         :return: 是否达成
         """
+        from ..classdataset import ClassDataSet
 
         # 反人类写法又出现了
 
         assert class_obs is not None, "没有传入班级侦测器/班级侦测器还没有初始化完成"
-        assert class_obs.base.achievement_obs is not None, "班级侦测器的成就侦测器还没有初始化完成"
+        assert class_obs.dataset.achievement_obs is not None, "班级侦测器的成就侦测器还没有初始化完成"
 
         if not self.active:
             return False
@@ -339,13 +340,22 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     student=student,
                     classes=class_obs.classes,
                     class_obs=class_obs,
-                    achievement_obs=class_obs.base.achievement_obs,
+                    achievement_obs=class_obs.dataset.achievement_obs,
                 )
                 for item in self.other:
                     if not item(d):
                         return False
 
-            except (NameError, TypeError, SystemError, AttributeError, RuntimeError) as e:  # pylint: disable=unused-variable
+            except (NameError, TypeError, SystemError, AttributeError, RuntimeError) as e:
+                if isinstance(e, ClassDataSet.OperationalError):
+                    return False
+
+                error_id = f"noticed_achievement_lambda_error_{self.uuid}"
+
+                if error_id in runtime_flags: # 提示一次就够了
+                    return False
+                
+                runtime_flags[error_id] = True
                 if e.args:
                     if e.args[0] == "name 'student' is not defined":
                         Base.log(
@@ -359,19 +369,23 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                             "存档的成就来自不同的版本",
                             "AchievementTemplate.achieved",
                         )
-                if "noticed_pyversion_changed" not in runtime_flags:
-                    Base.log(
-                        "W",
-                        "当前正在跨Python版本运行，请尽量不要切换py版本",
-                        "AchievementTemplate.achieved_by",
-                    )
-                    runtime_flags["noticed_pyversion_changed"] = True
+                
+                        if "noticed_pyversion_changed" not in runtime_flags:
+                            Base.log(
+                                "W",
+                                "当前很可能在跨Python版本运行，这大概率是问题出现的根本原因（序列化问题），"
+                                "请尽量不要切换py版本，或者自己试着修一下lambda的序列化",
+                                "AchievementTemplate.achieved_by",
+                            )
+                            runtime_flags["noticed_pyversion_changed"] = True
 
                 Base.log_exc(
                     f"位于成就{self.name}({self.key})的lambda函数出错：",
                     "AchievementTemplate.achieved",
                 )
-                if self.key in class_obs.base.default_achievements:
+                Base.log("W", "将不会再次展示此提示，请检查数据完整性（当然，也可能是正常现象）")
+
+                if self.key in class_obs.dataset.default_achievements:
                     if isinstance(self.other, list): # type: ignore
                         if not isinstance(self.other[0], Callable): # type: ignore
                             # 还没加载，先跳过
@@ -379,10 +393,10 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                         # 还没加载，先跳过
                     elif isinstance(self.other, str): # type: ignore
                         return False
-                    self.other = class_obs.base.default_achievements[self.key].other
+                    self.other = class_obs.dataset.default_achievements[self.key].other
                     Base.log("I", "已经重置为默认值", "AchievementTemplate.achieved")
                 else:
-                    raise ClassDataObj.ObserverError(f"位于成就{self.name}({self.key})的lambda函数出错")
+                    raise ClassDataLoader.ObserverError(f"位于成就{self.name}({self.key})的lambda函数出错")
                 return False
         return True
 

@@ -9,7 +9,7 @@ from typing import (
 )
 from utils import ( 
     Class, 
-    ClassObj, 
+    ClassDataSet, 
     ScoreModificationTemplate, 
     HomeworkRule, 
     ScoreModification, 
@@ -29,7 +29,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master: Optional[QWidget] = None,
-        main_window: Optional[ClassObj] = None,
+        main_window: Optional[ClassDataSet] = None,
         target_class: Class = None,
         target_students: Dict[int, Student] = None,
     ):

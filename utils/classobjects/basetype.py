@@ -15,7 +15,7 @@ from utils.profiler import profile
 
 if TYPE_CHECKING:
   from .dataloader import UserDataBase
-  from .classobj import ClassObj
+  from .classdataset import ClassDataSet
 
 _StringDataType = TypeVar("_StringDataType", covariant=True)
 
@@ -37,7 +37,7 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         super().__init__(str(_uuid) if _uuid else str(uuid4()))
         self.dtype = dt
 
-    def __setattr__(self, name: str, value: Any):  # 为了去掉UUID的限制
+    def __setattr__(self, name: str, value: Any):  # pyright: ignore[reportIncompatibleMethodOverride]，为了去掉UUID的限制
         Logger.log("T", f"setattr: {name} = {value} ({self})")
         return object.__setattr__(self, name, value)
 
@@ -70,6 +70,9 @@ class ClassDataType(ABC):
     所有班级数据类型的基类。
     """
 
+    class DataTypeError(RuntimeError):
+        "数据类型的错误"
+
     chunk_type_name: str
     "该班级数据类型的数据库名称。"
 
@@ -94,7 +97,7 @@ class ClassDataType(ABC):
         self._user_db_ref = None
 
     @property
-    def uuid(self) -> ClassDataTypeUUID[Self] | None:
+    def uuid(self) -> ClassDataTypeUUID[Self]:
         """
         该班级数据类型的唯一标识符。
         """
@@ -205,10 +208,12 @@ class ClassDataType(ABC):
         返回该班级数据类型的空对象。
         """
 
-    def get_class_obj(self) -> ClassObj | None:
-        """通过单例模式获取ClassObj引用"""
-        from .classobj import ClassObj
-        return ClassObj.get_current_instance()
+    def get_class_data_Set(self) -> Optional[ClassDataSet]:
+        """
+        通过单例模式获取ClassDataSet引用。
+        """
+        from .classdataset import ClassDataSet
+        return ClassDataSet.get_current_instance()
     
     
 
@@ -285,7 +290,7 @@ class DataProperty(property):
         if not self.trigger_event:
             return
         start_time = time.perf_counter()
-        class_obj = instance.get_class_obj()
+        class_obj = instance.get_class_data_Set()
         if class_obj is None:
             return
 

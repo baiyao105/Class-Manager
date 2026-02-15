@@ -8,7 +8,7 @@ from ...algorithm.types import update_object_mapping
 from ...basetypes import Base
 
 from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
     from .achievementtemp import AchievementTemplate
@@ -60,7 +60,7 @@ class Achievement(ClassDataType):
         self.temp = template
         self.target = target
         self.sound = self.temp.sound
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
 
     @DataProperty
     def time(self):
@@ -121,8 +121,8 @@ class Achievement(ClassDataType):
         if d["type"] != Achievement.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {Achievement.chunk_type_name}")
         obj = Achievement(
-            template=ClassDataObj.LoadUUID(d["template"], AchievementTemplate),
-            target=ClassDataObj.LoadUUID(d["target"], Student),
+            template=ClassDataLoader.LoadUUID(d["template"], AchievementTemplate),
+            target=ClassDataLoader.LoadUUID(d["target"], Student),
             reach_time=d["time"],
             reach_time_key=d["time_key"],
         )

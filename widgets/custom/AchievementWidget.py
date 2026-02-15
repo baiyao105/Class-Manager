@@ -3,7 +3,7 @@
 """
 
 from typing import Optional
-from utils import Achievement, AchievementTemplate, ClassObj
+from utils import Achievement, AchievementTemplate, ClassDataSet
 from widgets.basic import *
 from widgets.ui.pyside6.AchievementWindow import Ui_Form
 
@@ -15,7 +15,7 @@ class AchievementWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master_widget: Optional[QWidget] = None,
-        main_window: Optional[ClassObj] = None,
+        main_window: Optional[ClassDataSet] = None,
         achievement: Union[Achievement, AchievementTemplate] = None,
     ):
         """

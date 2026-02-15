@@ -4,7 +4,7 @@
 
 import copy
 from typing import Optional, Dict
-from utils import AttendanceInfo, ClassObj
+from utils import AttendanceInfo, ClassDataSet
 from widgets.custom.ListView import ListView
 from widgets.custom.AttendanceInfoViewWidget import AttendanceInfoViewWidget
 from widgets.basic import *
@@ -16,7 +16,7 @@ __all__ = ["CleaningScoreSumUpWidget"]
 
 class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
     def __init__(
-        self, master_widget: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
+        self, master_widget: Optional[QWidget] = None, main_window: Optional[ClassDataSet] = None
     ):
         """
         初始化

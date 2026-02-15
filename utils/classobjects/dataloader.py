@@ -39,12 +39,24 @@ from ..consts import runtime_flags
 from ..functions.prompts import question_yes_no
 
 from .basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
-from .classdataobj import *
+from .classdataloader import *
 
 
 
 
 BaseDataType = Union[int, float, bool, str]
+
+class LoaderError(RuntimeError):
+  "加载器出现错误"
+
+class UserCanceledError(LoaderError):
+  "用户取消加载"
+
+class ObjectDataNotFoundError(LoaderError):
+  "数据在存档中不存在"
+
+class IdentifierDumplicatedError(LoaderError):
+  "UUID重复了"
 
 
 class UserDataBase(Object):
@@ -95,7 +107,6 @@ class UserDataBase(Object):
     self.weekday_record = weekday_record or {}
     self.current_day_attendance = current_day_attendance or {}
     self.loaded = user is not None  # 任一参数非空即视为已加载
-    self.uuid = None
 
   def set(
     self,
@@ -262,7 +273,7 @@ class DataObject:
                 ),
               )
             else:
-              raise ValueError(
+              raise IdentifierDumplicatedError(
                 f"对于uuid={uuid!r}的对象，数据库中已经存在一个不同类型的对象！"
                 f"（当前为{type_name!r}，数据库中为{existing_class[0]!r}）\n"
                 "如果你看见了这个错误，你可能碰见了"
@@ -372,11 +383,11 @@ class Chunk:
     """
     获取对象数据。
 
-    :param history_uuid: 历史记录uuid，None为此周（还未重置的存档
+    :param history_uuid: 历史记录uuid，None为此周（还未重置的存档）
     :param uuid: 对象uuid
     :param data_type: 数据类型名
     :return: 对象数据
-    :raise ValueError: 数据不存在
+    :raise ObjectDataNotFoundError: 数据不存在
     """
     try:
       conn = self.database_connections[(history_uuid, data_type)]
@@ -385,7 +396,7 @@ class Chunk:
       self.database_connections[(history_uuid, data_type)] = conn
     result = conn.execute(f"SELECT data FROM datas_{uuid[:1]} WHERE uuid = ?", (str(uuid),)).fetchone()
     if result is None:
-      raise ValueError("数据不存在")
+      raise ObjectDataNotFoundError("数据不存在")
     return result[0]
   
   def get_current_save_dir(self):
@@ -495,7 +506,7 @@ class Chunk:
         DataObject.load_tasks.remove(_id)
         return obj
 
-    ClassDataObj.LoadUUID = lambda uuid, type: _load_object(uuid, type)  # type: ignore
+    ClassDataLoader.LoadUUID = lambda uuid, type: _load_object(uuid, type)  # type: ignore
 
   def load_history(
     self,
@@ -509,6 +520,7 @@ class Chunk:
     :param request_uuid: 请求uuid，只是用来做数据加载的标识的
     :return: 历史记录
     :raise FileNotFoundError: 历史记录不存在
+    :raise UserCanceledError: 用户取消加载
     """
     self.last_failures: list[tuple[ClassDataTypeUUID[History] | None, str, ClassDataTypeUUID[ClassDataType]]] = []
     start_time = time.time()
@@ -548,7 +560,7 @@ class Chunk:
             "如果继续加载，可能导致加载存档失败甚至闪退。\n"
             "是否继续加载数据？",
           ):
-            raise RuntimeError("用户取消加载")
+            raise UserCanceledError("用户取消加载")
           runtime_flags["noticed_version_changed"].add(request_uuid)  # type: ignore
 
     else:
@@ -573,12 +585,12 @@ class Chunk:
 
     classes: Dict[str, Class] = {}
     for _, class_uuid in class_uuids:
-      _class: Class | None = ClassDataObj.LoadUUID(class_uuid, Class)
+      _class: Class | None = ClassDataLoader.LoadUUID(class_uuid, Class)
       classes[_class.key] = _class
 
     for target_class, item in weekday_uuids.items():
       for _time_key, weekday_uuid in item.items():
-        weekday: DayRecord | None = ClassDataObj.LoadUUID(weekday_uuid, DayRecord)
+        weekday: DayRecord | None = ClassDataLoader.LoadUUID(weekday_uuid, DayRecord)
         if target_class not in self.bound_db.weekday_record:
           self.bound_db.weekday_record[target_class] = {}
         self.bound_db.weekday_record[target_class][weekday.utc] = weekday
@@ -633,7 +645,7 @@ class Chunk:
     )
 
     for _, template_uuid in template_uuids:
-      templates.append(ClassDataObj.LoadUUID(template_uuid, ScoreModificationTemplate))
+      templates.append(ClassDataLoader.LoadUUID(template_uuid, ScoreModificationTemplate))
 
     achievement_uuids: list[tuple[str, ClassDataTypeUUID[AchievementTemplate]]] = json.load(
       open(
@@ -642,7 +654,7 @@ class Chunk:
       )
     )
     for _, achievement_uuid in achievement_uuids:
-      achievements.append(ClassDataObj.LoadUUID(achievement_uuid, AchievementTemplate))
+      achievements.append(ClassDataLoader.LoadUUID(achievement_uuid, AchievementTemplate))
 
     current_day_attendance_uuids: list[tuple[str, ClassDataTypeUUID[AttendanceInfo]]] = json.load(
       open(
@@ -651,10 +663,9 @@ class Chunk:
       )
     )
     for target_class, history_uuid in current_day_attendance_uuids:
-      current_day_attendance[target_class] = ClassDataObj.LoadUUID(history_uuid, AttendanceInfo)
+      current_day_attendance[target_class] = ClassDataLoader.LoadUUID(history_uuid, AttendanceInfo)
 
     info = json.load(open(os.path.join(self.path, "info.json"), encoding="utf-8"))
-    self.bound_db.uuid = info["uuid"]
     self.bound_db.save_time = info["save_time"]
     self.bound_db.version = info["version"]
     self.bound_db.version_code = info["version_code"]
@@ -694,7 +705,9 @@ class Chunk:
 
   @staticmethod
   def commit_changes(clear_dataobj_connections: bool = True) -> None:
-    """释放所有连接并保存更改。"""
+    """
+    释放所有连接并保存更改。
+    """
     for v in Chunk.database_connections.values():
       v.commit()
       v.close()
@@ -1079,7 +1092,26 @@ class Chunk:
         for dir_1 in os.listdir(os.path.join(self.path, "Histories")):
           for dir_2 in os.listdir(os.path.join(self.path, "Histories", dir_1)):
             history_uuids.append(dir_1 + dir_2)
-        
+            
+        json.dump(
+          {
+            "user": self.bound_db.user,
+            "create_time": time.time(),
+            "save_time": self.bound_db.save_time,
+            "version": self.bound_db.version,
+            "version_code": self.bound_db.version_code,
+            "last_start_time": self.bound_db.last_start_time,
+            "last_reset": self.bound_db.last_reset,
+            "histories": history_uuids,
+            "python_version": (
+              sys.version_info.major,
+              sys.version_info.minor,
+              sys.version_info.micro,
+            ),
+          },
+          open(os.path.join(self.path, "info.json"), "w", encoding="utf-8"),
+          indent=4,
+        )
       except Exception:
         Base.log_exc("保存数据时出现未处理的错误，保存操作中断", "Chunk.save", "E")
         self.commit_changes()

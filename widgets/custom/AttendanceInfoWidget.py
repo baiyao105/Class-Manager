@@ -3,7 +3,7 @@
 """
 
 from typing import Optional, Dict, Literal
-from utils import AttendanceInfo, ClassObj
+from utils import AttendanceInfo, ClassDataSet
 from widgets.custom.ListView import ListView
 from widgets.custom.AttendanceInfoViewWidget import AttendanceInfoViewWidget
 from widgets.basic import *
@@ -21,7 +21,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
     def __init__(
         self,
         master: Optional[QWidget] = None,
-        main_window: ClassObj = None,
+        main_window: ClassDataSet = None,
         attendanceinfo: AttendanceInfo = None,
     ):
         """

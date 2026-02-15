@@ -3,7 +3,7 @@
 """
 
 from typing import Optional, List
-from utils import ClassObj
+from utils import ClassDataSet
 from widgets.custom.StudentWidget import StudentWidget
 from widgets.custom.StudentSelectorWidget import StudentSelectorWidget
 from widgets.basic import *
@@ -17,7 +17,7 @@ class RandomSelectWidget(Ui_Form, MyWidget):
     """随机点名窗口"""
 
     def __init__(
-        self, master: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
+        self, master: Optional[QWidget] = None, main_window: Optional[ClassDataSet] = None
     ):
         super().__init__(master)
         self.main_window = main_window

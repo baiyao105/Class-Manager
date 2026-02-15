@@ -15,7 +15,7 @@ from ...events.broadcast import BroadcastReceiver
 from ..objects.achievement import Achievement
 
 if TYPE_CHECKING:
-    from ..classobj import ClassObj
+    from ..classdataset import ClassDataSet
     from ..objects.student import Student
 
 
@@ -24,7 +24,7 @@ class AchievementStatusObserver:
 
     def __init__(
         self,
-        base: ClassObj,
+        base: ClassDataSet,
         class_key: str,
         achievement_display: Callable[[str, Student], Any] | None = None,
         tps: int = 20,
@@ -202,7 +202,7 @@ class AchievementStatusObserver:
         
         Base.log("I", "开始侦测器主循环...", "AchievementStatusObserver.run")
         while self.on_active:
-            self.next_frame()
+            self.next_frame(recheck_achievement=False)
         
         # 注销监听器
         Base.log("I", "开始注销监听器...", "AchievementStatusObserver.run")

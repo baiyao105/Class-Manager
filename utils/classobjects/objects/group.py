@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Self
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
 from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 from .datatag import DataTag, TagSigned
 
 if TYPE_CHECKING:
@@ -58,7 +58,7 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         "详细描述"
         self.belongs_to = belongs_to
         "所属班级"
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
         "归档uuid"
         self.tags = tags or []
 
@@ -157,11 +157,11 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         obj = Group(
             key=data["key"],
             name=data["name"],
-            leader=ClassDataObj.LoadUUID(data["leader"], Student),
-            members=[ClassDataObj.LoadUUID(s, Student) for s in data["members"]],
+            leader=ClassDataLoader.LoadUUID(data["leader"], Student),
+            members=[ClassDataLoader.LoadUUID(s, Student) for s in data["members"]],
             belongs_to=data["belongs_to"],
             further_desc=data["further_desc"],
-            tags=[ClassDataObj.LoadUUID(t, DataTag) for t in data["tags"]]
+            tags=[ClassDataLoader.LoadUUID(t, DataTag) for t in data["tags"]]
         )
         obj.uuid = data["uuid"]
         obj.archive_uuid = data["archive_uuid"]

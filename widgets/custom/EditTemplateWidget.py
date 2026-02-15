@@ -3,7 +3,7 @@
 """
 
 from typing import Optional
-from utils import ScoreModificationTemplate, ClassObj, question_yes_no
+from utils import ScoreModificationTemplate, ClassDataSet, question_yes_no
 from widgets.custom.ListView import ListView
 from widgets.basic import *
 from widgets.ui.pyside6.EditTemplateWindow import Ui_Form
@@ -16,7 +16,7 @@ class EditTemplateWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        main_window: Optional[ClassObj] = None,
+        main_window: Optional[ClassDataSet] = None,
         master_widget: Optional[QWidget] = None,
         template: ScoreModificationTemplate = None,
         in_listview: ListView = None,

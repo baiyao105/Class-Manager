@@ -6,7 +6,7 @@ from typing import Any, Self
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
 from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 
 class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
@@ -48,7 +48,7 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
         self.desc = description
         self.cant_replace = cant_replace
         self._is_visible = is_visible
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
 
     @DataProperty
     def mod(self):

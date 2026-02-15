@@ -9,7 +9,7 @@ from ...algorithm import SupportsKeyOrdering, update_object_mapping
 from ...basetypes import Base
 from .datatag import TagSigned, DataTag
 from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
     from ..observers.classstatobs import ClassStatusObserver
@@ -33,11 +33,20 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     last_reset_info_keep_turns = 2
     "在存档中上次重置信息的轮数"
 
-    class NoBelongningClass(Exception):
+    class NoBelongningClassError(ClassDataType.DataTypeError):
         "学生没有所属班级。"
 
-    class NoBelongningGroup(Exception):
+    class NoBelongningGroupError(ClassDataType.DataTypeError):
         "学生没有所属小组。"
+
+    class UnsupportedOperationError(ClassDataType.DataTypeError):
+        "操作不支持。"
+    
+    class ObserverMismatchError(ClassDataType.DataTypeError):
+        "侦测器和学生的班级不匹配。"
+
+    class CannotFindStudentInClassError(ClassDataType.DataTypeError):
+        "在侦测器的班级里找不到这个学生。"
 
     @staticmethod
     def new_dummy():
@@ -102,7 +111,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         "所属小组"
         self._last_reset_info = last_reset_info
         "上次重置的信息"
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
         "归档uuid"
         self.tags: list[DataTag] = tags or []
         "标签"
@@ -189,7 +198,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     @name.deleter
     def name(self):
         Base.log("E", "错误：用户尝试删除学生名", "Student.num.deleter")
-        raise ClassDataObj.OpreationError("不允许删除学生的名字")
+        raise Student.UnsupportedOperationError("不允许删除学生的名字")
 
     @DataProperty
     def num(self) -> int:
@@ -209,7 +218,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     @num.deleter
     def num(self):
         Base.log("E", "错误：用户尝试删除学号（？？？？）", "Student.name.deleter")
-        raise ClassDataObj.OpreationError("不允许删除学生的学号")
+        raise Student.UnsupportedOperationError("不允许删除学生的学号")
 
     @DataProperty
     def score(self):
@@ -226,7 +235,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     @score.deleter
     def score(self):
         Base.log("E", "错误：用户尝试删除分数（？？？？）", "Student.score.deleter")
-        raise ClassDataObj.OpreationError("不允许直接删除学生的分数")
+        raise Student.UnsupportedOperationError("不允许直接删除学生的分数")
 
     @DataProperty
     def belongs_to(self):
@@ -236,7 +245,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     @belongs_to.setter
     def belongs_to(self, _):
         Base.log("E", "错误：用户尝试修改班级", "Student.belongs_to.setter")
-        raise ClassDataObj.OpreationError("不允许直接修改学生的班级")
+        raise Student.UnsupportedOperationError("不允许直接修改学生的班级")
 
     @belongs_to.deleter
     def belongs_to(self):
@@ -245,7 +254,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
             "错误：用户尝试删除班级（？？？？？？？）",
             "Student.belongs_to.deleter",
         )
-        raise ClassDataObj.OpreationError("不允许直接删除学生的班级")
+        raise Student.UnsupportedOperationError("不允许直接删除学生的班级")
 
     @DataProperty
     def total_score(self):
@@ -325,13 +334,13 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         :return: Group对象
         """
         if not self._belongs_to:
-            raise Student.NoBelongningClass(f"尝试访问没有所属班级的学生{self!r}所在的小组")
+            raise Student.NoBelongningClassError(f"尝试访问没有所属班级的学生{self!r}所在的小组")
 
         if not self.belongs_to_group:
-            raise Student.NoBelongningGroup(f"尝试访问没有所属小组的学生{self!r}所在的小组")
+            raise Student.NoBelongningGroupError(f"尝试访问没有所属小组的学生{self!r}所在的小组")
 
         if self._belongs_to != class_obs.class_id:
-            raise ClassDataObj.ObserverError(
+            raise Student.ObserverMismatchError(
                 f"但是从理论层面来讲你不应该把{class_obs.class_id!r}的侦测器给一个{self._belongs_to!r}的学生"
             )
 
@@ -345,7 +354,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         :return: 排名
         """
         if self._belongs_to != class_obs.class_id:
-            raise ValueError(
+            raise Student.ObserverMismatchError(
                 f"但是从理论层面来讲你不应该把{class_obs.class_id!r}的侦测器给一个{self._belongs_to!r}的学生"
             )
 
@@ -353,7 +362,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         for index, student in ranking_data:
             if student.num == self.num:
                 return index
-        raise ValueError(f"你确定这个学生({self.belongs_to})在这个班({class_obs.class_id})？")
+        raise Student.CannotFindStudentInClassError(f"这个学生({self.num})貌似在这个班({class_obs.class_id})找不到")
 
     def get_non_dumplicated_ranking(self, class_obs: ClassStatusObserver) -> int:
         """
@@ -363,7 +372,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         :return: 排名
         """
         if self._belongs_to != class_obs.class_id:
-            raise ValueError(
+            raise Student.ObserverMismatchError(
                 f"但是从理论层面来讲你不应该把{class_obs.class_id!r}的侦测器给一个{self._belongs_to!r}的学生"
             )
 
@@ -371,7 +380,7 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         for index, student in ranking_data:
             if student.num == self.num:
                 return index
-        raise ValueError(f"你确定这个学生({self.belongs_to})在这个班({class_obs.class_id})？")
+        raise Student.CannotFindStudentInClassError(f"这个学生({self.num})貌似在这个班({class_obs.class_id})找不到")
 
     def __add__(self, value: Student | float) -> Student:
         "这种东西做出来是致敬班级小管家的（bushi"
@@ -457,17 +466,17 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
             num=data["num"],
             score=Student.score_dtype(data["score"]),
             belongs_to=data["belongs_to"],
-            history={k: ClassDataObj.LoadUUID(v, ScoreModification) for k, v in data["history"]},
+            history={k: ClassDataLoader.LoadUUID(v, ScoreModification) for k, v in data["history"]},
             last_reset=data["last_reset"],
             highest_score=data["highest_score"],
             lowest_score=data["lowest_score"],
-            achievements={k: ClassDataObj.LoadUUID(v, Achievement) for k, v in data["achievements"]},
+            achievements={k: ClassDataLoader.LoadUUID(v, Achievement) for k, v in data["achievements"]},
             total_score=data["total_score"],
             highest_score_cause_time=data["highest_score_cause_time"],
             lowest_score_cause_time=data["lowest_score_cause_time"],
             belongs_to_group=data["belongs_to_group"],
-            last_reset_info=ClassDataObj.LoadUUID(data["last_reset_info"], Student),
-            tags=[ClassDataObj.LoadUUID(t, DataTag) for t in data["tags"]],
+            last_reset_info=ClassDataLoader.LoadUUID(data["last_reset_info"], Student),
+            tags=[ClassDataLoader.LoadUUID(t, DataTag) for t in data["tags"]],
         )
 
         obj.uuid = data["uuid"]

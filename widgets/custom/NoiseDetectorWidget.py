@@ -7,13 +7,14 @@ HAS_PYAUDIO: bool = False
 
 try:
     import pyaudio
-    HAS_PYAUDIO = True
-except ImportError as unused:
-    HAS_PYAUDIO = False
+    HAS_PYAUDIO = True # type: ignore
+except ImportError: 
+    pass
+
 import numpy as np
 from utils import Thread
 from typing import Optional
-from utils import ClassObj
+from utils import ClassDataSet
 from widgets.basic import *
 from widgets.ui.pyside6.NoiseDetector import Ui_Form
 
@@ -25,11 +26,11 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
     # 定义音频参数
 
     try:
-        FORMAT = pyaudio.paInt16
+        FORMAT = pyaudio.paInt16 # type: ignore
         CHANNELS = 1
         RATE = 44100
         CHUNKSIZE = 1024
-        p = pyaudio.PyAudio()
+        p = pyaudio.PyAudio() # type: ignore
         stream = p.open(
             format=FORMAT,
             channels=CHANNELS,
@@ -42,7 +43,7 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
         stream = None
 
     @staticmethod
-    def caculate_db(data):
+    def caculate_db(data: bytes) -> float:
         try:
             samples = np.frombuffer(data, dtype=np.int16)
             peak_amplitude = np.abs(samples).max()
@@ -50,17 +51,17 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
                 return -np.inf
             else:
                 return 20 * np.log10(peak_amplitude / 32768.0)
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
+        except (ArithmeticError, np.linalg.LinAlgError):  # pylint: disable=broad-exception-caught
             return -np.inf
 
     @staticmethod
-    def caculate_abs(data):
+    def caculate_abs(data: bytes) -> float:
         samples = np.frombuffer(data, dtype=np.int16)
         peak_amplitude = np.abs(samples).max()
         return peak_amplitude / 32768
 
     def __init__(
-        self, master: Optional[QWidget] = None, main_window: Optional[ClassObj] = None
+        self, master: Optional[QWidget] = None, main_window: Optional[ClassDataSet] = None
     ):
         """
         构造新窗口
@@ -69,7 +70,7 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
         :param main_window: 主窗口
         """
         super().__init__(master)
-        self.setupUi(self)
+        self.setupUi(self) # type: ignore
         self.main_window = main_window
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_window)
@@ -87,12 +88,13 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
             return
         while True:
             try:
+                if self.stream is None: raise IOError("stream是None")
                 self.data = self.stream.read(self.CHUNKSIZE)
-            except BaseException as unused:  # pylint: disable=broad-exception-caught
+            except (IOError, OSError):
                 if self.stream is not None:
                     self.data = b"wdnmd"  # 抽象的音频信号
                 else:
-                    p = pyaudio.PyAudio()
+                    p = pyaudio.PyAudio() # type: ignore
                     self.stream = p.open(
                         format=self.FORMAT,
                         channels=self.CHANNELS,
@@ -107,7 +109,7 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
         abs_d = self.caculate_abs(data)
         try:
             label_len = 350 * abs_d
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
+        except (TypeError, ValueError):  # pylint: disable=broad-exception-caught
             label_len = 350
 
         if label_len >= 350:
@@ -139,7 +141,7 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
             f"当前噪音：{db:.2f}db （{int(abs_d * 65536)}, {int(label_len)}）"
         )
         start = QSize(self.last_length, 21)
-        end = QSize(min(label_len + 20, 350), 21)
+        end = QSize(min(int(label_len + 20), 350), 21)
         self.last_length = end.width()
         self.anim = QPropertyAnimation(self.label, b"size")
         self.anim.setDuration(33)

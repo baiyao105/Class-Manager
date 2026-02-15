@@ -74,7 +74,7 @@ class ClassObjectStudentTest(unittest.TestCase):
         DataObject.static_save(stu1, self.test_chunk)
         self.test_chunk.set_uuid_loader(None)
         Base.config.log_level = "D"
-        stu2 = ClassDataObj.LoadUUID(stu1.uuid, Student)
+        stu2 = ClassDataLoader.LoadUUID(stu1.uuid, Student)
         self.assertTrue(stu2.has_tag(tag3), "从数据中加载对象后，标签应当被正确加载")
 
 

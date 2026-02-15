@@ -2,7 +2,7 @@
 历史记录窗口模块
 """
 from typing import Optional
-from utils import ScoreModification, ClassObj
+from utils import ScoreModification, ClassDataSet
 from widgets.custom.ListView import ListView
 from widgets.basic import *
 from widgets.ui.pyside6.ModifyHistoryWindow import Ui_Form
@@ -16,7 +16,7 @@ class HistoryWidget(MyWidget, Ui_Form):
 
     def __init__(
         self,
-        main_window: ClassObj = None,
+        main_window: ClassDataSet = None,
         master_widget: Optional[QWidget] = None,
         history: ScoreModification = None,
         listview_widget: ListView = None,

@@ -5,6 +5,7 @@
 import copy
 import time
 import ctypes
+import signal
 from types import TracebackType
 import psutil
 import random
@@ -64,6 +65,23 @@ class Base(Logger, Object):
             + f"{lt.tm_hour:02}:{lt.tm_min:02}:{lt.tm_sec:02}"
             + f".{int((time.time() % 1) * 1000):03}"
         )
+    
+    @staticmethod
+    def set_signal_handler(sig: int, handler: Any):
+        "设置信号处理函数。"
+        signal.signal(sig, handler)
+
+    @staticmethod
+    def get_signal_handler(sig: int) -> Any:
+        "获取信号处理函数。"
+        return signal.getsignal(sig)
+    
+    @staticmethod
+    def reset_signal_handler(sig: int):
+        "重置信号处理函数为默认值。"
+        signal.signal(sig, signal.SIG_DFL)
+
+        
 
 
 class SysMemTracer:

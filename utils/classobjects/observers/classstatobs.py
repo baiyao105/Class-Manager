@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, Dict
 from ...algorithm import Stack, Thread
 from ...basetypes import Base
 
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
-    from ..classobj import ClassObj
+    from ..classdataset import ClassDataSet
     from ..objects.scoremod import ScoreModification
     from ..objects.student import Student
 
@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 class ClassStatusObserver:
     "班级状态侦测器"
 
-    def __init__(self, base: ClassObj, class_id: str, tps: int = 20):
+    def __init__(self, dataset: ClassDataSet, class_id: str, tps: int = 20):
         """
         构造一个新的侦测器
 
-        :param base: 班级数据 (self.classes)
+        :param dataset: 班级数据
         :param class_id: 班级id
         :param templates: 所有的分数修改模板
         """
@@ -33,16 +33,16 @@ class ClassStatusObserver:
             "班级id"
             self.stu_score_ord: Dict[int, Student] = {}
             "学生分数排序，不去重"
-            self.classes = base.classes
+            self.classes = dataset.classes
             "班级数据"
-            self.target_class = base.classes[self.class_id]
+            self.target_class = dataset.classes[self.class_id]
             "目标班级"
-            self.templates = base.modify_templates
+            self.templates = dataset.modify_templates
             "所有的分数修改模板"
             self.opreation_record: Stack[Iterable[ScoreModification]] = Stack([])
-            "操作记录"
-            self.base = base
-            "算法基层"
+            "分数修改操作记录"
+            self.dataset = dataset
+            "绑定的数据组"
             self.last_update = time.time()
             "上次更新时间"
             self.limited_tps = tps
@@ -52,9 +52,9 @@ class ClassStatusObserver:
             self.tps: float = 0
             "侦测器每秒帧数"
 
-        except (KeyError, ValueError, AttributeError, TypeError):
+        except (KeyError, ValueError, AttributeError, TypeError) as e:
             Base.log_exc("获取班级信息失败", "ClassStatusObserver.__init__")
-            raise ClassDataObj.ObserverError("获取班级信息失败")
+            raise ClassDataLoader.ObserverError("获取班级信息失败") from e
 
     def run(self):
         "内部用来启动侦测器的函数"

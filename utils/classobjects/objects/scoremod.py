@@ -11,7 +11,7 @@ from ...basetypes import Base
 from ...consts import debug
 
 from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
-from ..classdataobj import ClassDataObj
+from ..classdataloader import ClassDataLoader
 from .scoremodtemplate import ScoreModificationTemplate  # 可以直接导入，这个没有依赖
 
 if TYPE_CHECKING:
@@ -79,7 +79,7 @@ class ScoreModification(ClassDataType):
         self._execute_time = execute_time
         self.create_time = create_time
         self._executed = executed
-        self.archive_uuid = ClassDataObj.get_archive_uuid()
+        self.archive_uuid = ClassDataLoader.get_archive_uuid()
         self.execute_time_key = 0
 
     @DataProperty
@@ -144,7 +144,7 @@ class ScoreModification(ClassDataType):
             ZeroDivisionError,
         ) as exception:
             if debug:
-                raise ClassDataObj.OpreationError("执行加减分操作时发生错误") from exception
+                raise ClassDataLoader.OpreationalError("执行加减分操作时发生错误") from exception
             Base.log(
                 "E",
                 "执行时出现错误：\n\t\t" + ("\t" * 2).join(str(traceback.format_exc()).splitlines(True)).strip(),
@@ -260,8 +260,8 @@ class ScoreModification(ClassDataType):
         if d["type"] != ScoreModification.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {ScoreModification.chunk_type_name}")
         obj = ScoreModification(
-            template=ClassDataObj.LoadUUID(d["template"], ScoreModificationTemplate),
-            target=ClassDataObj.LoadUUID(d["target"], Student),
+            template=ClassDataLoader.LoadUUID(d["template"], ScoreModificationTemplate),
+            target=ClassDataLoader.LoadUUID(d["target"], Student),
             title=d["title"],
             mod=d["mod"],
             execute_time=d["execute_time"],

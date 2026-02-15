@@ -26,6 +26,6 @@ except:
         category=RuntimeWarning,
     )
 
-from .classobj import *
+from .classdataset import *
 from .dataloader import *
-from .observers import *  # 一定要放在default后面，observers依赖classobj，classobj依赖default
+from .observers import *  # 一定要放在default后面，observers依赖classdataset，classdataset依赖default
