@@ -3,33 +3,36 @@
 考勤信息窗口所在模块
 """
 
-from typing import Optional
-from utils import AttendanceInfo, ClassDataSet
-from widgets.basic import *
-from widgets.ui.pyside6.AttendanceInfoView import Ui_Form
+from __future__ import annotations
 
-__all__ = ["AttendanceInfoViewWidget"]
+from utils.qtconfig import QWidget
+from utils.classobjects import AttendanceInfo
+
+from widgets.basic import MyWidget
+from widgets.templates import AttendanceInfoView
 
 
-class AttendanceInfoViewWidget(Ui_Form, MyWidget):
-    """考勤信息查看器"""
+
+class AttendanceInfoViewWidget(AttendanceInfoView.Ui_Form, MyWidget):
+    """
+    考勤信息查看器。
+
+    （好敷衍。。。）
+    """
 
     def __init__(
         self,
-        master: Optional[QWidget] = None,
-        main_window: Optional[ClassDataSet] = None,
-        attendanceinfo: AttendanceInfo = None,
+        attendanceinfo: AttendanceInfo,
+        master: QWidget | None = None
     ):
         """
-        构造新窗口
+        构造新窗口。
 
         :param master: 父窗口
-        :param main_window: 主窗口
         :param attendanceinfo: 考勤信息
         """
         super().__init__(master)
-        self.setupUi(self)
-        self.main_window = main_window
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.attendanceinfo = attendanceinfo
 
         self.listWidget.addItems(
@@ -59,3 +62,5 @@ class AttendanceInfoViewWidget(Ui_Form, MyWidget):
         self.listWidget_7.addItems(
             [f"{stu.num}号 {stu.name}" for stu in self.attendanceinfo.is_leave_late]
         )
+
+__all__ = ["AttendanceInfoViewWidget"]

@@ -1308,7 +1308,7 @@ class ClassDataSet(ClassDataLoader, Base):
         else:
             send_to = to
 
-        if send_to is None: # type: ignore[unreachable]
+        if send_to is None: # type: ignore[unreachable]，以防我脑残
             Base.log("W", "传参为None，疑似初始化，return", "ClassObj.send_modify")
             return None
 
@@ -1320,7 +1320,7 @@ class ClassDataSet(ClassDataLoader, Base):
             Base.log("W", "传参为[None]，疑似初始化，return", "ClassObj.send_modify")
             return None
 
-        if key is None: # type: ignore[unreachable]
+        if key is None: # type: ignore[unreachable]，以防我脑残
             Base.log("W", "key为None，疑似模板选择时取消，return", "ClassObj.send_modify")
             return None
 

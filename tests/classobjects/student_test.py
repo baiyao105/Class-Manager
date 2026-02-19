@@ -8,7 +8,6 @@ from utils.classobjects.objects import DataTag
 
 class ClassObjectStudentTest(unittest.TestCase):
 
-
     def test_construct_and_basic_operation(self):
         stu1 = Student("名称1", 1145, 0.1, "class_id", belongs_to_group="group_id")
         stu2 = Student("名称2", 1919, 0.2, "class_id", belongs_to_group="group_id")
@@ -76,9 +75,6 @@ class ClassObjectStudentTest(unittest.TestCase):
         Base.config.log_level = "D"
         stu2 = ClassDataLoader.LoadUUID(stu1.uuid, Student)
         self.assertTrue(stu2.has_tag(tag3), "从数据中加载对象后，标签应当被正确加载")
-
-
-
 
 
     def __init__(self):

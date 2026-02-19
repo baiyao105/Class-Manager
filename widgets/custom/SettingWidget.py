@@ -1,30 +1,39 @@
 """
 设置窗口
 """
+from __future__ import annotations
 
-from typing import Optional
-from utils import ClassDataSet, question_yes_no, SettingsInfo
-from widgets.custom.ListView import ListView
-from widgets.basic import *
-from widgets.ui.pyside6.SettingWindow import Ui_Form
+from typing import TYPE_CHECKING
+
+from utils import question_yes_no, Base, QTimer
+from utils.qtconfig import QWidget, QCloseEvent, QTimer, Slot
+
+from widgets.basic import MyWidget
+from widgets.templates import SettingWindow
+
+if TYPE_CHECKING:
+    from control.classwindow.setting_model import SettingModel
 
 
 __all__ = ["SettingWidget"]
 
-class SettingWidget(Ui_Form, MyWidget):
-    """设置窗口"""
+class SettingWidget(SettingWindow.Ui_Form, MyWidget):
+    """
+    设置窗口
+    """
 
     def __init__(
-        self, master_widget: Optional[QWidget] = None, main_window: Optional[SettingsInfo] = None
+        self, setting: SettingModel, master: QWidget | None = None
     ):
-        """初始化
+        """
+        初始化
 
         :param master_widget: 这个窗口的父窗口
         :param main_window: 程序的主窗口，方便传参"""
-        super().__init__(master=master_widget)
-        self.setting_obj = main_window
-        self.master_widget = master_widget
-        self.setupUi(self)
+        super().__init__(master=master)
+        self.setting_obj = setting
+        self.master_widget = master
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.show()
         self.save.clicked.connect(self.accept_save)
         self.cancel.clicked.connect(self.cancel_save)
@@ -120,13 +129,13 @@ class SettingWidget(Ui_Form, MyWidget):
         self.spinBox_3.setValue(self.setting_obj.max_framerate)
         self.checkBox.setChecked(self.setting_obj.use_animate_background)
 
-    def update(self):
+    def update(self): # type: ignore
         self.label_26.setText(
             self.update_animation_speed_desc(self.horizontalSlider.value())[1]
         )
         super().update()
 
-    def update_animation_speed_desc(self, num) -> Tuple[int, str]:
+    def update_animation_speed_desc(self, num: int) -> tuple[float, str]:
         if num == 1:
             return (0.1, "0.1倍")
         if num == 2:
@@ -167,6 +176,7 @@ class SettingWidget(Ui_Form, MyWidget):
             return (float("inf"), "关闭")
         if num == 20:
             return (float("inf"), "关闭")
+        return (1, "1倍")
 
     def speed_to_index(self, animationspeed: float):
         if 0.05 <= animationspeed <= 0.15:
@@ -205,8 +215,9 @@ class SettingWidget(Ui_Form, MyWidget):
             return 18
         if animationspeed > 114514:
             return 19
+        return 8 # 默认1.0
 
-    def closeEvent(self, event: QCloseEvent, tip=True):
+    def closeEvent(self, event: QCloseEvent, tip: bool = True):
         if tip:
             if question_yes_no(self, "警告", "退出前保存？", True, "warning"):
                 self.accept_save()
@@ -235,15 +246,15 @@ class SettingWidget(Ui_Form, MyWidget):
             self.score_down_color_end_g.value(),
             self.score_down_color_end_b.value(),
         )
-        self.setting_obj.score_up_color_mixin_step = self.score_up_color_step.value()
+        self.setting_obj.score_up_color_mixin_step = int(self.score_up_color_step.value())
 
-        self.setting_obj.score_down_color_mixin_step = self.score_down_color_step.value()
+        self.setting_obj.score_down_color_mixin_step = int(self.score_down_color_step.value())
 
-        self.setting_obj.score_up_color_mixin_start = (
+        self.setting_obj.score_up_color_mixin_start = int(
             self.score_up_color_mixin_start.value()
         )
 
-        self.setting_obj.score_down_color_mixin_start = (
+        self.setting_obj.score_down_color_mixin_start = int(
             self.score_down_color_mixin_start.value()
         )
 

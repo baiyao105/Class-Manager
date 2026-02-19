@@ -2,55 +2,68 @@
 考勤信息展示窗口所在模块
 """
 
-from typing import Optional, Dict, Literal
-from utils import AttendanceInfo, ClassDataSet
+from __future__ import annotations
+
+import time
+from typing import Literal, TypeAlias
+
+from utils.basetypes import Base
+from utils.classobjects import AttendanceInfo, ClassDataSet
+from utils.qtconfig import (Signal, QWidget, QTimer, Slot, 
+                            QMessageBox, QColor, QRect, QRadioButton)
+
 from widgets.custom.ListView import ListView
 from widgets.custom.AttendanceInfoViewWidget import AttendanceInfoViewWidget
 from widgets.basic import *
-from widgets.ui.pyside6.AttendanceInfoEdit import Ui_Form
-
-__all__ = ["AttendanceInfoWidget"]
+from widgets.templates import AttendanceInfoEdit
 
 
-class AttendanceInfoWidget(Ui_Form, MyWidget):
+class TargetClassNotSetError(UIError):
+    "还没有设置目标班级。"    
+
+class NoSelectedStateError(UIError):
+    "没有选中学生的状态。"
+
+StudentState: TypeAlias = Literal [
+    "normal",       # 到校正常
+    "early",        # 提前到校
+    "late",         # 迟到
+    "late_more",    # 迟到过久
+    "absent",       # 请假/缺勤
+    "leave",        # 临时请假
+    "leave_early",  # 未知早退
+    "leave_late"    # 晚退
+]
+
+class AttendanceInfoWidget(AttendanceInfoEdit.Ui_Form, MyWidget):
     "考勤信息窗口"
 
     grid_button_signal = Signal()
     "排列按钮的信号"
 
+
+
     def __init__(
         self,
-        master: Optional[QWidget] = None,
-        main_window: ClassDataSet = None,
-        attendanceinfo: AttendanceInfo = None,
+        attendanceinfo: AttendanceInfo,
+        dataset: ClassDataSet,
+        master: QWidget | None = None
     ):
         """
-        构造新窗口
+        构造新窗口。
 
-        :param parent: 父窗口
-        :param main_window: 主窗口
         :param attendanceinfo: 考勤信息
+        :param dataset: 数据集
+        :param master: 父窗口
         """
         super().__init__(master)
-        self.setupUi(self)
-        self.main_window = main_window
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
+        self.dataset = dataset
         self.attendanceinfo = attendanceinfo
         self.finished = False
-        self.stu_buttons: Dict[int, ObjectButton] = {}
-        self.stu_states: Dict[
-            int,
-            Literal[
-                "normal",
-                "early",
-                "late",
-                "late_more",
-                "absent",
-                "leave",
-                "leave_early",
-                "leave_late"
-            ],
-        ] = {}
-        self.target_class = self.main_window.classes[attendanceinfo.target_class]
+        self.stu_buttons: dict[int, ObjectButton] = {}
+        self.stu_states: dict[int, StudentState] = {}
+        self.target_class = self.dataset.classes[attendanceinfo.target_class]
         for s in self.target_class.students.values():
             self.stu_states[s.num] = "normal"
         for s in self.attendanceinfo.is_absent:
@@ -76,18 +89,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
         self.pushButton.clicked.connect(self.show_attending_list)
 
     @staticmethod
-    def attending_state_to_string(
-        state: Literal[
-            "normal",  # 到校正常
-            "early",  # 提前到校
-            "late",  # 迟到
-            "late_more",  # 迟到过久
-            "absent",  # 请假/缺勤
-            "leave",  # 临时请假
-            "leave_early",  # 未知早退
-            "leave_late",  # 晚退
-        ],
-    ):
+    def attending_state_to_string(state: StudentState):
         "考勤状态转字符串"
         if state == "normal":
             return "到校正常"
@@ -118,18 +120,18 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
     def show_attending_list(self):
         try:
             attending_list = [
-                (day.attendance_info, day.utc) for day in self.main_window.weekday_record[self.target_class.key].values()
+                (day.attendance_info, day.utc) for day in self.dataset.weekday_record[self.target_class.key].values()
             ]
         except:
             QMessageBox.information(self, "提示", f"当前班级（{self.target_class.name}）没有考勤记录")
             return
         self.listview = ListView(
-            self,
             "考勤记录",
+            self,
             [
                 (
                     time.strftime("%Y年%m月%d日的考勤记录", time.localtime(utc)),
-                    lambda att=att: self.show_attendance(att),
+                    lambda att=att: self.show_attendance(att) # type: ignore
                 )
                 for att, utc in attending_list
             ],
@@ -138,27 +140,17 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
 
     def show_attendance(self, attendanceinfo: AttendanceInfo):
         self.view = AttendanceInfoViewWidget(
-            self.listview, self.main_window, attendanceinfo
+             attendanceinfo, self.listview
         )
         self.view.show()
 
-    def set_state(
-        self,
-        num: int,
-        state: Literal[
-            "normal",  # 到校正常
-            "early",  # 提前到校
-            "late",  # 迟到
-            "late_more",  # 迟到过久
-            "absent",  # 请假/缺勤
-            "leave",  # 临时请假
-            "leave_early",  # 未知早退
-            "leave_late",  # 晚退
-        ],
-    ):
+    def set_state(self, num: int, state: StudentState):
         # 这写的是什么爆炸东西
 
-        stu = self.main_window.target_class.students[num]
+        if self.dataset.target_class is None:
+            raise TargetClassNotSetError("还没设置目标班级就打开了这个窗口")
+        
+        stu = self.dataset.target_class.students[num]
 
         if self.stu_states[num] == "early" and state != "early":
             for h in reversed(stu.history.values()):  # 从最近的开始遍历
@@ -168,13 +160,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                     and h.executed
                 ):
                     # 防止今天把昨天的撤掉了
-                    self.main_window.retract_modify(h, info="<考勤撤回早到>")
+                    self.dataset.retract_modify(h, info="<考勤撤回早到>")
                     break  # 因为只要撤回一个就行了
 
         if self.stu_states[num] != "early" and state == "early":
-            self.main_window.send_modify(
+            self.dataset.send_modify(
                 "go_to_school_early",
-                self.main_window.target_class.students[num],
+                self.dataset.target_class.students[num],
                 info="<考勤早到>",
             )
 
@@ -185,13 +177,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                     and time.time() - h.execute_time_key / 1000 <= 86400
                     and h.executed
                 ):
-                    self.main_window.retract_modify(h, info="<考勤撤回迟到>")
+                    self.dataset.retract_modify(h, info="<考勤撤回迟到>")
                     break
 
         if self.stu_states[num] != "late" and state == "late":
-            self.main_window.send_modify(
+            self.dataset.send_modify(
                 "go_to_school_late",
-                self.main_window.target_class.students[num],
+                self.dataset.target_class.students[num],
                 info="<考勤迟到>",
             )
 
@@ -202,13 +194,13 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                     and time.time() - h.execute_time_key / 1000 <= 86400
                     and h.executed
                 ):
-                    self.main_window.retract_modify(h, info="<考勤撤回迟到过久>")
+                    self.dataset.retract_modify(h, info="<考勤撤回迟到过久>")
                     break
 
         if self.stu_states[num] != "late_more" and state == "late_more":
-            self.main_window.send_modify(
+            self.dataset.send_modify(
                 "go_to_school_late_more",
-                self.main_window.target_class.students[num],
+                self.dataset.target_class.students[num],
                 info="<考勤迟到过久>",
             )
 
@@ -216,7 +208,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
             state  # 把原来的撤回了再更新状态（你猜猜是我已经知道了还是踩过坑）
         )
 
-        # Base.log("I", f"设置学生{num}的状态为{state}", "AttendanceInfoWidget.set_state")
+        Base.log("I", f"设置学生{num}的状态为{state}", "AttendanceInfoWidget.set_state")
 
         if state != "early":
             index = 0
@@ -300,42 +292,41 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
         self.stu_buttons[num].setText(
             f"{stu.num} {stu.name}\n{f'{self.attending_state_to_string(self.stu_states[stu.num])}'}"
         )
-        self.stu_buttons[num]._set_color(
-            QColor(232, 244, 232)
-            if self.stu_states[stu.num] == "normal"
-            else (
-                QColor(202, 255, 202)
-                if self.stu_states[stu.num] == "early"
-                else (
-                    QColor(255, 244, 232)
-                    if self.stu_states[stu.num] == "late"
-                    else (
-                        QColor(255, 232, 232)
-                        if self.stu_states[stu.num] == "late_more"
-                        else (
-                            QColor(196, 196, 196)
-                            if self.stu_states[stu.num] == "absent"
-                            else (
-                                QColor(255, 255, 232)
-                                if self.stu_states[stu.num] == "leave"
-                                else (
-                                    QColor(244, 255, 232)
-                                    if self.stu_states[stu.num] == "leave_early"
-                                    else (
-                                        QColor(244, 244, 202)
-                                        if self.stu_states[stu.num] == "leave_late"
-                                        else QColor(255, 255, 255)
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
+        self.stu_buttons[num].set_color(self.get_state_color(self.stu_states[num]))
+
+    def get_state_color(self, state: StudentState) -> QColor:
+        mapping: dict[StudentState, QColor] = {
+            "normal": QColor(232, 244, 232),
+            "early":  QColor(202, 255, 202),
+            "late": QColor(255, 244, 232),
+            "late_more": QColor(255, 232, 232),
+            "absent": QColor(196, 196, 196),
+            "leave": QColor(255, 255, 232),
+            "leave_early": QColor(244, 255, 232),
+            "leave_late": QColor(244, 244, 202)
+        }
+        return mapping.get(state, QColor(255, 255, 255))
+
+    def get_current_selected_state(self) -> StudentState:
+        mapping: dict[StudentState, QRadioButton] = {
+            "normal": self.radioButton,
+            "early": self.radioButton_2,
+            "late": self.radioButton_3,
+            "late_more": self.radioButton_4,
+            "absent": self.radioButton_5,
+            "leave": self.radioButton_6,
+            "leave_early": self.radioButton_7,
+            "leave_late": self.radioButton_8
+        }
+        for k, v in mapping.items():
+            if v.isChecked():
+                return k
+        raise NoSelectedStateError("没有选中任何状态？？这怎么可能？？？")
 
     def grid_buttons(self):
-        """显示按钮（虽然不算真正意义上的grid）"""
+        """
+        显示按钮（虽然不算真正意义上的grid）
+        """
         self.grid_button_signal.emit()
 
     def _grid_buttons(self):
@@ -358,42 +349,7 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
             self.stu_buttons[num].setParent(self.widget)
             self.stu_buttons[num].clicked.connect(
                 lambda *, num=num: (
-                    self.set_state(
-                        num,
-                        (
-                            "normal"
-                            if self.radioButton.isChecked()
-                            else (
-                                "early"
-                                if self.radioButton_2.isChecked()
-                                else (
-                                    "late"
-                                    if self.radioButton_3.isChecked()
-                                    else (
-                                        "late_more"
-                                        if self.radioButton_4.isChecked()
-                                        else (
-                                            "absent"
-                                            if self.radioButton_5.isChecked()
-                                            else (
-                                                "leave"
-                                                if self.radioButton_6.isChecked()
-                                                else (
-                                                    "leave_early"
-                                                    if self.radioButton_7.isChecked()
-                                                    else (
-                                                        "leave_late"
-                                                        if self.radioButton_8.isChecked()
-                                                        else "unknown"
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    )
+                    self.set_state(num, self.get_current_selected_state())
                 )
             )
             self.set_state(num, self.stu_states[stu.num])
@@ -412,10 +368,10 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
                 self.stu_buttons[num].setText(
                     f"{stu.num} {stu.name}\n{f'{self.attending_state_to_string(self.stu_states[stu.num])}'}"
                 )
-            except KeyError as unused:
+            except (KeyError, RuntimeError) as e:
                 Base.log(
                     "W",
-                    "疑似添加/减少学生，正在重新加载",
+                    f"遇到了{e.__class__.__name__}，疑似刚刚添加/减少学生，正在重新加载",
                     "AttendanceInfoWidget.update_text",
                 )
 
@@ -436,3 +392,5 @@ class AttendanceInfoWidget(Ui_Form, MyWidget):
         self.label_9.setText(f"晚退：{len(self.attendanceinfo.is_leave_late)}")
 
 
+
+__all__ = ["AttendanceInfoWidget"]

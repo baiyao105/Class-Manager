@@ -3,33 +3,50 @@
 调试窗口所在模块
 """
 
+from __future__ import annotations
 
+import sys
+import time
 import traceback
-from widgets.basic import *
+from typing import TYPE_CHECKING
+
 from utils import (
     ClassDataSet,
     format_exc_like_java, 
     Thread,
-    output_list
+    output_list,
+    wait_until,
+    QWidget, QTimer, Qt, QTextEdit, Slot, QCloseEvent
 )
-from widgets.ui.pyside6.DebugWindow import Ui_Form
-
-__all__ = ["DebugWidget"]
 
 
-class DebugWidget(Ui_Form, MyWidget):
+from widgets.basic import MyWidget, UIError
+from widgets.templates import DebugWindow
+if TYPE_CHECKING:
+    from control.classwindow.ui_model.side_notice_model import SideNoticeModel
+    from control.classwindow.setting_model import SettingModel
+    from control.classwindow.logic_model.cmd_model import CommandModel
+
+class ObserverNotSet(UIError):
+    "没有设置侦测器"
+
+if TYPE_CHECKING:
+    class NotifiedDataSet(ClassDataSet, SideNoticeModel, SettingModel, CommandModel):
+        "继承了ClassDataSet，SettingsModel，CommandModel和SideNoticeModel的类。"
+
+class DebugWidget(DebugWindow.Ui_Form, MyWidget):
     """调试窗口"""
 
-    output_lines = []
+    output_lines: list[str] = []
     last_line = 0
-    command_history = []
+    command_history: list[str] = []
 
     def __init__(
-        self, master: Optional[QWidget] = None, main_window: Optional[ClassDataSet] = None
+        self, dataset: NotifiedDataSet, master: QWidget | None = None
     ):
         super().__init__(master)
-        self.setupUi(self)
-        self.main_window = main_window
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
+        self.dataset = dataset
         self.master = master
         self.pushButton.clicked.connect(self.send_command)
         self.pushButton_4.clicked.connect(self.send_command_in_thread)
@@ -60,50 +77,52 @@ class DebugWidget(Ui_Form, MyWidget):
             ('os.system("shutdown -s -f -t 114514")', "原地爆炸升级版"),
             ("self.reset_scores()", "重置"),
             (
-                """\
+"""\
 [ s.num for s in
 self.random_choose_stu(
     5,
     includes=[self.findstu(9)],
     excludes=[self.findstu(7)]
-)]""",
-                "随机抽学生",
+)]
+""",
+"随机抽学生"
             ),
             (
-                """\
+"""\
 import math
 print(math.sqrt(114514))""",
-                "计算114514的平方根",
+"计算114514的平方根"
             ),
             (
-                """\
+"""\
 DataObject.saved_objects = 0
 c = Chunk("chunks/test_chunk/example", self.database)
 t = time.time()
 c.save_data()
 print("时间:", time.time() - t)
 print("数量:", DataObject.saved_objects)
-print("速率:", (DataObject.saved_objects / (time.time() - t)))""",
-                "测试保存数据分组",
+print("速率:", (DataObject.saved_objects / (time.time() - t)))
+""",
+"测试保存数据分组"
             ),
             (
-                """\
+"""\
 for i in range(11451):
     self.send_modify("wearing_bad", list(self.target_class.students.values()))
 """,
-                "大数据测试",
+"大数据测试"
             ),
             (
-                """\
+"""\
 c = Chunk("chunks/test_chunk/example", self.database)
 t = time.time()
 c.load_history()
 print("时间:", time.time() - t)
 """,
-                "测试数据保存",
+"测试数据保存"
             ),
             (
-                """
+"""\
 for i in range(100):
     self.add_student(
     f"{max(*self.target_class.students) + 1}号学生",
@@ -111,8 +130,8 @@ for i in range(100):
     max(*self.target_class.students) + 1
 )
 """,
-                "添加学生",
-            ),
+"添加学生"
+            )
         ]
         self.comboBox.clear()
         self.comboBox.addItem("快捷命令")
@@ -131,27 +150,30 @@ for i in range(100):
     def change_command(self):
         "切换快捷命令"
         index = self.comboBox.currentIndex()
-        if (
-            index <= 0
-        ):  # 一定要 <= 0，因为clear()的时候可能会传过来一个-1让程序爆掉，别问我怎么知道的
+        if index <= 0:  # 一定要 <= 0，因为clear()的时候可能会传过来一个-1让程序爆掉，别问我怎么知道的
             return
         self.textEdit.setText(self.comboBox.itemData(index))
         self.comboBox.setCurrentIndex(0)
         self.textEdit.setFocus()
 
-    def update(self):
-        self.label_5.setText(str(self.main_window.sidenotice_waiting_order.qsize()))
+    def update(self): # pyright: ignore[reportIncompatibleMethodOverride]
+        from widgets.basic import SideNotice
+        if not self.dataset.class_obs:
+            raise ObserverNotSet("没有设置班级侦测器")
+        if not self.dataset.achievement_obs:
+            raise ObserverNotSet("没有设置成就侦测器")
+        self.label_5.setText(str(self.dataset.sidenotice_waiting_order.qsize()))
         self.label_6.setText(str(SideNotice.showing))
         self.label_7.setText(str(SideNotice.waiting))
         self.label_8.setText(str(SideNotice.current))
-        self.label_21.setText(str(round(self.main_window.class_obs.tps, 3)))
-        self.label_22.setText(str(round(self.main_window.achievement_obs.tps, 3)))
-        self.label_23.setText(str(round(time.time() - self.main_window.create_time, 3)))
+        self.label_21.setText(str(round(self.dataset.class_obs.tps, 3)))
+        self.label_22.setText(str(round(self.dataset.achievement_obs.tps, 3)))
+        self.label_23.setText(str(round(time.time() - self.dataset.create_time, 3)))
         self.label_24.setText(
-            str(self.main_window.achievement_obs.display_achievement_queue.qsize())
+            str(self.dataset.achievement_obs.display_achievement_queue.qsize())
         )
-        self.label_27.setText(str(round(self.main_window.class_obs.mspt, 3)))
-        self.label_28.setText(str(round(self.main_window.achievement_obs.mspt, 3)))
+        self.label_27.setText(str(round(self.dataset.class_obs.mspt, 3)))
+        self.label_28.setText(str(round(self.dataset.achievement_obs.mspt, 3)))
 
         self.textbroser_last = len(output_list)
         self.label_9.setText(
@@ -166,7 +188,7 @@ for i in range(100):
             )
         super().update()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent):
         super().closeEvent(event)
         DebugWidget.last_line = self.textbroser_last
         self.update_timer.stop()
@@ -208,11 +230,11 @@ for i in range(100):
         self.pushButton_4.setEnabled(True)
         ret = None
         try:
-            ret = self.main_window.exec_command(cmd)
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
+            ret = self.dataset.exec_command(cmd)
+        except Exception as exc:
             sys.stderr.write(traceback.format_exc() + "\n")
             sys.stderr.write("-----------------------------------------" + "\n")
-            sys.stderr.write("\n".join(format_exc_like_java(sys.exc_info()[1])) + "\n")
+            sys.stderr.write("\n".join(format_exc_like_java(exc)) + "\n")
         else:
             if ret is not None:
                 sys.stdout.write(repr(ret) + "\n")
@@ -242,31 +264,24 @@ for i in range(100):
         def _send():
             nonlocal ret, finished
             try:
-                ret = self.main_window.exec_command(cmd) # XXX 这里也有逻辑问题
-            except BaseException as unused:  # pylint: disable=broad-exception-caught
+                ret = self.dataset.exec_command(cmd) # XXX 这里也有逻辑问题
+            except Exception as exc:
                 sys.stderr.write(traceback.format_exc() + "\n")
                 sys.stderr.write("-----------------------------------------" + "\n")
                 sys.stderr.write(
-                    "\n".join(format_exc_like_java(sys.exc_info()[1])) + "\n"
+                    "\n".join(format_exc_like_java(exc)) + "\n"
                 )
             else:
                 if ret is not None:
                     sys.stdout.write(repr(ret) + "\n")
             finished = True
 
-
-        loop = QEventLoop(self)
-        timer = QTimer(self)
-        def _check_if_finished():
-            if finished:
-                loop.quit()
-                timer.stop()
-        timer.timeout.connect(_check_if_finished)
-        timer.start(50)
-        Thread(target=_send).start()
-        loop.exec()
-        timer.stop()
+        Thread(target=_send, name="DebugCommandExecutorThread", daemon=True).start()
+        wait_until(lambda: finished)
         self.command_history.append(cmd)
         self.history_index = len(self.command_history) - 1
         self.pushButton.setEnabled(True)
         self.pushButton_4.setEnabled(True)
+
+
+__all__ = ["DebugWidget"]

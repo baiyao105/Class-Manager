@@ -440,7 +440,7 @@ class Logger:
             Logger.fast_log_file.flush()
 
         if log_settings.log_mode == "write_instantly":
-            print(cm, file=Logger.stdout_orig)
+            Logger.stdout_orig.writelines([cm])
             if Logger.log_file:
                 Logger.log_file.write(lfm + "\n")
                 Logger.log_file.flush()
@@ -646,6 +646,6 @@ if log_style == "new":
     # 启用loguru的异常捕获
     logger.catch(onerror=lambda exc: Logger.log_exc("logger捕获到异常", exc=exc))
 
-Logger.set_capture_stdstream()
+# Logger.set_capture_stdstream()
 
 __all__ = ["Color", "Logger", "LoggerSettings", "log_settings"]

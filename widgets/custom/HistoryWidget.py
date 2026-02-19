@@ -1,46 +1,50 @@
 """
 历史记录窗口模块
 """
-from typing import Optional
-from utils import ScoreModification, ClassDataSet
+
+from __future__ import annotations
+
+
+from utils.basetypes import Base
+from utils.classobjects import ScoreModification, ClassDataSet
+from utils.qtconfig import QVBoxLayout, QWidget, QCloseEvent, QColor
+
 from widgets.custom.ListView import ListView
-from widgets.basic import *
-from widgets.ui.pyside6.ModifyHistoryWindow import Ui_Form
-
-__all__ = ["HistoryWidget"]
+from widgets.basic import MyWidget
+from widgets.templates import ModifyHistoryWindow
 
 
 
-class HistoryWidget(MyWidget, Ui_Form):
+class HistoryWidget(MyWidget, ModifyHistoryWindow.Ui_Form):
     """历史记录窗口"""
 
     def __init__(
         self,
-        main_window: ClassDataSet = None,
-        master_widget: Optional[QWidget] = None,
-        history: ScoreModification = None,
-        listview_widget: ListView = None,
-        listview_index: int = None,
-        readonly: bool = False,
+        dataset: ClassDataSet,
+        history: ScoreModification,
+        listview_widget: ListView | None = None,
+        listview_index: int | None  = None,
+        master: QWidget | None = None,
+        readonly: bool = False
     ):
         """
-        初始化一个分数修改历史记录窗口
+        初始化一个分数修改历史记录窗口。
 
-        :param main_window: 主窗口
-        :param master_widget: 父窗口
+        :param dataset: 班级数据集
+        :param master: 父窗口
         :param history: 分数修改历史记录
         :param listview_widget: 所属的ListView
         :param listview_index: 在ListView中的索引
         :param readonly: 是否只读
         """
 
-        super().__init__(master=main_window)
-        self.setupUi(self)
+        super().__init__(master=master)
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
 
         self.mainLayout = QVBoxLayout()
         self.setLayout(self.mainLayout)
-        self.main_window = main_window
-        self.master_widget = master_widget
+        self.dataset = dataset
+        self.master = master
         self.history = history
         self.listview_index = listview_index
         self.listview_widget = listview_widget
@@ -74,7 +78,7 @@ class HistoryWidget(MyWidget, Ui_Form):
             self.label_15.setText("无法撤回（只读）")
         elif (
             self.history
-            not in self.main_window.classes[self.history.target.belongs_to]
+            not in self.dataset.classes[self.history.target.belongs_to]
             .students[self.history.target.num]
             .history.values()
         ):
@@ -85,29 +89,30 @@ class HistoryWidget(MyWidget, Ui_Form):
             self.label_15.setText("")
 
     def retract(self):
-        Base.log("I", f"撤销：{repr(self.history)}", "HistoryWidget")
-        status, result = self.main_window.retract_modify(self.history)
-        Base.log("I", f"撤销结果：{repr((status, result))}", "HistoryWidget")
+        Base.log("I", f"撤销：{repr(self.history)}", "HistoryWidget.retract")
+        status, result = self.dataset.retract_modify(self.history)
+        Base.log("I", f"撤销结果：{repr((status, result))}", "HistoryWidget.retract")
 
-        if status:
-            if self.listview_index is not None and self.listview_widget:
-                self.listview_widget.setText(
-                    self.listview_index,
-                    (self.listview_widget.getText(self.listview_index) or "")
-                    + "（已撤回）",
-                )
+        if status and self.listview_widget is not None and self.listview_index is not None:
+            self.listview_widget.setText(
+                self.listview_index,
+                (str(self.listview_widget.getText(self.listview_index)) or "") + "（已撤回）")
             self.listview_widget.getItem(self.listview_index).setBackground(
                 QColor(202, 202, 202)
             )
+
         self.pushButton_3.setEnabled(False)
         self.closeEvent(QCloseEvent())
         self.destroy()
 
-    def closeEvent(self, event):
-        Base.log("I", "关闭历史记录窗口（通过closeEvent）", "HistoryWidget")
+    def closeEvent(self, event: QCloseEvent):
+        Base.log("I", "关闭历史记录窗口（通过closeEvent）", "HistoryWidget.closeEvent")
         super().closeEvent(event)
 
     def show(self, readonly: bool = False):
-        Base.log("I", "显示历史记录窗口", "HistoryWidget")
+        Base.log("I", "显示历史记录窗口", "HistoryWidget.show")
+        self.readonly = readonly or (not self.history.executed)
         self.update_status()
         super().show()
+
+__all__ = ["HistoryWidget"]

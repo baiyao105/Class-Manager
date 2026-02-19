@@ -148,7 +148,7 @@ CLIENT_VERSION: str = VERSION_INFO["client_version"]
 CLIENT_VERSION_CODE: str = VERSION_INFO["client_version_code"]
 "应用程序界面版本编码"
 
-settings: SettingsInfo = SettingsInfo.current
+settings: SettingsInfo = SettingsInfo.get_global_settings()
 "全局设置对象"
 
 show_exc_window_callback: Optional[Callable[[ExceptionInfoType], None]] = None
@@ -2448,7 +2448,7 @@ class ClassWindow(ClassDataSet, MainClassWindow.Ui_MainWindow, MyMainWindow):
     def open_setting_window(self):
         """设置窗口"""
         Base.log("I", "打开设置窗口", "MainWindow.setting_window")
-        self.setting_window = SettingWidget(main_window=self, master_widget=self)
+        self.setting_window = SettingWidget(setting=self, master=self)
         self.setting_window.show()
 
     @Slot()
@@ -2457,7 +2457,7 @@ class ClassWindow(ClassDataSet, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """打扫分数结算"""
         Base.log("I", "打开打扫分数结算窗口", "MainWindow.cleaning_sumup")
         self.cleaning_sumup_window = CleaningScoreSumUpWidget(
-            main_window=self, master_widget=self
+            dataset=self, master=self
         )
         self.cleaning_sumup_window.show()
 
@@ -2473,9 +2473,9 @@ class ClassWindow(ClassDataSet, MainClassWindow.Ui_MainWindow, MyMainWindow):
             "I", f"打开学生信息窗口，学生名：{student.name}", "MainWindow.student_info"
         )
         self.student_info_window = StudentWidget(
-            main_window=self,
+            dataset=self,
             student=student,
-            master_widget=master_widget or self,
+            master=master_widget or self,
             readonly=readonly,
         )
         self.student_info_window.set_student(student)
@@ -2517,7 +2517,7 @@ class ClassWindow(ClassDataSet, MainClassWindow.Ui_MainWindow, MyMainWindow):
         """作业总分结算窗口"""
         Base.log("I", "打开作业总分结算窗口", "MainWindow.homework_sumup")
         self.homework_sumup_window = HomeworkScoreSumUpWidget(
-            main_window=self,
+            dataset=self,
             master=self,
             target_class=self.target_class,
             target_students=self.target_class.students,

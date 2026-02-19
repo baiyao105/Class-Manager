@@ -274,6 +274,15 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
 
         if hasattr(self, "score_range") and not any([i[0] <= student.score <= i[1] for i in self.score_range]):
             return False
+        
+        AccessErrorTypes = (
+            KeyError,           # 索引不存在
+            IndexError,         # 一样
+            TypeError,          # 类型错误，可能出现在lambda里面
+            AttributeError,     # 可能出现在（老版本序列化方案）数据还没加载完的时候
+            RuntimeError        # 迭代时可迭代对象的大小改变了
+        )
+
         try:
             if hasattr(self, "score_rank_down_limit"):
                 lowest_rank = max(*([i[0] for i in class_obs.rank_dumplicate]))
@@ -289,7 +298,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                 )
                 if not (l <= next(i[0] for i in class_obs.rank_dumplicate if i[1].num == student.num) <= r):
                     return False
-        except (KeyError, IndexError, TypeError, AttributeError):
+        except AccessErrorTypes:
             return False
 
         if hasattr(self, "highest_score_down_limit") and (
@@ -331,7 +340,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                 ]
             ):
                 return False
-        except (KeyError, IndexError, TypeError, AttributeError):
+        except AccessErrorTypes:
             return False
 
         if hasattr(self, "other"):
@@ -346,7 +355,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     if not item(d):
                         return False
 
-            except (NameError, TypeError, SystemError, AttributeError, RuntimeError) as e:
+            except AccessErrorTypes as e:
                 if isinstance(e, ClassDataSet.OperationalError):
                     return False
 

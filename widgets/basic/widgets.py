@@ -17,7 +17,7 @@ from utils.functions.sounds import play_sound
 class ObjectButton(QPushButton):
     """学生按钮类，用于在界面上显示学生信息的交互按钮"""
 
-    def _set_color(self, col: QColor):
+    def set_color(self, col: QColor):
         """
         设置按钮的背景颜色
 
@@ -43,9 +43,9 @@ class ObjectButton(QPushButton):
     @opacity.setter
     def opacity(self, opacity: int):
         self._opacity = opacity
-        self._set_color(self.background_color)
+        self.set_color(self.background_color)
 
-    color = Property(QColor, fset=_set_color)
+    color = Property(QColor, fset=set_color)
 
     def __init__(
         self,
@@ -424,10 +424,8 @@ class SideNotice:
 
 if __name__ == "__main__":
     import sys
-
     from PySide6.QtWidgets import QApplication
-
     app = QApplication(sys.argv)
     window = ProgressAnimationTest()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

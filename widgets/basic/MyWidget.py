@@ -28,9 +28,9 @@ class MyWidget(QWidget):
         """
         super().__init__()
         self.is_running = True
-        self.master = master
-        if self.master is None:
-            self.master = MyMainWindow.main_instance
+        self._master = master
+        if self._master is None:
+            self._master = MyMainWindow.main_instance
         self.centralwidget = master
         self.setParent(master)
         Base.log("I", "子窗口创建", "MyWidget")
@@ -53,7 +53,7 @@ class MyWidget(QWidget):
     if platform.system() != "Windows":
         warnings.warn("非Windows系统可能无法正常使用动画效果")
 
-        def resize(self, *args, **kwargs):
+        def resize(self, *args: Any, **kwargs: Any):
             "调整大小"
             super().setFixedSize(*args, **kwargs)
 
@@ -83,8 +83,8 @@ class MyWidget(QWidget):
         animation = QPropertyAnimation(self, property_name)
         animation.setEasingCurve(easing_curve)
         animation.setDuration(
-            int(duration / SettingsInfo.current.animation_speed
-            if SettingsInfo.current.animation_speed > 0
+            int(duration / SettingsInfo.get_global_settings().animation_speed
+            if SettingsInfo.get_global_settings().animation_speed > 0
             else duration)
         )
         animation.setStartValue(start_value)
@@ -94,17 +94,17 @@ class MyWidget(QWidget):
     def showStartAnimation(self):
         "执行窗口显示动画"
         self.is_running = True
-        if SettingsInfo.current.animation_speed <= 114514:
+        if SettingsInfo.get_global_settings().animation_speed <= 114514:
             # 计算动画终点位置
-            if self.master:
+            if self._master:
                 endpoint = (
-                    self.master.geometry().topLeft()
+                    self._master.geometry().topLeft()
                     + QPoint(
-                        self.master.geometry().width() // 2,
-                        self.master.geometry().height() // 2,
+                        self._master.geometry().width() // 2,
+                        self._master.geometry().height() // 2,
                     )
                     - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
-                    + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
+                    + QPoint(SettingsInfo.get_global_settings().subwindow_x_offset, SettingsInfo.get_global_settings().subwindow_y_offset)
                 )
 
                 # 计算动画起点位置
@@ -122,7 +122,7 @@ class MyWidget(QWidget):
                         QGuiApplication.primaryScreen().availableGeometry().height() // 2,
                     )
                     - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
-                    + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
+                    + QPoint(SettingsInfo.get_global_settings().subwindow_x_offset, SettingsInfo.get_global_settings().subwindow_y_offset)
                     )
                 
                 startpoint = QPoint(
@@ -143,7 +143,7 @@ class MyWidget(QWidget):
         "执行窗口关闭动画"
         self.is_running = False
 
-        if SettingsInfo.current.animation_speed <= 114514:
+        if SettingsInfo.get_global_settings().animation_speed <= 114514:
 
             # 第一阶段动画：向上移动
             Base.log("D", "关闭动画进入第一阶段", "MyWidget.showCloseAnimation")
@@ -199,15 +199,15 @@ class MyWidget(QWidget):
     def show(self):
         "展示窗口"
         self.is_running = True
-        if self.master:
+        if self._master:
             pos = (
-                self.master.geometry().topLeft()
+                self._master.geometry().topLeft()
                 + QPoint(
-                    self.master.geometry().width() // 2,
-                    self.master.geometry().height() // 2,
+                    self._master.geometry().width() // 2,
+                    self._master.geometry().height() // 2,
                 )
                 - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
-                + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
+                + QPoint(SettingsInfo.get_global_settings().subwindow_x_offset, SettingsInfo.get_global_settings().subwindow_y_offset)
             )
 
         else:
@@ -216,12 +216,12 @@ class MyWidget(QWidget):
                 QGuiApplication.primaryScreen().availableGeometry().height() // 2,
             )
                 - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
-                + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
+                + QPoint(SettingsInfo.get_global_settings().subwindow_x_offset, SettingsInfo.get_global_settings().subwindow_y_offset)
             )
         
         self.move(pos)
         super().show()
-        if SettingsInfo.current.animation_speed <= 114514:
+        if SettingsInfo.get_global_settings().animation_speed <= 114514:
             self.showStartAnimation()
 
     def orig_show(self):
@@ -235,9 +235,10 @@ class MyWidget(QWidget):
         self.is_running = False
         super().hide()
 
-    def destroy(self):
+    def destroy(self, /,  destroyWindow: bool = True, destroySubWindows: bool = True):
         self.is_running = False
-        super().destroy()
+        super().destroy(destroyWindow=destroyWindow, destroySubWindows=destroySubWindows)
+
 
     def center(self):
         "将窗口居中显示在屏幕上"

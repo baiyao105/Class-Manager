@@ -2,31 +2,36 @@
 创建模板窗口
 """
 
-from utils import Base, ClassDataSet as ClassWindow
-from utils.algorithm.numeric import utc
-from widgets.basic import *
-from widgets.ui.pyside6.NewTemplateWindow import Ui_Form
+from __future__ import annotations
 
-__all__ = ["NewTemplateWidget"]
+from utils import Base, ClassDataSet, utc
+from utils.qtconfig import QWidget, Slot, QMessageBox, QCloseEvent
 
-class NewTemplateWidget(Ui_Form, MyWidget):
+
+from widgets.basic import MyWidget
+from widgets.templates import NewTemplateWindow
+
+
+class NewTemplateWidget(NewTemplateWindow.Ui_Form, MyWidget):
     """创建新模板的窗口"""
 
     def __init__(
-        self, main_window: ClassWindow, master_widget: Optional[QWidget] = None
+        self, dataset: ClassDataSet, master: QWidget | None = None
     ):
         """
-        初始化
-
-        :param main_window: 程序的主窗口，方便传参
-        :param master_widget: 这个窗口的父窗口
-        :param student: 这个学生窗口对应的学生
+        __init__ 的 Docstring
+        
+        :param self: 说明
+        :param dataset: 数据集
+        :type dataset: ClassDataSet
+        :param master: 父窗口
+        :type master: QWidget | None
         """
-        super().__init__(master=master_widget)
+        super().__init__(master=master)
         self.setupUi(self) # type: ignore
         self.show()
-        self.main_window = main_window
-        self.master_widget = master_widget
+        self.main_window = dataset
+        self.master_widget = master
         self.buttonBox.accepted.connect(self.commit)
         self.buttonBox.rejected.connect(self.cancel)
         self.lineEdit.setText("")
@@ -61,3 +66,5 @@ class NewTemplateWidget(Ui_Form, MyWidget):
         Base.log("I", "取消创建新模板", "NewTemplateWidget.cancel")
         self.closeEvent(QCloseEvent())
         self.destroy()
+
+__all__ = ["NewTemplateWidget"]

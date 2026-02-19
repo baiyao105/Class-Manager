@@ -1,43 +1,47 @@
 """
 模板编辑器所在模块
 """
+from __future__ import annotations
 
-from typing import Optional
-from utils import ScoreModificationTemplate, ClassDataSet, question_yes_no
+from utils import ScoreModificationTemplate, ClassDataSet, question_yes_no, Base
+from utils.qtconfig import QWidget, Slot, QMessageBox, QCloseEvent
+
+
 from widgets.custom.ListView import ListView
-from widgets.basic import *
-from widgets.ui.pyside6.EditTemplateWindow import Ui_Form
-
-__all__ = ["EditTemplateWidget"]
+from widgets.basic import MyWidget
+from widgets.templates import EditTemplateWindow
 
 
-class EditTemplateWidget(Ui_Form, MyWidget):
-    """编辑模板的窗口"""
+
+class EditTemplateWidget(EditTemplateWindow.Ui_Form, MyWidget):
+    """
+    编辑模板的窗口
+    """
 
     def __init__(
         self,
-        main_window: Optional[ClassDataSet] = None,
-        master_widget: Optional[QWidget] = None,
-        template: ScoreModificationTemplate = None,
-        in_listview: ListView = None,
-        listview_index: int = None,
+        dataset: ClassDataSet,
+        template: ScoreModificationTemplate,
+        listview: ListView,
+        listview_index: int,
+        master_widget: QWidget | None = None
     ):
         """
         初始化
 
-        :param main_window: 程序的主窗口，方便传参
-        :param master_widget: 这个窗口的父窗口
+        :param dataset: 数据集
+        :param master: 这个窗口的父窗口
         :param template: 要修改的模板
-        :param in_listview: 模板所在的listview
+        :param listview: 模板所在的listview
         :param listview_index: 模板在listview中的位置
         """
         super().__init__(master=master_widget)
-        self.setupUi(self)
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.show()
-        self.main_window = main_window
+        self.dataset = dataset
         self.master_widget = master_widget
         self.template = template
-        self.in_listview = in_listview
+        self.listview = listview
         self.listview_index = listview_index
         self.buttonBox.accepted.connect(self.commit)
         self.buttonBox.rejected.connect(self.cancel)
@@ -70,14 +74,14 @@ class EditTemplateWidget(Ui_Form, MyWidget):
             QMessageBox.warning(self, "警告", "模板描述不能为空")
             return
 
-        self.main_window.add_template(
+        self.dataset.add_template(
             self.template.key,
             self.lineEdit.text(),
             self.doubleSpinBox.value(),
             self.lineEdit_3.text(),
             "修改原模版",
         )
-        self.in_listview.setText(self.listview_index, self.lineEdit.text())
+        self.listview.setText(self.listview_index, self.lineEdit.text())
         self.closeEvent(QCloseEvent())
         self.destroy()
 
@@ -91,8 +95,10 @@ class EditTemplateWidget(Ui_Form, MyWidget):
         Base.log("I", "询问是否删除模板", "EditTemplateWidget.delete")
         if question_yes_no(self, "警告", "确认删除模板？", False, "warning"):
             Base.log("I", "删除模板", "EditTemplateWidget.delete")
-            self.main_window.del_template(self.template.key, "模板编辑器中删除")
-            self.in_listview.setText(self.listview_index, "(已删除)")
-            self.in_listview.setCallable(self.listview_index, lambda: None)
+            self.dataset.del_template(self.template.key, "模板编辑器中删除")
+            self.listview.setText(self.listview_index, "(已删除)")
+            self.listview.setCallable(self.listview_index, lambda: None)
             self.closeEvent(QCloseEvent())
             self.destroy()
+
+__all__ = ["EditTemplateWidget"]

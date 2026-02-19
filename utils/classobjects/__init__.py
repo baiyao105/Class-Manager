@@ -19,11 +19,11 @@ except:
 
     warnings.warn(
         "当前没有配置默认数据和登录模块，正在使用默认数据，"
-        "可以参考一下classdatatypes/bak/default.py和"
-        "classdatatypes/bak/login.py后"
-        "在进行classdatatypes下配置自己的login和default模块",
+        "可以参考一下utils/classobjects/bak/default.py和"
+        "utils/classobjects/bak/login.py后"
+        "在classdatatypes下配置自己的login和default模块",
         stacklevel=2,
-        category=RuntimeWarning,
+        category=RuntimeWarning
     )
 
 from .classdataset import *

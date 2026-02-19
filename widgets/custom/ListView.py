@@ -1,14 +1,107 @@
 """
 列表视图
 """
-from typing import List, Any, Union
+from __future__ import annotations
+
+
+import time
 from concurrent.futures import ThreadPoolExecutor
-from utils import Thread, Base, ClassDataSet as ClassWindow, steprange
+from typing import Callable, Any, Sequence, Tuple, TypeAlias, Union, overload
+
+from utils import Thread, Base, ClassDataSet as steprange, wait_until, steprange
+from utils.qtconfig import (
+    Signal, QWidget, QListWidgetItem, QListWidget, QPropertyAnimation,
+    QColor, QRect, QVBoxLayout, QPushButton, QAbstractItemView, QEventLoop,
+    QMetaObject, QModelIndex, Qt, Slot, QBrush, QPoint, QGuiApplication,
+    QSize, QCloseEvent
+)
 from utils.settings import SettingsInfo
-from widgets.basic import *
+
+from widgets.basic import MyWidget
+
 
 
 __all__ = ["ListView"]
+
+CallableWithNoArgsNeeded: TypeAlias = Callable[..., Any]
+"不需要主动提供参数的函数，用...是因为有的可能带着默认参数"
+
+AnimationConfigDataType: TypeAlias = Union[
+    Tuple[QColor, QColor], 
+    Tuple[QColor, QColor, int], 
+    Tuple[QColor, QColor, int, int]
+]
+
+ListViewItemDataType: TypeAlias = Union[
+    Tuple[str],
+    Tuple[str, CallableWithNoArgsNeeded],
+    Tuple[str, CallableWithNoArgsNeeded, AnimationConfigDataType]
+]
+
+
+default_color_start = QColor(232, 255, 244)
+default_color_end = QColor(255, 255, 255)
+default_step = int(10 / SettingsInfo.get_global_settings().animation_speed)
+default_interval = 33
+
+class AnimationConfig:
+    def __init__(self, 
+                begin: QColor | None = None, 
+                end: QColor | None = None,
+                step: int | None = None,
+                step_interval: int | None = None):
+        self.begin = begin or default_color_start
+        self.end = end or default_color_end
+        self.step = step or default_step
+        self.step_interval = step_interval or default_interval
+
+    @staticmethod
+    def from_tuple(data: AnimationConfigDataType) -> AnimationConfig:
+        try:
+            length = len(data)
+        except Exception:
+            raise TypeError("应当提供一个类似于元组的数据")
+
+        if length == 2:
+            begin, end = data  # type: ignore[misc]
+            return AnimationConfig(begin=begin, end=end)
+        if length == 3:
+            begin, end, step = data  # type: ignore[misc]
+            return AnimationConfig(begin=begin, end=end, step=step)
+        if length == 4:
+            begin, end, step, step_interval = data  # type: ignore[misc]
+            return AnimationConfig(begin=begin, end=end, step=step, step_interval=step_interval)
+
+        raise TypeError("Invalid AnimationConfigDataType length")
+
+class ListViewItem:
+    def __init__(self,
+                text: str,
+                command: CallableWithNoArgsNeeded | None = None,
+                anim_config: AnimationConfig | None = None):
+        self.text = text
+        self.command = command or (lambda: None)
+        self.anim_config = anim_config or AnimationConfig()
+
+    @staticmethod
+    def from_tuple(data: ListViewItemDataType):
+        text = data[0]
+        command = data[1] if len(data) > 1 else None
+        raw_anim = data[2] if len(data) > 2 else None
+        if isinstance(raw_anim, AnimationConfig):
+            anim_config = raw_anim
+        elif isinstance(raw_anim, tuple):
+            anim_config = AnimationConfig.from_tuple(raw_anim)
+        else:
+            anim_config = AnimationConfig()
+        return ListViewItem(text, command, anim_config)
+
+class ListViewCommand:
+    def __init__(self,
+                name: str,
+                command: CallableWithNoArgsNeeded | None = None):
+        self.name = name
+        self.command = command or (lambda: None)
 
 
 class ListView(MyWidget):  # pylint: disable=function-redefined
@@ -41,6 +134,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.pushButton_3.setObjectName("pushButton_3")
         self.verticalLayout.addWidget(self.pushButton_3)
         self.retranslateUi(form)
+        self.startanimation_1: QPropertyAnimation | None = None
         QMetaObject.connectSlotsByName(form)
 
     def retranslateUi(self, form: MyWidget):
@@ -51,42 +145,34 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
 
     def __init__(
         self,
-        master: Optional[QWidget] = None,
         title: str = "列表",
-        data: List[
-            Union[
-                Tuple[str, Callable],
-                Tuple[str, Callable, Optional[Tuple[QColor, QColor, int, int]]],
-            ]
-        ] = None,
+        master: QWidget | None = None,
+        data: Sequence[
+            tuple[str, CallableWithNoArgsNeeded] |
+            tuple[str, CallableWithNoArgsNeeded, AnimationConfigDataType]
+        ] | None = None,
         args: Any = None,
-        commands: List[Tuple[str, Callable]] = None,
+        commands: list[tuple[str, CallableWithNoArgsNeeded]] | None = None,
         allow_pre_action: bool = False,
         select_once_then_exit: bool = False,
     ):
         """
         初始化窗口
 
-        :param main_window: 主窗口
-        :param master_widget: 父窗口
         :param title: 窗口标题
+        :param master: 父窗口
         :param data: 数据，格式为 [(文本, 回调函数, 可选(起始颜色, 结束颜色, 总渐变步数, 每次变化间隔))]
         :param args: 随便传点什么参数用来存东西
-        :param commands: 命令，格式为 [(文本, 回调函数)]
+        :param commands: 用来当作侧边栏按钮的命令，格式为 [(文本, 回调函数)]
         :param allow_pre_action: 是否允许在动画完成前执行回调函数
         :param select_once_then_exit: 是否选中一次后退出
         """
-        if data is None:
-            data = [("空", lambda: None)]
-        if commands is None:
-            commands = []
         super().__init__(master=master)
         self.setupui(self)
         self.orig_height = self.height()
-        self.data = data
+        self.data: list[ListViewItem] = self.parse_data(data)
         self.args = args
         self.title = title
-        self.commands = commands
         self.allow_pre_action = allow_pre_action
         self.setWindowTitle(title)
         self.master_widget = master
@@ -100,20 +186,55 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.item_update.connect(self.update_item_color)
         self.verticalLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.verticalLayout.setSpacing(0)
-        self.btn_list: List[QPushButton] = []
-        self.cmd_list: List[Callable] = []
+        self.btn_list: list[QPushButton] = []
+        self.cmd_list: list[CallableWithNoArgsNeeded] = []
         self.ready = False
         self.setting_command = False
         self.setCommands(commands, force=True)
         self.select_once_then_exit = select_once_then_exit
-        self.widget_items: List[QListWidgetItem] = []
+        self.widget_items: list[QListWidgetItem] = []
+
+
+    def parse_data(self, data: 
+        Sequence[
+            tuple[str, CallableWithNoArgsNeeded] |
+            tuple[str, CallableWithNoArgsNeeded, AnimationConfigDataType]
+        ] | None = None) -> list[ListViewItem]:
+        "解析数据。"
+        result: list[ListViewItem] = []
+        if data is None:
+            return result
+        for item in data:
+            result.append(ListViewItem.from_tuple(item))
+        return result
+
+
+    @overload
+    def setCommands(self, commands: list[tuple[str, CallableWithNoArgsNeeded]] | None = None, *, force: bool = True) -> None:
+        ...
+
+    @overload
+    def setCommands(self, commands: list[ListViewCommand] | None = None, *, force: bool = True) -> None:
+        ...
+
 
     @Slot()
-    def setCommands(self, commands: List[Tuple[str, Callable]] = None, *, force=False):
+    def setCommands(self, commands_param: 
+                    list[tuple[str, CallableWithNoArgsNeeded]] | list[ListViewCommand] | None = None, 
+                    *, force: bool = False):
+        commands: list[tuple[str, CallableWithNoArgsNeeded]] = []
+        if commands_param is not None:
+            for item in commands_param:
+                if isinstance(item, ListViewCommand):
+                    commands.append((item.name, item.command))
+                else:
+                    commands.append(item)
+        if not len(commands): 
+            return
+        
         while self.setting_command and not force:
             time.sleep(0.001)
-        if commands is None:
-            return
+        
         self.commands = commands
         self.setting_command = True
         for btn in self.btn_list:
@@ -124,34 +245,21 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             self.btn_list.append(btn)
             self.verticalLayout.addWidget(btn)
             self.cmd_list.append(_callable)
-            btn.clicked.connect(
-                lambda *, string=string, _callable=_callable: (
-                    (
-                        lambda string=string, _callable=_callable: (
-                            Base.log(
-                                "I",
-                                f"执行命令：{string}，{_callable}",
-                                "ListView.setCommands",
-                            ),
-                            _callable(),
-                        )
-                    )()
-                    if self.ready or self.allow_pre_action
-                    else (
-                        lambda: Base.log(
-                            "W",
-                            f"正在初始化，忽略操作 ({string})",
-                            "ListView.setCommands",
-                        )
-                    )()
-                )
-            )
+            def _function(*, string: str = string, _callable: CallableWithNoArgsNeeded = _callable):
+                if self.ready or self.allow_pre_action:
+                    Base.log("I", f"执行命令：{string}，{_callable}", "ListView.setCommands")
+                    _callable()
+                else:
+                    Base.log("W", f"正在初始化，忽略操作 ({string})", "ListView.setCommands")
+
+            btn.clicked.connect(lambda: _function())
         self.verticalLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.verticalLayout.update()
         self.setting_command = False
 
+
     @Slot(QListWidgetItem, QColor)
-    def update_item_color(self, item: QListWidgetItem, color: QColor):
+    def update_item_color(self, item: QListWidgetItem | None, color: QColor):
         """
         更新某个项目的颜色
 
@@ -163,25 +271,32 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
                 return
             item.setBackground(QBrush(color))
 
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
+        except Exception:
             pass
+
 
     def show(self):
         "展示窗口"
         self.is_running = True
-        self.move(
-            (
-                self.master.geometry().topLeft()
+        startpoint: QPoint
+        if self._master:
+            startpoint = (
+                self._master.geometry().topLeft()
                 + QPoint(
-                    self.master.geometry().width() // 2,
-                    self.master.geometry().height() // 2,
+                    self._master.geometry().width() // 2,
+                    self._master.geometry().height() // 2,
                 )
                 - QPoint(self.geometry().width() // 2, self.geometry().height() // 2)
-                + QPoint(SettingsInfo.current.subwindow_x_offset, SettingsInfo.current.subwindow_y_offset)
+                + QPoint(SettingsInfo.get_global_settings().subwindow_x_offset, SettingsInfo.get_global_settings().subwindow_y_offset)
             )
-        )
+        else:
+            startpoint = QPoint(
+                QGuiApplication.primaryScreen().geometry().width() // 2 - self.geometry().width() // 2,
+                QGuiApplication.primaryScreen().geometry().height() // 2 - self.geometry().height() // 2
+            )
+        self.move(startpoint)
         super().orig_show()
-        if SettingsInfo.current.animation_speed <= 114514:
+        if SettingsInfo.get_global_settings().animation_speed <= 114514:
             self.showStartAnimation()
         else:
             self.init_items()
@@ -195,80 +310,51 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         Base.log("D", f"开始初始化项目，数量：{len(self.data)}", "ListView.init_items")
         self.anim_result = [False] * len(self.data)
         index = 0
-        default_color_start = QColor(232, 255, 244)
-        default_color_end = QColor(255, 255, 255)
-        default_step = int(10 / SettingsInfo.current.animation_speed)
-        default_interval = 33
+        
         self.listWidget.clear()
         self.widget_items.clear()
 
-        try:
-            for item in self.data:
-                if len(item) == 2 or (len(item) == 3 and item[2] is None):
-                    self.data[index] = (
-                        item[0],
-                        item[1],
-                        (
-                            default_color_start,
-                            default_color_end,
-                            default_step,
-                            default_interval,
-                        ),
-                    )
-                elif len(item) == 3:
-                    if len(item[2]) == 2:
-                        self.data[index] = (
-                            item[0],
-                            item[1],
-                            (item[2][0], item[2][1], default_step, default_interval),
-                        )
-                    elif len(item[2]) == 3:
-                        self.data[index] = (
-                            item[0],
-                            item[1],
-                            (item[2][0], item[2][1], item[2][2], default_interval),
-                        )
-                index += 1
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
-            Base.log_exc("初始化项目时发生错误", "ListView.init_items")
+
         index = 0
         length = len(self.data)
 
         try:
-            for string, _callable, flash_args in self.data:
+            for item in self.data:
+                string = item.text
                 widget_item = QListWidgetItem(string)
                 self.widget_items.append(widget_item)
                 self.listWidget.addItem(widget_item)
                 index += 1
 
-                if SettingsInfo.current.animation_speed <= 114514 and length <= 1000:    # 项目数量大于1000就不显示动画了
-
-                    def _animation(widget_item=widget_item, flash=flash_args, index=index):
+                if SettingsInfo.get_global_settings().animation_speed <= 114514 and length <= 1000:    # 项目数量大于1000就不显示动画了
+                   
+                    def _animation(
+                            widget_item: QListWidgetItem = widget_item, 
+                            anim_conf: AnimationConfig = item.anim_config, 
+                            index: int = index
+                        ):
                             self.insert_flash(
-                                widget_item, flash[0], flash[1], flash[2], flash[3]
-                            ),
-                            self._set_anim_finished(index - 1),
+                                widget_item,
+                                anim_conf.begin,
+                                anim_conf.end,
+                                anim_conf.step,
+                                anim_conf.step_interval
+                            )
+                            self._set_anim_finished(index - 1)
+
                     self.anim_executor.submit(_animation)
-                    time.sleep(0.01 * ((1000 - length) / 1000) / SettingsInfo.current.animation_speed)
+
+                    time.sleep(0.01 * ((1000 - length) / 1000) / SettingsInfo.get_global_settings().animation_speed)
 
                 else:
-                    widget_item.setBackground(QBrush(flash_args[1]))
+                    widget_item.setBackground(QBrush(item.anim_config.end))
                     self._set_anim_finished(index - 1)
 
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
-            Base.log_exc("初始化项目时发生错误", "ListView.init_items")
+        except Exception as exc:
+            Base.log_exc("初始化项目时发生错误", "ListView.init_items", "E", exc)
 
         Base.log("D", "等待动画结束", "ListView.init_items")
-        loop = QEventLoop(self)
-        timer = QTimer(self)
-        def _check_if_finished():
-            if all(self.anim_result):
-                loop.quit()
-                timer.stop()
-        timer.timeout.connect(_check_if_finished)
-        timer.start(100)
-        loop.exec()
-        timer.stop()
+        wait_until(lambda: all(self.anim_result))
         Base.log(
             "D",
             f"初始化项目完成，len(anim_result) = {len(self.anim_result)}",
@@ -279,7 +365,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
     def _set_anim_finished(self, index: int):
         try:
             self.anim_result[index] = True
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
+        except (IndexError, KeyError):
             pass
 
     def insert_flash(
@@ -288,7 +374,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         from_color: QColor,
         to_color: QColor,
         step: int = 45,
-        interval: int = 1,
+        interval: int = 1
     ):
         for r, g, b in list(
             zip(
@@ -299,58 +385,30 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         ):
             try:
 
-                self.item_update.emit(item, QColor(r, g, b))
+                self.item_update.emit(item, QColor(int(r), int(g), int(b)))
                 if interval:
                     time.sleep((interval / 1000))
                 if not self.isVisible():
                     return
 
-            except BaseException as unused:  # pylint: disable=broad-exception-caught
+            except Exception as exc:
+                Base.log_exc_short("更新动画背景色时出现错误", exc=exc)
                 pass
-
-    def create_animation(
-        self,
-        property_name,
-        duration,
-        start_value,
-        end_value,
-        easing_curve=QEasingCurve.Type.OutCubic,
-    ):
-        """创建通用属性动画
-
-        Args:
-            property_name: 目标属性名
-            duration: 动画持续时间(毫秒)
-            start_value: 起始值
-            end_value: 结束值
-            easing_curve: 缓动曲线类型
-
-        Returns:
-            配置好的QPropertyAnimation对象
-        """
-        animation = QPropertyAnimation(self, property_name)
-        animation.setEasingCurve(easing_curve)
-        animation.setDuration(
-            duration / SettingsInfo.current.animation_speed
-            if SettingsInfo.current.animation_speed > 0
-            else duration
-        )
-        animation.setStartValue(start_value)
-        animation.setEndValue(end_value)
-        return animation
 
     def showStartAnimation(self):
         Base.log("D", "开始启动动画（阶段1）", "ListView.showStartAnimation")
 
         # 计算动画终点和起点
 
-
         endpoint = (
-            self.master.geometry().topLeft()
+            self._master.geometry().topLeft()
             + QPoint(
-                self.master.geometry().width() / 2, self.master.geometry().height() / 2
+                self._master.geometry().width() // 2, self._master.geometry().height() // 2
             )
-            - QPoint(self.geometry().width() / 2, self.orig_height / 2)
+            - QPoint(self.geometry().width() // 2, self.orig_height // 2)
+        ) if  self._master else QPoint(
+            QGuiApplication.primaryScreen().availableGeometry().width() // 2 - self.geometry().width() // 2,
+            QGuiApplication.primaryScreen().availableGeometry().height() // 2 - self.orig_height // 2
         )
 
         startpoint = QPoint(
@@ -371,8 +429,7 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
 
         Base.log("D", "开始启动动画（阶段2）", "ListView.showStartAnimation")
 
-        self.str_list = [item[0] for item in self.data]
-        self.widget_items = [QListWidgetItem(string) for string in self.str_list]
+        self.widget_items = [QListWidgetItem(item.text) for item in self.data]
         self.listWidget.clear()
         Thread(target=self.init_items, name="ListView.init_items").start()
 
@@ -388,9 +445,8 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.startanimation_2.start()
         wait_loop_2.exec()
 
-    def addData(self, item: Tuple[str, Callable]):
-        self.data.append(item)
-        self.str_list.append(item[0])
+    def addData(self, item: ListViewItemDataType):
+        self.data.append(ListViewItem.from_tuple(item))
         listwidget_item = QListWidgetItem(item[0])
         self.listWidget.addItem(listwidget_item)
         self.widget_items.append(listwidget_item)
@@ -400,75 +456,89 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             Base.log("E", "ListView未准备好", "ListView.addItem")
             return
         self.listWidget.addItem(item)
-        self.str_list.append(item.text())
-        self.data.append((item.text(), None))
+        self.data.append(ListViewItem(item.text()))
         self.widget_items.append(item)
 
-    def setData(self, data: List[Tuple[str, Callable]]):
-        self.data = data
-        self.str_list = [item[0] for item in data]
+    @overload
+    def setData(self, data: list[ListViewItemDataType]) -> None: ...
+
+    @overload
+    def setData(self, data: list[ListViewItem]) -> None: ...
+
+    def setData(self, data: list[ListViewItemDataType] | list[ListViewItem]):
+        if len(data):
+            if isinstance(data[0], ListViewItem):
+                self.data = data # type: ignore
+            else:
+                self.data = [ListViewItem.from_tuple(item) for item in data] # type: ignore
+
         self.listWidget.clear()
-        for item in self.str_list:
-            self.listWidget.addItem(QListWidgetItem(item))
+        for item in self.data:
+            self.listWidget.addItem(QListWidgetItem(item.text))
 
     def setText(self, index: int, text: str):
         if not self.ready:
             Base.log("E", "ListView未准备好", "ListView.setText")
             return
-        self.str_list[index] = text
         item = self.listWidget.item(index)
         item.setText(text)
-        self.data[index] = (text, self.data[index][1])
+        self.data[index].text = text
 
     def getText(self, index: int):
         if not self.ready:
             Base.log("E", "ListView未准备好", "ListView.getText")
             return
-        return self.data[index][0]
+        return self.data[index].text
 
     def getItem(self, index: int) -> QListWidgetItem:
         return self.listWidget.item(index)
 
     def getCallable(self, index: int):
-        return self.data[index][1]
+        return self.data[index].command
 
-    def setCallable(self, index: int, func: Callable):
-        self.data[index] = (self.data[index][0], func)
+    def setCallable(self, index: int, func: CallableWithNoArgsNeeded):
+        self.data[index].command = func
 
-    def delete(self, index: int) -> QListWidgetItem:
+    def delete(self, index: int) -> QListWidgetItem | None:
         if not self.ready:
             Base.log("E", "ListView未准备好", "ListView.delete")
             return
-        self.str_list.pop(index)
         item = self.listWidget.takeItem(index)
         self.widget_items.pop(index)
         self.data.pop(index)
         return item
+    
+    @overload
+    def insert(self, index: int, data: ListViewItemDataType) -> None: ...
 
-    def insert(self, index, data: Tuple[str, Callable]):
+    @overload
+    def insert(self, index: int, data: ListViewItem) -> None: ...
+
+    def insert(self, index: int, data: ListViewItemDataType | ListViewItem):
         if not self.ready:
             Base.log("E", "ListView未准备好", "ListView.insert")
             return
-        self.str_list.insert(index, data[0])
-        self.listWidget.insertItem(index, QListWidgetItem(data[0]))
-        self.listWidget.item(index).setText(data[0])
+        if not isinstance(data, ListViewItem):
+            data = ListViewItem.from_tuple(data)
+        self.listWidget.insertItem(index, QListWidgetItem(data.text))
+        self.listWidget.item(index).setText(data.text)
         self.data.insert(index, data)
 
     def length(self):
-        return len(self.str_list)
+        return len(self.data)
 
     @Slot(QModelIndex)
     def itemClicked(self, qModelIndex: QModelIndex):
         # 弹出消息框
         Base.log(
             "I",
-            f"点击了{repr(self.str_list[qModelIndex.row()])}, 调用函数{repr(self.data[qModelIndex.row()][1])}",
+            f"点击了{repr(self.data[qModelIndex.row()].text)}, 调用函数{repr(self.data[qModelIndex.row()].command)}",
             "ListView",
         )
-        self.data[qModelIndex.row()][1]()
+        self.data[qModelIndex.row()].command()
         if self.select_once_then_exit:
             self.close()
 
-    def closeEvent(self, event: QEvent):
+    def closeEvent(self, event: QCloseEvent):
         Base.log("I", "ListView窗口关闭（通过关闭事件）", "ListView")
         super().closeEvent(event)

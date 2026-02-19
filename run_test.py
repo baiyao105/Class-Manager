@@ -8,11 +8,12 @@ import time
 import unittest
 st = time.time()
 from tests import test_suite
-from utils.logger import Logger
+import utils # type: ignore
 
 print(f"全包导入用时: {time.time() - st:.3f}秒") # 目测很慢是因为pygame和更新检测
 
-Logger.set_capture_stdstream(False, False)
+# from utils.logger import Logger
+# Logger.set_capture_stdstream(False, False)
 
 if __name__ == "__main__":
     suite = test_suite()

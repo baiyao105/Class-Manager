@@ -53,7 +53,7 @@ class MyMainWindow(QMainWindow):
             )
         self.show()
 
-    def closeEvent(self, event: QCloseEvent, tip=True) -> bool:
+    def closeEvent(self, event: QCloseEvent, tip: bool = True) -> bool:
         "处理窗口关闭事件"
         Logger.log("I", "主窗口尝试退出", "MyMainWindow")
         self.close_count += 1

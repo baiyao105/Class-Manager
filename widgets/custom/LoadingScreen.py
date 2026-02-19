@@ -4,7 +4,7 @@
 from types import TracebackType
 from typing import Any, Type, Union, Literal, Callable, Optional
 from widgets.basic import MyWidget
-from widgets.ui.py import LoadingScreen
+from widgets.templates import LoadingScreen
 from utils.qtconfig import QTimer, QWidget
 
 __all__ = ["LoadingScreenWidget"]
@@ -15,6 +15,7 @@ class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
     def __init__(self, 
                     parent: Optional[QWidget] = None, 
                     mode: Literal["progressed", "indeterminate"] = "progressed",
+                    title: str = "正在加载",
                     progress: Union[int, float] = 0,
                     stage_desc: Optional[str] = None,
                     stage_progress_desc: Optional[str] = None,
@@ -30,6 +31,7 @@ class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
         self._stage_desc = stage_desc
         self._stage_progress_desc = stage_progress_desc
         self._time_remaining_desc = time_remaning_desc
+        self.title = title
         self.mode_condition = mode_condition
         self.progress_condition = progress_condition
         self.stage_desc_condition = stage_desc_condition
@@ -49,6 +51,7 @@ class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
         self.label_7.setText(self._stage_progress_desc or "")
         self.label_8.setText(self._time_remaining_desc or "")
         self.update_timer = QTimer(self)
+        self.setWindowTitle(self.title)
         self.update_timer.timeout.connect(self.update)
         self.destroyed.connect(self.update_timer.stop)
 

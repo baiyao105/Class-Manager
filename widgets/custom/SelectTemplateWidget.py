@@ -2,35 +2,42 @@
 点评模板选择窗口
 """
 
-from typing import Optional
-from utils import ClassDataSet
-from widgets.ui.pyside6.SelectTemplateWindow import Ui_Form
-from widgets.basic import *
+from __future__ import __annotations__
 
-__all__ = ["SelectTemplateWidget"]
+from typing import TypeAlias
 
-class SelectTemplateWidget(MyWidget, Ui_Form):
+from utils.basetypes import Base
+from utils.classobjects import ClassDataSet, ScoreModificationTemplate
+from utils.functions import wait_until
+from utils.qtconfig import Signal, QWidget, QCloseEvent, Slot
+
+from widgets.templates import SelectTemplateWindow
+from widgets.basic import MyWidget
+
+SelectResultType: TypeAlias = tuple[str | None, str | None, str | None, float | None]
+
+class SelectTemplateWidget(MyWidget, SelectTemplateWindow.Ui_Form):
     "选择模板窗口"
 
     return_result = Signal(tuple)
-    "返回信号：(模板key，修改标题，修改描述，修改分数) (Tuple[str, str, str, float])"
+    "返回信号：(模板key，修改标题，修改描述，修改分数) (tuple[str, str, str, float])"
 
     def __init__(
-        self, main_window: Optional[ClassDataSet] = None, master_widget: Optional[QWidget] = None
+        self, dataset: ClassDataSet, master: QWidget | None = None
     ):
         """
-        初始化
+        初始化窗口。
 
-        :main_window: 主窗口
-        :master_widget: 父窗口
+        :param dataset: 数据集
+        :param master: 父窗口
         """
-        super().__init__(master=master_widget)
-        self.setupUi(self)
+        super().__init__(master=master)
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.setWindowTitle("选择模板")
         index = 0
-        self.index_map = {}
-        self.data_obj = main_window
-        self.master_widget = master_widget
+        self.index_map: dict[int, ScoreModificationTemplate] = {}
+        self.data_obj = dataset
+        self.master_widget = master
         self.show()
         self.comboBox.clear()
         for key in self.data_obj.modify_templates:
@@ -47,7 +54,7 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         self.buttonBox.accepted.connect(self.finish)
         self.buttonBox.rejected.connect(self.close)
         self.comboBox.currentIndexChanged.connect(self.update_edit)
-        self.result: Optional[Tuple[str, str, str, float]] = None
+        self.result: SelectResultType | None = None
 
     def show(self):
         self.update_edit()
@@ -61,7 +68,7 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
             self.lineEdit_3.setText(template.desc)
             self.doubleSpinBox.setValue(template.mod)
 
-        except KeyError as unused:
+        except KeyError:
             pass
 
     def select(self):
@@ -76,7 +83,7 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
                 index += 1
         self.update_edit()
 
-    def close(self):
+    def destroy(self, /,  destroyWindow: bool = True, destroySubWindows: bool = True):
         Base.log(
             "I",
             f"选择结果：{repr((self.selected, self.return_title, self.return_desc, self.return_mod))}",
@@ -84,9 +91,10 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         )
         self.select_finished = True
         Base.log("I", "选择模板窗口关闭", "SelectTemplateWidget")
-        super(MyWidget, self).close()
+        super().destroy(destroyWindow=destroyWindow, destroySubWindows=destroySubWindows)
 
-    def closeEvent(self, event: QEvent):
+
+    def closeEvent(self, event: QCloseEvent):
         Base.log("I", "选择模板窗口关闭（通过关闭事件）", "SelectTemplateWidget")
         super().closeEvent(event)
 
@@ -99,9 +107,7 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         self.select_finished = True
         self.close()
 
-    def finish(
-        self,
-    ) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[float]]:
+    def finish(self):
         self.selected_index = self.comboBox.currentIndex()
         self.selected = self.data_obj.modify_templates[
             self.index_map[self.selected_index]
@@ -131,17 +137,14 @@ class SelectTemplateWidget(MyWidget, Ui_Form):
         self.select_finished = True
         self.close()
 
-    def exec(self) -> Optional[Tuple[str, str, str, float]]:
-        """阻塞调用，返回 (key, title, desc, mod)"""
+    def exec(self) -> SelectResultType:
+        """
+        阻塞调用，返回 (key, title, desc, mod)，如果取消了会是四个None
+        """
         self.show()
-        loop = QEventLoop(self)
-        timer = QTimer(self)
-        def _check_if_finished():
-            if self.select_finished:
-                loop.quit()
-                timer.stop()
-        timer.timeout.connect(_check_if_finished)
-        timer.start(50)
-        loop.exec()
-        timer.stop()
+        wait_until(lambda: self.select_finished)
+        assert self.result, "按道理来说选择完了result就不应该是None了啊"
         return self.result
+
+
+__all__ = ["SelectTemplateWidget"]

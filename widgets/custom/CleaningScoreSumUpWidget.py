@@ -2,34 +2,44 @@
 考勤信息展示窗口所在模块
 """
 
+from __future__ import annotations
+
+import time
 import copy
-from typing import Optional, Dict
-from utils import AttendanceInfo, ClassDataSet
-from widgets.custom.ListView import ListView
-from widgets.custom.AttendanceInfoViewWidget import AttendanceInfoViewWidget
-from widgets.basic import *
-from widgets.ui.pyside6.CleaingScoreSumUp import Ui_Form
 
-__all__ = ["CleaningScoreSumUpWidget"]
+from utils.basetypes import Base
+from utils.classobjects import  ClassDataSet, Student
+from utils.qtconfig import QWidget, QListWidgetItem, QCloseEvent, Slot
 
+from widgets.basic import UIError, MyWidget
+from widgets.templates import CleaingScoreSumUp
 
 
-class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
+
+class TargetClassNotSetError(UIError):
+    "还没有设置目标班级。"    
+
+class CleaningMappingNotSetError(UIError):
+    "还没有设置卫生人员表。"
+
+
+class CleaningScoreSumUpWidget(CleaingScoreSumUp.Ui_Form, MyWidget):
     def __init__(
-        self, master_widget: Optional[QWidget] = None, main_window: Optional[ClassDataSet] = None
+        self, 
+        dataset: ClassDataSet,
+        master: QWidget | None = None,
     ):
         """
         初始化
 
-        :param master_widget: 这个窗口的父窗口
-        :param main_window: 程序的主窗口，方便传参
+        :param dataset: 数据库
+        :param master: 这个窗口的父窗口
         """
-        super().__init__(master=master_widget)
-        self.main_window = main_window
-        self.master_widget = master_widget
-        self.setupUi(self)
+        super().__init__(master=master)
+        self.dataset = dataset
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.finished = False
-        self.leader = []
+        self.leader: list[Student] = []
         self.member = []
         self.comboBox.clear()
         self.comboBox.addItems(["星期一", "星期二", "星期三", "星期四", "星期五"])
@@ -42,6 +52,8 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
             "cleaning_4.7_leader",
             "cleaning_4.6_and_lower_leader",
         ]
+        "适用于组长的分数模板"
+
 
         self.mod_member = [
             "cleaning_5.0_member",
@@ -50,6 +62,7 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
             "cleaning_4.7_member",
             "cleaning_4.6_and_lower_member",
         ]
+        "适用于成员的分数模板"
 
         self.comboBox.setCurrentIndex(
             min((time.localtime().tm_wday + 7 - 1) % 7, 4)
@@ -73,35 +86,40 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
         self.finished = False
         self.update_students()
 
-    def update_students(self, refresh_stu=True):
+    def update_students(self, refresh_stu: bool = True):
         "更新学生"
+        if self.dataset.target_class is None:
+            raise TargetClassNotSetError("还没设置目标班级就尝试更新学生")
+        if self.dataset.target_class.cleaning_mapping is None:
+            raise CleaningMappingNotSetError("请先设置一下卫生人员表")
+        
         self.label_5.setText(
-            self.main_window.modify_templates[
+            self.dataset.modify_templates[
                 self.mod_member[self.comboBox_2.currentIndex()]
             ].desc
         )
         selected = self.comboBox.currentIndex() + 1
         if refresh_stu:
             self.leader = copy.deepcopy(
-                self.main_window.target_class.cleaning_mapping[selected]["leader"]
+                self.dataset.target_class.cleaning_mapping[selected]["leader"]
             )
             self.member = copy.deepcopy(
-                self.main_window.target_class.cleaning_mapping[selected]["member"]
+                self.dataset.target_class.cleaning_mapping[selected]["member"]
             )
 
         self.listWidget.clear()
         for s in self.leader:
             index = self.comboBox_2.currentIndex()
             if index == 0:
-                score = self.main_window.modify_templates["cleaning_5.0_leader"].mod
+                score = self.dataset.modify_templates["cleaning_5.0_leader"].mod
             elif index == 1:
-                score = self.main_window.modify_templates["cleaning_4.9_leader"].mod
+                score = self.dataset.modify_templates["cleaning_4.9_leader"].mod
             elif index == 2:
-                score = self.main_window.modify_templates["cleaning_4.8_leader"].mod
+                score = self.dataset.modify_templates["cleaning_4.8_leader"].mod
             elif index == 3:
-                score = self.main_window.modify_templates["cleaning_4.7_leader"].mod
+                score = self.dataset.modify_templates["cleaning_4.7_leader"].mod
             else:
-                score = self.main_window.modify_templates[
+                score = self.dataset.modify_templates[
                     "cleaning_4.6_and_lower_leader"
                 ].mod
             self.listWidget.addItem(
@@ -111,15 +129,15 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
         for s in self.member:
             index = self.comboBox_2.currentIndex()
             if index == 0:
-                score = self.main_window.modify_templates["cleaning_5.0_member"].mod
+                score = self.dataset.modify_templates["cleaning_5.0_member"].mod
             elif index == 1:
-                score = self.main_window.modify_templates["cleaning_4.9_member"].mod
+                score = self.dataset.modify_templates["cleaning_4.9_member"].mod
             elif index == 2:
-                score = self.main_window.modify_templates["cleaning_4.8_member"].mod
+                score = self.dataset.modify_templates["cleaning_4.8_member"].mod
             elif index == 3:
-                score = self.main_window.modify_templates["cleaning_4.7_member"].mod
+                score = self.dataset.modify_templates["cleaning_4.7_member"].mod
             else:
-                score = self.main_window.modify_templates[
+                score = self.dataset.modify_templates[
                     "cleaning_4.6_and_lower_member"
                 ].mod
             self.listWidget.addItem(
@@ -134,7 +152,7 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
                 "I",
                 f"从组长列表移除{s.num}，"
                 f"当前列表：{[s.num for s in self.leader]}",
-                "CleaningScoreSumUpWidget",
+                "CleaningScoreSumUpWidget.remove_from_list",
             )
             self.update_students(refresh_stu=False)
         else:
@@ -145,7 +163,7 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
                 "I",
                 f"从成员列表移除{s.num}，"
                 f"当前列表：{[s.num for s in self.member]}",
-                "CleaningScoreSumUpWidget",
+                "CleaningScoreSumUpWidget.remove_from_list",
             )
             self.update_students(refresh_stu=False)
 
@@ -155,23 +173,23 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
         Base.log(
             "I",
             f"提交按钮被点击，结果：组长{[s.num for s in self.leader]} 成员{[s.num for s in self.member]}",
-            "CleaningScoreSumUpWidget",
+            "CleaningScoreSumUpWidget.commit",
         )
         if not self.finished:
             self.finished = True
 
-            self.main_window.send_modify(
+            self.dataset.send_modify(
                 self.mod_leader[self.comboBox_2.currentIndex()],
                 [
-                    self.main_window.classes[l.belongs_to].students[l.num]
+                    self.dataset.classes[l.belongs_to].students[l.num]
                     for l in self.leader
                 ],
             )
 
-            self.main_window.send_modify(
+            self.dataset.send_modify(
                 self.mod_member[self.comboBox_2.currentIndex()],
                 [
-                    self.main_window.classes[m.belongs_to].students[m.num]
+                    self.dataset.classes[m.belongs_to].students[m.num]
                     for m in self.member
                 ],
             )
@@ -183,4 +201,8 @@ class CleaningScoreSumUpWidget(Ui_Form, MyWidget):
         "取消按钮"
         self.closeEvent(QCloseEvent())
 
+
+
+
+__all__ = ["CleaningScoreSumUpWidget"]
 

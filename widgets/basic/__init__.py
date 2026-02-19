@@ -2,19 +2,25 @@
 基础窗口类
 """
 import sys
+from typing import Dict, Literal
 from .MyMainWindow import MyMainWindow
 from .MyWidget import MyWidget
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
+from utils.qtconfig import *
 from .widgets import *
 from utils.logger import Logger as Base
-
+from utils.consts import qt_log_filter
+from .exceptions import UIError
+from .widgets import (
+    SideNotice, ObjectButton, ProgressAnimatedItem, 
+    ProgressAnimatedListWidgetItem, ProgressAnimationTest
+)
 
 
 
 def handle_fatal_qt_error(msg: str):
-    """处理Qt致命错误并安全退出程序"""
+    """
+    处理Qt致命错误并安全退出程序。
+    """
     Base.log("F", "PySide6发生致命错误：", "MainThread")
     Base.log("F", msg, "MainThread")
     # widget.save_current_settings()
@@ -30,9 +36,11 @@ def handle_fatal_qt_error(msg: str):
 def qt_messagehandler(
     mode: QtMsgType, context: QMessageLogContext, msg: str
 ):  # pylint: disable=unused-argument
-    """自定义Qt消息处理函数，使用字典映射优化日志记录"""
+    """
+    自定义Qt消息处理函数，让Qt的信息也记录到日志里。
+    """
     # 使用字典映射消息类型到日志级别
-    msg_type_map = {
+    msg_type_map: Dict[QtMsgType, Literal["D", "I", "W", "C", "F"]] = {
         QtMsgType.QtDebugMsg: "D",
         QtMsgType.QtInfoMsg: "I",
         QtMsgType.QtWarningMsg: "W",
@@ -50,5 +58,10 @@ def qt_messagehandler(
 
 
 qInstallMessageHandler(qt_messagehandler)
-QLoggingCategory.setFilterRules("*.*=true\n*.debug=false\n*.info=false")
-# 让Qt把除了debug和info以外的日志都输出到qtmessagehandler
+QLoggingCategory.setFilterRules(qt_log_filter) # 让Qt把除了debug和info以外的日志都输出到qtmessagehandler
+
+__all__ = [
+    "MyMainWindow", "MyWidget", "UIError", 
+    "SideNotice", "ObjectButton", "ProgressAnimatedItem", 
+    "ProgressAnimatedListWidgetItem", "ProgressAnimationTest"
+]

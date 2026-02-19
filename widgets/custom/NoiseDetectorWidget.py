@@ -12,15 +12,16 @@ except ImportError:
     pass
 
 import numpy as np
-from utils import Thread
 from typing import Optional
-from utils import ClassDataSet
-from widgets.basic import *
-from widgets.ui.pyside6.NoiseDetector import Ui_Form
+
+from utils import ClassDataSet, Thread, play_sound, Base
+from utils.qtconfig import QTimer, QWidget, QSize, QEasingCurve
+
+from widgets.basic import MyWidget
+from widgets.templates import NoiseDetector
 
 
-__all__ = ["NoiseDetectorWidget"]
-class NoiseDetectorWidget(Ui_Form, MyWidget):
+class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
     """噪音检测器"""
 
     # 定义音频参数
@@ -142,13 +143,15 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
         )
         start = QSize(self.last_length, 21)
         end = QSize(min(int(label_len + 20), 350), 21)
-        self.last_length = end.width()
-        self.anim = QPropertyAnimation(self.label, b"size")
-        self.anim.setDuration(33)
-        self.anim.setStartValue(start)
-        self.anim.setEndValue(end)
-        self.anim.setEasingCurve(QEasingCurve.Type.Linear)
-        self.anim.setLoopCount(1)
+        
+
+        self.anim = self.create_animation(
+            b"size",
+            33,
+            start,
+            end,
+            QEasingCurve.Type.Linear
+        )
         self.anim.start()
 
     def call_my_army(self):
@@ -160,3 +163,5 @@ class NoiseDetectorWidget(Ui_Form, MyWidget):
             f"准备呼叫班主任，班主任设备IP：{teacher_ip}, 邮箱：{teacher_email}",
             "NoiseDetectorWidget.call_my_army",
         )
+
+__all__ = ["NoiseDetectorWidget"]

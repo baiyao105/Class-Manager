@@ -1,16 +1,16 @@
 """
-创建模板窗口
+这啥阴
 """
+
+from __future__ import annotations
 
 from typing import Optional
 from widgets.basic import MyWidget
 from utils.qtconfig import QWidget, QMessageBox
-from widgets.ui.pyside6.WTF import Ui_Form
-
-__all__ = ["WTFWidget"]
+from widgets.templates import WTF
 
 
-class WTFWidget(Ui_Form, MyWidget):
+class WTFWidget(WTF.Ui_Form, MyWidget):
     "我愿称之为世界上最抽象的UI"
 
     def __init__(self, master_widget: Optional[QWidget] = None):
@@ -27,3 +27,5 @@ class WTFWidget(Ui_Form, MyWidget):
         )
         self.setWindowTitle("1145141919810")
         self.show()
+
+__all__ = ["WTFWidget"]

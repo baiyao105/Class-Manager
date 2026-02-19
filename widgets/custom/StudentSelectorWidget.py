@@ -1,15 +1,19 @@
 """
 学生选择器所在模块
 """
+from __future__ import annotations
+from typing import Iterable
 
-from typing import Optional, List, Dict
-from utils import ClassDataSet
-from widgets.basic import *
-from widgets.ui.pyside6.MultiSelectWindow import Ui_Form
+from utils.classobjects import ClassDataSet, Student
+from utils.basetypes import Base
+from utils.qtconfig import (Signal, QWidget, QVBoxLayout, 
+                            QCheckBox, QRect, Slot, QMessageBox, QCloseEvent)
+from utils.functions import wait_until
 
-__all__ = ["StudentSelectorWidget"]
+from widgets.basic import MyWidget
+from widgets.templates import MultiSelectWindow
 
-class StudentSelectorWidget(Ui_Form, MyWidget):
+class StudentSelectorWidget(MultiSelectWindow.Ui_Form, MyWidget):
     """多选学生窗口"""
 
     return_result = Signal(list)
@@ -17,50 +21,48 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        main_window: ClassDataSet = None,
-        master: Optional[QWidget] = None,
-        target_students: List[Student] = None,
-        default_selection: List[Student] = None,
+        dataset: ClassDataSet,
+        master: QWidget | None = None,
+        target_students: Iterable[Student] | None = None,
+        default_selection: Iterable[Student] | None = None,
         allow_none: bool = False,
         title: str = "选择学生",
     ):
         """
         学生选择器
 
-        :param main_window: 主窗口
-        :param master_widget: 父窗口
+        :param dataset: 数据集
+        :param master: 父窗口
         :param target_students: 目标学生列表
         :param default_selection: 默认选择的学生
         :param allow_none: 是否允许选择空列表
         :param title: 窗口标题
         """
-        super().__init__(master=main_window)
-        if target_students is None:
-            target_students = []
-        self.setupUi(self)
+        super().__init__(master=master)
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.setWindowTitle("学生选择器")
         self.label.setText(title)
         self.mainLayout = QVBoxLayout()
         self.setLayout(self.mainLayout)
-        self.main_window = main_window
-        self.master_widget = master
-        self.target_students = target_students
-        self.default_selection = (
-            default_selection if default_selection is not None else []
+        self.dataset = dataset
+        self.master = master
+        self.target_students = target_students or []
+        self.default_selection: list[Student] = (
+            list(default_selection) if default_selection is not None else []
         )
-        self.mapping = {}
+        self.mapping: dict[int, Student] = {}
         self.allow_none = allow_none
         row = 0
         col = 0
-        self.checkbuttons: Dict[int, QCheckBox] = {}
-        self.select_result: Optional[List[Student]] = None
-        for num, stu in [(stu.num, stu) for stu in target_students]:
+        self.checkbuttons: dict[int, QCheckBox] = {}
+        self.select_result: list[Student] | None = None
+        for num, stu in [(stu.num, stu) for stu in self.target_students]:
             self.mapping[num] = stu
             checkbox = QCheckBox(f"{stu.num}号 " + stu.name + f"\n{stu.score}分")
             checkbox.setGeometry(QRect(0, 0, 60, 60))
             checkbox.setChecked(stu in self.default_selection)
             self.gridLayout.addWidget(checkbox, row, col)
-            self.checkbuttons[num] = self.gridLayout.itemAtPosition(row, col).widget()
+            self.checkbuttons[num] = checkbox
             col += 1
             if col > 9:
                 col = 0
@@ -84,30 +86,22 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
         self.comboBox.setCurrentIndex(2)
         self.comboBox.currentIndexChanged.connect(self.width_changed)
 
-    def exec(self, allow_none: bool = False) -> List[Student]:
+    def exec(self, allow_none: bool = False) -> list[Student]:
         """
         执行当前的多选操作。
 
         :param allow_none: 允许不选学生
         """
-        Base.log("I", "多选窗口开始执行", "MultiSelectWidget")
+        Base.log("I", "多选窗口开始执行", "MultiSelectWidget.exec")
         self.allow_none = allow_none
         self.show()
-        loop = QEventLoop(self)
-        timer = QTimer(self)
-        def _check_if_finished():
-            if self.select_result is not None:
-                loop.quit()
-                timer.stop()
-        timer.timeout.connect(_check_if_finished)
-        timer.start(50)
-        loop.exec()
-        timer.stop()
+        wait_until(lambda: (self.select_result is not None))
         Base.log(
             "I",
             f"多选窗口执行结束，结果：{repr(self.select_result)}",
-            "MultiSelectWidget",
+            "MultiSelectWidget.exec",
         )
+        assert self.select_result is not None, "怎么wait_until之后又变回None了？？"
         return self.select_result
 
     @Slot()
@@ -117,9 +111,9 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
             f"多选窗口宽度设置为：{self.comboBox.currentText()}",
             "MultiSelectWidget.width_changed",
         )
-        for i in range(self.gridLayout.count()):
-            if isinstance(self.gridLayout.itemAt(i).widget(), QCheckBox):
-                self.gridLayout.itemAt(i).widget().deleteLater()
+        for v in self.checkbuttons.values():
+            v.deleteLater()
+        self.checkbuttons.clear()
         row = 0
         col = 0
         for num, stu in [(stu.num, stu) for stu in self.target_students]:
@@ -151,7 +145,8 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
             return
         Base.log(
             "I",
-            f"提交多选窗口，结果：{repr([num for num, checkbutton in self.checkbuttons.items() if checkbutton.isChecked()])}",
+            f"提交多选窗口，结果："
+            f"{repr([num for num, checkbutton in self.checkbuttons.items() if checkbutton.isChecked()])}",
             "MultiSelectWidget.commit",
         )
         self.return_result.emit(
@@ -193,6 +188,8 @@ class StudentSelectorWidget(Ui_Form, MyWidget):
         for checkbutton in self.checkbuttons.values():
             checkbutton.setChecked(False)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent):
         Base.log("I", "关闭多选窗口（通过closeEvent）", "MultiSelectWidget")
         super().closeEvent(event)
+        
+__all__ = ["StudentSelectorWidget"]

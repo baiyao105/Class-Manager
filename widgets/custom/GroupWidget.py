@@ -2,18 +2,24 @@
 小组窗口所在模块
 """
 
-from typing import Optional, List
-from utils import Achievement, AchievementTemplate, ClassDataSet
+from __future__ import annotations
+
+from utils.basetypes import Base
+from utils.classobjects import ClassDataSet, Group, Student
+from utils.qtconfig import (Signal, QWidget, QVBoxLayout, QTimer, QCloseEvent,
+                            QListWidgetItem, QModelIndex, QEasingCurve, QColor)
+
+
+from widgets.basic.widgets import ProgressAnimatedListWidgetItem
 from widgets.custom.StudentWidget import StudentWidget
 from widgets.custom.StudentSelectorWidget import StudentSelectorWidget
 from widgets.custom.SelectTemplateWidget import SelectTemplateWidget
-from widgets.basic import *
-from widgets.ui.pyside6.GroupWindow import Ui_Form
-
-__all__ = ["GroupWidget"]
+from widgets.basic import MyWidget
+from widgets.templates import GroupWindow 
 
 
-class GroupWidget(Ui_Form, MyWidget):
+
+class GroupWidget(GroupWindow.Ui_Form, MyWidget):
     "小组窗口"
 
     student_list_update = Signal()
@@ -21,20 +27,20 @@ class GroupWidget(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        main_window: Optional[ClassDataSet]= None,
-        master_widget: Optional[QWidget] = None,
-        group: Group = None,
+        group: Group,
+        dataset: ClassDataSet,
+        master: QWidget | None = None,
         readonly: bool = False,
     ):
         """
-        初始化
+        初始化。
 
         :param main_window: 程序的主窗口，方便传参
         :param master_widget: 这个窗口的父窗口
         :param group: 这个学生窗口对应的小组
         """
-        super().__init__(master=master_widget)
-        self.setupUi(self)
+        super().__init__(master=master)
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.group = group
         self.show()
         self.mainLayout = QVBoxLayout()
@@ -42,12 +48,12 @@ class GroupWidget(Ui_Form, MyWidget):
         self.setLayout(self.mainLayout)
         self.first_load = True
         self.update_timer = QTimer(self)
-        self.last_score = {}
+        self.last_score: dict[str | Student, float] = {}
         self.update_timer.timeout.connect(self.update_label)
         self.update_timer.start(100)
-        self.main_window = main_window
-        self.master_widget = master_widget
-        self.listWidget_order = []
+        self.main_window = dataset
+        self.master_widget = master
+        self.listWidget_order: list[Student] = []
         for member in self.group.members:
             self.listWidget.addItem(
                 QListWidgetItem(f"{member.num}号 {member.name} {member.score}分")
@@ -67,14 +73,14 @@ class GroupWidget(Ui_Form, MyWidget):
         self.pushButton.setDisabled(readonly)
         self.pushButton_2.setDisabled(readonly)
         self.pushButton_2.clicked.connect(self.send_to_all_members)
-        self.last_value: List[int] = []
-        self.stu_selector: Optional[StudentSelectorWidget] = None
-        self.tmp_selector: Optional[SelectTemplateWidget] = None
+        self.last_value: list[float] = []
+        self.stu_selector: StudentSelectorWidget | None = None
+        self.tmp_selector: SelectTemplateWidget | None = None
         self.destroyed.connect(self.stu_list_update_timer.stop)
         self.destroyed.connect(self.update_timer.stop)
 
-    def show(self, readonly=False):
-        Base.log("I", f"小组信息窗口显示：选中{self.group}", "GroupWindowInstance")
+    def show(self, readonly: bool = False):
+        Base.log("I", f"小组信息窗口显示：选中{self.group}", "GroupWidget.show")
         super().show()
         self.pushButton.setDisabled(readonly)
         self.pushButton_2.setDisabled(readonly)
@@ -88,12 +94,18 @@ class GroupWidget(Ui_Form, MyWidget):
         result = self.stu_selector.exec()
         self.tmp_selector = SelectTemplateWidget(self.main_window, self)
         key, title, desc, mod = self.tmp_selector.exec()
+        if key is None:
+            Base.log("I", "取消发送点评，exec() 返回了None或者key是None", "GroupWidget.select_member_and_send")
+            return
         self.main_window.send_modify(key, result, title, desc, mod, "选组员发送")
 
     def send_to_all_members(self):
         "发送至所有组员"
         self.tmp_selector = SelectTemplateWidget(self.main_window, self)
         key, title, desc, mod = self.tmp_selector.exec()
+        if key is None:
+            Base.log("I", "取消发送点评，exec() 返回了None或者key是None", "GroupWidget.send_to_all_members")
+            return
         self.main_window.send_modify(key, self.group.members, title, desc, mod, "选组员发送")
 
 
@@ -108,12 +120,12 @@ class GroupWidget(Ui_Form, MyWidget):
         Base.log(
             "I",
             f"点击列表项:{index.row()}, {repr(student)}",
-            "MainWindow.click_opreation",
+            "GroupWidget.student_clicked",
         )
         if hasattr(self, "student_window"):
             self.student_window.destroy()  # pylint: disable=access-member-before-definition
         self.student_window = StudentWidget(
-            self.main_window, self, student
+            dataset=self.main_window, master=self, student=student
         )  # pylint: disable=attribute-defined-outside-init
         self.student_window.show(self.readonly)
 
@@ -133,8 +145,8 @@ class GroupWidget(Ui_Form, MyWidget):
                 self.last_score[member] = member.score
             self.last_score["total"] = self.group.total_score
         self.listWidget.clear()
-        self.listWidget_order = []
-        end_value = []
+        self.listWidget_order: list[Student] = []
+        end_value: list[float] = []
         for member in sorted(self.group.members, key=lambda s: s.score, reverse=True):
             item = ProgressAnimatedListWidgetItem(
                 f"{member.num}号 {member.name} {member.score}分"
@@ -144,7 +156,7 @@ class GroupWidget(Ui_Form, MyWidget):
             self.listWidget.setItemWidget(item, widget_item)
             try:
                 start = self.last_value.pop(0)
-            except BaseException as unused:  # pylint: disable=broad-exception-caught
+            except Exception:
                 start = min(
                     abs(
                         self.last_score[member]
@@ -195,3 +207,5 @@ class GroupWidget(Ui_Form, MyWidget):
 
     def closeEvent(self, event: QCloseEvent):
         super().closeEvent(event)
+
+__all__ = ["GroupWidget"]

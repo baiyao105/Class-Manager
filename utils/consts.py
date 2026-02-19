@@ -29,6 +29,9 @@ app_style: Literal["windowsvista", "Windows", "Fusion", "windows11"] = "windowsv
 qt_version: Literal["PySide6"] = "PySide6"
 "使用的Qt版本"
 
+qt_log_filter: str = "*.*=true\n*.debug=false\n*.info=false"
+"Qt的日志过滤规则"
+
 app_stylesheet: str = """
 QMainWindow {
     color: black;

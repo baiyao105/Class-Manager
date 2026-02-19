@@ -103,7 +103,7 @@
   <widget class="QPushButton" name="pushButton">
    <property name="geometry">
     <rect>
-     <x>530</x>
+     <x>520</x>
      <y>180</y>
      <width>75</width>
      <height>24</height>
@@ -111,38 +111,6 @@
    </property>
    <property name="text">
     <string>GO !</string>
-   </property>
-  </widget>
-  <widget class="Line" name="line">
-   <property name="geometry">
-    <rect>
-     <x>510</x>
-     <y>160</y>
-     <width>178</width>
-     <height>2</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">background: black</string>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-  </widget>
-  <widget class="Line" name="line_2">
-   <property name="geometry">
-    <rect>
-     <x>510</x>
-     <y>170</y>
-     <width>178</width>
-     <height>2</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">background: black</string>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
    </property>
   </widget>
   <widget class="QLabel" name="label_5">
@@ -221,6 +189,19 @@
      <width>211</width>
      <height>301</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_6">
+   <property name="geometry">
+    <rect>
+     <x>650</x>
+     <y>20</y>
+     <width>111</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>结果</string>
    </property>
   </widget>
  </widget>

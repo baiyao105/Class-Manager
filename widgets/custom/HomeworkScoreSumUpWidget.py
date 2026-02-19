@@ -1,61 +1,70 @@
 """
 作业分结算窗口所在模块
 """
+from __future__  import annotations
 
-from typing import (
-    Optional, 
-    Dict, 
-    List
-)
 from utils import ( 
     Class, 
+    Student,
     ClassDataSet, 
     ScoreModificationTemplate, 
     HomeworkRule, 
     ScoreModification, 
-    question_yes_no
+    question_yes_no,
+    Base
 )
+from utils.qtconfig import (
+    QWidget, QTimer, QMessageBox, QPropertyAnimation, QSize,
+    QColor
+)
+
 from widgets.custom.ListView import ListView
-from widgets.basic import *
-from widgets.ui.pyside6.HomeworkScoreSumUp import Ui_Form
+from widgets.basic import MyWidget, ObjectButton
+from widgets.templates import HomeworkScoreSumUp
 
 __all__ = ["HomeworkScoreSumUpWidget"]
 
-class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
+class HomeworkScoreSumUpWidget(HomeworkScoreSumUp.Ui_Form, MyWidget):
     """
     作业分结算窗口
     """
 
     def __init__(
         self,
-        master: Optional[QWidget] = None,
-        main_window: Optional[ClassDataSet] = None,
-        target_class: Class = None,
-        target_students: Dict[int, Student] = None,
+        dataset: ClassDataSet,
+        target_class: Class,
+        target_students: dict[int, Student] | None = None,
+        master: QWidget | None = None
     ):
+        """
+        构造一个作业分结算窗口。
+        
+        :param dataset: 数据集
+        :type dataset: ClassDataSet
+        :param target_class: 目标班级，从这里获取作业的加减分规则
+        :type target_class: Class
+        :param target_students: 指定的学生，如果不指定就默认为指定的班级的所有学生
+        :type target_students: dict[int, Student] | None
+        :param master: 父窗口
+        :type master: QWidget | None
+        """
         super().__init__(master)
-        self.setupUi(self)
-        self.main_window = main_window
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
+        self.dataset = dataset
         self.master = master
         self.target_class = target_class
-        self.target_students = target_students
-        self.mapping: Dict[int, Student] = {}
-        self.buttons: Dict[int, ObjectButton] = {}
+        self.target_students = target_students or target_class.students
+        self.mapping: dict[int, Student] = {}
+        self.buttons: dict[int, ObjectButton] = {}
         self.comboBox_3.clear()
         self.comboBox_3.addItems(
-            [
-                str(8),
-                str(9),
-                str(10),
-                str(11),
-                str(12),
-            ]
+            [str(8), str(9), str(10), str(11), str(12)]
         )
         self.homework_rules = target_class.homework_rules
         self.comboBox_4.clear()
         self.comboBox_4.addItems(["添加一项", "删除一项", "查看信息", "全部删除"])
         self.comboBox.clear()
-        self.sent_list: Dict[int, List[ScoreModification]] = {}
+        self.sent_list: dict[int, list[ScoreModification]] = {}
         "已经发送的列表"
         error_template = ScoreModificationTemplate(
             "error",
@@ -63,14 +72,14 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             "没有内置的作业常规分方案",
             "请完善default.py中Class的homework_rule",
         )
-        self.subject_list: Dict[int, HomeworkRule] = {
+        self.subject_list: dict[int, HomeworkRule] = {
             -1: HomeworkRule("error", "列表为空", "", {"列表为空": error_template})
         }
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_buttons)
         self.update_timer.start(100)
         self.destroyed.connect(self.update_timer.stop)
-        self.current_template: Optional[ScoreModificationTemplate] = None
+        self.current_template: ScoreModificationTemplate = error_template
         for index, rule in enumerate(self.homework_rules.values()):
             self.subject_list[index] = rule
             self.comboBox.addItem(rule.subject_name)
@@ -80,18 +89,18 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
                 self, "emm", "懒得写，要不你帮我写吧\n（不要用奇怪的眼神看我）"
             )
         )
-        self.optional_template_mapping: Dict[int, ScoreModificationTemplate] = {
+        self.optional_template_mapping: dict[int, ScoreModificationTemplate] = {
             -1: error_template
         }
         self.comboBox_13.clear()
         for t in [
-            _t for _t in self.main_window.modify_templates.values() if _t.is_visible
+            _t for _t in self.dataset.modify_templates.values() if _t.is_visible
         ]:
             self.comboBox_13.addItem(t.title)
             # -1的原因：有一个是error_template
             self.optional_template_mapping[len(self.optional_template_mapping) - 1] = t
 
-        self.anims: Dict[int, QPropertyAnimation] = {}
+        self.anims: dict[int, QPropertyAnimation] = {}
 
         self.comboBox.setCurrentIndex(0)
         self.comboBox_3.setCurrentIndex(2)
@@ -120,7 +129,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             "HomeworkSumpWidget.subject_changed",
         )
 
-        self.current_modifacion_list: Dict[int, ScoreModificationTemplate] = {
+        self.current_modifacion_list: dict[int, ScoreModificationTemplate] = {
             -1: ScoreModificationTemplate("error", 0, "出错了", "出错了")
         }
         Base.log("I", "清空列表", "HomeworkSumpWidget.subject_changed")
@@ -175,8 +184,11 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             "HomeworkSumpWidget.width_changed",
         )
         for i in range(self.widget.count()):
-            if isinstance(self.widget.itemAt(i).widget(), ObjectButton):
-                self.widget.itemAt(i).widget().deleteLater()
+            item = self.widget.itemAt(i)
+            if item:
+                widget = item.widget()
+                if isinstance(widget, ObjectButton):
+                    widget.deleteLater()
         row = 0
         col = 0
         for num, stu in self.target_students.items():
@@ -187,7 +199,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             self.widget.addWidget(button, row, col, 1, 1)
             self.buttons[num] = button
             self.buttons[num].clicked.connect(
-                lambda _=None, num=num: self.do_action(num)
+                lambda *, num=num: self.do_action(num)
             )
             self.buttons[num].setFixedSize(QSize(81, 51))
             col += 1
@@ -203,11 +215,23 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
                 + f"\n{self.mapping[num].score}分"
             )
 
+    def get_list_anim_color(self, diff: float) -> tuple[QColor, QColor]:
+        if diff > 0:
+            return QColor(202, 255, 222), QColor(232, 255, 232)
+        elif diff < 0:
+            return QColor(255, 202, 202), QColor(255, 232, 232)
+        else:
+            return QColor(201, 232, 255), QColor(233, 244, 255)
+        
+    def get_modify_desc(self, m: ScoreModification) -> str:
+        return f"{m.title} {m.execute_time.split('.')[0] \
+                if m.execute_time else '未执行'} {m.mod:+.1f}"
+
     def do_action(self, num: int):
         Base.log(
             "I",
             f"进行操作：学生学号为{num}",
-            "HomeworkSumpWidget.show_stu_homework_info",
+            "HomeworkSumpWidget.do_action",
         )
         mode = self.comboBox_4.currentIndex()
         if mode == 0:
@@ -219,7 +243,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
         elif mode == 3:
             mode = "clear"
 
-        Base.log("I", "操作模式：" + mode, "HomeworkSumpWidget.show_stu_homework_info")
+        Base.log("I", "操作模式：" + str(mode), "HomeworkSumpWidget.do_action")
         if mode == "add":
             self.sent_list[num].append(
                 ScoreModification(
@@ -242,7 +266,7 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
                     ),
                 )
             )
-            self.main_window.send_modify_instance(self.sent_list[num][-1], "<作业登分>")
+            self.dataset.send_modify_instance(self.sent_list[num][-1], "<作业登分>")
             self.anims[num] = QPropertyAnimation(self.buttons[num], b"color")
             self.anims[num].setDuration(300)
             self.anims[num].setStartValue(
@@ -258,39 +282,20 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             self.anims[num].start()
 
         if mode == "sub":
-            self.list_view = ListView(self, "已发送的作业等第点评", None)
+            self.list_view = ListView("已发送的作业等第点评", self, None)
 
             self.list_view.setData(
                 [
                     (text, func, args)
                     for text, func, args in [
                         (
-                            f"{m.title} {m.execute_time.split('.')[0]} {m.mod:+.1f}",
+                            self.get_modify_desc(m),
                             lambda m=m: (
-                                self.main_window.retract_modify(m, "<作业登分>"),
+                                self.dataset.retract_modify(m, "<作业登分>"),
                                 self.sent_list[num].remove(m),
                                 self.list_view.close(),
                             ),
-                            (
-                                (
-                                    QColor(202, 255, 222)
-                                    if m.mod > 0
-                                    else (
-                                        QColor(255, 202, 202)
-                                        if m.mod < 0
-                                        else QColor(201, 232, 255)
-                                    )
-                                ),
-                                (
-                                    QColor(232, 255, 232)
-                                    if m.mod > 0
-                                    else (
-                                        QColor(255, 232, 232)
-                                        if m.mod < 0
-                                        else QColor(233, 244, 255)
-                                    )
-                                ),
-                            ),
+                            self.get_list_anim_color(m.mod)
                         )
                         for m in reversed(self.sent_list[num])
                         if m.executed
@@ -301,38 +306,19 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
             self.list_view.show()
 
         if mode == "info":
-            self.list_view = ListView(self, "已发送的作业等第点评", None)
+            self.list_view = ListView("已发送的作业等第点评", self, None)
             self.list_view.setData(
                 [
                     (text, func, args)
                     for text, func, args in [
                         (
-                            f"{m.title} {m.execute_time.split('.')[0]} {m.mod:+.1f}",
+                            self.get_modify_desc(m),
                             lambda m=m, index=index: (
-                                self.main_window.history_window(
+                                self.dataset.history_window(
                                     m, index, self.list_view, master=self
                                 ),
                             ),
-                            (
-                                (
-                                    QColor(202, 255, 222)
-                                    if m.mod > 0
-                                    else (
-                                        QColor(255, 202, 202)
-                                        if m.mod < 0
-                                        else QColor(201, 232, 255)
-                                    )
-                                ),
-                                (
-                                    QColor(232, 255, 232)
-                                    if m.mod > 0
-                                    else (
-                                        QColor(255, 232, 232)
-                                        if m.mod < 0
-                                        else QColor(233, 244, 255)
-                                    )
-                                ),
-                            ),
+                            self.get_list_anim_color(m.mod)
                         )
                         for index, m in enumerate(reversed(self.sent_list[num]))
                         if m.executed
@@ -345,19 +331,19 @@ class HomeworkScoreSumUpWidget(Ui_Form, MyWidget):
         if mode == "clear":
             if not len([m for m in self.sent_list[num] if m.executed]):
                 QMessageBox.information(
-                    self.main_window,
+                    self.master,
                     "提示",
                     f"烫知识：你选择的{num}号并没有发送任何作业等第点评",
                 )
                 return
             if question_yes_no(
-                self.main_window,
+                self.master,
                 "确认",
                 f"确定要把刚刚所有的作业等第点评全部删除吗？\n（选中了{num}号，已经发送了{len([m for m in self.sent_list[num] if m.executed])}个）",
                 False,
                 "warning",
             ):
-                self.main_window.retract_modify(
+                self.dataset.retract_modify(
                     [m for m in self.sent_list[num] if m.executed], "<作业登分>"
                 )
                 self.sent_list[num] = []

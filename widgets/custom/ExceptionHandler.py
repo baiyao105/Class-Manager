@@ -1,30 +1,30 @@
 """
 错误展示窗口所在模块
 """
+from __future__ import annotations
 
 import time
 import traceback
-from typing import Optional, Tuple, List, Dict
-from utils.classobjects import ClassDataSet
-from widgets.custom.ListView import ListView
-from widgets.basic import *
-from widgets.ui.pyside6.ExceptionHandler import Ui_Form
 
-__all__ = ["ExceptionHandler"]
+from utils.qtconfig import QWidget, QIcon, QTimer, Qt, QCloseEvent
+
+from widgets.basic import *
+from widgets.templates import ExceptionHandler as ExceptionHandlerTemplate
+
 
 
 class ExceptionInfo:
     "记录异常信息"
-    def __init__(self, tbstr: str, repeats: int, expire_time: int):
+    def __init__(self, tbstr: str, repeats: int, expire_time: float):
         self.tbstr = tbstr
         self.repeats = repeats
         self.expire_time = expire_time
 
 
-class ExceptionHandler(Ui_Form, MyWidget):
+class ExceptionHandler(ExceptionHandlerTemplate.Ui_Form, MyWidget):
     "错误窗口"
 
-    handled_exception: Dict[str, ExceptionInfo] = {}
+    handled_exception: dict[str, ExceptionInfo] = {}
     """
     记录已经处理过的异常（时间戳，异常Traceback，重复次数，过期时间）
     
@@ -34,9 +34,8 @@ class ExceptionHandler(Ui_Form, MyWidget):
 
     def __init__(
         self,
-        master_widget: Optional[QWidget] = None,
-        main_window: Optional[ClassDataSet] = None,
-        exception: Optional[BaseException] = None,
+        exception: BaseException | None = None,
+        master: QWidget | None = None
     ):
         """
         初始化
@@ -44,13 +43,10 @@ class ExceptionHandler(Ui_Form, MyWidget):
         :param master_widget: 这个窗口的父窗口
         :param main_window: 程序的主窗口，方便传参
         """
-        super().__init__(master=master_widget)
-        self.master_widget = master_widget
-        self.main_window = main_window
-        "当前异常在列表中的索引"
+        super().__init__(master=master)
         self.setup_time = time.time()
         self.exception = exception
-        self.setupUi(self)
+        self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
         self.setWindowTitle("出错啦！")
         self.setWindowIcon(QIcon("img/logo/favicon-error.ico"))
         self.checkBox.stateChanged.connect(self.on_checkbox_changed)
@@ -73,7 +69,7 @@ class ExceptionHandler(Ui_Form, MyWidget):
         else:
             self.spinBox.setEnabled(True)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent):
         if self.checkBox.isChecked():
             self.handled_exception[self.tbstr].expire_time = time.time() + self.spinBox.value() * 60.0
         super().closeEvent(event)
@@ -93,7 +89,7 @@ class ExceptionHandler(Ui_Form, MyWidget):
             self.label_5.setText("")
             self.textBrowser.setText("没有Traceback，别想了")
 
-    def update(self):
+    def update(self): # pyright: ignore[reportIncompatibleMethodOverride]
         self.set_text()
         super().update()
 
@@ -107,3 +103,5 @@ class ExceptionHandler(Ui_Form, MyWidget):
         super().show()
         self.set_text()
         self.update_timer.start(1000)
+
+__all__ = ["ExceptionHandler"]
