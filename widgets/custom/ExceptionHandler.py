@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import time
 import traceback
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from utils.basetypes import Base
 from utils.qtconfig import QWidget, QIcon, QTimer, Qt, QCloseEvent
@@ -60,11 +60,12 @@ class ExceptionHandlerWidget(ExceptionHandlerTemplate.Ui_Form, MyWidget):
         self.set_text_timer.timeout.connect(self.set_text)
         self.pushButton.clicked.connect(self.model.on_exit_with_exception)
         self.pushButton_2.clicked.connect(self.model.on_report_error)
-        self.pushButton_3.clicked.connect(self.model.on_close)
+        self.pushButton_3.clicked.connect(self.close)
         self.set_text()
 
     
-    def on_checkbox_changed(self, state: Qt.CheckState):
+    def on_checkbox_changed(self, *args: Any):
+        state = self.checkBox.checkState()
         if state == Qt.CheckState.Checked:
             Base.log("I", "稍后提醒的选项被勾选了", "ExceptionHandler.on_checkbox_changed")
             self.spinBox.setEnabled(True)
@@ -107,7 +108,9 @@ class ExceptionHandlerWidget(ExceptionHandlerTemplate.Ui_Form, MyWidget):
             self.handled_exception[self.tbstr] = ExceptionInfo(self.tbstr, 1, 1145141919810114)
         elif (time.time() - self.handled_exception[self.tbstr].expire_time > 0):
             self.handled_exception[self.tbstr].repeats += 1
+            self.handled_exception[self.tbstr].expire_time = 1145141919810114
         else:
+            self.handled_exception[self.tbstr].repeats += 1
             return
         super().show()
         self.set_text()

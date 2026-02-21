@@ -85,7 +85,8 @@ self.random_choose_stu(
             (
 """\
 import math
-print(math.sqrt(114514))""",
+print(math.sqrt(114514))
+""",
 "计算114514的平方根"
             ),
             (
@@ -100,6 +101,27 @@ print("速率:", (DataObject.saved_objects / (time.time() - t)))
 """,
 "测试保存数据分组"
             ),
+            (
+                 """\
+import random
+from utils import *
+temp = ScoreModificationTemplate(
+    "fly_in_class",
+    -114.0,
+    "在课堂上飞起来",
+    "装___我让你________",
+)
+
+for i in range(1145):
+    stu = self.random_choose_stu()
+    mod = ScoreModification(
+		temp, stu, mod=random.randint(-114, 114)
+    )
+    self.send_modify_instance(mod)
+""",
+"随机分发点评"
+            ),
+            
             (
 """\
 for i in range(11451):
@@ -157,7 +179,7 @@ for i in range(100):
             raise ObserverNotSet("没有设置班级侦测器")
         if not self.dataset.achievement_obs:
             raise ObserverNotSet("没有设置成就侦测器")
-        self.label_5.setText(str(self.dataset.sidenotice_waiting_order.qsize()))
+        self.label_5.setText(str(self.dataset.side_notice_waiting_order.qsize()))
         self.label_6.setText(str(SideNotice.showing))
         self.label_7.setText(str(SideNotice.waiting))
         self.label_8.setText(str(SideNotice.current))

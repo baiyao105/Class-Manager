@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 import time
 import random
@@ -54,9 +55,15 @@ class ClassWindowModel(
     UserDisplayModel,
     ClassUIModel
 ):
+    
+    debug_task_executor = ThreadPoolExecutor(max_workers=16)
+    "调试任务执行器"
 
     signal_exiting: Signal = Signal()
     "即将退出的信号"
+
+    signal_raise_exc: Signal = Signal(Exception)
+    "抛出异常的信号"
 
     def __init__(self, 
             app: QApplication, 
@@ -157,6 +164,7 @@ class ClassWindowModel(
         
         self.setFixedSize(self.width(), self.height())
         self.signal_exiting.connect(self.slot_exiting)
+        self.signal_raise_exc.connect(self.slot_raise_exc)
         self.setWindowTitle(f"班寄管理 - {self.target_class.name}")
 
 
@@ -193,6 +201,8 @@ class ClassWindowModel(
         """
         self.quit()
         super(ClassUIModel, self).on_exit_with_exception()
+
+    
         
         
     @Slot()
@@ -248,7 +258,26 @@ class ClassWindowModel(
             pen=(255, 0, 0)
         )
         self.sys_mem_tracer_widget.show()
-        wait_until(lambda: self.sys_mem_tracer_widget is not None and self.sys_mem_tracer_widget.isHidden())
+        wait_until(lambda: self.sys_mem_tracer_widget is not None 
+                    and self.sys_mem_tracer_widget.isHidden())
+
+    def raise_exc(self, exc: BaseException):
+        """
+        抛出异常。
+        """
+        Base.log("I", 
+                f"尝试抛出异常: [{exc.__class__.__name__}] {exc}", 
+                "ClassWindowModel.raise_exc")
+        self.signal_raise_exc.emit(exc)
+
+    def slot_raise_exc(self, exc: BaseException):
+        """
+        抛出异常的槽函数。
+        """
+        Base.log("I",
+                 f"在槽函数中接到异常: [{exc.__class__.__name__}] {exc}，尝试向主线程抛出",
+                 "ClassWindowModel.slot_raise_exc")
+        raise exc
 
     def stop(self):
         """
@@ -266,10 +295,7 @@ class ClassWindowModel(
             "双击这种列表项目可查看信息",
             lambda: QMessageBox.information(self, "。", "孩子真棒"),
         )
-        self.icon = QIcon()
-        self.icon.addPixmap(
-            QPixmap(os.path.join(self.img_path, "facicon.ico")), QIcon.Mode.Normal, QIcon.State.Off
-        )
+        self.icon = QIcon(os.path.join(self.img_path, "favicon.ico"))
         self.setWindowIcon(self.icon)
         self.on_start_up_finished()
         self.refresh_hint_widget()

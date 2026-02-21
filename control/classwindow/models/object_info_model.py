@@ -294,12 +294,21 @@ class ObjectInfoModel(MixinSuperType):
             return                  \
             QColor(222, 255, 222),  \
             QColor(
-                max(202, int(242 - ((stu.score) * (255 - 202) / 30))),
+                max(202, int(252 - ((stu.score) * (252 - 192) / 30))),
                 255,
-                max(202, int(242 - ((stu.score) * (255 - 202) / 30)))
+                max(202, int(252 - ((stu.score) * (252 - 192) / 30)))
             )
+        elif stu.score < 0:
+            return                 \
+            QColor(255, 222, 222), \
+            QColor(
+                255,
+                max(202, int(252 + ((stu.score) * (252 - 192) / 30))),
+                max(202, int(252 + ((stu.score) * (252 - 192) / 30)))
+            )
+
         else:
-            return (QColor(255, 222, 222), QColor(255, 0, 0))
+            return (QColor(233, 244, 255), QColor(255, 255, 255))
         
 
 

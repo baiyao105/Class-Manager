@@ -116,8 +116,8 @@ class AchievementStatusObserver:
                 time.sleep(max((1 / self.limited_tps) - (time.time() - self.last_frame_time), 0))
             self.last_frame_time = time.time()
             opreated = False
-            for s in list(self.classes[self.class_id].students.values()):
-                for a in list(self.achievement_templates.keys()):
+            for s in self.classes[self.class_id].students.values():
+                for a in self.achievement_templates.keys():
                     if self.achievement_templates[a].achieved_by(s, self.class_obs) and (
                         self.achievement_templates[a].key
                         not in [  # 判断成就是否已经达成过
@@ -156,6 +156,8 @@ class AchievementStatusObserver:
                     if handle_overloading:
                         self.on_observer_overloaded(self.last_frame_time, last_opreate_time, self.mspt)
                 time.sleep((self.mspt * (1 / self.overload_ratio)) / 1000)
+            Logger.log("I", F"成就检查完毕，本帧耗时: {self.mspt:.3f}ms", "AchievementStatusObserver.next_frame")
+            
         self.tps = 1 / max((time.time() - last_opreate_time), 0.001)
 
     def on_observer_overloaded(
@@ -220,7 +222,7 @@ class AchievementStatusObserver:
                     item = self.display_achievement_queue.get()
                     if self.achievement_displayer:
                         self.achievement_displayer(item[0], item[1])
-                time.sleep(0.1)  # 每一行代码都有它存在的意义，不信删了试试
+                time.sleep(0.01)  # 每一行代码都有它存在的意义，不信删了试试
             except Exception as e:  # pylint: disable=broad-exception-caught
                 Base.log(
                     "E",

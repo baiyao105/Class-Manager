@@ -102,7 +102,6 @@ class ExceptionHandlerModel(_BaseClass):
         当用户想要报告错误的时候执行的操作。
         """
         os.startfile("https://www.bilibili.com/video/BV1GJ411x7h7/")
-        self.close()
 
     @Slot()
     def on_close(self):

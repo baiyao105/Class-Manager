@@ -76,9 +76,9 @@ class SideNoticeModel(_BaseClass):
         # 不调用super().__init__()
         if hasattr(self, 'setParent') and master:
             self.setParent(master)
-        self.sidenotice_waiting_order: Queue[SideNotice] = Queue()
+        self.side_notice_waiting_order: Queue[SideNotice] = Queue()
         "提示栏等待顺序"
-        self.sidenotice_avilable_slots = list(range(5))
+        self.side_notice_avilable_slots = list(range(5))
         "提示栏可用槽位"
         self.tip_history: list[SideNotice] = []
         "提示历史，每一项都对应ListWidget里边的一项"
@@ -90,7 +90,7 @@ class SideNoticeModel(_BaseClass):
         self.signal_place_tip.connect(self.slot_place_tip)
         self.side_notice_init_finished = True
         self.show_tip(
-            "", "双击项目查看消息记录", duration=5000, further_info="孩子真聪明（bushi"
+            "", "双击右侧的列表项可以查看消息记录", duration=10000, further_info="孩子真聪明（bushi"
         )
         
 
@@ -156,7 +156,7 @@ class SideNoticeModel(_BaseClass):
             further_info=further_info,
         )
 
-        self.sidenotice_waiting_order.put(obj)
+        self.side_notice_waiting_order.put(obj)
         return obj
 
     def closeEvent(self, event: QCloseEvent):
@@ -188,9 +188,9 @@ class TipHandler(QThread):
     return_slot_delay: float = 0.2
     "在展示时间结束后多久才会归还槽位，单位: sec"
 
-    return_slot_executor_workers: int = 30
+    return_slot_executor_workers: int = 50
+    "归还槽位线程池的线程数量"
 
-    
     
 
     def __init__(self, parent: SideNoticeModel):
@@ -207,26 +207,42 @@ class TipHandler(QThread):
     @profile()
     def run(self):
         Base.log("I", "提示处理器线程开始运行", "TipHandler.run")
-        while True:
+        while not self.isInterruptionRequested():
+            index = None
+            current = None
 
-            while True:
+            while not self.isInterruptionRequested():
+
                 try:
-                    current = self.model.sidenotice_waiting_order.get(timeout=0.01)
+                    current = self.model.side_notice_waiting_order.get(timeout=0.01)
                     break
                 except queue.Empty:
                     if self.isInterruptionRequested():
                         Base.log("I", "提示处理器线程结束", "TipHandler.run")
                         return
+                    
 
-            try:
-                index = self.model.sidenotice_avilable_slots.pop(0)
-            except IndexError:
-                Base.log("W", "没有可用的提示槽位，重新等待", "TipHandler.run")
+            while not self.isInterruptionRequested():
+                try:
+                    index = self.model.side_notice_avilable_slots.pop(0)
+                    break
+                except IndexError:
+                    time.sleep(0.01)
+                    if self.isInterruptionRequested():
+                        Base.log("I", "提示处理器线程结束", "TipHandler.run")
+                        return
+                    continue
+
+            if self.isInterruptionRequested():
+                Base.log("I", "提示处理器线程结束", "TipHandler.run")
+                return
+
+            if index is None or current is None:
                 continue
 
             def return_slot(slot: int, current: SideNotice):
                 if not current.finished:
-                    self.model.sidenotice_avilable_slots.append(slot)
+                    self.model.side_notice_avilable_slots.append(slot)
                     current.finished = True
 
             def _return_slot_after_shown(
@@ -249,7 +265,7 @@ class TipHandler(QThread):
 
             self.return_slot_executor.submit(_return_slot_after_shown)
 
-            current.closebutton_clicked = lambda: _exec_on_close()
+            current.closebutton_clicked = lambda *, func = _exec_on_close: func()
 
             Base.log(
                 "D",

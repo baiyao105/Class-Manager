@@ -1219,7 +1219,7 @@ DEFAULT_ACHIEVEMENTS: dict[str, AchievementTemplate] = {
         "这东西真就是随机给的",
         condition_info="每周随机选一个人给",
         further_info="幸运，但没用",
-        others=[lambda d: d.student.num == int(d.class_obs.dataset.last_reset) % len(d.class_obs.target_class.students)],
+        others=[lambda d: d.student.num == list(d.class_obs.target_class.students)[int(d.class_obs.dataset.last_reset) % len(d.class_obs.target_class.students)]],
     ),
     "interrupts_cast": AchievementTemplate(
         "interrupts_cast",

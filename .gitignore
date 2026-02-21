@@ -223,10 +223,10 @@ temp
 /data
 
 # User data
-backup/
-chunks/
-audio/music/*
-background.mp4
-compile.conf
-last_usr.ncw
-user_info.ncw
+/backups/
+/chunks/
+/audio/music/*
+/background.mp4
+/compile.conf
+/last_usr.ncw
+/user_info.ncw
