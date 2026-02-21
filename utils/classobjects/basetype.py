@@ -220,12 +220,9 @@ class ClassDataType(ABC):
 
 class DataProperty(property):
     """
-    数据属性，用于ClassDataType的属性
-    
-    扩展功能：
-    1. 自动检测属性值变化
-    2. 变化时立即触发事件
-    3. 支持配置是否触发事件
+    数据属性，用于ClassDataType的属性。
+
+    打上这个标签的属性在值变化时会依照设置触发数据变化事件。
     """
 
     def __init__(
@@ -235,7 +232,7 @@ class DataProperty(property):
         fdel: Optional[Callable[..., Any]] = None,
         doc: Optional[str] = None,
         trigger_event: bool = True,
-        event_name_override: Optional[str] = None,
+        event_name_override: Optional[str] = None
     ):
         """
         构造函数
@@ -244,7 +241,7 @@ class DataProperty(property):
         :param fset: setter函数
         :param fdel: deleter函数
         :param doc: 文档字符串
-        :param trigger_event: 是否在值变化时触发事件
+        :param trigger_event: 是否在值变化时触发数据变化事件
         :param event_name_override: 自定义事件名称（覆盖默认命名）
         """
         super().__init__(fget, fset, fdel, doc)
@@ -264,28 +261,28 @@ class DataProperty(property):
         super().__set__(instance, value)
         new_value = value
         if old_value != new_value:
-            self._on_value_changed(instance, old_value, new_value)
+            self.on_value_changed(instance, old_value, new_value)
 
 
     def __delete__(self, instance: ClassDataType):
         raise AttributeError("不能删除数据属性")
 
-    def _get_full_event_name(self, instance: Any) -> str:
+    def get_full_event_name(self) -> str:
         """
         获取完整的事件名称
         
         :param instance: 实例对象
         :return: 完整事件名称
         """
-        property_name = self.fget.__qualname__
+        if self.event_name_override is not None:
+            return self.event_name_override
+        property_name =  self.fget.__qualname__
         return f"DATA_CHANGED_{property_name}"
 
     @profile("DataProperty._on_value_changed")
-    def _on_value_changed(self, instance: ClassDataType, old_value: Any, new_value: Any):
+    def on_value_changed(self, instance: ClassDataType, old_value: Any, new_value: Any):
         """
         值变化时的处理
-        
-        立即触发事件，不延迟
         """
         if not self.trigger_event:
             return
@@ -293,9 +290,8 @@ class DataProperty(property):
         class_obj = instance.get_class_data_Set()
         if class_obj is None:
             return
-
-        event_key = self._get_full_event_name(instance)
+        event_key = self.get_full_event_name()
         class_obj.broadcast_data_changed(event_key)
         elapsed = time.perf_counter() - start_time
-        if elapsed > 0.001:  # 超过1ms就记录
-            Logger.log("W", f"DataProperty._on_value_changed发送事件{event_key}时耗费了{elapsed*1000:.2f}ms")
+        if elapsed > 0.001:
+            Logger.log("W", f"DataProperty._on_value_changed发送数据变更事件{event_key}时耗费了{elapsed*1000:.2f}ms")
