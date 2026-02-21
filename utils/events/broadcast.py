@@ -275,14 +275,11 @@ class BroadcastDispatcher:
         dispatch_count = 0
         
         with self._lock:
-            lock_time = time.perf_counter()
             
             for key in list(self.listeners.keys()):
                 if key.startswith(BroadcastReceiver.RE_PATTERN_PREFIX):
                     pattern = key[len(BroadcastReceiver.RE_PATTERN_PREFIX):]
-                    match_start = time.perf_counter()
                     if re.match(pattern, tag):
-                        match_time = time.perf_counter() - match_start
                         for listener in self.listeners[key]:
                             self._dispatch_to(listener, tag, *args, **kwargs)
                             dispatch_count += 1
@@ -299,8 +296,8 @@ class BroadcastDispatcher:
                         listener_count += 1
         
         total_time = time.perf_counter() - start_time
-        if total_time > 0.01:  # 超过10ms就记录
-            Logger.log("D", f"Broadcast '{tag}' took {total_time*1000:.2f}ms, dispatched to {dispatch_count} listeners, {listener_count} total checks")
+        if total_time > 0.01:  # 我啥时候写的这个
+            Logger.log("D", f"广播时间{tag}消耗了{total_time*1000:.2f}ms，分发给了{dispatch_count}/{listener_count}个接收器")
 
     def _dispatch_to(self, listener: BroadcastReceiver, tag: str, *args: Any, **kwargs: Any):
         "分发消息到指定监听器。"

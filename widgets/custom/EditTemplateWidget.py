@@ -22,8 +22,8 @@ class EditTemplateWidget(EditTemplateWindow.Ui_Form, MyWidget):
         self,
         dataset: ClassDataSet,
         template: ScoreModificationTemplate,
-        listview: ListView,
-        listview_index: int,
+        listview: ListView | None = None,
+        listview_index: int | None = None,
         master_widget: QWidget | None = None
     ):
         """
@@ -81,7 +81,8 @@ class EditTemplateWidget(EditTemplateWindow.Ui_Form, MyWidget):
             self.lineEdit_3.text(),
             "修改原模版",
         )
-        self.listview.setText(self.listview_index, self.lineEdit.text())
+        if self.listview and self.listview_index is not None:
+            self.listview.setText(self.listview_index, self.lineEdit.text())
         self.closeEvent(QCloseEvent())
         self.destroy()
 
@@ -96,8 +97,9 @@ class EditTemplateWidget(EditTemplateWindow.Ui_Form, MyWidget):
         if question_yes_no(self, "警告", "确认删除模板？", False, "warning"):
             Base.log("I", "删除模板", "EditTemplateWidget.delete")
             self.dataset.del_template(self.template.key, "模板编辑器中删除")
-            self.listview.setText(self.listview_index, "(已删除)")
-            self.listview.setCallable(self.listview_index, lambda: None)
+            if self.listview and self.listview_index is not None:
+                self.listview.setText(self.listview_index, "(已删除)")
+                self.listview.setCallable(self.listview_index, lambda: None)
             self.closeEvent(QCloseEvent())
             self.destroy()
 

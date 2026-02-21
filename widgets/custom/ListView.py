@@ -21,7 +21,6 @@ from widgets.basic import MyWidget
 
 
 
-__all__ = ["ListView"]
 
 CallableWithNoArgsNeeded: TypeAlias = Callable[..., Any]
 "不需要主动提供参数的函数，用...是因为有的可能带着默认参数"
@@ -37,6 +36,8 @@ ListViewItemDataType: TypeAlias = Union[
     Tuple[str, CallableWithNoArgsNeeded],
     Tuple[str, CallableWithNoArgsNeeded, AnimationConfigDataType]
 ]
+
+ListViewCommandDataType: TypeAlias = Tuple[str, CallableWithNoArgsNeeded]
 
 
 default_color_start = QColor(232, 255, 244)
@@ -102,6 +103,12 @@ class ListViewCommand:
                 command: CallableWithNoArgsNeeded | None = None):
         self.name = name
         self.command = command or (lambda: None)
+    
+    @staticmethod
+    def from_tuple(data: ListViewCommandDataType):
+        name = data[0]
+        command = data[1]
+        return ListViewCommand(name, command)
 
 
 class ListView(MyWidget):  # pylint: disable=function-redefined
@@ -147,12 +154,9 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self,
         title: str = "列表",
         master: QWidget | None = None,
-        data: Sequence[
-            tuple[str, CallableWithNoArgsNeeded] |
-            tuple[str, CallableWithNoArgsNeeded, AnimationConfigDataType]
-        ] | None = None,
+        data: Sequence[ListViewItemDataType] | None = None,
         args: Any = None,
-        commands: list[tuple[str, CallableWithNoArgsNeeded]] | None = None,
+        commands: Sequence[ListViewCommandDataType] | None = None,
         allow_pre_action: bool = False,
         select_once_then_exit: bool = False,
     ):
@@ -190,16 +194,12 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         self.cmd_list: list[CallableWithNoArgsNeeded] = []
         self.ready = False
         self.setting_command = False
-        self.setCommands(commands, force=True)
+        self.setCommands(list(commands or []), force=True)
         self.select_once_then_exit = select_once_then_exit
         self.widget_items: list[QListWidgetItem] = []
 
 
-    def parse_data(self, data: 
-        Sequence[
-            tuple[str, CallableWithNoArgsNeeded] |
-            tuple[str, CallableWithNoArgsNeeded, AnimationConfigDataType]
-        ] | None = None) -> list[ListViewItem]:
+    def parse_data(self, data: Sequence[ListViewItemDataType] | None = None) -> list[ListViewItem]:
         "解析数据。"
         result: list[ListViewItem] = []
         if data is None:
@@ -245,14 +245,14 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
             self.btn_list.append(btn)
             self.verticalLayout.addWidget(btn)
             self.cmd_list.append(_callable)
-            def _function(*, string: str = string, _callable: CallableWithNoArgsNeeded = _callable):
+            Base.log("D", F"设置命令: {string} ({_callable}) -> {btn}", "ListView.setCommands")
+            def wrapper(*, string: str = string, func: CallableWithNoArgsNeeded = _callable):
                 if self.ready or self.allow_pre_action:
-                    Base.log("I", f"执行命令：{string}，{_callable}", "ListView.setCommands")
-                    _callable()
+                    Base.log("I", f"执行命令：{string}，{func}", "ListView.setCommands")
+                    func()
                 else:
                     Base.log("W", f"正在初始化，忽略操作 ({string})", "ListView.setCommands")
-
-            btn.clicked.connect(lambda: _function())
+            btn.clicked.connect(wrapper)
         self.verticalLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.verticalLayout.update()
         self.setting_command = False
@@ -376,12 +376,10 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         step: int = 45,
         interval: int = 1
     ):
-        for r, g, b in list(
-            zip(
-                steprange(from_color.red(), to_color.red(), step),
-                steprange(from_color.green(), to_color.green(), step),
-                steprange(from_color.blue(), to_color.blue(), step),
-            )
+        for r, g, b in zip(
+            steprange(from_color.red(), to_color.red(), step),
+            steprange(from_color.green(), to_color.green(), step),
+            steprange(from_color.blue(), to_color.blue(), step),
         ):
             try:
 
@@ -393,7 +391,6 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
 
             except Exception as exc:
                 Base.log_exc_short("更新动画背景色时出现错误", exc=exc)
-                pass
 
     def showStartAnimation(self):
         Base.log("D", "开始启动动画（阶段1）", "ListView.showStartAnimation")
@@ -528,17 +525,19 @@ class ListView(MyWidget):  # pylint: disable=function-redefined
         return len(self.data)
 
     @Slot(QModelIndex)
-    def itemClicked(self, qModelIndex: QModelIndex):
+    def itemClicked(self, model_index: QModelIndex):
         # 弹出消息框
         Base.log(
             "I",
-            f"点击了{repr(self.data[qModelIndex.row()].text)}, 调用函数{repr(self.data[qModelIndex.row()].command)}",
+            f"点击了{repr(self.data[model_index.row()].text)}, 调用函数{repr(self.data[model_index.row()].command)}",
             "ListView",
         )
-        self.data[qModelIndex.row()].command()
+        self.data[model_index.row()].command()
         if self.select_once_then_exit:
             self.close()
 
     def closeEvent(self, event: QCloseEvent):
         Base.log("I", "ListView窗口关闭（通过关闭事件）", "ListView")
         super().closeEvent(event)
+
+__all__ = ["ListView"]

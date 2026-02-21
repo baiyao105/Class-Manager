@@ -39,7 +39,7 @@ class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
             input=True,
             frames_per_buffer=CHUNKSIZE,
         )
-    except BaseException as unused:  # pylint: disable=broad-exception-caught
+    except Exception as unused:  # pylint: disable=broad-exception-caught
         p = None
         stream = None
 

@@ -1,11 +1,11 @@
 """
 关于Qt的函数
 """
+
 from __future__ import annotations
 import time
 from typing import Callable, Literal, TYPE_CHECKING
-from ..qtconfig import QPixmap, QImage
-from ..qtconfig import QTimer, QEventLoop
+from ..qtconfig import QPixmap, QImage, QTimer, QEventLoop, QWidget
 
 if TYPE_CHECKING:
     import cv2  # 导入要卡好一会，所以只在类型检查的时候导入
@@ -60,3 +60,8 @@ def wait_until(
     if timeout_handling == "raise" and not result:
         raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} / {timeout} ms)")
     return result
+
+
+def wait_till_close(window: QWidget):
+    """等待窗口关闭"""
+    wait_until(lambda: not window.isVisible())

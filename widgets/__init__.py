@@ -26,7 +26,7 @@ from .custom.StudentSelectorWidget import StudentSelectorWidget
 from .custom.StudentWidget import StudentWidget
 from .custom.WTFWidget import WTFWidget
 from .custom.LoadingScreen import LoadingScreenWidget
-from .custom.ExceptionHandler import ExceptionHandler
+from .custom.ExceptionHandler import ExceptionHandlerWidget
 
 from .basic import *
 
@@ -37,6 +37,6 @@ __all__ = [
     "HomeworkScoreSumUpWidget", "ListView", "NewTemplateWidget",
     "NoiseDetectorWidget", "RandomSelectWidget", "SelectTemplateWidget",
     "SettingWidget", "StudentSelectorWidget", "StudentWidget", "WTFWidget",
-    "LoadingScreenWidget", "ExceptionHandler",
+    "LoadingScreenWidget", "ExceptionHandlerWidget",
     "ObjectButton", "ProgressAnimatedListWidgetItem", "SideNotice"
 ]

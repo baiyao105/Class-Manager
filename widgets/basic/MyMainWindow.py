@@ -3,10 +3,9 @@
 """
 from __future__ import annotations
 from typing import Optional
+from utils.basetypes import Base
 from utils.logger import Logger
-from PySide6.QtWidgets import QMainWindow
-from PySide6.QtGui import Qt, QCloseEvent
-from PySide6.QtCore import QTimer, Slot
+from utils.qtconfig import QMainWindow, Qt, QCloseEvent, QTimer, Slot, QWidget
 from utils.functions.prompts import question_yes_no
 
 __all__ = ["MyMainWindow"]
@@ -17,10 +16,10 @@ class MyMainWindow(QMainWindow):
     main_instance: Optional[MyMainWindow] = None
     "主实例"
 
-
-
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master: QWidget | None = None):
+        Base.log("I", "初始化MyMainWindow", "MyMainWindow.__init__")
+        super().__init__(master)
+        self.master = master
         self.is_running = True
         self.setTopmost(True)
         self.move(200, 110)
@@ -53,7 +52,33 @@ class MyMainWindow(QMainWindow):
             )
         self.show()
 
-    def closeEvent(self, event: QCloseEvent, tip: bool = True) -> bool:
+    def requestExit(self, event: QCloseEvent) -> bool:
+        Logger.log("I", "主窗口尝试退出", "MyMainWindow")
+        self.close_count += 1
+        if self.isEnabled():
+            reply = question_yes_no(
+                self,
+                "提示",
+                "确定退出？" if self.close_count <= 5 else "确认退出程序？",
+            )
+            if reply:
+                Logger.log("I", "确认退出", "MyMainWindow")
+                event.accept()
+                self.is_running = False
+                return True
+
+            else:
+                Logger.log("I", "取消退出", "MyMainWindow")
+                event.ignore()
+                return False
+        else:
+            Logger.log("I", "子窗口未关闭，无法退出", "MyMainWindow")
+            event.ignore()
+            return False
+
+    
+
+    def closeEvent(self, event: QCloseEvent, tip: bool = True):
         "处理窗口关闭事件"
         Logger.log("I", "主窗口尝试退出", "MyMainWindow")
         self.close_count += 1
@@ -64,23 +89,18 @@ class MyMainWindow(QMainWindow):
                     "提示",
                     "确定退出？" if self.close_count <= 5 else "确认退出程序？",
                 )
-                # 判断返回结果处理相应事项
                 if reply:
                     Logger.log("I", "确认退出", "MyMainWindow")
                     event.accept()
                     self.is_running = False
-                    return True
 
                 else:
                     Logger.log("I", "取消退出", "MyMainWindow")
                     event.ignore()
-                    return False
             else:
                 Logger.log("I", "子窗口未关闭，无法退出", "MyMainWindow")
                 event.ignore()
-                return False
         else:
             Logger.log("I", "退出", "MyMainWindow")
             event.accept()
             self.is_running = False
-            return True

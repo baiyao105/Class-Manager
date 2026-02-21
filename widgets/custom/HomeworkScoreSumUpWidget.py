@@ -22,7 +22,6 @@ from widgets.custom.ListView import ListView
 from widgets.basic import MyWidget, ObjectButton
 from widgets.templates import HomeworkScoreSumUp
 
-__all__ = ["HomeworkScoreSumUpWidget"]
 
 class HomeworkScoreSumUpWidget(HomeworkScoreSumUp.Ui_Form, MyWidget):
     """
@@ -347,3 +346,5 @@ class HomeworkScoreSumUpWidget(HomeworkScoreSumUp.Ui_Form, MyWidget):
                     [m for m in self.sent_list[num] if m.executed], "<作业登分>"
                 )
                 self.sent_list[num] = []
+
+__all__ = ["HomeworkScoreSumUpWidget"]

@@ -129,11 +129,11 @@ class LoggerSettings:
         log_file_path: str | None = LOG_FILE_PATH,
         fast_log_file_path: str | None = None,
         console_wrapper: TextIO | None = stdout_orig,
-        log_mode: Literal["write_instantly", "write_buffered"] = "write_buffered",
+        log_mode: Literal["write_instantly", "write_buffered"] = "write_instantly",
         log_level: Literal["T", "I", "W", "E", "F", "D", "C", "OFF"] = "D",
         draw_color: bool = True,
-        use_mutex: bool = False,
-        encoding: str | None = "utf-8",
+        use_mutex: bool = True,
+        encoding: str | None = "utf-8"
     ):
         """
         初始化日志配置
@@ -440,7 +440,7 @@ class Logger:
             Logger.fast_log_file.flush()
 
         if log_settings.log_mode == "write_instantly":
-            Logger.stdout_orig.writelines([cm])
+            Logger.stdout_orig.write(cm + "\n")
             if Logger.log_file:
                 Logger.log_file.write(lfm + "\n")
                 Logger.log_file.flush()

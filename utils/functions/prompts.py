@@ -1,9 +1,12 @@
 """
 关于询问用户的函数
 """
+
 from __future__ import annotations
+
 import random
 from typing import Literal
+
 from ..qtconfig import QWidget, QMessageBox
 from ..qtconfig import QPixmap, QIcon
 

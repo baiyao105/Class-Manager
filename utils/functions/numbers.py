@@ -2,8 +2,9 @@
 关于数字的函数
 """
 
-import random
 import time
+import random
+from typing import Any
 
 
 def utc(prec: int = 3):
@@ -34,7 +35,7 @@ def steprange(start: int | float, stop: int | float, step: int) -> list[float]:
     return [start + i * diff for i in range(step)]
 
 
-def addrof(obj) -> str:
+def addrof(obj: Any) -> str:
     """
     获取对象的内存地址
 

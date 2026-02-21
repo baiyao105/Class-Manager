@@ -9,6 +9,7 @@ from typing import Any
 from utils.basetypes import Base
 from utils.system import system_lined, CommandOutput
 
+
 class CommandModel:
 
     def __init__(self):
@@ -36,5 +37,19 @@ class CommandModel:
     
     def exec_cmdline(self, cmdline: str, encoding: str = "utf-8",
                         show_output: bool = True, cwd: str = os.getcwd()) -> CommandOutput:
+        """
+        执行一行字符串形式的系统命令。
+        
+        :param cmdline: 命令
+        :type cmdline: str
+        :param encoding: 输出的编码
+        :type encoding: str
+        :param show_output: 是否在日志里打出输出 (sys.stdout)
+        :type show_output: bool
+        :param cwd: 工作目录
+        :type cwd: str
+        :return: 命令执行结果
+        :rtype: CommandOutput
+        """
         return system_lined(cmdline, encoding=encoding, show_output=show_output, cwd=cwd)
 

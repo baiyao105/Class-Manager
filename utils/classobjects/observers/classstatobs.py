@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Sequence
 
 from ...algorithm import Stack, Thread
 from ...basetypes import Base
@@ -39,7 +38,7 @@ class ClassStatusObserver:
             "目标班级"
             self.templates = dataset.modify_templates
             "所有的分数修改模板"
-            self.opreation_record: Stack[Iterable[ScoreModification]] = Stack([])
+            self.opreation_record: Stack[Sequence[ScoreModification]] = Stack([])
             "分数修改操作记录"
             self.dataset = dataset
             "绑定的数据组"

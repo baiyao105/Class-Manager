@@ -21,5 +21,6 @@ from .system import *
 from .time_ops import *
 from .update_check import *
 from .classobjects import *
+from .typecheck import *
 
 

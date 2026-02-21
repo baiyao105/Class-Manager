@@ -612,7 +612,7 @@ class Chunk:
     )
     return history
 
-  def del_history(self, history_uuid: str) -> bool:
+  def del_history(self, history_uuid: ClassDataTypeUUID[History]) -> bool:
     """
     删除历史记录
     """

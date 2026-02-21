@@ -2,7 +2,7 @@
 点评模板选择窗口
 """
 
-from __future__ import __annotations__
+from __future__ import annotations
 
 from typing import TypeAlias
 

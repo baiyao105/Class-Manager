@@ -371,7 +371,8 @@ class UpdateInfo(enum.IntEnum):
     ERROR = 3
 
 
-def update_check(current_core_version: int, current_gui_version: int) -> tuple[int, str | BaseException]:
+def update_check(current_core_version: int, current_gui_version: int) \
+        -> tuple[int, str | BaseException | dict[str, Any]]:
     """获取更新信息。
 
     Args:

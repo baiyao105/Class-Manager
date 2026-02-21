@@ -14,10 +14,12 @@ from widgets.basic import MyWidget
 from widgets.templates import MultiSelectWindow
 
 class StudentSelectorWidget(MultiSelectWindow.Ui_Form, MyWidget):
-    """多选学生窗口"""
+    """
+    多选学生窗口.
+    """
 
     return_result = Signal(list)
-    "返回结果信号"
+    "返回结果信号，返回的是list[Student]"
 
     def __init__(
         self,

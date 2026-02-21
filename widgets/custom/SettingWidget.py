@@ -12,10 +12,9 @@ from widgets.basic import MyWidget
 from widgets.templates import SettingWindow
 
 if TYPE_CHECKING:
-    from control.classwindow.setting_model import SettingModel
+    from control.classwindow.logic_model.setting_model import SettingModel
 
 
-__all__ = ["SettingWidget"]
 
 class SettingWidget(SettingWindow.Ui_Form, MyWidget):
     """
@@ -289,3 +288,6 @@ class SettingWidget(SettingWindow.Ui_Form, MyWidget):
     def cancel_save(self):
         Base.log("I", "取消保存", "SettingWidget.cancel_save")
         self.closeEvent(QCloseEvent(), tip=False)
+
+
+__all__ = ["SettingWidget"]

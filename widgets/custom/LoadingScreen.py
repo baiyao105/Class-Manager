@@ -7,7 +7,6 @@ from widgets.basic import MyWidget
 from widgets.templates import LoadingScreen
 from utils.qtconfig import QTimer, QWidget
 
-__all__ = ["LoadingScreenWidget"]
 
 
 class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
@@ -141,3 +140,5 @@ class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]):
         self.close()
         return False
+
+__all__ = ["LoadingScreenWidget"]

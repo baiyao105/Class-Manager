@@ -10,12 +10,12 @@
 """
 from __future__ import annotations
 import inspect
-from typing import List, Callable
+from typing import Any, List, Callable
 
 
 # 还是type: ignore 大神（
 
-def get_function_namespace(func) -> str:
+def get_function_namespace(func: Callable[..., Any]) -> str:
     """
     获取函数的命名空间
 
@@ -25,25 +25,21 @@ def get_function_namespace(func) -> str:
     module = inspect.getmodule(func)
     if not hasattr(func, "__module__"):
         try:
-            return func.__qualname__    # type: ignore
-        except BaseException as unused:  # pylint: disable=broad-exception-caught
+            return func.__qualname__
+        except AttributeError:
             try:
-                return func.__name__ # type: ignore
-            except (
-                BaseException
-            ) as unused:  # pylint: disable=broad-exception-caught
+                return func.__name__
+            except AttributeError:
                 if isinstance(func, property):
                     return str(func.fget.__qualname__)
                 elif isinstance(func, classmethod):
                     return str(func.__func__.__qualname__) # type: ignore
                 try:
                     return func.__class__.__qualname__ # type: ignore
-                except (
-                    BaseException
-                ) as unused_2:  # pylint: disable=broad-exception-caught
+                except AttributeError:  # pylint: disable=broad-exception-caught
                     return func.__class__.__name__ # type: ignore
     if module is None:
-        module_name = ( # type: ignore
+        module_name = (
             func.__self__.__module__ if hasattr(func, "__self__") else func.__module__ # type: ignore
         ) 
     else:
@@ -87,7 +83,7 @@ def format_exc_like_java(exc: BaseException) -> List[str]:
     return result
 
 
-def get_function_module(func: object | Callable) -> str:
+def get_function_module(func: object | Callable[..., Any]) -> str:
     "获取函数的模块"
     module = inspect.getmodule(func)
     if module is None:

@@ -3,8 +3,10 @@
 """
 
 from __future__ import annotations
+
 from typing import Optional
 from utils import login
+
 
 class LoginError(RuntimeError):
     "登录出错。"

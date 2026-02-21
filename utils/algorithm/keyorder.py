@@ -18,56 +18,56 @@ class SupportsKeyOrdering(ABC):
     """
     支持key排序的抽象类。
 
-        意思就是说这个类有一个``key``属性，这个属性是``str``类型
+    意思就是说这个类有一个``key``属性，这个属性是``str``类型
 
-        这个``SupportsKeyOrdering``是为了方便使用而设计的，因为很多类都需要一个``key``属性
+    这个`SupportsKeyOrdering`是为了方便使用而设计的，因为很多类都需要一个`key`属性
 
-        （比如``ScoreModifactionTemplate``的``key``就表示模板本身的标识符）
+        （比如`ScoreModifactionTemplate`的`key`就表示模板本身的标识符）
 
-        只要这个类实现了``key``属性，那么就可以使用``OrderedKeyList``（后面有讲）来存储这个类
+    只要这个类实现了``key``属性，那么就可以使用``OrderedKeyList``（后面有讲）来存储这个类
 
         （比如``OrderedKeyList[ScoreModificationTemplate]``）
 
-        还有，只要继承这个类，然后自己写一下key的实现，就可以直接使用``OrderedKeyList``来存储这个类了
+    还有，只要继承这个类，然后自己写一下key的实现，就可以直接使用``OrderedKeyList``来存储这个类了
 
-        就像这样：
-        >>> class SomeClassThatSupportsKeyOrdering(SupportsKeyOrdering):
-        ...     def __init__(self, key: str):
-        ...         self.key = key      # 在一个OrderedKeyList里面每一个元素都有自己的key
-        ...                             # 至于这个key表示的是什么就由你来决定了
-        >>>                             # 但是但是，这个key只能是str，因为int拿来做索引值了，float和tuple(元组)之类的懒得写
+    就像这样：
+    >>> class SomeClassThatSupportsKeyOrdering(SupportsKeyOrdering):
+    ...     def __init__(self, key: str):
+    ...         self.key = key      # 在一个OrderedKeyList里面每一个元素都有自己的key
+    ...                             # 至于这个key表示的是什么就由你来决定了
+    >>>                             # 但是但是，这个key只能是str，因为int拿来做索引值了，float和tuple(元组)之类的懒得写
 
 
-        以前以来我们都用``collections.OrderedDict``来寻找模板，比如这样
+    以前以来我们都用``collections.OrderedDict``来寻找模板，比如这样
 
-        >>> DEFAULT_SCORE_TEMPLATES: OrderedDict[str, ScoreModificationTemplate] = OrderedDict([
-        ...   "go_to_school_early": ScoreModificationTemplate(
-        ...         "go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃"),
-        ...   "go_to_school_late": ScoreModificationTemplate(
-        ...         "go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
-        ... ])
-        >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
-        ScoreModificationTemplate("go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃")
+    >>> DEFAULT_SCORE_TEMPLATES: OrderedDict[str, ScoreModificationTemplate] = OrderedDict([
+    ...   "go_to_school_early": ScoreModificationTemplate(
+    ...         "go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃"),
+    ...   "go_to_school_late": ScoreModificationTemplate(
+    ...         "go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
+    ... ])
+    >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
+    ScoreModificationTemplate("go_to_school_early", 1.0,  "7:20前到校", "早起的鸟儿有虫吃")
 
-        这样做的好处是我们可以直接通过key来获取模板，也可以通过模板反向找到它的key值
+    这样做的好处是我们可以直接通过key来获取模板，也可以通过模板反向找到它的key值
 
-        但是缺点是如果``OrderedDict``中的key和``ScoreModification``中的key不一致就会出错
+    但是缺点是如果``OrderedDict``中的key和``ScoreModification``中的key不一致就会出错
 
-        现在我们可以用``OrderedKeyList``来存储模板这类"SupportsKeyOrdering"的对象，就不用写dict的key
+    现在我们可以用``OrderedKeyList``来存储模板这类"SupportsKeyOrdering"的对象，就不用写dict的key
 
-        这样就不用担心dict中的key和模板中的不一样了
+    这样就不用担心dict中的key和模板中的不一样了
 
-        >>> DEFAULT_SCORE_TEMPLATES = OrderedKeyList([
-        ...   ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃"),
-        ...   ScoreModificationTemplate("go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
-        ... ])   # 这就不需要写Key了，而且这个东西支持所有list的方法和部分dict的方法
-        >>>      #（比如append，keys和items之类）
-        >>> DEFAULT_SCORE_TEMPLATES[0]
-        ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
-        >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
-        ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
+    >>> DEFAULT_SCORE_TEMPLATES = OrderedKeyList([
+    ...   ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃"),
+    ...   ScoreModificationTemplate("go_to_school_late", -1.0, "7:25后到校", "早起的虫儿被鸟吃"),
+    ... ])   # 这就不需要写Key了，而且这个东西支持所有list的方法和部分dict的方法
+    >>>      #（比如append，keys和items之类）
+    >>> DEFAULT_SCORE_TEMPLATES[0]
+    ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
+    >>> DEFAULT_SCORE_TEMPLATES["go_to_school_early"]
+    ScoreModificationTemplate("go_to_school_early", 1.0, "7:20前到校", "早起的鸟儿有虫吃")
 
-        你学废了吗？
+    你学废了吗？
     """
 
 

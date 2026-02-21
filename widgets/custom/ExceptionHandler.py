@@ -21,7 +21,7 @@ class ExceptionInfo:
         self.expire_time = expire_time
 
 
-class ExceptionHandler(ExceptionHandlerTemplate.Ui_Form, MyWidget):
+class ExceptionHandlerWidget(ExceptionHandlerTemplate.Ui_Form, MyWidget):
     "错误窗口"
 
     handled_exception: dict[str, ExceptionInfo] = {}
@@ -104,4 +104,4 @@ class ExceptionHandler(ExceptionHandlerTemplate.Ui_Form, MyWidget):
         self.set_text()
         self.update_timer.start(1000)
 
-__all__ = ["ExceptionHandler"]
+__all__ = ["ExceptionHandlerWidget"]

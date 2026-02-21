@@ -220,7 +220,7 @@ class-manager.old
 RinUI
 temp
 .vscode
-data
+/data
 
 # User data
 backup/

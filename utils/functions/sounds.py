@@ -52,7 +52,7 @@ def _play_sound(filename: str, volume: float = 1, loop: int = 0, fade_ms: int = 
         sound = pygame.mixer.Sound(filename)
         sound.set_volume(volume)
         sound.play(loops=loop, fade_ms=fade_ms)
-    except (OSError, pygame.error) as unused:  # pylint: disable=unused-variable
+    except (OSError, pygame.error):
         Logger.log_exc("播放声音失败")
 
 
@@ -70,7 +70,7 @@ def play_music(filename: str, volume: float = 0.5, loop: int = 0, fade_ms: int =
         pygame.mixer.music.load(filename)
         pygame.mixer.music.set_volume(volume)
         pygame.mixer.music.play(loops=loop, fade_ms=fade_ms)
-    except (OSError, pygame.error) as unused:  # pylint: disable=unused-variable
+    except (OSError, pygame.error):
         Logger.log_exc("播放音乐失败")
 
 

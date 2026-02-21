@@ -11,7 +11,6 @@ import traceback
 from typing import TYPE_CHECKING
 
 from utils import (
-    ClassDataSet,
     format_exc_like_java, 
     Thread,
     output_list,
@@ -23,16 +22,12 @@ from utils import (
 from widgets.basic import MyWidget, UIError
 from widgets.templates import DebugWindow
 if TYPE_CHECKING:
-    from control.classwindow.ui_model.side_notice_model import SideNoticeModel
-    from control.classwindow.setting_model import SettingModel
-    from control.classwindow.logic_model.cmd_model import CommandModel
+    from control.classwindow.ui_model.class_ui_model import ClassUIModel
 
 class ObserverNotSet(UIError):
     "没有设置侦测器"
 
-if TYPE_CHECKING:
-    class NotifiedDataSet(ClassDataSet, SideNoticeModel, SettingModel, CommandModel):
-        "继承了ClassDataSet，SettingsModel，CommandModel和SideNoticeModel的类。"
+
 
 class DebugWidget(DebugWindow.Ui_Form, MyWidget):
     """调试窗口"""
@@ -42,7 +37,7 @@ class DebugWidget(DebugWindow.Ui_Form, MyWidget):
     command_history: list[str] = []
 
     def __init__(
-        self, dataset: NotifiedDataSet, master: QWidget | None = None
+        self, dataset: ClassUIModel, master: QWidget | None = None
     ):
         super().__init__(master)
         self.setupUi(self) # pyright: ignore[reportUnknownMemberType]
