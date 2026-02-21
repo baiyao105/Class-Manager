@@ -96,7 +96,7 @@ class ObjectInfoModel(MixinSuperType):
         )
         self.group_info_window.show(readonly)
 
-    def show_attendance(self, master: QWidget | None = None) -> None:
+    def show_attendance(self, *, master: QWidget | None = None) -> None:
         """
         显示考勤。
         """

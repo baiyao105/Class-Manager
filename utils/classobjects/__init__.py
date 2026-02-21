@@ -13,7 +13,7 @@ from .objects import *
 try:
     from .default import *
     from .login import *
-except:
+except ImportError:
     from .bak.default import *
     from .bak.login import *
 

@@ -16,10 +16,10 @@ from .view_model import ViewModel
 
 class BasicUIModel( # pyright: ignore[reportIncompatibleMethodOverride]
     MyMainWindow,
+    ViewModel,
     ExceptionHandlerModel,
     SideNoticeModel, 
     MessageBoxModel, 
-    ViewModel,
     metaclass=AutoSlotMeta
 ):
     """

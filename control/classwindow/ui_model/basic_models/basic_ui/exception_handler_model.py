@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Type, TypeAlia
 from utils.consts import log_style
 from utils.logger import logger
 from utils.basetypes import Base
-from utils.qtconfig import Signal, QWidget
+from utils.qtconfig import Signal, QWidget, Slot
 
 from widgets.custom.ExceptionHandler import ExceptionHandlerWidget
 
@@ -70,6 +70,7 @@ class ExceptionHandlerModel(_BaseClass):
         self.show_exc_window_callback = self.show_exc_window
         self.exception_window: ExceptionHandlerWidget | None = None
         "异常信息窗口"
+        self.signal_show_exc_window.connect(self.slot_show_exc_window)
 
     def show_exc_window(self, excinfo: OptExcInfo) -> None:
         """
@@ -79,7 +80,8 @@ class ExceptionHandlerModel(_BaseClass):
         """
         self.signal_show_exc_window.emit(excinfo)
 
-    def _show_exception(self, e: OptExcInfo):
+    @Slot(tuple)
+    def slot_show_exc_window(self, e: OptExcInfo):
         "展示异常信息的接口"
         Base.log("I", f"展示异常信息窗口：{e!r}", "MainWindow._show_exception")
         self.exception_window = ExceptionHandlerWidget(e[1], self)

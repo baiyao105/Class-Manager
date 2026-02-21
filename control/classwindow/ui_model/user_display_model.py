@@ -32,7 +32,7 @@ class UserDisplayModel(MixinSuperType):
     signal_refresh_hint_widget = Signal(int)
     "刷新提示(屏幕右上角的)文本信号"
 
-    signal_dont_click_btn_clicked = Signal(int)
+    signal_dont_click = Signal(int)
     "千万别点被点击了"
 
     def __init__(
@@ -51,8 +51,8 @@ class UserDisplayModel(MixinSuperType):
         self.CardWidget_2.clicked.connect(
             lambda: Thread(target=self.refresh_hint_widget).start()
         )
-        self.signal_dont_click_btn_clicked.connect(self._dont_click)
-        self.signal_refresh_hint_widget.connect(self._refresh_hint_widget)
+        self.signal_dont_click.connect(self.slot_dont_click)
+        self.signal_refresh_hint_widget.connect(self.slot_refresh_hint_widget)
         self.pushButton.clicked.connect(self.dont_click)
         self.pushButton_3.clicked.connect(self.about_this)
         self.pushButton_4.clicked.connect(self.open_setting_window)
@@ -68,7 +68,7 @@ class UserDisplayModel(MixinSuperType):
         self.signal_refresh_hint_widget.emit(mode)
 
     @Slot(int)
-    def _refresh_hint_widget(self, mode: int = 0):
+    def slot_refresh_hint_widget(self, mode: int = 0):
         "刷新提示的接口"
         Base.log("I", f"刷新提示，当前模式：{mode}", "MainWindow.refresh_hints")
         mode = mode or random.randint(0, 100)
@@ -126,10 +126,10 @@ class UserDisplayModel(MixinSuperType):
                 msg_type="warning",
             )
             runtime_flags["tip_dont_click"] = True
-        self.signal_dont_click_btn_clicked.emit(style)
+        self.signal_dont_click.emit(style)
 
     @Slot(int)
-    def _dont_click(self, style: int):
+    def slot_dont_click(self, style: int):
         "千万别点被点击时的接口"
         style = random.randint(1, 7) if style == 0 else style
         self.log("I", f"按钮被点击，本次执行类型：{style}", "MainWindow.dont_click")

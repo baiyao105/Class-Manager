@@ -40,12 +40,12 @@ class UpdateWidgetModel(ObjectInfoModel):
     更新控件有关的模型。
     """
 
-    signal_button_update = Signal(ObjectButton, tuple)
+    signal_button_anim = Signal(ObjectButton, tuple)
     """
     按钮状态更新信号，用于控制按钮闪烁效果（这个应该是吃性能最多的信号了）
     """
 
-    signal_stu_list_update = Signal()
+    signal_grid_buttons = Signal()
     """
     学生列表按钮更新信号
     """
@@ -76,9 +76,9 @@ class UpdateWidgetModel(ObjectInfoModel):
         self.update_label_timer = QTimer(self)
         self.update_label_timer.timeout.connect(self.update_labels)
         self.update_label_timer.start(50)
-        self.signal_button_update.connect(self.btn_anim)
-        self.signal_stu_list_update.connect(self._grid_buttons)
-        self.signal_anim_group_state_changed.connect(self._anim_group_state_changed)
+        self.signal_button_anim.connect(self.slot_button_anim)
+        self.signal_grid_buttons.connect(self.slot_grid_buttons)
+        self.signal_anim_group_state_changed.connect(self.slot_anim_group_state_changed)
         self.grid_buttons()
         self.updator_thread.start()
 
@@ -86,9 +86,10 @@ class UpdateWidgetModel(ObjectInfoModel):
         """
         显示所有学生按钮（虽然不算真正意义上的grid）
         """
-        self.signal_stu_list_update.emit()
+        self.signal_grid_buttons.emit()
 
-    def _grid_buttons(self):
+    Slot()
+    def slot_grid_buttons(self):
         """
         grid_buttons的接口，不要用Thread调用，不然会炸
         """
@@ -164,7 +165,8 @@ class UpdateWidgetModel(ObjectInfoModel):
         DELETE = 3
         "删除动画组"
         
-    def _anim_group_state_changed(self, state: int):
+    Slot()
+    def slot_anim_group_state_changed(self, state: int):
         """处理动画组状态变化"""
         if self.btns_anim_group is None:
             return
@@ -179,7 +181,7 @@ class UpdateWidgetModel(ObjectInfoModel):
             self.running_btns_anim_group.deleteLater()
             self.btns_anim_group = None
         
-
+    Slot()
     def update_labels(self):
         "更新界面"
         t = time.time()
@@ -209,22 +211,8 @@ class UpdateWidgetModel(ObjectInfoModel):
             else "没有加载侦测器"
         )
         self.BodyLabel_2.setText(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        self.BodyLabel.setText(
-            "%s好，欢迎回来"
-            % (
-                "早上"
-                if 5 <= time.localtime().tm_hour < 10
-                else (
-                    "上午"
-                    if 10 <= time.localtime().tm_hour < 12
-                    else (
-                        "中午"
-                        if 12 <= time.localtime().tm_hour < 14
-                        else "下午" if 14 <= time.localtime().tm_hour < 18 else "晚上"
-                    )
-                )
-            )
-        )
+        self.BodyLabel.setText("{}好，欢迎回来".format(self.get_day_period_name(time.time())))
+            
         t2 = time.time()
         super().update()
         t3 = time.time()
@@ -233,9 +221,22 @@ class UpdateWidgetModel(ObjectInfoModel):
         v.super = t3 - t2
         v.total_time = t3 - t
 
+    def get_day_period_name(self, timestamp: float):
+        lt = time.localtime(timestamp)
+        hour = lt.tm_hour
+        if hour in range(5, 9+1):
+            return "早上"
+        elif hour in range(9, 12+1):
+            return "上午"
+        elif hour in range(12, 14+1):
+            return "中午"
+        elif hour in range(14, 18+1):
+            return "下午"
+        else:
+            return "晚上"
 
     @Slot(QPushButton, tuple)
-    def btn_anim(self, obj: ObjectButton, args: FlashArgType):
+    def slot_button_anim(self, obj: ObjectButton, args: FlashArgType):
         """
         使按钮进行一次闪烁动画。
         """
@@ -312,8 +313,8 @@ class UpdateThread(QThread):
         assert self.model.target_class is not None, "更新线程在还没有设置目标班级的时候被初始化了"
         self.target_class = self.model.target_class
         self.button_state_last_change = time.time()
-        self.last_student_list = [s for s in self.model.target_class.students]
-        self.last_group_list = [g for g in self.model.target_class.groups]
+        self.last_student_list = list(self.model.target_class.students)
+        self.last_group_list = list(self.model.target_class.groups)
         self.lastest_score: dict[int, float] = {}
         self.lastest_grp_score: dict[str, float] = {}
 
@@ -357,6 +358,7 @@ class UpdateThread(QThread):
         return (r, g, b)
 
     def calc_duration(self, delta: float):
+        delta = abs(delta)
         return min(
             self.model.score_up_flash_framelength_max,
             int(
@@ -367,12 +369,10 @@ class UpdateThread(QThread):
     
     def update_stu_btns(self):
         "更新主窗口的学生按钮"
-        if self.last_student_list != [s for s in self.target_class.students]:
+        if self.last_student_list != list(self.target_class.students):
             Base.log("I", "学生列表变动, 准备更新", "UpdateThread.run")
-            self.last_student_list = [s for s in self.target_class.students]
-            self.lastest_score = {
-                s: 0 for s in self.target_class.students.keys()
-            }
+            self.last_student_list = list(self.target_class.students)
+            self.lastest_score = dict.fromkeys(self.target_class.students.keys(), 0)
             self.model.grid_buttons()
             Base.log("I", "学生列表更新完成", "UpdateThread.run")
 
@@ -380,45 +380,34 @@ class UpdateThread(QThread):
             self.model.stu_buttons[num].setText(
                 f"{stu.num}号 {stu.name}\n{stu.score}分"
             )
-            if stu.score > self.lastest_score[stu.num]:
-                value = float(stu.score - self.lastest_score[stu.num])
-                self.model.signal_button_update.emit(
+            diff = float(stu.score - self.lastest_score[stu.num])
+            if diff != 0:
+                self.model.signal_button_anim.emit(
                     self.model.stu_buttons[num],
-                    (self.calc_start_color(value),
+                    (self.calc_start_color(diff),
                     (255, 255, 255),
-                    self.calc_duration(value))
+                    self.calc_duration(diff))
                 )
-                self.lastest_score[stu.num] = stu.score
-            elif stu.score < self.lastest_score[stu.num]:
-                value = float(stu.score - self.lastest_score[stu.num])
-                self.model.signal_button_update.emit(
-                    self.model.stu_buttons[num],
-                    (self.calc_start_color(value),
-                    (255, 255, 255),
-                    self.calc_duration(value))
+            self.lastest_score[stu.num] = stu.score
+            if (
+                self.lastest_score[stu.num] - stu.score >= 1145
+                and not self.first_loop
+            ):
+                play_sound("audio/sounds/boom.mp3", volume=0.2)
+                Base.log(
+                    "I",
+                    f"不是哥们，真有人能扣"
+                    f"{self.lastest_score[stu.num] - stu.score:.1f}分？犯天条了？",
+                    "UpdateThread.run",
                 )
-                if (
-                    self.lastest_score[stu.num] - stu.score >= 1145
-                    and not self.first_loop
-                ):
-                    play_sound("audio/sounds/boom.mp3", volume=0.2)
-                    Base.log(
-                        "I",
-                        f"不是哥们，真有人能扣"
-                        f"{self.lastest_score[stu.num] - stu.score:.1f}分？犯天条了？",
-                        "UpdateThread.run",
-                    )
-                self.lastest_score[stu.num] = stu.score
             time.sleep(0.002)
 
     def update_grp_btns(self):
         "更新主界面的小组按钮"
-        if self.last_group_list != [g for g in self.target_class.groups]:
+        if self.last_group_list != list(self.target_class.groups):
             Base.log("I", "小组列表变动, 准备更新", "UpdateThread.run")
-            self.last_group_list = [g for g in self.target_class.groups]
-            self.lastest_grp_score = {
-                g: 0 for g in self.target_class.groups.keys()
-            }
+            self.last_group_list = list(self.target_class.groups)
+            self.lastest_grp_score = dict.fromkeys(self.target_class.groups.keys(), 0)
             self.model.grid_buttons()
             Base.log("I", "小组列表更新完成", "UpdateThread.run")
 
@@ -428,23 +417,15 @@ class UpdateThread(QThread):
                 f"平均 {grp.average_score:.2f}分\n"
                 f"去最低平均 {grp.average_score_without_lowest:.2f}分"
             )
-            if grp.total_score > self.lastest_grp_score[key]:
-                value = float(grp.total_score - self.lastest_grp_score[key])
-                self.model.signal_button_update.emit(
+            diff = float(grp.total_score - self.lastest_grp_score[key])
+            if diff != 0:
+                self.model.signal_button_anim.emit(
                     self.model.grp_buttons[key],
-                    (self.calc_start_color(value),
+                    (self.calc_start_color(diff),
                     (255, 255, 255),
-                    self.calc_duration(value))
+                    self.calc_duration(diff))
                 )
-                self.lastest_grp_score[key] = grp.total_score
-            elif grp.total_score < self.lastest_grp_score[key]:
-                value = float(grp.total_score - self.lastest_grp_score[key])
-                self.model.signal_button_update.emit(
-                    self.model.grp_buttons[key],
-                    (self.calc_start_color(value),
-                    (255, 255, 255),
-                    self.calc_duration(value)))
-                self.lastest_grp_score[key] = grp.total_score
+            self.lastest_grp_score[key] = grp.total_score
 
     def detect_update(self):
         "检测是否有更新过"
@@ -455,7 +436,7 @@ class UpdateThread(QThread):
             self.model.client_version = CLIENT_VERSION
             self.model.save_current_settings()
 
-    def detect_new_version(self, from_system: bool = True):
+    def detect_new_version(self):
         "检测是否有新版本"
         from utils.update_check import (
             update_check,
@@ -605,13 +586,8 @@ class UpdateThread(QThread):
     def run(self):
         "线程运行"
         Base.log("I", "更新线程开始运行", "UpdateThread.run")
-        self.lastest_score = dict(
-            [(stu.num, 0.0) for stu in self.target_class.students.values()]
-        )
-
-        self.lastest_grp_score = dict(
-            [(grp.key, 0.0) for grp in self.target_class.groups.values()]
-        )
+        self.lastest_score = {stu.num: 0.0 for stu in self.target_class.students.values()}
+        self.lastest_grp_score = {grp.key: 0.0 for grp in self.target_class.groups.values()}
 
         while not self.isInterruptionRequested():
             try:
@@ -631,5 +607,5 @@ class UpdateThread(QThread):
                 self.model.signal_anim_group_state_changed.emit(self.model.AnimationGroupStatement.CREATE_NEW)
 
 
-            except BaseException as exc:  # pylint: disable=broad-exception-caught
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 self.model.handle_exception((exc.__class__, exc, exc.__traceback__))

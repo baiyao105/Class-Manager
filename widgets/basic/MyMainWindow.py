@@ -18,7 +18,7 @@ class MyMainWindow(QMainWindow):
 
     def __init__(self, master: QWidget | None = None):
         Base.log("I", "初始化MyMainWindow", "MyMainWindow.__init__")
-        super().__init__(master)
+        QMainWindow.__init__(self, master)
         self.master = master
         self.is_running = True
         self.setTopmost(True)
@@ -50,7 +50,6 @@ class MyMainWindow(QMainWindow):
             self.setWindowFlags(
                 self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint
             )
-        self.show()
 
     def requestExit(self, event: QCloseEvent) -> bool:
         Logger.log("I", "主窗口尝试退出", "MyMainWindow")

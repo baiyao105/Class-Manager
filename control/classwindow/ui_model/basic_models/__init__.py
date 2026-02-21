@@ -26,8 +26,6 @@ class DataUIModel(RecoverModel):
         op.setOpacity(opacity)
         self.setGraphicsEffect(op)
 
-    
-        
 
     def stop(self):
         "停止运行并保存数据"

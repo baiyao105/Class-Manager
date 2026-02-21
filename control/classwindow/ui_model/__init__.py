@@ -21,7 +21,7 @@ from utils.consts import (
 from utils.functions.qtutils import wait_until
 from utils.qtconfig import (
     QApplication, QStyleFactory, QWidget, Signal, QMessageBox, QIcon, QPixmap,
-    QLabel, QCloseEvent, Qt
+    QLabel, QCloseEvent, Qt, Slot
 )
 
 from .template_manage_model import TemplateManageModel
@@ -84,14 +84,15 @@ class ClassWindowModel(
                 self.app.setStyle(style)
             self.app.setStyleSheet(app_stylesheet)
 
-        kwargs: dict[str, Any] = dict(
-            self=self, 
-            current_user=current_user, 
-            class_name=class_name, 
-            class_key=class_key, 
-            save_path=save_path
-        )
-        for cls in [
+        kwargs: dict[str, Any] = {
+            "self": self, 
+            "current_user": current_user, 
+            "class_name": class_name, 
+            "class_key": class_key, 
+            "save_path": save_path
+        }
+        
+        super_classes: list[type] = [
             ClassUIModel,
             UpdateWidgetModel,
             OperationModel,
@@ -103,8 +104,9 @@ class ClassWindowModel(
             FastCommandModel,
             LogDisplayModel,
             UserDisplayModel,
-        ]:
-            cls.__init__(**kwargs)
+        ]
+        for cls in super_classes:
+            cls.__init__(**kwargs) # type: ignore
       
         self.exit_action_finished: bool = False
         "退出动作是否完成"
@@ -140,7 +142,7 @@ class ClassWindowModel(
         self.action_24.triggered.connect(self.show_update_log)
         self.action_25.triggered.connect(
             lambda: Thread(
-                target=lambda: self.updator_thread.detect_new_version(False)
+                target=lambda: self.updator_thread.detect_new_version()
             ).start()
         )
         self.action_26.triggered.connect(self.refresh_window)
@@ -148,7 +150,7 @@ class ClassWindowModel(
         self.actionNew_Template.triggered.connect(self.new_template)  # 笑死唯一一个不是默认名字的action控件
         
         self.setFixedSize(self.width(), self.height())
-        self.signal_exiting.connect(self._on_exit)
+        self.signal_exiting.connect(self.slot_exiting)
         self.setWindowTitle(f"班寄管理 - {self.target_class.name}")
 
     def on_start_up_finished(self):
@@ -162,7 +164,8 @@ class ClassWindowModel(
         """
         self.signal_exiting.emit()
 
-    def _on_exit(self):
+    @Slot()
+    def slot_exiting(self):
         Base.log("I", "开始执行退出操作", "ClassWindowModel._on_exit")
         self.stop()
         self.exit_action_finished = True
@@ -235,95 +238,128 @@ class ClassWindowModel(
         Base.log("I", "线程已终止，退出mainloop", "ClassWindowModel")
         return status
     
-    @FastCommandModel.as_method_command("show_noise_detector", "噪声检测器")
-    def show_noise_detector(self):
-        return super().show_noise_detector()
+    @Slot()
+    def edit_fast_command_btns(self):
+        return super().edit_fast_command_btns()
     
-    @FastCommandModel.as_method_command("music_selector", "播放音乐")
-    def music_selector(self):
-        return super().music_selector()
+    @Slot()
+    def update_recent_command_btns(self):
+        return super().update_recent_command_btns()
     
-    @FastCommandModel.as_method_command("save_data_as", "另存为")
-    def save_data_as(self):
-        return super().save_data_as()
+    @Slot(int)
+    def dont_click(self, style: int | None = 0):
+        return super().dont_click(style)
 
-    @FastCommandModel.as_method_command("show_debug_window", "调试窗口")
-    def show_debug_window(self):
-        return super().show_debug_window()
-
+    @Slot()
     @FastCommandModel.as_method_command("about_this", "关于工具")
     def about_this(self):
         return super().about_this()
     
-    @FastCommandModel.as_method_command("refresh_window", "刷新窗口")
-    def refresh_window(self):
-        return super().refresh_window()
-    
-    @FastCommandModel.as_method_command("detect_new_version", "检测新版本")
-    def detect_new_version(self):
-        return super().detect_new_version()
-    
-    @FastCommandModel.as_method_command("show_update_log", "更新日志")
-    def show_update_log(self):
-        return super().show_update_log()
-    
-    @FastCommandModel.as_method_command("create_recover_point", "创建还原点")
-    def create_recover_point(self):
-        return super().create_recover_point()
+    @Slot()
+    @FastCommandModel.as_method_command("open_setting_window", "设置窗口")
+    def open_setting_window(self):
+        return super().open_setting_window()
 
-    @FastCommandModel.as_method_command("show_recover_points", "显示还原点")
-    def show_recover_points(self):
-        return super().show_recover_points()
-    
+    @Slot()
     @FastCommandModel.as_method_command("student_rank", "学生排名")
     def student_rank(self):
         return super().student_rank()
     
+    @Slot()
+    @FastCommandModel.as_method_command("manage_templates", "管理模板")
+    def manage_templates(self):
+        return super().manage_templates()
+    
+    @Slot() # 也算是 Slot() 吧。。。
+    @FastCommandModel.as_method_command("scoring_select", "多选学生")
+    def scoring_select(self, *, students: list[Student] | None = None):
+        return super().scoring_select(students=students)
+
+    @Slot()
+    @FastCommandModel.as_method_command("retract_lastest", "撤回上步")
+    def retract_lastest(self):
+        return super().retract_lastest()
+    
+    @Slot()
+    @FastCommandModel.as_method_command("save", "保存数据")
+    def save(self):
+        return super().save()
+        
+    @Slot()
+    @FastCommandModel.as_method_command("reset_scores", "重置分数")
+    def reset_scores(self):
+        return super().reset_scores()
+    
+    @Slot()
     @FastCommandModel.as_method_command("show_all_history", "历史记录")
     def show_all_history(self) -> None:
         return super().show_all_history()
+
+    @Slot()
+    @FastCommandModel.as_method_command("show_recover_points", "显示还原点")
+    def show_recover_points(self):
+        return super().show_recover_points()
     
-    @FastCommandModel.as_method_command("show_attendance", "考勤记录")
-    def show_attendance(self, master: QWidget | None = None) -> None:
-        return super().show_attendance(master)
-    
-    @FastCommandModel.as_method_command("homework_score_sum_up", "作业分结算")
-    def homework_score_sum_up(self):
-        return super().homework_score_sum_up()
-    
-    @FastCommandModel.as_method_command("random_select", "随机选取")
-    def random_select(self):
-        return super().random_select()
+    @FastCommandModel.as_method_command("create_recover_point", "创建还原点")
+    def create_recover_point(self):
+        return super().create_recover_point()
     
     @FastCommandModel.as_method_command("cleaning_score_sum_up", "卫生分结算")
     def cleaning_score_sum_up(self):
         return super().cleaning_score_sum_up()
     
-    @FastCommandModel.as_method_command("open_setting_window", "设置窗口")
-    def open_setting_window(self):
-        return super().open_setting_window()
+    @Slot()
+    @FastCommandModel.as_method_command("music_selector", "播放音乐")
+    def music_selector(self):
+        return super().music_selector()
     
-    @FastCommandModel.as_method_command("save", "保存数据")
-    def save(self):
-        return super().save()
+    @Slot()
+    @FastCommandModel.as_method_command("show_noise_detector", "噪声检测器")    
+    def show_noise_detector(self):
+        return super().show_noise_detector()
     
-    @FastCommandModel.as_method_command("scoring_select", "多选学生")
-    def scoring_select(self, *, students: list[Student] | None = None):
-        return super().scoring_select(students=students)
+    @Slot()
+    @FastCommandModel.as_method_command("random_select", "随机选取")
+    def random_select(self):
+        return super().random_select()
     
-    @FastCommandModel.as_method_command("manage_templates", "管理模板")
-    def manage_templates(self):
-        return super().manage_templates()
+    @Slot()
+    @FastCommandModel.as_method_command("homework_score_sum_up", "作业分结算")
+    def homework_score_sum_up(self):
+        return super().homework_score_sum_up()
+
+    @Slot()
+    @FastCommandModel.as_method_command("show_debug_window", "调试窗口")
+    def show_debug_window(self):
+        return super().show_debug_window()
     
+    @Slot()
+    @FastCommandModel.as_method_command("refresh_window", "刷新窗口")
+    def refresh_window(self):
+        return super().refresh_window()
+    
+    @Slot()
+    @FastCommandModel.as_method_command("save_data_as", "另存为")
+    def save_data_as(self):
+        return super().save_data_as()
+    
+    @Slot()
+    @FastCommandModel.as_method_command("detect_new_version", "检测新版本")
+    def detect_new_version(self):
+        return super().detect_new_version()
+    
+    @Slot()
+    @FastCommandModel.as_method_command("show_update_log", "更新日志")
+    def show_update_log(self):
+        return super().show_update_log()
+    
+    @Slot()
+    @FastCommandModel.as_method_command("show_attendance", "考勤记录")
+    def show_attendance(self, *, master: QWidget | None = None) -> None:
+        return super().show_attendance(master=master)
+    
+    @Slot()
     @FastCommandModel.as_method_command("new_template", "新建模板")
     def new_template(self):
         return super().new_template()
-        
-    @FastCommandModel.as_method_command("reset_scores", "重置分数")
-    def reset_scores(self):
-        return super().reset_scores()
-
-    @FastCommandModel.as_method_command("retract_lastest", "撤回上步")
-    def retract_lastest(self):
-        return super().retract_lastest()
         

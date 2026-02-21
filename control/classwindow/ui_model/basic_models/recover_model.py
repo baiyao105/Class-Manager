@@ -194,6 +194,7 @@ class RecoverModel(DataSetModel):
         "停止运行并保存最后的备份"
         Base.log("I", "正在保存最后的备份", "RecoverModel.stop")
         self.script_backup(self.auto_backup_scheme)
+        super().stop()
 
 
 class RecoveryPoint:

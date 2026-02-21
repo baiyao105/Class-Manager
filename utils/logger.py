@@ -11,7 +11,7 @@ import datetime
 import traceback
 from queue import Queue
 from threading import Lock, Thread
-from typing import Any, Dict, Literal, NamedTuple, TextIO, final, Optional, List, Callable
+from typing import Any, Dict, Literal, NamedTuple, TextIO, TypeAlias, final, Optional, List, Callable
 
 import colorama
 from loguru import logger
@@ -431,7 +431,7 @@ class Logger:
         msg_type = Logger.get_shortname(context.level)
         cm = (
             f"{Color.BLUE}{get_time()}{Color.END} {color}{msg_type}{Color.END} "
-            f"{Color.from_rgb(50, 50, 50)}{context.source.ljust(35)}{color} {context.message}{Color.END}"
+            f"{Color.from_rgb(50, 50, 50)}{context.source.ljust(40)}{color} {context.message}{Color.END}"
         )
         lfm = f"{get_time()} {msg_type} {(context.source + f' -> {context.file}:{context.lineno}').ljust(60)} {context.message}"
 
@@ -449,7 +449,7 @@ class Logger:
             Logger.console_log_queue.put(cm)
             Logger.logfile_log_queue.put(lfm)
 
-    LogHandler = Callable[[LogInfo], Any]
+    LogHandler: TypeAlias = Callable[[LogInfo], Any]
 
     log_handlers: Dict[str, LogHandler] = {
         "new": _new_logger,
@@ -499,7 +499,6 @@ class Logger:
                     lineno = 0
                 while file.startswith(("/", "\\")):
                     file = file[1:]
-                frame = inspect.currentframe()
                 
                 filename = caller_frame.f_code.co_filename
                 file_basename = os.path.basename(filename)
@@ -646,6 +645,6 @@ if log_style == "new":
     # 启用loguru的异常捕获
     logger.catch(onerror=lambda exc: Logger.log_exc("logger捕获到异常", exc=exc))
 
-# Logger.set_capture_stdstream()
+Logger.set_capture_stdstream()
 
 __all__ = ["Color", "Logger", "LoggerSettings", "log_settings"]

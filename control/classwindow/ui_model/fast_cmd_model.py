@@ -52,16 +52,8 @@ class FastCommandModel(MixinSuperType):
     ):
         Base.log("D", "初始化FastCommandModel", "FastCommandModel.__init__")
 
-        try:
-            with open(
-                os.getcwd()
-                + os.sep
-                + f"chunks/{self.current_user}/quick_commands.pkl",
-                "rb",
-            ) as f:
-                self.load_quick_settings_from_list(pickle.load(f))
-        except FileNotFoundError:
-            Base.log("W", "未找到快速命令文件，重置为默认", "MainWindow.load_settings")
+        self.fast_command_edit_state: bool = False
+        "是否在快捷命令的编辑状态"
 
         self.selected_quick_command: list[Command | None] = [
             [c for c in self.command_list if c.key == "new_template"][0],
@@ -74,13 +66,29 @@ class FastCommandModel(MixinSuperType):
             [c for c in self.command_list if c.key == "detect_new_version"][0],
             [c for c in self.command_list if c.key == "show_update_log"][0],
         ]
+        "当前选择的快捷命令列表"
+
+        self.recent_command_update_timer = QTimer(self)
+        "最近命令按钮更新定时器"
+        try:
+            with open(
+                os.getcwd()
+                + os.sep
+                + f"chunks/{self.current_user}/quick_commands.pkl",
+                "rb",
+            ) as f:
+                self.load_quick_settings_from_list(pickle.load(f))
+        except FileNotFoundError:
+            Base.log("W", "未找到快速命令文件，重置为默认", "MainWindow.load_settings")
 
         self.refresh_quick_command_btns()
         self.HyperlinkLabel.clicked.connect(self.edit_fast_command_btns)
-        self.recent_command_update_timer = QTimer(self)
-        "最近命令更新定时器"
         self.recent_command_update_timer.timeout.connect(self.update_recent_command_btns)
         self.recent_command_update_timer.start(300)
+
+        
+
+
 
     @property
     def command_key_list(self) -> list[str | None]:
@@ -124,30 +132,127 @@ class FastCommandModel(MixinSuperType):
         :param reset_callable: 是否重置按钮的回调函数
         """
         for i in range(1, 9 + 1):
-            btn: PushButton = getattr(self, f"PushButton_{i}")
             item = self.selected_quick_command[i - 1]
-            if item is not None:
-                btn.setText(item.name)
-                if reset_callable:
-                    try:
-                        btn.clicked.disconnect()
-                    except RuntimeError as e:
-                        Base.log("W", f"尝试断开未连接的信号：(PushButton_{i}) {e}")
-                    cmd = item
-                    func = cmd.callable
+            self.connect_quick_command_btn(i, item, reset_callable)
 
-                    if func:
-                        if cmd.mode == "method":
-                            # 因为不是直接调用的类方法，需要手动传一个self
-                            btn.clicked.connect(lambda *, f=func: f(self)) # type: ignore
-                        else:
-                            btn.clicked.connect(lambda *, f=func: f()) # type: ignore
 
-                btn.setEnabled(True)
+    def connect_quick_command_btn(self, 
+        index: int, 
+        cmd: Command | None = None, 
+        reset_callable: bool = True
+    ):  
+        """
+        连接快捷命令按钮。
+
+        :param index: 按钮索引
+        :param cmd: 命令
+        :param reset_callable: 是否重置按钮的回调函数
+        """
+        btn: PushButton = getattr(self, f"PushButton_{index}")
+        btn.setText(cmd.name if cmd is not None else "未指定")
+        if cmd and cmd.callable and reset_callable:
+            self.disconnect_quick_command_btn(index)
+            if cmd.mode == "method":
+                # 因为不是直接调用的类方法，需要手动传一个self
+                btn.clicked.connect(lambda *, f=cmd.callable: f(self)) # type: ignore
             else:
-                btn.setText("未指定")
-                btn.setEnabled(False)
-            btn.update()
+                btn.clicked.connect(lambda *, f=cmd.callable: f()) # type: ignore
+            btn.setEnabled(True)
+        elif not cmd and not self.fast_command_edit_state:
+            Base.log("I", f"位于位置{index}的快捷命令未指定，将会将这个按钮禁用", "FastCmdModel.connect_quick_command_btn")
+            btn.setEnabled(False)
+        btn.update()
+
+    def disconnect_quick_command_btn(self, index: int):
+        """
+        将一个快捷命令按钮的连接全部断开。
+        """
+        btn: PushButton = getattr(self, f"PushButton_{index}")
+        try:
+            btn.clicked.disconnect()
+        except RuntimeError as e:
+            Base.log(
+                "W",
+                f"尝试断开未连接的信号：(PushButton_{index}) {e}",
+                "FastCmdModel.edit_fast_command_btns",
+            )
+
+    def select_quick_command(self, index: int):
+        """
+        打开快捷命令选择窗口。
+
+        :param index: 要选择的按钮的索引
+        """
+        btn: PushButton = getattr(self, f"PushButton_{index}")
+
+        def _set_quick_command(cmd: Command | None, i: int = index) -> None:
+            self.selected_quick_command[i - 1] = cmd
+            Base.log(
+                "I",
+                f"第{i}个快捷命令已被更改：{btn.text()} -> {cmd.name if cmd is not None else '未指定'}",
+            )
+            btn.setText(cmd.name if cmd is not None else "未指定")
+            self.refresh_quick_command_btns(False)
+            for i in range(1, 9 + 1):
+                _btn: PushButton = getattr(self, f"PushButton_{i}")
+                _btn.setEnabled(True)
+
+        list_view_data: list[ListViewItemDataType] = []
+        list_view_data.append(("选择要设置的快捷命令", lambda: None))
+        list_view_data.extend([("", lambda: None)] * 2)
+        for c in self.command_list:
+            text = c.name
+            func = lambda *, c=c: (
+                _set_quick_command(c),
+                self.refresh_quick_command_btns(False)
+            )
+            list_view_data.append((text, func))
+        list_view_data.append(("<不指定>", lambda: _set_quick_command(None)))
+
+        self.list_view(
+            list_view_data,
+            "选择要设置的快捷命令",
+            self,
+            select_once_then_exit=True
+        )
+
+
+    def enter_fast_command_edit_state(self):
+        """
+        进入快捷命令编辑状态。
+        """
+
+        Base.log("I", "进入快捷命令编辑模式", "FastCmdModel.edit_fast_command_btns")
+        
+        self.CaptionLabel.setText("快速管理 (编辑中)")
+        self.HyperlinkLabel.setText("完成")
+        
+        for i in range(1, 9 + 1):
+
+            btn: PushButton = getattr(self, f"PushButton_{i}")  
+
+            self.disconnect_quick_command_btn(i)
+                
+            def _on_click(index: int = i):
+                self.select_quick_command(index)
+                self.refresh_quick_command_btns(False)
+
+            btn.clicked.connect(lambda *, func=_on_click: func()) # type: ignore
+            btn.setEnabled(True)
+
+
+    def exit_fast_command_edit_state(self):
+        """
+        退出快捷命令编辑状态。
+        """
+        Base.log("I", "退出快捷命令编辑模式", "FastCmdModel.edit_fast_command_btns")
+        self.CaptionLabel.setText("快速管理")
+        self.show_tip(
+            "提示", "快捷命令保存成功", duration=3275, icon=InfoBarIcon.SUCCESS
+        )
+        self.HyperlinkLabel.setText("编辑")
+        self.refresh_quick_command_btns(True)
+        self.save_quick_command_config()
 
 
     def edit_fast_command_btns(self):
@@ -155,80 +260,22 @@ class FastCommandModel(MixinSuperType):
         编辑快捷命令按钮，如果已经处于编辑状态则退出编辑状态
         """
         self.refresh_quick_command_btns(True)
+
         if not hasattr(self, "fast_command_edit_state"):
             self.fast_command_edit_state = False
+
         self.fast_command_edit_state = not self.fast_command_edit_state
 
         if self.fast_command_edit_state:
-            Base.log("I", "进入快捷命令编辑模式", "FastCmdModel.edit_fast_command_btns")
-            self.CaptionLabel.setText("快速管理 (编辑中)")
-            self.HyperlinkLabel.setText("完成")
-            for i in range(1, 9 + 1):
-                btn: PushButton = getattr(self, f"PushButton_{i}")
-
-                def _select_command(btn: PushButton, i: int = i):
-                    def _set_quick_command(cmd: Command | None, i: int = i) -> None:
-                        self.selected_quick_command[i - 1] = cmd
-                        Base.log(
-                            "I",
-                            f"第{i}个快捷命令已被更改：{btn.text()} -> {cmd.name if cmd is not None else '未指定'}",
-                        )
-                        btn.setText(cmd.name if cmd is not None else "未指定")
-                        self.refresh_quick_command_btns(False)
-                        for i in range(1, 9 + 1):
-                            _btn: PushButton = getattr(self, f"PushButton_{i}")
-                            _btn.setEnabled(True)
-
-                    list_view_data: list[ListViewItemDataType] = []
-                    list_view_data.append(("选择要设置的快捷命令", lambda: None))
-                    list_view_data.extend([("", lambda: None)] * 2)
-                    for c in self.command_list:
-                        text = c.name
-                        func = lambda *, c=c: (
-                            _set_quick_command(c),
-                            self.refresh_quick_command_btns(False)
-                        )
-                        list_view_data.append((text, func))
-                    list_view_data.append(("<不指定>", lambda: _set_quick_command(None)))
-
-                    self.list_view(
-                        list_view_data,
-                        "选择要设置的快捷命令",
-                        self,
-                        select_once_then_exit=True
-                    )
-
-                try:
-                    btn.clicked.disconnect()
-                except RuntimeError as e:
-                    Base.log(
-                        "W",
-                        f"尝试断开未连接的信号：(PushButton_{i}) {e}",
-                        "FastCmdModel.edit_fast_command_btns",
-                    )
-                    
-                def _on_click(
-                    select_command_callable: Callable[[PushButton], None] = _select_command, 
-                    btn: PushButton = btn
-                ):
-                    select_command_callable(btn)
-                    self.refresh_quick_command_btns(False)
-
-                btn.clicked.connect(lambda: _on_click())
-                btn.setEnabled(True)
+            self.enter_fast_command_edit_state()
 
         else:
-            Base.log("I", "退出快捷命令编辑模式", "FastCmdModel.edit_fast_command_btns")
-            self.CaptionLabel.setText("快速管理")
-            self.show_tip(
-                "提示", "快捷命令保存成功", duration=3275, icon=InfoBarIcon.SUCCESS
-            )
-            self.HyperlinkLabel.setText("编辑")
-            self.refresh_quick_command_btns(True)
-            self.save_quick_command_config()
-
+            self.exit_fast_command_edit_state()
 
     def save_quick_command_config(self):
+        """
+        保存快捷命令配置。
+        """
         Base.log("I", "保存快捷命令配置", "FastCmdModel.save_fast_command_config")
         pickle.dump(
             self.command_key_list,
@@ -241,7 +288,9 @@ class FastCommandModel(MixinSuperType):
         self.refresh_quick_command_btns()
 
     def load_quick_settings_from_list(self, cmdlist: list[str]):
-        "从名称或者key值列表中加载快捷命令"
+        """
+        从名称或者key值列表中加载快捷命令。
+        """
         self.selected_quick_command = [None] * 9
         avaliable = [c.name for c in self.command_list]
         avaliable2 = [c.key for c in self.command_list]
@@ -263,18 +312,36 @@ class FastCommandModel(MixinSuperType):
 
         self.refresh_quick_command_btns()
 
+    def disconnect_recent_command_btns(self):
+        """
+        断开当前所有最近使用按钮的连接。
+        """
+        for btn in [self.PushButton_10, self.PushButton_11, self.PushButton_12]:
+            try:
+                btn.clicked.disconnect(None)
+            except RuntimeError:
+                pass
+    
+    def exec_fast_command(self, cmd: Command | None, idx: int | None = None):
+        """
+        执行一个快捷命令。
+        """
+        Base.log("I", f"执行最近使用命令{cmd.name if cmd else 'None'}, index = {idx}", 
+                    "FastCmdModel.update_recent_command_btns")
+        if cmd and cmd.callable:
+            if cmd.mode == "method":
+                # 因为不是直接调用的类方法，需要手动传一个self
+                cmd.callable(self)
+            else:
+                cmd.callable()
+
     
     def update_recent_command_btns(self):
         """
         更新最近使用命令按钮。
         """
 
-        for btn in [self.PushButton_10, self.PushButton_11, self.PushButton_12]:
-            try:
-                btn.clicked.disconnect(None)
-            except RuntimeError:
-                pass
-
+        self.disconnect_recent_command_btns()
             
         lately_used_commands = FastCommandModel.lately_used_commands
         callable_last_1 = lately_used_commands[-1] if lately_used_commands else None
@@ -285,17 +352,15 @@ class FastCommandModel(MixinSuperType):
         self.PushButton_11.setText(callable_last_2.name if callable_last_2 else "暂无")
         self.PushButton_12.setText(callable_last_3.name if callable_last_3 else "暂无")
 
-        def _exec_command(cmd: Command | None):
-            if cmd and cmd.callable:
-                if cmd.mode == "method":
-                    # 因为不是直接调用的类方法，需要手动传一个self
-                    cmd.callable(self)
-                else:
-                    cmd.callable()
+        Base.log("T", f"更新最近使用命令按钮: "
+                        f"{callable_last_1.name if callable_last_1 else 'None'}, "
+                        f"{callable_last_2.name if callable_last_2 else 'None'}, "
+                        f"{callable_last_3.name if callable_last_3 else 'None'}", 
+                        "FastCmdModel.update_recent_command_btns")
 
-        self.PushButton_10.clicked.connect(lambda cmd=callable_last_1: _exec_command(cmd))
-        self.PushButton_11.clicked.connect(lambda cmd=callable_last_2: _exec_command(cmd))
-        self.PushButton_12.clicked.connect(lambda cmd=callable_last_3: _exec_command(cmd))
+        self.PushButton_10.clicked.connect(lambda *, cmd=callable_last_1: self.exec_fast_command(cmd, 1))
+        self.PushButton_11.clicked.connect(lambda *, cmd=callable_last_2: self.exec_fast_command(cmd, 2))
+        self.PushButton_12.clicked.connect(lambda *, cmd=callable_last_3: self.exec_fast_command(cmd, 3))
 
 
     def stop(self):

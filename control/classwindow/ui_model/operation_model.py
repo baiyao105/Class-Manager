@@ -11,7 +11,7 @@ from utils.classobjects import Student
 
 from utils.functions.prompts import question_yes_no
 from utils.functions.sounds import play_music, stop_music
-from utils.qtconfig import InfoBarIcon, QWidget
+from utils.qtconfig import InfoBarIcon, QWidget, Slot
 
 from widgets import (SelectTemplateWidget, StudentSelectorWidget, 
                      CleaningScoreSumUpWidget, RandomSelectWidget,
@@ -77,6 +77,7 @@ class OperationModel(ObjectInfoModel):
         self.multi_select_template_window.return_result.connect(_on_return)
         self.multi_select_template_window.select()
 
+    @Slot()
     def cleaning_score_sum_up(self):
         """
         打开卫生打扫分数结算窗口。
@@ -158,7 +159,7 @@ class OperationModel(ObjectInfoModel):
         self.music_listview = ListView("选择音乐", self, music_list)
         self.music_listview.show()
 
-
+    @Slot()
     def create_recover_point(self):
         """
         创建还原点。

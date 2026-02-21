@@ -327,6 +327,8 @@ class DataSetModel(BasicUIModel, ClassDataSet, LogicModel):
             self.save_data(path)
 
     def stop(self):
-        super().stop()
+        ClassDataSet.stop(self)
+        BasicUIModel.stop(self)
+        
 
 

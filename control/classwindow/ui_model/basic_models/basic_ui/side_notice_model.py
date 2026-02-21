@@ -33,13 +33,15 @@ class SideNoticeModel(_BaseClass):
     是一个Mixin类。
     """
 
-    signal_tip_update = Signal(tuple)
+    signal_show_tip = Signal(tuple)
     """
     提示更新信号，用于传递需要显示的提示信息。
+
+    这个信号传递元组，然后会构造SideNotice放在TipHandler的队列里。
     """
 
     @Slot(tuple)
-    def slot_tip_update(
+    def slot_show_tip(
         self, 
         args: tuple[
             str, str, QWidget | None, 
@@ -51,15 +53,17 @@ class SideNoticeModel(_BaseClass):
         """
         self.impl_show_tip(*args)
 
-    signal_show_new_tip = Signal(SideNotice)
+    signal_place_tip = Signal(SideNotice)
     """
-    显示新提示信号，它如果被传递了会直接在主线程展示这个传过来的SideNotice。
+    显示新提示信号，由TipHandler传递。
+    
+    它如果被传递了会直接在主线程展示这个传过来的SideNotice。
     """
 
     @Slot(SideNotice)
-    def slot_show_new_tip(self, notice: SideNotice):
-        "显示新提示，就是单纯show"
-        Base.log("D", f"在主界面上显示提示 <SideNotice object at <{addrof(notice)}>", 
+    def slot_place_tip(self, notice: SideNotice):
+        "显示新提示，直接展示传过来的SideNotice对象。"
+        Base.log("T", f"在主界面上显示提示 <SideNotice object at <{addrof(notice)}>", 
                  "SideNoticeModel.slot_show_new_tip")
         notice.show()
 
@@ -81,8 +85,8 @@ class SideNoticeModel(_BaseClass):
         "提示处理器"
         self.tip_handler.start()
         "提示历史"
-        self.signal_tip_update.connect(self.slot_tip_update)
-        self.signal_show_new_tip.connect(self.slot_show_new_tip)
+        self.signal_show_tip.connect(self.slot_show_tip)
+        self.signal_place_tip.connect(self.slot_place_tip)
         self.side_notice_init_finished = True
         self.show_tip(
             "", "双击项目查看消息记录", duration=5000, further_info="孩子真聪明（bushi"
@@ -115,7 +119,7 @@ class SideNoticeModel(_BaseClass):
         if not hasattr(self, "side_notice_init_finished") or not self.side_notice_init_finished:
             Base.log("W", "提示栏初始化未完成，无法显示提示", "SideNoticeModel.show_tip")
             return
-        self.signal_tip_update.emit((
+        self.signal_show_tip.emit((
             title, content, master, duration,
             icon, sound, closeable, click_command, further_info
         ))
@@ -252,7 +256,7 @@ class TipHandler(QThread):
                 "TipHandler.run",
             )
 
-            self.model.signal_show_new_tip.emit(current)
+            self.model.signal_place_tip.emit(current)
 
 
     def destroy(self):

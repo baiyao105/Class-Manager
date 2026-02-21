@@ -11,7 +11,7 @@ from typing import Callable, Any
 from utils.basetypes import Base
 from utils.qtconfig import (
     QListWidgetItem, QWidget, QAbstractItemView,
-    QIcon, InfoBarIcon
+    QIcon, InfoBarIcon, Slot
 )
 
 
@@ -34,7 +34,7 @@ class TipViewerModel(MixinSuperType):
         save_path: str | None = None
     ):
         Base.log("D", "初始化TipViewerModel", "TipViewerModel.__init__")
-        self.ListWidget.itemDoubleClicked.connect(self.view_tip_hisory)
+        self.ListWidget.itemDoubleClicked.connect(self.view_tip_history)
         self.ListWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
     def impl_show_tip(self,
@@ -59,8 +59,8 @@ class TipViewerModel(MixinSuperType):
         )
         return obj
 
-
-    def view_tip_hisory(self, item: QListWidgetItem):
+    @Slot(QListWidgetItem)
+    def view_tip_history(self, item: QListWidgetItem):
         "查看提示历史，在屏幕右侧的历史列表被双击的时候自动调用"
         Base.log("I", f"查看历史信息，点击的索引：{self.ListWidget.row(item)}", 
                         "TipViewerModel.view_tip_hisory")

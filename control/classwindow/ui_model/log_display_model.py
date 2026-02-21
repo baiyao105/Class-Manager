@@ -47,8 +47,8 @@ class LogDisplayModel(MixinSuperType):
             name="RefreshLogWindowThread",
         )
         self.refresh_log_window_thread.start()
-        self.signal_log_update.connect(self.logwindow_add_newline)
-        self.signal_log_window_refresh.connect(self._refresh_logwindow)
+        self.signal_log_update.connect(self.slot_log_update)
+        self.signal_log_window_refresh.connect(self.slot_log_window_refresh)
         self.signal_log_update.emit("这里是日志")
 
     def refresh_logwindow_while_alive(self):
@@ -60,7 +60,7 @@ class LogDisplayModel(MixinSuperType):
             time.sleep(self.log_update_interval)
 
     @Slot(str)
-    def logwindow_add_newline(self, string: str):
+    def slot_log_update(self, string: str):
         """
         向日志窗口添加新日志条目。
 
@@ -73,7 +73,7 @@ class LogDisplayModel(MixinSuperType):
             self.logwindow_content.pop(0)
 
     @Slot()
-    def _refresh_logwindow(self):
+    def slot_log_window_refresh(self):
         "刷新日志窗口的接口，不要直接跨线程调用，会爆炸"
         if self.logged_count != self.displayed_on_the_log_window:
             self.textBrowser.setText("\n".join(self.short_log_info))
