@@ -64,6 +64,7 @@ class Ui_Form(object):
         self.spinBox.setObjectName(u"spinBox")
         self.spinBox.setGeometry(QRect(320, 329, 61, 22))
         self.spinBox.setMaximum(114514)
+        self.spinBox.setValue(5)
         self.label_8 = QLabel(Form)
         self.label_8.setObjectName(u"label_8")
         self.label_8.setGeometry(QRect(390, 332, 341, 16))

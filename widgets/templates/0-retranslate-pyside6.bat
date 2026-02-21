@@ -3,7 +3,7 @@
 chcp 65001
 cls
 setlocal enabledelayedexpansion
-set "target_dir=widgets"
+set "target_dir=pyside6"
 if not exist %target_dir% md %target_dir%
 set /a total=0
 for %%i in (*.ui) do set /a total+=1

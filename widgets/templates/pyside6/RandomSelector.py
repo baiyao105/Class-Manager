@@ -15,9 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QLabel, QListWidget,
-    QListWidgetItem, QPushButton, QSizePolicy, QSpinBox,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QLabel, QListWidget, QListWidgetItem,
+    QPushButton, QSizePolicy, QSpinBox, QWidget)
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -50,19 +49,7 @@ class Ui_Form(object):
         self.listWidget_3.setGeometry(QRect(330, 80, 131, 192))
         self.pushButton = QPushButton(Form)
         self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setGeometry(QRect(530, 180, 75, 24))
-        self.line = QFrame(Form)
-        self.line.setObjectName(u"line")
-        self.line.setGeometry(QRect(510, 160, 178, 2))
-        self.line.setStyleSheet(u"background: black")
-        self.line.setFrameShape(QFrame.Shape.HLine)
-        self.line.setFrameShadow(QFrame.Shadow.Sunken)
-        self.line_2 = QFrame(Form)
-        self.line_2.setObjectName(u"line_2")
-        self.line_2.setGeometry(QRect(510, 170, 178, 2))
-        self.line_2.setStyleSheet(u"background: black")
-        self.line_2.setFrameShape(QFrame.Shape.HLine)
-        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
+        self.pushButton.setGeometry(QRect(520, 180, 75, 24))
         self.label_5 = QLabel(Form)
         self.label_5.setObjectName(u"label_5")
         self.label_5.setGeometry(QRect(480, 130, 91, 16))
@@ -83,6 +70,9 @@ class Ui_Form(object):
         self.listWidget_4 = QListWidget(Form)
         self.listWidget_4.setObjectName(u"listWidget_4")
         self.listWidget_4.setGeometry(QRect(700, 20, 211, 301))
+        self.label_6 = QLabel(Form)
+        self.label_6.setObjectName(u"label_6")
+        self.label_6.setGeometry(QRect(650, 20, 111, 16))
 
         self.retranslateUi(Form)
 
@@ -100,5 +90,6 @@ class Ui_Form(object):
         self.pushButton_2.setText(QCoreApplication.translate("Form", u"\u9009\u62e9", None))
         self.pushButton_3.setText(QCoreApplication.translate("Form", u"\u9009\u62e9", None))
         self.pushButton_4.setText(QCoreApplication.translate("Form", u"\u9009\u62e9", None))
+        self.label_6.setText(QCoreApplication.translate("Form", u"\u7ed3\u679c", None))
     # retranslateUi
 
