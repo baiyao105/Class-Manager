@@ -59,6 +59,8 @@ class ClassUIModel(DataUIModel, MainClassWindow.Ui_MainWindow):
         save_path: str | None = None
     ) -> None:
         Base.log("D", "初始化ClassUIModel", "ClassUIModel.__init__")
+        self.setup_ui_finished = False
+        "是否已经完成UI设置"
         self.window_info = WindowInfo()
         "窗口绘制信息"
         super().__init__(
@@ -68,6 +70,7 @@ class ClassUIModel(DataUIModel, MainClassWindow.Ui_MainWindow):
             save_path=save_path
         )
         self.setupUi(self) # type: ignore
+        self.setup_ui_finished = True
 
 if TYPE_CHECKING:
     MixinSuperType = ClassUIModel

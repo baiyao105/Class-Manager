@@ -52,11 +52,12 @@ class TipViewerModel(MixinSuperType):
             title, content, master, duration, 
             icon, sound, closeable, click_command, further_info
         )
-        self.tip_history.insert(0, obj)
-        self.ListWidget.insertItem(
-            0,
-            time.strftime("%H:%M ", time.localtime(obj.create_time)) + f"{obj.title} {obj.content}",
-        )
+        if self.setup_ui_finished:
+            self.tip_history.insert(0, obj)
+            self.ListWidget.insertItem(
+                0,
+                time.strftime("%H:%M ", time.localtime(obj.create_time)) + f"{obj.title} {obj.content}",
+            )
         return obj
 
     @Slot(QListWidgetItem)

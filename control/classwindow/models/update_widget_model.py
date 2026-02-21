@@ -608,4 +608,4 @@ class UpdateThread(QThread):
 
 
             except Exception as exc:  # pylint: disable=broad-exception-caught
-                self.model.handle_exception((exc.__class__, exc, exc.__traceback__))
+                self.model.handle_exception(exc.__class__, exc, exc.__traceback__)

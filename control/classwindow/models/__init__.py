@@ -6,21 +6,24 @@ from __future__ import annotations
 
 import os
 import time
+import random
+import traceback
 from typing import Any
 
 import pyqtgraph as pg # type: ignore
 
-from control.classwindow.ui_model.class_ui_model import ClassUIModel
+from control.classwindow.models.class_ui_model import ClassUIModel
 from utils.algorithm import Thread
 from utils.basetypes import Base, SysMemTracer
-from utils.classobjects import Student
+from utils.classobjects import Student, ClassDataSet
 from utils.consts import (
     qt_version, app_style, app_stylesheet, 
     enable_memory_tracing
 )
 from utils.functions.qtutils import wait_until
 from utils.qtconfig import (
-    QApplication, QStyleFactory, QWidget, Signal, QMessageBox, QIcon, QPixmap,
+    QApplication, QStyleFactory, QWidget, 
+    Signal, QMessageBox, QIcon, QPixmap,
     QLabel, QCloseEvent, Qt, Slot
 )
 
@@ -34,12 +37,9 @@ from .tip_viewer_model import TipViewerModel
 from .update_widget_model import UpdateWidgetModel
 from .user_display_model import UserDisplayModel
 from .object_info_model import ObjectInfoModel
-from ..ui_model.basic_models.basic_ui import BasicUIModel
+from ..models.basic_models.basic_ui import BasicUIModel
 
 
-sys_mem_tracer = SysMemTracer(record_data=True)
-if enable_memory_tracing:
-    sys_mem_tracer.start()
 
 class ClassWindowModel(
     UpdateWidgetModel, 
@@ -67,6 +67,7 @@ class ClassWindowModel(
         ):
         """
         窗口初始化
+
         :param app: QApplication
         :param args: 命令行参数
         :param class_name: 班级名称
@@ -77,6 +78,17 @@ class ClassWindowModel(
 
         self.app = app
         "应用程序对象"
+        self.icon: QIcon | None = None
+        "窗口图标"
+        self.create_time = time.time()
+        "程序创建时间"
+        self.sys_mem_tracer = SysMemTracer(record_data=True)
+        "内存追踪器，如果enable_memory_tracing == True它就会在__init__刚开始的时候启动"
+        self.sys_mem_tracer_widget: pg.PlotWidget | None = None
+        if enable_memory_tracing:
+            self.sys_mem_tracer.start()
+        
+
 
         if qt_version in ("PySide6", "PyQt6"):
             style = QStyleFactory.create(app_style)
@@ -113,12 +125,6 @@ class ClassWindowModel(
 
         assert self.target_class, "设置过班级了应该就不会为None了"
 
-        self.icon: QIcon | None = None
-        "窗口图标"
-
-        self.create_time = time.time()
-        "程序创建时间"
-
         self.action.triggered.connect(self.student_rank)
         self.action_2.triggered.connect(self.manage_templates)
         self.action_3.triggered.connect(self.open_setting_window)
@@ -153,17 +159,42 @@ class ClassWindowModel(
         self.signal_exiting.connect(self.slot_exiting)
         self.setWindowTitle(f"班寄管理 - {self.target_class.name}")
 
+
     def on_start_up_finished(self):
         """
         窗口启动完成
         """
+        lt = time.localtime()
+        if (lt.tm_mon, lt.tm_mday) == (4, 1):
+            e = ClassDataSet.ObserverError(
+                f"数据加载失败，详情请查看日志 [{random.randint(114514, 1919810)}]"
+            )
+            self.question_if_exec(
+                "警告",
+                "数据加载出现错误！\n"
+                + "".join(traceback.format_exception_only(e.__class__, e))
+                + "\n\n"
+                "是否查看解决方案？",
+                lambda: (
+                    os.startfile("https://www.bilibili.com/video/BV1GJ411x7h7/"),
+                    self.information("114514", "愚人节快乐"),
+                ),
+            )
 
     def on_exit(self):
         """
-        窗口准备退出
+        窗口准备退出。
         """
         self.signal_exiting.emit()
 
+    def on_exit_with_exception(self):
+        """
+        窗口将要因为异常而退出。
+        """
+        self.quit()
+        super(ClassUIModel, self).on_exit_with_exception()
+        
+        
     @Slot()
     def slot_exiting(self):
         Base.log("I", "开始执行退出操作", "ClassWindowModel._on_exit")
@@ -172,42 +203,57 @@ class ClassWindowModel(
 
     def closeEvent(self, event: QCloseEvent, tip: bool = True):
         """
-        关闭事件，这里是覆写的MyClassWindowModel.closeEvent
+        关闭事件，这里是覆写的MyClassWindowModel.closeEvent。
 
         :param event: 传来的QCloseEvent
         """
         Base.log("I", "准备关闭程序", "ClassWindowModel.closeEvent")
         if super(BasicUIModel, self).requestExit(event):
-            self.setEnabled(False)
-            self.exit_tip = QLabel(self)
-            self.exit_tip.setText("正在保存数据...")
-            self.exit_tip.setStyleSheet(
-                "background-color: rgb(197, 197, 197); border-radius: 8px"
-            )
-            self.exit_tip.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.exit_tip.setGeometry(
-                self.width() // 2 - 70, self.height() // 2 - 20, 140, 40
-            )
-            self.exit_tip.show()
-            self.exit_action_finished = False
-            self.signal_exiting.emit()
-            wait_until(lambda: self.exit_action_finished)
-            self.hide()
-            if enable_memory_tracing:
-                Base.log("I", "绘制内存使用记录", "ClassWindowModel.closeEvent")
-                sys_mem_tracer_widget = pg.PlotWidget()
-                sys_mem_tracer_widget = pg.plot(title="内存使用记录", clear=True) # type: ignore
-                sys_mem_tracer_widget.plot(
-                    list(sys_mem_tracer.data.keys()), 
-                    list(sys_mem_tracer.data.values()), 
-                    pen=(255, 0, 0)
-                )
-                sys_mem_tracer_widget.show()
-                wait_until(lambda: sys_mem_tracer_widget.isHidden())
-            Base.log("I", "执行app.quit()", "ClassWindowModel.closeEvent")
-            self.app.quit()
+            self.quit()
+            
+    def quit(self):
+        """
+        退出程序。
+        """
+        self.setEnabled(False)
+        self.exit_tip = QLabel(self)
+        self.exit_tip.setText("正在保存数据...")
+        self.exit_tip.setStyleSheet(
+            "background-color: rgb(197, 197, 197); border-radius: 8px"
+        )
+        self.exit_tip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.exit_tip.setGeometry(
+            self.width() // 2 - 70, self.height() // 2 - 20, 140, 40
+        )
+        self.exit_tip.show()
+        self.exit_action_finished = False
+        self.signal_exiting.emit()
+        wait_until(lambda: self.exit_action_finished)
+        self.hide()
+        if enable_memory_tracing:
+            self.plot_mem_usage()
+        Base.log("I", "执行app.quit()", "ClassWindowModel.save_and_quit")
+        self.app.quit()
+
+    def plot_mem_usage(self):
+        """
+        绘制内存使用记录图。
+        """
+        Base.log("I", "绘制内存使用记录", "ClassWindowModel.plot_mem_usage")
+        self.sys_mem_tracer_widget = pg.PlotWidget()
+        self.sys_mem_tracer_widget = pg.plot(title="内存使用记录", clear=True) # type: ignore
+        self.sys_mem_tracer_widget.plot(
+            list(self.sys_mem_tracer.data.keys()), 
+            list(self.sys_mem_tracer.data.values()), 
+            pen=(255, 0, 0)
+        )
+        self.sys_mem_tracer_widget.show()
+        wait_until(lambda: self.sys_mem_tracer_widget is not None and self.sys_mem_tracer_widget.isHidden())
 
     def stop(self):
+        """
+        停止运行。
+        """
         super().stop()
     
     def mainloop(self) -> int:
@@ -229,7 +275,7 @@ class ClassWindowModel(
         self.refresh_hint_widget()
         self.show()
         self.updator_thread.start()
-        Base.log("I", "线程启动完成，exec()", "ClassWindowModel.mainloop")
+        Base.log("I", "线程启动完成，启动app.exec()", "ClassWindowModel.mainloop")
         status = self.app.exec()
         Base.log("I", f"主循环返回值：{status}", "ClassWindowModel.mainloop")
         self.app.quit()
@@ -363,3 +409,5 @@ class ClassWindowModel(
     def new_template(self):
         return super().new_template()
         
+
+__all__ = ["ClassWindowModel"]

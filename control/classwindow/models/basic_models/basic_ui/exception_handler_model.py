@@ -53,6 +53,7 @@ class ExceptionHandlerModel(_BaseClass):
     """
 
     show_exc_window_callback: Optional[Callable[[OptExcInfo], Any]] = None
+    "显示异常窗口的回调函数"
 
     def __init__(self, master: QWidget | None = None) -> None:
         """
@@ -84,24 +85,50 @@ class ExceptionHandlerModel(_BaseClass):
     def slot_show_exc_window(self, e: OptExcInfo):
         "展示异常信息的接口"
         Base.log("I", f"展示异常信息窗口：{e!r}", "MainWindow._show_exception")
-        self.exception_window = ExceptionHandlerWidget(e[1], self)
+        self.exception_window = ExceptionHandlerWidget(model=self, exception=e[1], master=self)
         self.exception_window.show()
 
-    def setup_hooks(self, hook: Callable[[OptExcInfo], Any]) -> None:
+    @Slot()
+    def on_exit_with_exception(self):
+        """
+        当遇到错误并且用户想要退出的时候执行的操作。
+        """
+        self.close()
+        sys.exit(0)
+
+    @Slot()
+    def on_report_error(self):
+        """
+        当用户想要报告错误的时候执行的操作。
+        """
+        os.startfile("https://www.bilibili.com/video/BV1GJ411x7h7/")
+        self.close()
+
+    @Slot()
+    def on_close(self):
+        """
+        当用户想要关闭窗口的时候执行的操作。
+        """
+        self.close()
+    
+
+    def setup_hooks(self, hook: Callable[[*OptExcInfo], Any]) -> None:
         sys.excepthook = hook
         threading.excepthook = hook
 
-    def handle_exception(self, excinfo: OptExcInfo | ThreadingExcInfo) -> None:
+        
+    def handle_exception(self, 
+            exc_type: Type[BaseException] | None, 
+            exc_val: BaseException | None, 
+            exc_tb: TracebackType | None,
+            thread: threading.Thread | None = None
+        ) -> None:
         """
         捕获未处理的异常并显示错误对话框，
         用作sys.excepthook和threading.excepthook的处理函数。
 
         :param excinfo: 异常信息。
         """
-        thread = None
-        exc_type, exc_val, exc_tb = excinfo[:3]
-        if len(excinfo) == 4:
-            thread = excinfo[3]
         file_basename = os.path.basename(__file__)
         file_path = __file__.replace(os.getcwd(), "").lstrip("\\/")
         # 绑定上下文信息
@@ -114,7 +141,7 @@ class ExceptionHandlerModel(_BaseClass):
                 source_with_lineno="handle_exception:-1",
             )
             if thread:
-                binding = binding.bind(thread=thread.name)
+                binding = binding.bind(thread=thread)
             binding.exception("Uncaught exception occurred", exc_info=exc_val)
         else:
             Base.log_exc("捕获到异常", "exception_handler", exc=exc_val)

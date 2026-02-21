@@ -298,4 +298,4 @@ class DataProperty(property):
         class_obj.broadcast_data_changed(event_key)
         elapsed = time.perf_counter() - start_time
         if elapsed > 0.001:  # 超过1ms就记录
-            Logger.log("D", f"DataProperty._on_value_changed for {event_key} took {elapsed*1000:.2f}ms")
+            Logger.log("W", f"DataProperty._on_value_changed发送事件{event_key}时耗费了{elapsed*1000:.2f}ms")

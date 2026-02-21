@@ -257,7 +257,7 @@ class FastCommandModel(MixinSuperType):
 
     def edit_fast_command_btns(self):
         """
-        编辑快捷命令按钮，如果已经处于编辑状态则退出编辑状态
+        编辑快捷命令按钮，如果已经处于编辑状态则退出编辑状态。
         """
         self.refresh_quick_command_btns(True)
 

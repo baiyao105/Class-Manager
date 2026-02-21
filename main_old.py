@@ -1,6 +1,7 @@
 
 import sys
-
+# import utils
+# utils.consts.enable_memory_tracing = True
 from control import ClassWindowModel
 from utils import QApplication, default_user, DEFAULT_CLASS_KEY, Base
 

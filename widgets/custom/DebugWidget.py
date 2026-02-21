@@ -22,7 +22,7 @@ from utils import (
 from widgets.basic import MyWidget, UIError
 from widgets.templates import DebugWindow
 if TYPE_CHECKING:
-    from control.classwindow.ui_model.class_ui_model import ClassUIModel
+    from control.classwindow.models.class_ui_model import ClassUIModel
 
 class ObserverNotSet(UIError):
     "没有设置侦测器"

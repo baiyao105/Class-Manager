@@ -4,7 +4,7 @@
 """
 
 
-from .ui_model import BasicUIModel, ClassUIModel, ClassWindowModel
+from .models import BasicUIModel, ClassUIModel, ClassWindowModel
 
 __all__ = [
     "BasicUIModel",

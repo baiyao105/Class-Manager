@@ -58,7 +58,10 @@ def wait_until(
     loop.exec()
     timer.stop()
     if timeout_handling == "raise" and not result:
-        raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} / {timeout} ms)")
+        if timeout is None:
+            raise TimeoutError("等待期间QEventLoop被意外终止")
+        else:
+            raise TimeoutError(f"等待超时 ({(time.time() - start_time) * 1000:.0f} / {timeout} ms)")
     return result
 
 

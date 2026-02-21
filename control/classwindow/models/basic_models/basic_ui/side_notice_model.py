@@ -81,6 +81,7 @@ class SideNoticeModel(_BaseClass):
         self.sidenotice_avilable_slots = list(range(5))
         "提示栏可用槽位"
         self.tip_history: list[SideNotice] = []
+        "提示历史，每一项都对应ListWidget里边的一项"
         self.tip_handler = TipHandler(self)
         "提示处理器"
         self.tip_handler.start()
