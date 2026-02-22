@@ -24,7 +24,7 @@ from utils.consts import (
 from utils.functions.qtutils import wait_until
 from utils.qtconfig import (
     QApplication, QStyleFactory, QWidget, 
-    Signal, QMessageBox, QIcon, QPixmap,
+    Signal, QMessageBox, QIcon,
     QLabel, QCloseEvent, Qt, Slot
 )
 

@@ -150,8 +150,10 @@ class NoiseDetectorWidget(NoiseDetector.Ui_Form, MyWidget):
             33,
             start,
             end,
-            QEasingCurve.Type.Linear
+            QEasingCurve.Type.Linear,
+            target=self.label
         )
+        self.last_length = end.width()
         self.anim.start()
 
     def call_my_army(self):

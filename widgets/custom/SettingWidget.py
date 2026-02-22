@@ -223,6 +223,11 @@ class SettingWidget(SettingWindow.Ui_Form, MyWidget):
         else:
             super().closeEvent(event)
 
+    def force_close(self, save: bool = True):
+        if save:
+            self.accept_save()
+        super().closeEvent(QCloseEvent())
+
     @Slot()
     def accept_save(self):
         self.setting_obj.score_up_color_mixin_begin = (

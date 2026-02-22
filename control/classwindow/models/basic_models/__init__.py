@@ -20,12 +20,6 @@ class DataUIModel(RecoverModel):
         super().__init__(current_user=current_user, class_name=class_name, class_key=class_key, save_path=save_path)
         self.should_stop = False
 
-    def setOpacity(self, opacity: float):
-        "设置窗口透明度"
-        op = QGraphicsOpacityEffect()
-        op.setOpacity(opacity)
-        self.setGraphicsEffect(op)
-
 
     def stop(self):
         "停止运行并保存数据"

@@ -61,6 +61,10 @@ class AnimatedBackgroundModel(MixinSuperType):
         "背景视频路径"
         self.default_bg_video_path = os.path.join("audio", "video", "default", "background.mp4")
         "默认背景视频路径"
+        Base.log("D", f"将窗口透明度设置为{self.opacity}", "AnimatedBackgroundModel.__init__")
+        self.setWindowOpacity(self.opacity)
+
+
 
     def read_video_while_alive(self):
         """

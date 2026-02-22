@@ -9,9 +9,13 @@ from typing import Optional, Union, Any
 from utils.settings import SettingsInfo
 from utils.basetypes import Base
 
-from PySide6.QtWidgets import QWidget
-from PySide6.QtGui import Qt, QGuiApplication, QCloseEvent
-from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QPoint, QEventLoop, QByteArray
+
+from utils.qtconfig import (
+    QWidget, Qt, QGuiApplication, QCloseEvent, 
+    QPropertyAnimation, QEasingCurve, QPoint, 
+    QEventLoop, QByteArray, QObject
+)
+
 from widgets.basic.MyMainWindow import MyMainWindow
 
 
@@ -66,6 +70,8 @@ class MyWidget(QWidget):
         easing_curve: Union[
             QEasingCurve, QEasingCurve.Type
         ] = QEasingCurve.Type.OutCubic,
+        *,
+        target: QObject | None = None
     ):
         """
         创建通用动画
@@ -76,11 +82,12 @@ class MyWidget(QWidget):
             start_value: 起始值
             end_value: 结束值
             easing_curve: 缓动曲线类型
+            target: 目标对象，默认为self
 
         Returns:
             配置好的QPropertyAnimation对象
         """
-        animation = QPropertyAnimation(self, property_name)
+        animation = QPropertyAnimation(target or self, property_name)
         animation.setEasingCurve(easing_curve)
         animation.setDuration(
             int(duration / SettingsInfo.get_global_settings().animation_speed

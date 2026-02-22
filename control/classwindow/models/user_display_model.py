@@ -231,5 +231,8 @@ class UserDisplayModel(MixinSuperType):
         ]
         for widget in widgets:
             if widget:
-                widget.close()
+                if isinstance(widget, SettingWidget):
+                    widget.force_close(True)
+                else:
+                    widget.close()
         super().stop()
