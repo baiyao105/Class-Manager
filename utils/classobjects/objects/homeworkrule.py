@@ -103,7 +103,7 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.homework_rule import HomeworkRuleModel
+        from ..dataloaders.pydantic_loader.models.homework_rule import HomeworkRuleModel
         return HomeworkRuleModel.from_class_data(self)
 
 

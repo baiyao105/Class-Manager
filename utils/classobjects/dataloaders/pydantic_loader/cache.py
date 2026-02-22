@@ -10,7 +10,7 @@ import threading
 from typing import Any, TypeVar
 from uuid import UUID
 
-from ..basetype import ClassDataType
+from ...basetype import ClassDataType
 
 
 T = TypeVar("T")

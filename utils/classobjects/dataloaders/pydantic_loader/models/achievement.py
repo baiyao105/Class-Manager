@@ -10,9 +10,9 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.achievement import Achievement
-from ...objects.achievementtemp import AchievementTemplate
-from ...objects.student import Student
+from ....objects.achievement import Achievement
+from ....objects.achievementtemp import AchievementTemplate
+from ....objects.student import Student
 
 
 class AchievementModel(PydanticModelBase[Achievement]):

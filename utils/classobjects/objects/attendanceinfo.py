@@ -169,5 +169,5 @@ class AttendanceInfo(ClassDataType):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.attendance_info import AttendanceInfoModel
+        from ..dataloaders.pydantic_loader.models.attendance_info import AttendanceInfoModel
         return AttendanceInfoModel.from_class_data(self)

@@ -11,7 +11,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, PrivateAttr
 
-from ..basetype import ClassDataType, ClassDataTypeUUID
+from ...basetype import ClassDataType, ClassDataTypeUUID
 
 
 T = TypeVar("T", bound=ClassDataType)
@@ -203,5 +203,5 @@ class PydanticReference(BaseModel, Generic[RefType]):
 
         :return: ClassDataType对象
         """
-        from ..classdataloader import ClassDataLoader
+        from ...classdataloader import ClassDataLoader
         return cast(RefType, ClassDataLoader.LoadUUID(self.uuid, self.dtype))

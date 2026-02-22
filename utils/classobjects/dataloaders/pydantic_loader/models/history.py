@@ -10,10 +10,10 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.classtype import Class
-from ...objects.dayrecord import DayRecord
-from ...objects.history import History
-from ...basetype import ClassDataTypeUUID
+from ....objects.classtype import Class
+from ....objects.dayrecord import DayRecord
+from ....objects.history import History
+from ....basetype import ClassDataTypeUUID
 
 class HistoryModel(PydanticModelBase[History]):
     "历史记录的Pydantic模型"

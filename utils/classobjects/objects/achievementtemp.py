@@ -596,5 +596,5 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.achievement_template import AchievementTemplateModel
+        from ..dataloaders.pydantic_loader.models.achievement_template import AchievementTemplateModel
         return AchievementTemplateModel.from_class_data(self)

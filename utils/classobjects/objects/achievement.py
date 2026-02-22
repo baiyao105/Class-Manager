@@ -13,7 +13,7 @@ from ..classdataloader import ClassDataLoader
 if TYPE_CHECKING:
     from .achievementtemp import AchievementTemplate
     from .student import Student
-    from ..pydantic_loader.models.achievement import AchievementModel
+    from ..dataloaders.pydantic_loader.models.achievement import AchievementModel
 
 
 class Achievement(ClassDataType):
@@ -151,6 +151,6 @@ class Achievement(ClassDataType):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.achievement import AchievementModel
+        from ..dataloaders.pydantic_loader.models.achievement import AchievementModel
         return AchievementModel.from_class_data(self)
         

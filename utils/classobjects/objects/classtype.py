@@ -332,5 +332,5 @@ class Class(ClassDataType, SupportsKeyOrdering):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.classtype import ClassModel
+        from ..dataloaders.pydantic_loader.models.classtype import ClassModel
         return ClassModel.from_class_data(self)

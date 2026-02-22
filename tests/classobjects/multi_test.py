@@ -1,7 +1,7 @@
 import unittest
 
 from utils.classobjects import *
-from utils.classobjects.dataloader import DataObject
+from utils.classobjects.dataloaders import create_chunk
 
 
 class ClassObjectMultiTest(unittest.TestCase):
@@ -87,11 +87,11 @@ class ClassObjectMultiTest(unittest.TestCase):
 
         data = action_1.to_string()
 
-        DataObject.static_save(stu1, self.test_chunk)
-        DataObject.static_save(action_1, self.test_chunk)
-        DataObject.static_save(action_2, self.test_chunk)
-        DataObject.static_save(template_1, self.test_chunk)
-        DataObject.static_save(template_2, self.test_chunk)
+        self.test_chunk.save_object(stu1)
+        self.test_chunk.save_object(action_1)
+        self.test_chunk.save_object(action_2)
+        self.test_chunk.save_object(template_1)
+        self.test_chunk.save_object(template_2)
 
 
         action_3 = ScoreModification.from_string(data)
@@ -129,7 +129,7 @@ class ClassObjectMultiTest(unittest.TestCase):
 
     def __init__(self):
         super().__init__()
-        self.test_chunk = Chunk("chunks/_test_chunk", UserDataBase())
+        self.test_chunk = create_chunk("chunks/_test_chunk", UserDataBase())
         self.test_chunk.save_data()
         self.test_chunk.load_data()
 

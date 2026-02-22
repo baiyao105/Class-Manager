@@ -10,7 +10,7 @@ from pydantic import Field
 
 from ..base import PydanticModelBase
 
-from ...objects.scoremodtemplate import ScoreModificationTemplate
+from ....objects.scoremodtemplate import ScoreModificationTemplate
 
 
 class ScoreTemplateModel(PydanticModelBase[ScoreModificationTemplate]):

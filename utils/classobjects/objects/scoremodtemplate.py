@@ -136,5 +136,5 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.score_template import ScoreTemplateModel
+        from ..dataloaders.pydantic_loader.models.score_template import ScoreTemplateModel
         return ScoreTemplateModel.from_class_data(self)

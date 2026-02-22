@@ -134,7 +134,7 @@ class DataTag(ClassDataType):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.datatag import DataTagModel
+        from ..dataloaders.pydantic_loader.models.datatag import DataTagModel
         return DataTagModel.from_class_data(self)
 
 

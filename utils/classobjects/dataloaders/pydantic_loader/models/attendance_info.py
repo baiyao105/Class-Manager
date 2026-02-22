@@ -10,8 +10,8 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.attendanceinfo import AttendanceInfo
-from ...objects.student import Student
+from ....objects.attendanceinfo import AttendanceInfo
+from ....objects.student import Student
 
 class AttendanceInfoModel(PydanticModelBase[AttendanceInfo]):
     "考勤信息的Pydantic模型"

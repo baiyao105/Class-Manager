@@ -15,9 +15,9 @@ from utils.classobjects import *
 from utils.classobjects.objects.dayrecord import DayRecord
 from utils.classobjects.objects.history import History
 from utils.classobjects.objects.homeworkrule import HomeworkRule
-from utils.classobjects.pydantic_loader.loader import PydanticLoader
-from utils.classobjects.pydantic_loader.cache import get_cache
-from utils.classobjects.pydantic_loader.base import PydanticReference
+from utils.classobjects.dataloaders.pydantic_loader.loader import PydanticLoader
+from utils.classobjects.dataloaders.pydantic_loader.cache import get_cache
+from utils.classobjects.dataloaders.pydantic_loader.base import PydanticReference
 
 
 class ComplexPydanticTest(unittest.TestCase):
@@ -280,7 +280,7 @@ class ComplexPydanticTest(unittest.TestCase):
 
         parsed_data = json.loads(json_str)
 
-        from utils.classobjects.pydantic_loader.models.classtype import ClassModel
+        from utils.classobjects.dataloaders.pydantic_loader.models.classtype import ClassModel
         restored_model = ClassModel.model_validate(parsed_data)
 
         self.assertEqual(str(restored_model.uuid), str(cls.uuid), "往返后UUID应该一致")

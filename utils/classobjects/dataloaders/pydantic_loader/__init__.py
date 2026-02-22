@@ -5,6 +5,15 @@ Pydantic数据模型加载器。
 """
 
 from .base import PydanticModelBase, PydanticReference
+from ...datachunk import DataChunk
+from .loader import (
+    PydanticLoader,
+    PydanticLoaderError,
+    ModelNotFoundError,
+    DataNotFoundError,
+    get_loader,
+    clear_cache,
+)
 from .models import (
     DataTagModel,
     StudentModel,
@@ -22,6 +31,13 @@ from .models import (
 __all__ = [
     "PydanticModelBase",
     "PydanticReference",
+    "DataChunk",
+    "PydanticLoader",
+    "PydanticLoaderError",
+    "ModelNotFoundError",
+    "DataNotFoundError",
+    "get_loader",
+    "clear_cache",
     "DataTagModel",
     "StudentModel",
     "ScoreTemplateModel",

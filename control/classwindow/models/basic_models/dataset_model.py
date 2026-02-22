@@ -10,8 +10,8 @@ from typing import Literal
 
 from utils.basetypes import Base
 from utils.algorithm import Thread
-from utils.classobjects import (ClassDataSet, Student, OptExcInfo, Chunk,
-                                DayRecord, UserDataBase, AttendanceInfo)
+from utils.classobjects import ClassDataSet, Student, OptExcInfo, DayRecord, UserDataBase, AttendanceInfo
+from utils.classobjects.dataloaders import Chunk
 from utils.functions import question_yes_no, wait_until
 from utils.qtconfig import InfoBarIcon, QMessageBox, Qt, QFileDialog
 

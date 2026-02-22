@@ -8,6 +8,7 @@ import time
 from typing import Iterable
 
 from utils.basetypes import Base
+from utils.classobjects.dataloaders import create_chunk
 from utils.functions import wait_until
 from utils.algorithm import Thread
 from utils.classobjects import Student, Group, Chunk, Class, ScoreModification
@@ -154,7 +155,7 @@ class ObjectInfoModel(MixinSuperType):
                 nonlocal view
                 uuid = list(self.history_data.values())[0].uuid
                 assert uuid is not None, "怎么可能？？？历史记录列表中的UUID怎么会是None？？？"
-                Chunk(self.save_path, None).del_history(uuid)
+                create_chunk(self.save_path, None).del_history(uuid)
                 self.history_data.pop(list(self.history_data)[0])
                 self.insert_action_history_info(
                     "删除"

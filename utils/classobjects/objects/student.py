@@ -557,5 +557,5 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.student import StudentModel
+        from ..dataloaders.pydantic_loader.models.student import StudentModel
         return StudentModel.from_class_data(self)

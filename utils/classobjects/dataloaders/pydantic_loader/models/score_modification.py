@@ -10,9 +10,9 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.scoremod import ScoreModification
-from ...objects.scoremodtemplate import ScoreModificationTemplate
-from ...objects.student import Student
+from ....objects.scoremod import ScoreModification
+from ....objects.scoremodtemplate import ScoreModificationTemplate
+from ....objects.student import Student
 
 
 class ScoreModificationModel(PydanticModelBase[ScoreModification]):

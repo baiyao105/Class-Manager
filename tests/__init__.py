@@ -5,6 +5,7 @@ import unittest
 from .classobjects import ClassObjectMultiTest, ClassObjectStudentTest
 from .classobjects.pydantic_test import PydanticConversionTest
 from .classobjects.complex_pydantic_test import ComplexPydanticTest
+from .classobjects.loader_test import PydanticLoaderTest
 from .algorithm import AlgorithmMultiTest
 from .events import TaskTest, BroadcastTest
 
@@ -21,6 +22,7 @@ def test_suite():
     suite.addTest(BroadcastTest())
     suite.addTest(PydanticConversionTest())
     suite.addTest(ComplexPydanticTest())
+    suite.addTest(PydanticLoaderTest())
     return suite
 
 __all__ = [
@@ -30,5 +32,6 @@ __all__ = [
     "ClassObjectStudentTest",
     "PydanticConversionTest",
     "ComplexPydanticTest",
+    "PydanticLoaderTest",
     "test_suite"
 ]

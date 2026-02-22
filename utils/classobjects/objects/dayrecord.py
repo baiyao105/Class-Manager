@@ -111,5 +111,5 @@ class DayRecord(ClassDataType):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.day_record import DayRecordModel
+        from ..dataloaders.pydantic_loader.models.day_record import DayRecordModel
         return DayRecordModel.from_class_data(self)

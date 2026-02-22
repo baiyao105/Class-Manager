@@ -155,5 +155,5 @@ class History(ClassDataType):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.history import HistoryModel
+        from ..dataloaders.pydantic_loader.models.history import HistoryModel
         return HistoryModel.from_class_data(self)

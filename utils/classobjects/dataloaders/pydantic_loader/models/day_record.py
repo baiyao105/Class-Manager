@@ -10,9 +10,9 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.attendanceinfo import AttendanceInfo
-from ...objects.classtype import Class
-from ...objects.dayrecord import DayRecord
+from ....objects.attendanceinfo import AttendanceInfo
+from ....objects.classtype import Class
+from ....objects.dayrecord import DayRecord
 
 
 class DayRecordModel(PydanticModelBase[DayRecord]):

@@ -10,9 +10,9 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.datatag import DataTag
-from ...objects.group import Group
-from ...objects.student import Student
+from ....objects.datatag import DataTag
+from ....objects.group import Group
+from ....objects.student import Student
 
 
 class GroupModel(PydanticModelBase[Group]):

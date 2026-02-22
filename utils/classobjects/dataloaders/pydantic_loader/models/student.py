@@ -10,10 +10,10 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.achievement import Achievement
-from ...objects.datatag import DataTag
-from ...objects.scoremod import ScoreModification
-from ...objects.student import Student
+from ....objects.achievement import Achievement
+from ....objects.datatag import DataTag
+from ....objects.scoremod import ScoreModification
+from ....objects.student import Student
 
 
 class StudentModel(PydanticModelBase[Student]):

@@ -10,7 +10,7 @@ from pydantic import Field
 
 from ..base import PydanticModelBase
 
-from ...objects.achievementtemp import AchievementTemplate
+from ....objects.achievementtemp import AchievementTemplate
 
 
 class AchievementTemplateModel(PydanticModelBase[AchievementTemplate]):

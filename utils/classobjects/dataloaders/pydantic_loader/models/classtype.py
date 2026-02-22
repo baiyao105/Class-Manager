@@ -10,9 +10,9 @@ from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
 
-from ...objects.classtype import Class
-from ...objects.student import Student
-from ...objects.group import Group
+from ....objects.classtype import Class
+from ....objects.student import Student
+from ....objects.group import Group
 
 
 class ClassModel(PydanticModelBase[Class]):

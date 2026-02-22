@@ -28,7 +28,8 @@ from ..update_check import CORE_VERSION, CORE_VERSION_CODE
 
 from .classdataloader import *
 
-from .dataloader import Chunk, UserDataBase
+from .classdataloader import UserDataBase
+from .dataloaders import create_chunk
 from .default import *
 from .objects import *
 
@@ -444,7 +445,7 @@ class ClassDataSet(ClassDataLoader, Base):
 
             if method == "sqlite":
                 path = os.path.dirname(path) if path.endswith(".datas") else path
-                data_chunk = Chunk(path)
+                data_chunk = create_chunk(path)
                 data = data_chunk.load_data(load_full_histories)
                 if not silent:
                     Base.log("I", f"耗时：{time.time() - start:.2f}", "ClassDataSet.load_data")
@@ -879,7 +880,7 @@ class ClassDataSet(ClassDataLoader, Base):
                 )
                 if mode == "sqlite":
                     path = os.path.dirname(path) if path.endswith(".datas") else path
-                    chunk = Chunk(path, database)
+                    chunk = create_chunk(path, database)
                     t = time.time()
                     chunk.save_data()
                     Base.log(

@@ -9,8 +9,8 @@ from typing import ClassVar
 from pydantic import Field
 
 from ..base import PydanticModelBase, PydanticReference
-from ...objects.homeworkrule import HomeworkRule
-from ...objects.scoremodtemplate import ScoreModificationTemplate
+from ....objects.homeworkrule import HomeworkRule
+from ....objects.scoremodtemplate import ScoreModificationTemplate
 
 
 class HomeworkRuleModel(PydanticModelBase[HomeworkRule]):

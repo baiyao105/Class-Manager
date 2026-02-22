@@ -302,6 +302,6 @@ class ScoreModification(ClassDataType):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.score_modification import ScoreModificationModel
+        from ..dataloaders.pydantic_loader.models.score_modification import ScoreModificationModel
         return ScoreModificationModel.from_class_data(self)
 

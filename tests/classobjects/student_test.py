@@ -2,7 +2,6 @@ import unittest
 
 from utils.basetypes import Base
 from utils.classobjects import *
-from utils.classobjects.dataloader import DataObject
 from utils.classobjects.objects import DataTag
 
 
@@ -70,16 +69,18 @@ class ClassObjectStudentTest(unittest.TestCase):
         self.assertTrue(stu1.has_tag(tag3), "添加带有校验器的标签时，符合校验器条件的标签添加操作应当成功")
         self.assertTrue(stu1.has_tag("a_simple_tag_2"), "添加带有校验器的标签时，符合校验器条件的标签添加操作应当成功")
 
-        DataObject.static_save(stu1, self.test_chunk)
+        self.test_chunk.save_object(stu1)
         self.test_chunk.set_uuid_loader(None)
         Base.config.log_level = "D"
         stu2 = ClassDataLoader.LoadUUID(stu1.uuid, Student)
+        self.assertIsNotNone(stu2, "加载的对象不应为None")
+        assert stu2 is not None
         self.assertTrue(stu2.has_tag(tag3), "从数据中加载对象后，标签应当被正确加载")
 
 
     def __init__(self):
         super().__init__()
-        self.test_chunk = Chunk("chunks/_test_chunk", UserDataBase())
+        self.test_chunk = create_chunk("chunks/_test_chunk", UserDataBase())
         self.test_chunk.save_data()
         self.test_chunk.load_data()
 

@@ -1,6 +1,7 @@
 """
 数据加载模块
 """
+from __future__ import annotations
 
 # 神人类型检查一夜之间又给我报了一堆错
 # 关键是他没解析到DataProperty（后面用来写触发式更新）的返回值
@@ -30,16 +31,17 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import Iterable
-from typing import Any, TypeVar, Union, Optional, Dict
+from typing import Any, ClassVar, Dict, Optional, TypeVar, Union
 
-from ..algorithm import Mutex
-from ..basetypes import Base
-from ..classobjects import *
-from ..consts import runtime_flags
-from ..functions.prompts import question_yes_no
+from ...algorithm import Mutex
+from ...basetypes import Base
+from ...classobjects import *
+from ...consts import runtime_flags
+from ...functions.prompts import question_yes_no
 
-from .basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
-from .classdataloader import *
+from ..basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
+from ..classdataloader import *
+from ..datachunk import DataChunk
 
 
 BaseDataType = Union[int, float, bool, str]
@@ -246,7 +248,7 @@ def spilt_list(
 _DT = TypeVar("_DT", bound=ClassDataType)
 
 
-class Chunk:
+class Chunk(DataChunk):
   """
   数据分组.
 
@@ -258,7 +260,7 @@ class Chunk:
   database_connections: dict[tuple[ClassDataTypeUUID[History] | None, str], sqlite3.Connection] = {}
   "数据库连接池，database_connection[(历史记录uuid,数据类型名)] = sqlite3.Connection"
 
-  loading_info: dict[str, Any] = {}
+  loading_info: ClassVar[dict[str, Any]] = {}
   "加载信息, 字典里面是啥自己开盲盒吧（懒得写了）"
 
   save_task_mutex: Mutex = Mutex()
@@ -274,6 +276,117 @@ class Chunk:
       self.path if not path.endswith(".datas") else os.path.dirname(self.path),
       exist_ok=True,
     )
+
+  @staticmethod
+  def get_chunk(path: str, database: UserDataBase) -> Chunk:
+    """
+    获取Chunk对象。
+
+    :param path: 数据存储路径
+    :param database: 绑定的数据库对象
+    :return: Chunk对象
+    """
+    return Chunk(path, database)
+
+  def load_object(
+    self,
+    uuid: ClassDataTypeUUID[_DT],
+    data_type: type[_DT],
+  ) -> _DT | None:
+    """
+    加载单个对象。
+
+    :param uuid: 对象UUID
+    :param data_type: 对象类型
+    :return: 加载的对象，不存在则返回None
+    """
+    return ClassDataLoader.LoadUUID(uuid, data_type)
+
+  def save_object(self, obj: ClassDataType) -> None:
+    """
+    保存单个对象。
+
+    :param obj: 要保存的对象
+    """
+    DataObject(obj, self).save(self.get_current_save_dir())
+
+  def create_history(self) -> ClassDataTypeUUID[History]:
+    """
+    创建历史记录存档。
+
+    :return: 新创建的历史记录UUID
+    """
+    history = History(self.bound_db.classes, self.bound_db.weekday_record)
+    self._save_history_internal(history)
+    if history.uuid is None:
+      raise LoaderError("历史记录UUID不能为None")
+    return history.uuid
+
+  def _save_history_internal(self, history: History) -> None:
+    """
+    内部方法：保存历史记录。
+
+    :param history: 历史记录对象
+    """
+    if history.uuid is None:
+      return
+    history_path = os.path.join(self.path, "Histories", str(history.uuid)[:2], str(history.uuid)[2:])
+    os.makedirs(history_path, exist_ok=True)
+    info = {
+      "uuid": str(history.uuid),
+      "create_time": history.time,
+      "save_time": self.bound_db.save_time,
+    }
+    with open(os.path.join(history_path, "info.json"), "w", encoding="utf-8") as f:
+      json.dump(info, f, ensure_ascii=False, indent=2)
+
+  def list_histories(self) -> list[ClassDataTypeUUID[History]]:
+    """
+    列出所有历史记录。
+
+    :return: 历史记录UUID列表
+    """
+    histories_dir = os.path.join(self.path, "Histories")
+    if not os.path.isdir(histories_dir):
+      return []
+
+    results: list[ClassDataTypeUUID[History]] = []
+    for prefix_dir in os.listdir(histories_dir):
+      prefix_path = os.path.join(histories_dir, prefix_dir)
+      if not os.path.isdir(prefix_path) or len(prefix_dir) != 2:
+        continue
+
+      for history_dir in os.listdir(prefix_path):
+        history_path = os.path.join(prefix_path, history_dir)
+        info_path = os.path.join(history_path, "info.json")
+        if not os.path.isdir(history_path):
+          continue
+
+        if os.path.isfile(info_path):
+          try:
+            with open(info_path, encoding="utf-8") as f:
+              info = json.load(f)
+            uuid_str = info.get("uuid", prefix_dir + history_dir)
+            results.append(ClassDataTypeUUID(History, uuid.UUID(uuid_str)))
+          except (json.JSONDecodeError, OSError, ValueError):
+            try:
+              results.append(ClassDataTypeUUID(History, uuid.UUID(prefix_dir + history_dir)))
+            except ValueError:
+              continue
+
+    return results
+
+  def close_connections(self) -> None:
+    """
+    关闭所有数据库连接。
+    """
+    for conn in self.database_connections.values():
+      try:
+        conn.commit()
+        conn.close()
+      except sqlite3.Error:
+        pass
+    self.database_connections.clear()
 
   def get_object_rdata(
     self,

@@ -218,7 +218,7 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
 
         :return: Pydantic模型实例
         """
-        from ..pydantic_loader.models.group import GroupModel
+        from ..dataloaders.pydantic_loader.models.group import GroupModel
         return GroupModel.from_class_data(self)
 
     def __repr__(self):

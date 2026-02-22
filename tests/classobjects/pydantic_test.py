@@ -6,8 +6,8 @@ import unittest
 
 from utils.classobjects import *
 from utils.classobjects.objects.datatag import DataTag
-from utils.classobjects.pydantic_loader.loader import PydanticLoader
-from utils.classobjects.pydantic_loader.cache import get_cache
+from utils.classobjects.dataloaders.pydantic_loader.loader import PydanticLoader
+from utils.classobjects.dataloaders.pydantic_loader.cache import get_cache
 
 
 class PydanticConversionTest(unittest.TestCase):

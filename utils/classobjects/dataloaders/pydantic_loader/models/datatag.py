@@ -10,7 +10,7 @@ from pydantic import Field
 
 from ..base import PydanticModelBase
 
-from ...objects.datatag import DataTag
+from ....objects.datatag import DataTag
 
 
 class DataTagModel(PydanticModelBase[DataTag]):

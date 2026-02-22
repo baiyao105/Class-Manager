@@ -16,7 +16,7 @@ from utils.logger import Logger
 from utils.profiler import profile
 
 if TYPE_CHECKING:
-  from .dataloader import UserDataBase
+  from .classdataloader import UserDataBase
   from .classdataset import ClassDataSet
 
 
@@ -28,7 +28,7 @@ class StringObjectDataKind(str, Generic[_StringDataType]):
 
 
 
-_DataType = TypeVar("_DataType", covariant=True)
+_DataType = TypeVar("_DataType", bound="ClassDataType", covariant=True)
 
 
 class ClassDataTypeUUID(UUID, Generic[_DataType]):
@@ -110,8 +110,16 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         :return: ClassDataTypeUUID实例
         """
         if isinstance(value, ClassDataTypeUUID):
-            return value  # pyright: ignore[reportUnknownVariableType]
-        raise ValueError(f"无法将 {type(value)} 转换为 ClassDataTypeUUID")
+            return value # type: ignore
+        if isinstance(value, dict) and "uuid" in value and "type_name" in value:
+            from .dataloaders.pydantic_loader.base import get_type_by_name
+            type_name: str = str(value["type_name"]) # type: ignore
+            uuid: str = str(value["uuid"]) # type: ignore
+            dtype = get_type_by_name(type_name)
+            if dtype is None:
+                raise ValueError(f"未知的类型名称: {type_name}")
+            return ClassDataTypeUUID(dtype, UUID(uuid.replace("-", "")))
+        raise ValueError(f"无法将{type(value).__name__}转换为ClassDataTypeUUID")  # type: ignore
 
 
 class ClassDataType(ABC):
