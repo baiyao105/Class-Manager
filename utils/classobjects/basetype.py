@@ -36,13 +36,29 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
     班级数据类型的唯一标识符。
     """
 
-    def __init__(self, dt: type[_DataType], _uuid: UUID | None = None):
+    def __new__(cls, 
+        dt: type[_DataType] | None = None, # 有的时候python会直接调用cls.__new__()，比如deepcopy时
+        _uuid: UUID | None = None
+    ):
+        obj = super().__new__(cls)
+        obj.dtype = dt # type: ignore
+        return obj
+
+    def __init__(self, dt: type[_DataType], _uuid: UUID | None = None): # type: ignore
+        self.dtype: type[ClassDataType] = dt
+
         super().__init__(str(_uuid) if _uuid else str(uuid4()))
-        self.dtype = dt
+
+    def __deepcopy__(self, memo: dict[int, Any] | None) -> Self:
+        return ClassDataTypeUUID(self.dtype, UUID(str(self)))  # type: ignore[return-value]
+
+    def __reduce__(self) -> tuple[type[Self], tuple[type[ClassDataType], UUID]]:
+        return (ClassDataTypeUUID, (self.dtype, UUID(str(self))))  # type: ignore[return-value]
 
     def __setattr__(self, name: str, value: Any):  # pyright: ignore[reportIncompatibleMethodOverride]，为了去掉UUID的限制
-        Logger.log("T", f"setattr: {name} = {value} ({self})")
-        return object.__setattr__(self, name, value)
+        val = object.__setattr__(self, name, value)
+        Logger.log("T", f"setattr: {name} = {value!r} ({self!r})")
+        return val
 
     def __eq__(self, other: object) -> bool:
         if self.__class__ != other.__class__:
@@ -62,7 +78,7 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         return hash(self.dtype.__qualname__ + "_" + str(self))  # 防止不同类但UUID相同的情况
 
     def __repr__(self) -> str:
-        return f"ClassDataTypeUUID(value={super().__repr__()}, dtype={self.dtype.__name__})"
+        return f"ClassDataTypeUUID(value={super(UUID, self).__repr__()}, dtype={self.dtype.__name__})"
 
     def __str__(self) -> str:
         return super().__str__().replace("-", "")
@@ -95,6 +111,8 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
         :param value: ClassDataTypeUUID实例
         :return: 包含UUID和类型信息的字典
         """
+        if not hasattr(value, 'dtype'):
+            raise ValueError(f"ClassDataTypeUUID实例没有dtype属性: {value}")
         return {
             "uuid": str(value),
             "type_name": value.dtype.chunk_type_name
@@ -113,8 +131,8 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
             return value # type: ignore
         if isinstance(value, dict) and "uuid" in value and "type_name" in value:
             from .dataloaders.pydantic_loader.base import get_type_by_name
-            type_name: str = str(value["type_name"]) # type: ignore
-            uuid: str = str(value["uuid"]) # type: ignore
+            type_name: str = str(value["type_name"])  # type: ignore
+            uuid: str = str(value["uuid"])  # type: ignore
             dtype = get_type_by_name(type_name)
             if dtype is None:
                 raise ValueError(f"未知的类型名称: {type_name}")

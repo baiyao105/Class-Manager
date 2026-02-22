@@ -200,33 +200,33 @@ class Class(ClassDataType, SupportsKeyOrdering):
         return result
 
 
-    def dump_student_dict(self) -> dict[int, str]:
+    def dump_student_dict(self) -> list[tuple[int, str]]:
         "将班级的学生字典转换为字符串列表。"
-        return {n: str(s.uuid) for n, s in self.students.items()}
+        return [(n, str(s.uuid)) for n, s in self.students.items()]
 
     @staticmethod
     def load_student_dict(d: dict[str, Any]) -> dict[int, Student]:
         "从字符串列表加载学生字典。"
         from .student import Student
-        stu_dict: dict[int, ClassDataTypeUUID[Student]] = d["students"]
+        stu_list: list[tuple[int, ClassDataTypeUUID[Student]]] = d["students"]
         result: dict[int, Student] = {}
-        for n, s in stu_dict.items():
+        for n, s in stu_list:
             stu = ClassDataLoader.LoadUUID(s, Student)
             assert stu, f"班级{d['uuid']}的学生{n}加载失败"
             result[n] = stu
         return result
         
-    def dump_group_dict(self) -> dict[str, str]:
+    def dump_group_dict(self) -> list[tuple[str, str]]:
         "将班级的小组字典转换为字符串列表。"
-        return {n: str(g.uuid) for n, g in self.groups.items()}
+        return [(n, str(g.uuid)) for n, g in self.groups.items()]
     
     @staticmethod
     def load_group_dict(d: dict[str, Any]) -> dict[str, Group]:
         "从字符串列表加载小组字典。"
         from .group import Group
-        group_dict: dict[str, ClassDataTypeUUID[Group]] = d["groups"]
+        group_list: list[tuple[str, ClassDataTypeUUID[Group]]] = d["groups"]
         result: dict[str, Group] = {}
-        for n, g in group_dict.items():
+        for n, g in group_list:
             group = ClassDataLoader.LoadUUID(g, Group)
             assert group, f"班级{d['uuid']}的小组{n}加载失败"
             result[n] = group
@@ -246,7 +246,7 @@ class Class(ClassDataType, SupportsKeyOrdering):
         -> dict[int, dict[Literal["member", "leader"], list[Student]]]:
         "从字符串列表加载清理映射。"
         result: dict[int, dict[Literal["member", "leader"], list[Student]]] = {}
-        for k, v in d["cleaning_mapping"]:
+        for k, v in d["cleaning_mapping"].items():
             k: int
             v: dict[Literal["member", "leader"], list[ClassDataTypeUUID[Student]]]
             result[k] = {}
@@ -298,13 +298,10 @@ class Class(ClassDataType, SupportsKeyOrdering):
     @classmethod
     def from_string(cls, string: str) -> Self:
         "从字符串加载班级对象。"
-        from .student import Student
 
         d = json.loads(string)
         if d["type"] != cls.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
-        students = {n: ClassDataLoader.LoadUUID(s, Student) for n, s in d["students"]}
-        assert all(students.values()), f"班级{d['uuid']}的学生{[n for n, s in students.items() if s is None]}加载失败"
 
         obj = cls(
             name=d["name"],

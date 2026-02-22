@@ -7,12 +7,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import Any, ClassVar, TypeVar
 
-if TYPE_CHECKING:
-    from .basetype import ClassDataType, ClassDataTypeUUID
-    from .objects.history import History
-    from .classdataset import UserDataBase
+from .basetype import ClassDataType, ClassDataTypeUUID
+from .objects.history import History
+from .classdataset import UserDataBase
 
 T = TypeVar("T", bound=ClassDataType)
 

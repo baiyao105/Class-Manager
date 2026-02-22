@@ -27,5 +27,5 @@ except ImportError:
     )
 
 from .classdataset import *
-from .dataloader import *
+from .dataloaders import *
 from .observers import *  # 一定要放在default后面，observers依赖classdataset，classdataset依赖default

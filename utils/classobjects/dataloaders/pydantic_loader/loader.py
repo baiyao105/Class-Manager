@@ -627,7 +627,7 @@ class PydanticLoader(DataChunk):
         :param history_uuid: 历史记录UUID，None表示当前存档
         :return: 历史记录对象
         """
-        from ...objects import Class, DayRecord
+        from ...objects import Class, DayRecord, History
 
         if history_uuid is None:
             path = os.path.join(self.current_path, "Current")
@@ -635,22 +635,37 @@ class PydanticLoader(DataChunk):
             path = os.path.join(self.current_path, "Histories", str(history_uuid)[:2], str(history_uuid)[2:])
 
         if not os.path.isdir(path):
+            if history_uuid is None:
+                os.makedirs(path, exist_ok=True)
+                history = History({}, {})
+                return history
             raise FileNotFoundError(f"历史记录不存在: {path}")
 
         self.set_uuid_loader(history_uuid)
 
-        info = json.load(open(os.path.join(path, "info.json"), encoding="utf-8"))
+        info_file = os.path.join(path, "info.json")
+        classes_file = os.path.join(path, "classes.json")
+        weekdays_file = os.path.join(path, "weekdays.json")
 
-        class_uuids: list[tuple[str, ClassDataTypeUUID[Class]]] = json.load(
-            open(os.path.join(path, "classes.json"), encoding="utf-8")
-        )
+        if not all(os.path.isfile(f) for f in [info_file, classes_file, weekdays_file]):
+            if history_uuid is None:
+                history = History({}, {})
+                return history
+            raise FileNotFoundError(f"历史记录文件不完整: {path}")
 
-        weekday_uuids: dict[str, dict[str, str]] = json.load(
-            open(os.path.join(path, "weekdays.json"), encoding="utf-8")
-        )
+        try:
+            info = json.load(open(info_file, encoding="utf-8"))
+            class_uuids: list[tuple[str, str]] = json.load(open(classes_file, encoding="utf-8"))
+            weekday_uuids: dict[str, dict[str, str]] = json.load(open(weekdays_file, encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            if history_uuid is None:
+                history = History({}, {})
+                return history
+            raise FileNotFoundError(f"历史记录文件损坏: {path}") from e
 
         classes: dict[str, Class] = {}
-        for _, class_uuid in class_uuids:
+        for _, class_uuid_str in class_uuids:
+            class_uuid = ClassDataTypeUUID(Class, UUID(class_uuid_str))
             _class = self.load_object(class_uuid, Class)
             if _class:
                 classes[_class.key] = _class
@@ -804,35 +819,53 @@ class PydanticLoader(DataChunk):
 
         current_record = self.load_history(None)
 
+        current_path = os.path.join(self.current_path, "Current")
+        
         templates: list[ScoreModificationTemplate] = []
         achievements: list[AchievementTemplate] = []
         current_day_attendance: dict[str, AttendanceInfo] = {}
 
-        template_uuids: list[tuple[str, ClassDataTypeUUID[ScoreModificationTemplate]]] = json.load(
-            open(os.path.join(self.current_path, "Current", "templates.json"), encoding="utf-8")
-        )
-        for _, template_uuid in template_uuids:
-            template = self.load_object(template_uuid, ScoreModificationTemplate)
-            if template:
-                templates.append(template)
+        templates_file = os.path.join(current_path, "templates.json")
+        if os.path.isfile(templates_file):
+            template_uuids: list[tuple[str, ClassDataTypeUUID[ScoreModificationTemplate]]] = json.load(
+                open(templates_file, encoding="utf-8")
+            )
+            for _, template_uuid in template_uuids:
+                template = self.load_object(template_uuid, ScoreModificationTemplate)
+                if template:
+                    templates.append(template)
+        else:
+            Base.log("W", "当前模板记录文件不存在", "PydanticLoader.load_data")
 
-        achievement_uuids: list[tuple[str, ClassDataTypeUUID[AchievementTemplate]]] = json.load(
-            open(os.path.join(self.current_path, "Current", "achievements.json"), encoding="utf-8")
-        )
-        for _, achievement_uuid in achievement_uuids:
-            achievement = self.load_object(achievement_uuid, AchievementTemplate)
-            if achievement:
-                achievements.append(achievement)
+        achievements_file = os.path.join(current_path, "achievements.json")
+        if os.path.isfile(achievements_file):
+            achievement_uuids: list[tuple[str, ClassDataTypeUUID[AchievementTemplate]]] = json.load(
+                open(achievements_file, encoding="utf-8")
+            )
+            for _, achievement_uuid in achievement_uuids:
+                achievement = self.load_object(achievement_uuid, AchievementTemplate)
+                if achievement:
+                    achievements.append(achievement)
+        else:
+            Base.log("W", "当前成就记录文件不存在", "PydanticLoader.load_data")
 
-        current_day_attendance_uuids: list[tuple[str, ClassDataTypeUUID[AttendanceInfo]]] = json.load(
-            open(os.path.join(self.current_path, "Current", "current_day_attendance.json"), encoding="utf-8")
-        )
-        for target_class, attendance_uuid in current_day_attendance_uuids:
-            attendance = self.load_object(attendance_uuid, AttendanceInfo)
-            if attendance:
-                current_day_attendance[target_class] = attendance
+        attendance_file = os.path.join(current_path, "current_day_attendance.json")
+        if os.path.isfile(attendance_file):
+            current_day_attendance_uuids: list[tuple[str, ClassDataTypeUUID[AttendanceInfo]]] = json.load(
+                open(attendance_file, encoding="utf-8")
+            )
+            for target_class, attendance_uuid in current_day_attendance_uuids:
+                attendance = self.load_object(attendance_uuid, AttendanceInfo)
+                if attendance:
+                    current_day_attendance[target_class] = attendance
+        else:
+            Base.log("W", "当前日出勤记录文件不存在", "PydanticLoader.load_data")
 
-        info = json.load(open(os.path.join(self.current_path, "info.json"), encoding="utf-8"))
+        info_file = os.path.join(self.current_path, "info.json")
+        if os.path.isfile(info_file):
+            info = json.load(open(info_file, encoding="utf-8"))
+        else:
+            raise FileNotFoundError(f"信息文件不存在: {info_file}")
 
         histories: dict[float, History] = {}
         if load_all:
@@ -1018,7 +1051,7 @@ class PydanticLoader(DataChunk):
         with open(os.path.join(path, "info.json"), "w", encoding="utf-8") as f:
             json.dump(info, f, ensure_ascii=False, indent=2)
 
-        class_uuids = [(c.key, c.uuid) for c in classes]
+        class_uuids = [(c.key, str(c.uuid)) for c in classes]
         with open(os.path.join(path, "classes.json"), "w", encoding="utf-8") as f:
             json.dump(class_uuids, f, ensure_ascii=False, indent=2)
 
@@ -1067,15 +1100,15 @@ class PydanticLoader(DataChunk):
         with open(os.path.join(self.current_path, "info.json"), "w", encoding="utf-8") as f:
             json.dump(info, f, ensure_ascii=False, indent=2)
 
-        template_uuids = [(t.key, t.uuid) for t in self.bound_db.templates.values()]
+        template_uuids = [(t.key, str(t.uuid)) for t in self.bound_db.templates.values()]
         with open(os.path.join(self.current_path, "Current", "templates.json"), "w", encoding="utf-8") as f:
             json.dump(template_uuids, f, ensure_ascii=False, indent=2)
 
-        achievement_uuids = [(a.key, a.uuid) for a in self.bound_db.achievements.values()]
+        achievement_uuids = [(a.key, str(a.uuid)) for a in self.bound_db.achievements.values()]
         with open(os.path.join(self.current_path, "Current", "achievements.json"), "w", encoding="utf-8") as f:
             json.dump(achievement_uuids, f, ensure_ascii=False, indent=2)
 
-        attendance_uuids = [(c, a.uuid) for c, a in self.bound_db.current_day_attendance.items()]
+        attendance_uuids = [(c, str(a.uuid)) for c, a in self.bound_db.current_day_attendance.items()]
         with open(os.path.join(self.current_path, "Current", "current_day_attendance.json"), "w", encoding="utf-8") as f:
             json.dump(attendance_uuids, f, ensure_ascii=False, indent=2)
 
