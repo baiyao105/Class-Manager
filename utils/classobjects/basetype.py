@@ -10,12 +10,15 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Dict, Generic, Optional, Self, TypeVar
 from uuid import UUID, uuid4
 
+from pydantic_core import core_schema
+
 from utils.logger import Logger
 from utils.profiler import profile
 
 if TYPE_CHECKING:
   from .dataloader import UserDataBase
   from .classdataset import ClassDataSet
+
 
 _StringDataType = TypeVar("_StringDataType", covariant=True)
 
@@ -63,6 +66,52 @@ class ClassDataTypeUUID(UUID, Generic[_DataType]):
 
     def __str__(self) -> str:
         return super().__str__().replace("-", "")
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: Any) -> Any:
+        """
+        Pydantic核心模式生成。
+
+        将ClassDataTypeUUID作为包含类型信息的字典处理。
+        """
+        python_schema = core_schema.with_info_plain_validator_function(
+            cls._validate_pydantic,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                cls._serialize_pydantic,
+                return_schema=core_schema.dict_schema(
+                    core_schema.str_schema(),
+                    core_schema.any_schema()
+                ),
+                when_used="json"
+            )
+        )
+        return python_schema
+
+    @classmethod
+    def _serialize_pydantic(cls, value: ClassDataTypeUUID[Any]) -> dict[str, str]:
+        """
+        Pydantic序列化函数。
+
+        :param value: ClassDataTypeUUID实例
+        :return: 包含UUID和类型信息的字典
+        """
+        return {
+            "uuid": str(value),
+            "type_name": value.dtype.chunk_type_name
+        }
+
+    @classmethod
+    def _validate_pydantic(cls, value: Any, _info: Any) -> ClassDataTypeUUID[Any]:
+        """
+        Pydantic验证函数。
+
+        :param value: 输入值
+        :param _info: 验证信息
+        :return: ClassDataTypeUUID实例
+        """
+        if isinstance(value, ClassDataTypeUUID):
+            return value  # pyright: ignore[reportUnknownVariableType]
+        raise ValueError(f"无法将 {type(value)} 转换为 ClassDataTypeUUID")
 
 
 class ClassDataType(ABC):
@@ -165,9 +214,9 @@ class ClassDataType(ABC):
             f"({', '.join([f'{k}={v!r}' for k, v in self.__dict__.items() if not k.startswith('_')])})"
         )
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def from_string(string: str) -> ClassDataType:
+    def from_string(cls, string: str) -> Self:
         """
         从字符串解析该班级数据类型，并返回该类型的对象。
         """
@@ -187,7 +236,7 @@ class ClassDataType(ABC):
         """
         raise NotImplementedError(f"该数据类型({self.__class__.__name__})的to_dict方法未实现")
 
-    def from_dict(self, data: Dict[str, Any]) -> "ClassDataType":
+    def from_dict(self, data: Dict[str, Any]) -> Self:
         """
         从字典解析该班级数据类型。
 
@@ -196,14 +245,14 @@ class ClassDataType(ABC):
         raise NotImplementedError(f"该数据类型({self.__class__.__name__})的from_dict方法未实现")
 
     @abstractmethod
-    def inst_from_string(self, string: str) -> "ClassDataType":
+    def inst_from_string(self, string: str) -> Self:
         """
         从字符串解析该班级数据类型，并加载至本身。
         """
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def new_dummy() -> "ClassDataType":
+    def new_dummy(cls) -> Self:
         """
         返回该班级数据类型的空对象。
         """
@@ -215,7 +264,13 @@ class ClassDataType(ABC):
         from .classdataset import ClassDataSet
         return ClassDataSet.get_current_instance()
     
-    
+    @abstractmethod
+    def to_pydantic(self) -> Any:
+        """
+        将该班级数据类型转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
 
 
 class DataProperty(property):

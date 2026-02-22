@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 from ...algorithm.types import update_object_mapping
 
@@ -13,6 +13,7 @@ from ..classdataloader import ClassDataLoader
 if TYPE_CHECKING:
     from .achievementtemp import AchievementTemplate
     from .student import Student
+    from ..pydantic_loader.models.achievement import AchievementModel
 
 
 class Achievement(ClassDataType):
@@ -24,17 +25,17 @@ class Achievement(ClassDataType):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "创建一个空的成就实例"
         from .achievementtemp import AchievementTemplate
         from .student import Student
 
-        return Achievement(
+        return cls(
             AchievementTemplate.new_dummy(),
             Student.new_dummy(),
             "1970-01-01 00:00:00.000",
-            0,
+            0
         )
 
     def __init__(
@@ -111,21 +112,27 @@ class Achievement(ClassDataType):
             }
         ))
 
-    @staticmethod
-    def from_string(string: str):
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "从字符串加载成就对象。"
         from .achievementtemp import AchievementTemplate
         from .student import Student
 
         d: dict[str, Any] = json.loads(string)
-        if d["type"] != Achievement.chunk_type_name:
-            raise ValueError(f"类型不匹配：{d['type']} != {Achievement.chunk_type_name}")
-        obj = Achievement(
-            template=ClassDataLoader.LoadUUID(d["template"], AchievementTemplate),
-            target=ClassDataLoader.LoadUUID(d["target"], Student),
+        
+        if d["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
+        template = ClassDataLoader.LoadUUID(d["template"], AchievementTemplate)
+        assert template is not None, f"成就{d['uuid']}的成就模板{template}加载失败"
+        target = ClassDataLoader.LoadUUID(d["target"], Student)
+        assert target is not None, f"成就{d['uuid']}的目标学生对象{target}加载失败"
+        obj = cls(
+            template=template,
+            target=target,
             reach_time=d["time"],
             reach_time_key=d["time_key"],
         )
+        
         obj.sound = d["sound"]
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
@@ -136,3 +143,14 @@ class Achievement(ClassDataType):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self) -> AchievementModel:
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.achievement import AchievementModel
+        return AchievementModel.from_class_data(self)
+        

@@ -355,10 +355,10 @@ except Exception:
         "client_version_code": 0,
     } 
 
-CORE_VERSION = VERSION_INFO["core_version"]
-CORE_VERSION_CODE = VERSION_INFO["core_version_code"]
-CLIENT_VERSION = VERSION_INFO["client_version"]
-CLIENT_VERSION_CODE = VERSION_INFO["client_version_code"]
+CORE_VERSION: str = VERSION_INFO["core_version"]
+CORE_VERSION_CODE: int = VERSION_INFO["core_version_code"]
+CLIENT_VERSION: str = VERSION_INFO["client_version"]
+CLIENT_VERSION_CODE: int = VERSION_INFO["client_version_code"]
 
 
 url = f"https://gitee.com/{AUTHOR}/{REPO_NAME}/raw/{MASTER}/version"

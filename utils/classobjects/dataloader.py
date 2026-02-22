@@ -33,15 +33,13 @@ from collections.abc import Iterable
 from typing import Any, TypeVar, Union, Optional, Dict
 
 from ..algorithm import Mutex
-from ..basetypes import Base, Object
+from ..basetypes import Base
 from ..classobjects import *
 from ..consts import runtime_flags
 from ..functions.prompts import question_yes_no
 
 from .basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
 from .classdataloader import *
-
-
 
 
 BaseDataType = Union[int, float, bool, str]
@@ -57,103 +55,6 @@ class ObjectDataNotFoundError(LoaderError):
 
 class IdentifierDumplicatedError(LoaderError):
   "UUID重复了"
-
-
-class UserDataBase(Object):
-  "用户数据库"
-
-  def __init__(
-    self,
-    user: str | None = None,
-    save_time: float | None = None,
-    version: str | None = None,
-    version_code: int | None = None,
-    last_reset: float | None = None,
-    history_data: dict[float, History] | None = None,
-    classes: dict[str, Class] | None = None,
-    templates: OrderedDict[str, ScoreModificationTemplate] | dict[str, ScoreModificationTemplate] | None = None,
-    achievements: dict[str, AchievementTemplate] | None = None,
-    last_start_time: float | None = None,
-    weekday_record: dict[str, dict[float, DayRecord]] | None = None,
-    current_day_attendance: dict[str, AttendanceInfo] | None = None,
-  ):
-    """
-    构建一个数据库对象。
-
-    :param user: 用户名
-    :param save_time: 保存时间
-    :param version: 算法核心版本
-    :param version_code: 算法核心版本号
-    :param last_reset: 上次重置时间戳
-    :param history_data: 历史数据
-    :param classes: 当前班级列表
-    :param templates: 当前分数模板
-    :param achievements: 当前成就模板
-    :param last_start_time: 上次启动时间
-    :param weekday_record: 每周出勤记录
-    :param current_day_attendance: 每个班级的今日出勤状况
-    """
-    self.loaded = False
-    self.user = user or "unknown"
-    self.save_time = save_time or time.time()
-    self.version = version or "unknown"
-    self.version_code = version_code or 0
-    self.last_reset = last_reset or time.time()
-    self.history_data = history_data or {}
-    self.classes = classes or {}
-    self.templates = OrderedDict(templates or {})
-    self.achievements = achievements or {}
-    self.last_start_time = last_start_time or time.time()
-    self.weekday_record = weekday_record or {}
-    self.current_day_attendance = current_day_attendance or {}
-    self.loaded = user is not None  # 任一参数非空即视为已加载
-
-  def set(
-    self,
-    user: str | None = None,
-    save_time: float | None = None,
-    version: str | None = None,
-    version_code: int | None = None,
-    last_reset: float | None = None,
-    history_data: dict[float, History] | None = None,
-    classes: dict[str, Class] | None = None,
-    templates: OrderedDict[str, ScoreModificationTemplate] | dict[str, ScoreModificationTemplate] | None = None,
-    achievements: dict[str, AchievementTemplate] | None = None,
-    last_start_time: float | None = None,
-    weekday_record: dict[str, dict[float, DayRecord]] | None = None,
-    current_day_attendance: dict[str, AttendanceInfo] | None = None,
-  ):
-    """
-    构建一个数据库对象。
-
-    :param user: 用户名
-    :param save_time: 保存时间
-    :param version: 算法核心版本
-    :param version_code: 算法核心版本号
-    :param last_reset: 上次重置时间戳
-    :param history_data: 历史数据
-    :param class: 当前班级列表
-    :param templates: 当前分数模板
-    :param achievements: 当前成就模板
-    :param last_start_time: 上次启动时间
-    :param current_day_attendance: 今日出勤状况
-    """
-    self.user = user or "unknown"
-    self.save_time = save_time or time.time()
-    self.version = version or "unknown"
-    self.version_code = version_code or 0
-    self.last_reset = last_reset or time.time()
-    self.history_data = history_data or {}
-    self.classes = classes or {}
-    self.templates = OrderedDict(templates or {})
-    self.achievements = achievements or {}
-    self.last_start_time = last_start_time or time.time()
-    self.weekday_record = weekday_record or {}
-    self.current_day_attendance = current_day_attendance or {}
-    self.loaded = user is not None  # 任一参数非空即视为已加载
-
-  def __contains__(self, key: str) -> bool:
-    return key in self.__dict__ and self.__dict__[key] is not None and self.__dict__[key] is not None
 
 
 class DataObject:
@@ -506,7 +407,7 @@ class Chunk:
         DataObject.load_tasks.remove(_id)
         return obj
 
-    ClassDataLoader.LoadUUID = lambda uuid, type: _load_object(uuid, type)  # type: ignore
+    ClassDataLoader.LoadUUID = lambda uuid, type: _load_object(uuid, type)
 
   def load_history(
     self,
@@ -586,6 +487,7 @@ class Chunk:
     classes: Dict[str, Class] = {}
     for _, class_uuid in class_uuids:
       _class: Class | None = ClassDataLoader.LoadUUID(class_uuid, Class)
+      assert _class is not None, f"班级{class_uuid}加载失败"
       classes[_class.key] = _class
 
     for target_class, item in weekday_uuids.items():
@@ -593,6 +495,7 @@ class Chunk:
         weekday: DayRecord | None = ClassDataLoader.LoadUUID(weekday_uuid, DayRecord)
         if target_class not in self.bound_db.weekday_record:
           self.bound_db.weekday_record[target_class] = {}
+        assert weekday is not None, f"星期{_time_key}的记录{weekday_uuid}加载失败"
         self.bound_db.weekday_record[target_class][weekday.utc] = weekday
 
     history = History(
@@ -645,7 +548,9 @@ class Chunk:
     )
 
     for _, template_uuid in template_uuids:
-      templates.append(ClassDataLoader.LoadUUID(template_uuid, ScoreModificationTemplate))
+      template = ClassDataLoader.LoadUUID(template_uuid, ScoreModificationTemplate)
+      assert template is not None, f"模板{template_uuid}加载失败"
+      templates.append(template)
 
     achievement_uuids: list[tuple[str, ClassDataTypeUUID[AchievementTemplate]]] = json.load(
       open(
@@ -654,7 +559,10 @@ class Chunk:
       )
     )
     for _, achievement_uuid in achievement_uuids:
-      achievements.append(ClassDataLoader.LoadUUID(achievement_uuid, AchievementTemplate))
+      achievement = ClassDataLoader.LoadUUID(achievement_uuid, AchievementTemplate)
+      assert achievement is not None, f"成就{achievement_uuid}加载失败"
+      achievements.append(achievement)
+
 
     current_day_attendance_uuids: list[tuple[str, ClassDataTypeUUID[AttendanceInfo]]] = json.load(
       open(
@@ -663,7 +571,9 @@ class Chunk:
       )
     )
     for target_class, history_uuid in current_day_attendance_uuids:
-      current_day_attendance[target_class] = ClassDataLoader.LoadUUID(history_uuid, AttendanceInfo)
+      attendance = ClassDataLoader.LoadUUID(history_uuid, AttendanceInfo)
+      assert attendance is not None, f"出勤记录{history_uuid}加载失败"
+      current_day_attendance[target_class] = attendance
 
     info = json.load(open(os.path.join(self.path, "info.json"), encoding="utf-8"))
     self.bound_db.save_time = info["save_time"]

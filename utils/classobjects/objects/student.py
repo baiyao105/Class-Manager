@@ -3,12 +3,12 @@ from __future__ import annotations
 import copy
 import json
 import time
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 from ...basetypes import Base
 from .datatag import TagSigned, DataTag
-from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
+from ..basetype import ClassDataType, ClassDataTypeUUID, DataProperty, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
@@ -48,10 +48,10 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
     class CannotFindStudentInClassError(ClassDataType.DataTypeError):
         "在侦测器的班级里找不到这个学生。"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空学生"
-        return Student("dummy", 0, 0.0, "dummy")
+        return cls("dummy", 0, 0.0, "dummy")
 
     def __init__(
         self,
@@ -427,6 +427,69 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         self.total_score += value
         return self
 
+    def dump_history(self) -> list[tuple[int, str]]:
+        "将学生的历史记录转换为字符串映射。"
+        return [(h.execute_time_key, str(h.uuid)) for h in self.history.values() if h.executed]
+
+    @staticmethod
+    def load_history(d: dict[str, Any]) -> dict[int, ScoreModification]:
+        "从数据字典加载学生的历史记录。"
+        from .scoremod import ScoreModification
+        result: dict[int, ScoreModification] = {}
+        for k, v in d["history"]:
+            k: int
+            v: ClassDataTypeUUID[ScoreModification]
+            item = ClassDataLoader.LoadUUID(v, ScoreModification)
+            assert item is not None, f"目标的历史记录{k}加载失败"
+            result[k] = item
+        return result
+
+    def dump_achievements(self) -> list[tuple[int, str]]:
+        "将学生的成就记录转换为字符串映射。"
+        return [(a.time_key, str(a.uuid)) for a in self.achievements.values()]
+
+    @staticmethod
+    def load_achievements(d: dict[str, Any]) -> dict[int, Achievement]:
+        "从数据字典加载学生的成就记录。"
+        from .achievement import Achievement
+        result: dict[int, Achievement] = {}
+        for k, v in d["achievements"]:
+            k: int
+            v: ClassDataTypeUUID[Achievement]
+            item = ClassDataLoader.LoadUUID(v, Achievement)
+            assert item is not None, f"目标的成就记录{k}加载失败"
+            result[k] = item
+        return result
+
+    def dump_last_reset_info(self) -> str | None:
+        "将学生的上次重置信息转换为字符串。"
+        return str(self.last_reset_info.uuid) if self._last_reset_info else None
+    
+    @staticmethod
+    def load_last_reset_info(d: dict[str, Any]) -> Student | None:
+        "从数据字典加载学生的上次重置信息。"
+        from .student import Student
+        if "last_reset_info" in d and d["last_reset_info"] is not None:
+            return ClassDataLoader.LoadUUID(d["last_reset_info"], Student) 
+        return None
+
+    def dump_tags(self) -> list[str]:
+        "将学生的标签转换为字符串列表。"
+        return [str(t.uuid) for t in self.tags]
+
+    @staticmethod
+    def load_tags(d: dict[str, Any]) -> list[DataTag]:
+        "从数据字典加载学生的标签。"
+        from .datatag import DataTag
+        result: list[DataTag] = []
+        for t in d["tags"]:
+            t: ClassDataTypeUUID[DataTag]
+            item = ClassDataLoader.LoadUUID(t, DataTag)
+            assert item is not None, f"目标标签{t}加载失败"
+            result.append(item)
+        return result
+
+
     def to_string(self) -> StringObjectDataKind[Self]:
         "将学生对象转换为JSON格式"
         return StringObjectDataKind(json.dumps(
@@ -436,47 +499,45 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
                 "num": self.num,
                 "score": float(self.score),
                 "belongs_to": self.belongs_to,
-                "history": [(h.execute_time_key, str(h.uuid)) for h in self.history.values() if h.executed],
+                "history": self.dump_history(),
                 "last_reset": self.last_reset,
-                "achievements": [(a.time_key, str(a.uuid)) for a in self.achievements.values()],
+                "achievements": self.dump_achievements(),
                 "highest_score": self.highest_score,
                 "lowest_score": self.lowest_score,
                 "highest_score_cause_time": self.highest_score_cause_time,
                 "lowest_score_cause_time": self.lowest_score_cause_time,
                 "belongs_to_group": self.belongs_to_group,
                 "total_score": self.total_score,
-                "last_reset_info": (str(self.last_reset_info.uuid) if self._last_reset_info else None),
-                "tags": [str(t.uuid) for t in self.tags],
+                "last_reset_info": self.dump_last_reset_info(),
+                "tags": self.dump_tags(),
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
         ))
 
-    @staticmethod
-    def from_string(string: str) -> Student:
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "将字符串转换为学生对象。"
-        from .achievement import Achievement
-        from .scoremod import ScoreModification
 
         data = json.loads(string)
-        if data["type"] != Student.chunk_type_name:
-            raise TypeError(f"类型不匹配：{data['type']} != {Student.chunk_type_name}")
-        obj = Student(
+        if data["type"] != cls.chunk_type_name:
+            raise TypeError(f"类型不匹配：{data['type']} != {cls.chunk_type_name}")
+        obj = cls(
             name=data["name"],
             num=data["num"],
-            score=Student.score_dtype(data["score"]),
+            score=cls.score_dtype(data["score"]),
             belongs_to=data["belongs_to"],
-            history={k: ClassDataLoader.LoadUUID(v, ScoreModification) for k, v in data["history"]},
+            history=cls.load_history(data),
             last_reset=data["last_reset"],
             highest_score=data["highest_score"],
             lowest_score=data["lowest_score"],
-            achievements={k: ClassDataLoader.LoadUUID(v, Achievement) for k, v in data["achievements"]},
+            achievements=cls.load_achievements(data),
             total_score=data["total_score"],
             highest_score_cause_time=data["highest_score_cause_time"],
             lowest_score_cause_time=data["lowest_score_cause_time"],
             belongs_to_group=data["belongs_to_group"],
-            last_reset_info=ClassDataLoader.LoadUUID(data["last_reset_info"], Student),
-            tags=[ClassDataLoader.LoadUUID(t, DataTag) for t in data["tags"]],
+            last_reset_info=cls.load_last_reset_info(data),
+            tags=cls.load_tags(data)
         )
 
         obj.uuid = data["uuid"]
@@ -488,3 +549,13 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__) 
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.student import StudentModel
+        return StudentModel.from_class_data(self)

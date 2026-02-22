@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 from utils.algorithm import update_object_mapping
 
@@ -22,13 +22,13 @@ class DayRecord(ClassDataType):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空的每日记录对象"
         from .attendanceinfo import AttendanceInfo
         from .classtype import Class
 
-        return DayRecord(Class.new_dummy(), 0, 0, AttendanceInfo.new_dummy())
+        return cls(Class.new_dummy(), 0, 0, AttendanceInfo.new_dummy())
 
     def __init__(
         self,
@@ -66,19 +66,33 @@ class DayRecord(ClassDataType):
         ))
 
     @staticmethod
-    def from_string(string: str) -> DayRecord:
-        "从字符串加载每日记录对象。"
-        from .attendanceinfo import AttendanceInfo
+    def load_target_class(d: dict[str, Any]) -> Class:
+        "从字典加载目标班级对象。"
         from .classtype import Class
+        result = ClassDataLoader.LoadUUID(d["target_class"], Class)
+        assert result is not None, f"目标班级{d['target_class']}加载失败"
+        return result
+
+    @staticmethod
+    def load_attendance_info(d: dict[str, Any]) -> AttendanceInfo:
+        "从字典加载考勤信息对象。"
+        from .attendanceinfo import AttendanceInfo
+        result = ClassDataLoader.LoadUUID(d["attendance_info"], AttendanceInfo)
+        assert result is not None, f"考勤信息{d['attendance_info']}加载失败"
+        return result
+
+    @classmethod
+    def from_string(cls, string: str) -> Self:
+        "从字符串加载每日记录对象。"
 
         data = json.loads(string)
-        if data["type"] != DayRecord.chunk_type_name:
-            raise ValueError(f"类型不匹配：{data['type']} != {DayRecord.chunk_type_name}")
-        obj = DayRecord(
-            target_class=ClassDataLoader.LoadUUID(data["target_class"], Class),
+        if data["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{data['type']} != {cls.chunk_type_name}")
+        obj = cls(
+            target_class=cls.load_target_class(data),
             weekday=data["weekday"],
             create_utc=data["utc"],
-            attendance_info=ClassDataLoader.LoadUUID(data["attendance_info"], AttendanceInfo),
+            attendance_info=cls.load_attendance_info(data),
         )
         obj.uuid = data["uuid"]
         obj.archive_uuid = data["archive_uuid"]
@@ -89,3 +103,13 @@ class DayRecord(ClassDataType):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.day_record import DayRecordModel
+        return DayRecordModel.from_class_data(self)

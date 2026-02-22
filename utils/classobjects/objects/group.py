@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
@@ -22,12 +22,12 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "创建一个空的小组"
         from .student import Student
 
-        return Group("dummy", "dummy", Student.new_dummy(), [], "dummy")
+        return cls("dummy", "dummy", Student.new_dummy(), [], "dummy")
 
     def __init__(
         self,
@@ -129,6 +129,44 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         "查看一个学生是否在这个小组。"
         return any([s.num == student.num for s in self.members])
 
+    def dump_members(self) -> list[str]:
+        "将小组的所有成员的uuid转化为字符串列表。"
+        return [str(s.uuid) for s in self.members]
+
+    @staticmethod
+    def load_members(d: dict[str, Any]) -> list[Student]:
+        "从字典加载小组的所有成员。"
+        from .student import Student
+        members: list[Student] = []
+        for s in d["members"]:
+            item = ClassDataLoader.LoadUUID(s, Student)
+            assert item is not None, f"目标学生{s}加载失败"
+            members.append(item)
+        return members
+
+    def dump_tags(self) -> list[str]:
+        "将小组的所有标签的uuid转化为字符串列表。"
+        return [str(t.uuid) for t in self.tags]
+    
+    @staticmethod
+    def load_tags(d: dict[str, Any]) -> list[DataTag]:
+        "从字典加载小组的所有标签。"
+        from .datatag import DataTag
+        tags: list[DataTag] = []
+        for t in d["tags"]:
+            item = ClassDataLoader.LoadUUID(t, DataTag)
+            assert item is not None, f"目标标签{t}加载失败"
+            tags.append(item)
+        return tags
+
+    @staticmethod
+    def load_leader(d: dict[str, Any]) -> Student:
+        "从字典加载小组的组长。"
+        from .student import Student
+        leader = ClassDataLoader.LoadUUID(d["leader"], Student)
+        assert leader is not None, f"目标组长{d['leader']}加载失败"
+        return leader
+
     def to_string(self) -> StringObjectDataKind[Self]:
         "将小组对象转化为字符串。"
         return StringObjectDataKind(json.dumps(
@@ -137,31 +175,30 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
                 "key": self.key,
                 "name": self.name,
                 "leader": str(self.leader.uuid),
-                "members": [str(s.uuid) for s in self.members],
+                "members": self.dump_members(), 
                 "belongs_to": self.belongs_to,
                 "further_desc": self.further_desc,
-                "tags": [str(t.uuid) for t in self.tags],
+                "tags": self.dump_tags(),
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
         ))
 
-    @staticmethod
-    def from_string(string: str):
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "将字符串转化为小组对象。"
-        from .student import Student
 
         data = json.loads(string)
-        if data["type"] != Group.chunk_type_name:
-            raise TypeError(f"类型不匹配：{data['type']} != {Group.chunk_type_name}")
-        obj = Group(
+        if data["type"] != cls.chunk_type_name:
+            raise TypeError(f"类型不匹配：{data['type']} != {cls.chunk_type_name}")
+        obj = cls(
             key=data["key"],
             name=data["name"],
-            leader=ClassDataLoader.LoadUUID(data["leader"], Student),
-            members=[ClassDataLoader.LoadUUID(s, Student) for s in data["members"]],
+            leader=cls.load_leader(data),
+            members=cls.load_members(data),
             belongs_to=data["belongs_to"],
             further_desc=data["further_desc"],
-            tags=[ClassDataLoader.LoadUUID(t, DataTag) for t in data["tags"]]
+            tags=cls.load_tags(data)
         )
         obj.uuid = data["uuid"]
         obj.archive_uuid = data["archive_uuid"]
@@ -170,9 +207,19 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
 
     def inst_from_string(self, string: str):
         "将字符串转化为小组对象。"
-        obj = Group.from_string(string)
+        obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.group import GroupModel
+        return GroupModel.from_class_data(self)
 
     def __repr__(self):
         return (
@@ -183,3 +230,4 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
             f"belongs_to={self.belongs_to!r}, "
             f"further_desc={self.further_desc!r}"
         )
+

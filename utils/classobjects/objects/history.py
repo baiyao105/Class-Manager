@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self, override
 from uuid import UUID
 
 from ...algorithm.types import update_object_mapping
@@ -71,40 +71,65 @@ class History(ClassDataType):
 
         else:
             raise TypeError(f"uuid.setter需要提供UUID，ClassDataTypeUUID或者str， 但提供了{type(value)}")
+    
+    def dump_classes(self) -> dict[str, str]:
+        "将班级字典转换为字符串字典。"
+        return {k: str(v.uuid) for k, v in self.classes.items()}
+
+    @staticmethod
+    def load_classes(d: dict[str, Any]) -> dict[str, Class]:
+        "从字符串字典加载班级对象。"
+        from .classtype import Class
+        result: dict[str, Class] = {}
+        for k, v in d["classes"].items():
+            cls = ClassDataLoader.LoadUUID(v, Class)
+            assert cls is not None, f"历史记录的班级{k}加载失败"
+            result[k] = cls
+        return result
+
+    def dump_weekdays(self) -> list[list[tuple[str, float, str]]]:
+        "将周记录字典转换为字符串列表。"
+        return [
+            [(_class, time_key, str(day.uuid)) for time_key, day in item.items()]
+            for _class, item in self.weekdays.items()
+        ]
+    
+    @staticmethod
+    def load_weekdays(d: dict[str, Any]) -> dict[str, dict[float, DayRecord]]:
+        "从字符串列表加载周记录对象。"
+        from .dayrecord import DayRecord
+        result: dict[str, dict[float, DayRecord]] = {}
+        for _class, time_key, day_uuid in d["weekdays"]:
+            if _class not in result:
+                result[_class] = {}
+            item = ClassDataLoader.LoadUUID(day_uuid, DayRecord)
+            assert item is not None, f"历史记录的班级{_class}的时间{time_key}的记录加载失败"
+            result[_class][time_key] = item
+        return result
 
     def to_string(self) -> StringObjectDataKind[Self]:
         "将历史记录转换为字符串。"
         return StringObjectDataKind(json.dumps(
             {
-                "classes": {k: str(v.uuid) for k, v in self.classes.items()},
+                "classes": self.dump_classes(),
                 "time": self.time,
-                "weekdays": [
-                    [(_class, time_key, str(day.uuid)) for time_key, day in item.items()]
-                    for _class, item in self.weekdays.items()
-                ],
+                "weekdays": self.dump_weekdays(),
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
         ))
 
-    @staticmethod
-    def from_string(string: str) -> History:
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "从字符串加载历史记录。"
-        from .classtype import Class
-        from .dayrecord import DayRecord
-
         d = json.loads(string)
-        if d["type"] != History.chunk_type_name:
-            raise ValueError(f"类型不匹配：{d['type']} != {History.chunk_type_name}")
-        obj = History(
-            classes={k: ClassDataLoader.LoadUUID(v, Class) for k, v in d["classes"].items()},
-            weekdays={},
+        if d["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
+        obj = cls(
+            classes=cls.load_classes(d),
+            weekdays=cls.load_weekdays(d),
             save_time=d["time"],
         )
-        for _class, time_key, day_uuid in d["weekdays"]:
-            if _class not in obj.weekdays:
-                obj.weekdays[_class] = {}
-            obj.weekdays[_class][time_key] = ClassDataLoader.LoadUUID(day_uuid, DayRecord)
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
         assert obj.uuid == obj.archive_uuid, (
@@ -118,7 +143,17 @@ class History(ClassDataType):
         update_object_mapping(self, obj.__dict__)
         return self
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "创建一个空的历史记录。"
-        return History({}, {})
+        return cls({}, {})
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.history import HistoryModel
+        return HistoryModel.from_class_data(self)

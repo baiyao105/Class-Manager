@@ -19,7 +19,7 @@ class ClassData(Object):
         student: Student,
         classes: dict[str, Class],
         class_obs: ClassStatusObserver,
-        achievement_obs: AchievementStatusObserver,
+        achievement_obs: AchievementStatusObserver
     ):
         """
         班级数据构造函数。

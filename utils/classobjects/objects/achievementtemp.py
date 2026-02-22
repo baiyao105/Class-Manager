@@ -4,7 +4,7 @@ import base64
 import json
 import pickle
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Literal, Self
+from typing import Any, Literal, Self, override
 
 import dill as pickle # type: ignore
 
@@ -16,9 +16,8 @@ from ..basetype import ClassDataType, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
 from .classdata import ClassData
 
-if TYPE_CHECKING:
-    from ..observers.classstatobs import ClassStatusObserver
-    from .student import Student
+from ..observers.classstatobs import ClassStatusObserver
+from .student import Student
 
 
 class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
@@ -30,10 +29,10 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
     is_unrelated_data_type = True
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空的成就模板"
-        t = AchievementTemplate(
+        t = cls(
             "dummy",
             "这个成就永远不会被达成",
             "就是不可能达成",
@@ -104,18 +103,23 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
 
         self.active = True
 
+        self.name_eq: list[str] | None = None
         if name_equals is not None:
             self.name_eq = list(name_equals) if isinstance(name_equals, list) else [name_equals]
 
+        self.name_ne: list[str] | None = None
         if name_not_equals is not None:
             self.name_ne = list(name_not_equals) if isinstance(name_not_equals, list) else [name_not_equals]
 
+        self.num_eq: list[int] | None = None
         if num_equals is not None:
             self.num_eq = list(num_equals) if isinstance(num_equals, list) else [num_equals]
 
+        self.num_ne: list[int] | None = None
         if num_not_equals is not None:
             self.num_ne = list(num_not_equals) if isinstance(num_not_equals, list) else [num_not_equals]
 
+        self.score_range: list[tuple[float, float]] | None = None
         if score_range is not None:
             if not score_range:
                 Base.log(
@@ -128,26 +132,38 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     score_range = [score_range]
                 self.score_range = list(score_range)
 
+        self.score_rank_down_limit: int | None = None
+        self.score_rank_up_limit: int | None = None
         if score_rank_range is not None:
             self.score_rank_down_limit = score_rank_range[0]
             self.score_rank_up_limit = score_rank_range[1]
 
+        self.highest_score_down_limit: float | None = None
+        self.highest_score_up_limit: float | None = None
         if highest_score_range is not None:
             self.highest_score_down_limit = highest_score_range[0]
             self.highest_score_up_limit = highest_score_range[1]
 
+        self.lowest_score_down_limit: float | None = None
+        self.lowest_score_up_limit: float | None = None
         if lowest_score_range is not None:
             self.lowest_score_down_limit = lowest_score_range[0]
             self.lowest_score_up_limit = lowest_score_range[1]
 
+        self.highest_score_cause_range_down_limit: int | None = None
+        self.highest_score_cause_range_up_limit: int | None = None
         if highest_score_cause_range is not None:
             self.highest_score_cause_range_down_limit = highest_score_cause_range[0]
             self.highest_score_cause_range_up_limit = highest_score_cause_range[1]
 
+        self.lowest_score_cause_range_down_limit: int | None = None
+        self.lowest_score_cause_range_up_limit: int | None = None
         if lowest_score_cause_range is not None:
             self.lowest_score_cause_range_down_limit = lowest_score_cause_range[0]
             self.lowest_score_cause_range_up_limit = lowest_score_cause_range[1]
 
+        self.modify_ranges_orig: list[tuple[str, int | float, int | float]] | None = None
+        self.modify_ranges: list[dict[str, str | int | float]] | None = None
         if modify_key_range is not None:
             if not len(modify_key_range):
                 Base.log(
@@ -160,9 +176,10 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     modify_key_range = [modify_key_range]
 
                 self.modify_ranges_orig = modify_key_range
-                self.modify_ranges: list[dict[str, str | int | float]] = [
+                self.modify_ranges = [
                     {"key": item[0], "lowest": item[1], "highest": item[2]} for item in self.modify_ranges_orig
                 ]
+        
         self.other: list[Callable[[ClassData], bool]] = []
         if others is not None:
             if not isinstance(others, list):
@@ -170,7 +187,9 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             else:
                 self.other = others
         
-        self.when_triggered = when_triggered if isinstance(when_triggered, list) else [when_triggered]
+        self.when_triggered: list[Literal["any", "on_reset"]] = (
+            when_triggered if isinstance(when_triggered, list) else [when_triggered]
+        )
         self.sound = sound
         self.icon = icon
         self.further_info = further_info
@@ -185,55 +204,52 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             "name": self.name,
             "desc": self.desc,
         }
-        if hasattr(self, "name_eq"):
+        if self.name_eq is not None:
             kwargs["name_equals"] = self.name_eq
-        if hasattr(self, "name_ne"):
+        if self.name_ne is not None:
             kwargs["name_not_equals"] = self.name_ne
-        if hasattr(self, "num_eq"):
+        if self.num_eq is not None:
             kwargs["num_equals"] = self.num_eq
-        if hasattr(self, "num_ne"):
+        if self.num_ne is not None:
             kwargs["num_not_equals"] = self.num_ne
-        if hasattr(self, "score_range"):
+        if self.score_range is not None:
             kwargs["score_range"] = self.score_range
-        if hasattr(self, "score_rank_down_limit"):
+        if self.score_rank_down_limit is not None:
             kwargs["score_rank_range"] = [
                 self.score_rank_down_limit,
                 self.score_rank_up_limit,
             ]
-        if hasattr(self, "highest_score_down_limit"):
+        if self.highest_score_down_limit is not None:
             kwargs["highest_score_range"] = [
                 self.highest_score_down_limit,
                 self.highest_score_up_limit,
             ]
-        if hasattr(self, "lowest_score_down_limit"):
+        if self.lowest_score_down_limit is not None:
             kwargs["lowest_score_range"] = [
                 self.lowest_score_down_limit,
                 self.lowest_score_up_limit,
             ]
-        if hasattr(self, "highest_score_cause_range_down_limit"):
+        if self.highest_score_cause_range_down_limit is not None:
             kwargs["highest_score_cause_range"] = [
                 self.highest_score_cause_range_down_limit,
                 self.highest_score_cause_range_up_limit,
             ]
-        if hasattr(self, "lowest_score_cause_range_down_limit"):
+        if self.lowest_score_cause_range_down_limit is not None:
             kwargs["lowest_score_cause_range"] = [
                 self.lowest_score_cause_range_down_limit,
                 self.lowest_score_cause_range_up_limit,
             ]
-        if hasattr(self, "modify_ranges_orig"):
+        if self.modify_ranges_orig is not None:
             kwargs["modify_key_range"] = self.modify_ranges_orig
-        if hasattr(self, "other"):
+        if self.other:
             kwargs["others"] = self.other
-        if hasattr(self, "when_triggered"):
-            kwargs["when_triggered"] = self.when_triggered
-        if hasattr(self, "sound"):
+        kwargs["when_triggered"] = self.when_triggered
+        if self.sound is not None:
             kwargs["sound"] = self.sound
-        if hasattr(self, "icon"):
+        if self.icon is not None:
             kwargs["icon"] = self.icon
-        if hasattr(self, "further_info"):
-            kwargs["further_info"] = self.further_info
-        if hasattr(self, "condition_info"):
-            kwargs["condition_info"] = self.condition_info
+        kwargs["further_info"] = self.further_info
+        kwargs["condition_info"] = self.condition_info
         return kwargs
 
     def achieved_by(self, student: Student, class_obs: ClassStatusObserver) -> bool:
@@ -260,19 +276,19 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         ):
             return False
 
-        if hasattr(self, "name_ne") and student.name in self.name_ne:
+        if self.name_ne is not None and student.name in self.name_ne:
             return False
 
-        if hasattr(self, "num_ne") and student.num in self.num_ne:
+        if self.num_ne is not None and student.num in self.num_ne:
             return False
 
-        if hasattr(self, "name_eq") and student.name not in self.name_eq:
+        if self.name_eq is not None and student.name not in self.name_eq:
             return False
 
-        if hasattr(self, "num_eq") and student.num not in self.num_eq:
+        if self.num_eq is not None and student.num not in self.num_eq:
             return False
 
-        if hasattr(self, "score_range") and not any([i[0] <= student.score <= i[1] for i in self.score_range]):
+        if self.score_range is not None and not any([i[0] <= student.score <= i[1] for i in self.score_range]):
             return False
         
         AccessErrorTypes = (
@@ -284,7 +300,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         )
 
         try:
-            if hasattr(self, "score_rank_down_limit"):
+            if self.score_rank_down_limit is not None and self.score_rank_up_limit is not None:
                 lowest_rank = max(*([i[0] for i in class_obs.rank_dumplicate]))
                 l = (
                     (lowest_rank + self.score_rank_down_limit + 1)
@@ -301,12 +317,12 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         except AccessErrorTypes:
             return False
 
-        if hasattr(self, "highest_score_down_limit") and (
+        if self.highest_score_down_limit is not None and self.highest_score_up_limit is not None and (
             not self.highest_score_down_limit <= student.highest_score <= self.highest_score_up_limit
         ):
             return False
 
-        if hasattr(self, "highest_score_cause_range_down_limit") and (
+        if self.highest_score_cause_range_down_limit is not None and self.highest_score_cause_range_up_limit is not None and (
             (not student.highest_score_cause_time)
             or (
                 not self.highest_score_cause_range_down_limit
@@ -316,12 +332,12 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         ):
             return False
 
-        if hasattr(self, "lowest_score_down_limit") and (
+        if self.lowest_score_down_limit is not None and self.lowest_score_up_limit is not None and (
             not self.lowest_score_down_limit <= student.lowest_score <= self.lowest_score_up_limit
         ):
             return False
 
-        if hasattr(self, "lowest_score_cause_range_down_limit") and (
+        if self.lowest_score_cause_range_down_limit is not None and self.lowest_score_cause_range_up_limit is not None and (
             (not student.lowest_score_cause_time)
             or (
                 not self.lowest_score_cause_range_down_limit
@@ -331,7 +347,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         ):
             return False
         try:
-            if hasattr(self, "modify_ranges") and not all(
+            if self.modify_ranges is not None and not all(
                 [
                     item["lowest"]
                     <= [history.temp.key for history in student.history.values() if history.executed].count(item["key"])  # type: ignore
@@ -343,7 +359,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         except AccessErrorTypes:
             return False
 
-        if hasattr(self, "other"):
+        if self.other:
             try:
                 d = ClassData(
                     student=student,
@@ -420,19 +436,19 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
 
         :return: 一个字符串"""
         return_str = ""
-        if hasattr(self, "name_eq"):
+        if self.name_eq is not None:
             return_str += "仅适用于" + "，".join(self.name_eq) + "\n"
 
-        if hasattr(self, "num_eq"):
+        if self.num_eq is not None:
             return_str += "仅适用于学号为" + "，".join([str(n) for n in self.num_eq]) + "的学生\n"
 
-        if hasattr(self, "name_ne"):
-            return_str += "不适用于" + "，".join(self.name_eq) + "\n"
+        if self.name_ne is not None:
+            return_str += "不适用于" + "，".join(self.name_ne) + "\n"
 
-        if hasattr(self, "num_ne"):
-            return_str += "不适用于学号为" + "，".join([str(n) for n in self.num_eq]) + "的学生\n"
+        if self.num_ne is not None:
+            return_str += "不适用于学号为" + "，".join([str(n) for n in self.num_ne]) + "的学生\n"
 
-        if hasattr(self, "score_range"):
+        if self.score_range is not None:
             first = True
             for item in self.score_range:
                 if not first:
@@ -452,7 +468,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                 else:
                     return_str += "分数为0\n"
 
-        if hasattr(self, "score_rank_down_limit"):
+        if self.score_rank_down_limit is not None:
             if self.score_rank_down_limit == self.score_rank_up_limit:
                 return_str += (
                     f"位于班上{('倒数' if self.score_rank_down_limit < 0 else '')}"
@@ -466,13 +482,13 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     + "第"
                     + f"{abs(self.score_rank_down_limit)}"
                     + "和"  # pylint: disable=E1130
-                    + ("倒数" if self.score_rank_up_limit < 0 else "")
+                    + ("倒数" if self.score_rank_up_limit is not None and self.score_rank_up_limit < 0 else "")
                     + "第"
-                    + f"{abs(self.score_rank_up_limit)}"
+                    + f"{abs(self.score_rank_up_limit) if self.score_rank_up_limit is not None else 0}"
                     + "之间\n"
                 )  # pylint: disable=E1130
 
-        if hasattr(self, "highest_score_down_limit"):
+        if self.highest_score_down_limit is not None and self.highest_score_up_limit is not None:
             down = self.highest_score_down_limit
             up = self.highest_score_up_limit
             if -(2**63) < down < up < 2**63:
@@ -486,7 +502,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             else:
                 return_str += "没看懂，反正对历史最高分有要求（写的抽象了没法判断）\n"
 
-        if hasattr(self, "lowest_score_down_limit"):
+        if self.lowest_score_down_limit is not None and self.lowest_score_up_limit is not None:
             down = self.lowest_score_down_limit
             up = self.lowest_score_up_limit
             if -(2**63) < down < up < 2**63:
@@ -500,7 +516,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
             else:
                 return_str += "没看懂，反正对历史最低分有要求（写的抽象了没法判断）\n"
 
-        if hasattr(self, "modify_ranges"):
+        if self.modify_ranges is not None:
             for item in self.modify_ranges:
                 lowest: int | float = item["lowest"]  # type: ignore
                 highest: int | float = item["highest"]  # type: ignore
@@ -519,7 +535,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
                     )
                 )
 
-        if hasattr(self, "other"):
+        if self.other:
             return_str += "有一些其他条件，如果没写就自己摸索吧\n"
 
         if return_str == "":
@@ -539,12 +555,12 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         obj["archive_uuid"] = str(self.archive_uuid)
         return StringObjectDataKind(json.dumps(obj))
 
-    @staticmethod
-    def from_string(string: str):
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "从字符串加载成就模板对象。"
         d: dict[str, Any] = json.loads(string)
-        if d["type"] != AchievementTemplate.chunk_type_name:
-            raise ValueError(f"类型不匹配：{d['type']} != {AchievementTemplate.chunk_type_name}")
+        if d["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
         try:
             if "others" in d:
                 d["others"] = pickle.loads(base64.b64decode(d["others"]))  # pyright: ignore[reportUnknownMemberType]
@@ -561,7 +577,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         d.pop("type")
         uuid = d.pop("uuid")
         archive_uuid = d.pop("archive_uuid")
-        obj = AchievementTemplate(**d)
+        obj = cls(**d)
         obj.uuid = uuid
         obj.archive_uuid = archive_uuid
         obj.active = True
@@ -572,3 +588,13 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.achievement_template import AchievementTemplateModel
+        return AchievementTemplateModel.from_class_data(self)

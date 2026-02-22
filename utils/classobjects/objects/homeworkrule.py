@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Self
+from typing import Any, Self, override
 
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
@@ -19,10 +19,10 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空作业规则"
-        return HomeworkRule("dummy", "dummy", "dummy", {})
+        return cls("dummy", "dummy", "dummy", {})
 
     def __init__(
         self,
@@ -44,6 +44,21 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         self.ruler = ruler
         self.rule_mapping = rule_mapping
         self.archive_uuid = ClassDataLoader.get_archive_uuid()
+    
+    def dump_rules(self) -> dict[str, str]:
+        "将规则映射转换为字符串映射。"
+        return {n: str(t.uuid) for n, t in self.rule_mapping.items()}
+    
+    @staticmethod
+    def load_rules(d: dict[str, Any]) -> dict[str, ScoreModificationTemplate]:
+        "从字符串映射加载规则映射。"
+        from .scoremodtemplate import ScoreModificationTemplate
+        result: dict[str, ScoreModificationTemplate] = {}
+        for n, t in d.items():
+            item = ClassDataLoader.LoadUUID(t, ScoreModificationTemplate)
+            assert item is not None, f"作业规则的规则{n}加载失败"
+            result[n] = item
+        return result
 
     def to_string(self) -> StringObjectDataKind[Self]:
         "将作业规则对象转为字符串。"
@@ -53,23 +68,23 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
                 "key": self.key,
                 "subject_name": self.subject_name,
                 "ruler": self.ruler,
-                "rule_mapping": dict([(n, str(t.uuid)) for n, t in self.rule_mapping.items()]),
+                "rule_mapping": self.dump_rules(),
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
         ))
 
-    @staticmethod
-    def from_string(string: str):
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "从字符串加载作业规则对象。"
         d = json.loads(string)
-        if d["type"] != HomeworkRule.chunk_type_name:
-            raise ValueError(f"类型不匹配：{d['type']} != {HomeworkRule.chunk_type_name}")
-        obj = HomeworkRule(
+        if d["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
+        obj = cls(
             key=d["key"],
             subject_name=d["subject_name"],
             ruler=d["ruler"],
-            rule_mapping={n: ClassDataLoader.LoadUUID(t, ScoreModificationTemplate) for n, t in d["rule_mapping"].items()},
+            rule_mapping=cls.load_rules(d["rule_mapping"]),
         )
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
@@ -80,3 +95,15 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.homework_rule import HomeworkRuleModel
+        return HomeworkRuleModel.from_class_data(self)
+
+

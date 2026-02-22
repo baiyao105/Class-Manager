@@ -18,9 +18,6 @@ from .homeworkrule import HomeworkRule
 from .scoremod import ScoreModification
 from .scoremodtemplate import ScoreModificationTemplate
 from .student import Student
-from .dayrecord import DayRecord
-from .history import History
-from .attendanceinfo import AttendanceInfo
 from .datatag import DataTag, TagSigned
 
 __all__ = [

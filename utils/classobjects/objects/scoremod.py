@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 import traceback
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 from ...algorithm.types import update_object_mapping
 
@@ -27,12 +27,12 @@ class ScoreModification(ClassDataType):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空的分数加减操作"
         from .student import Student
 
-        return ScoreModification(ScoreModificationTemplate.new_dummy(), Student.new_dummy())
+        return cls(ScoreModificationTemplate.new_dummy(), Student.new_dummy())
 
     def __init__(
         self,
@@ -144,7 +144,7 @@ class ScoreModification(ClassDataType):
             ZeroDivisionError,
         ) as exception:
             if debug:
-                raise ClassDataLoader.OpreationalError("执行加减分操作时发生错误") from exception
+                raise ClassDataLoader.OperationalError("执行加减分操作时发生错误") from exception
             Base.log(
                 "E",
                 "执行时出现错误：\n\t\t" + ("\t" * 2).join(str(traceback.format_exc()).splitlines(True)).strip(),
@@ -232,6 +232,22 @@ class ScoreModification(ClassDataType):
             Base.log("W", "操作并未执行，无需撤回", "ScoreModification.retract")
             return False, "操作并未执行, 无需撤回"
 
+    @staticmethod
+    def load_template(d: dict[str, Any]) -> ScoreModificationTemplate:
+        "从字典加载分数修改模板。"
+        from .scoremodtemplate import ScoreModificationTemplate
+        template = ClassDataLoader.LoadUUID(d["template"], ScoreModificationTemplate)
+        assert template is not None, f"目标模板{d['template']}加载失败"
+        return template
+    
+    @staticmethod
+    def load_target(d: dict[str, Any]) -> Student:
+        "从字典加载分数修改记录的目标学生。"
+        from .student import Student
+        target = ClassDataLoader.LoadUUID(d["target"], Student)
+        assert target is not None, f"目标学生{d['target']}加载失败"
+        return target
+
     def to_string(self) -> StringObjectDataKind[Self]:
         "将分数修改记录对象转为字符串。"
         return StringObjectDataKind(json.dumps(
@@ -251,17 +267,16 @@ class ScoreModification(ClassDataType):
             }
         ))
 
-    @staticmethod
-    def from_string(string: str):
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "将字符串转换为分数修改对象。"
-        from .student import Student
 
         d = json.loads(string)
-        if d["type"] != ScoreModification.chunk_type_name:
-            raise ValueError(f"类型不匹配：{d['type']} != {ScoreModification.chunk_type_name}")
-        obj = ScoreModification(
-            template=ClassDataLoader.LoadUUID(d["template"], ScoreModificationTemplate),
-            target=ClassDataLoader.LoadUUID(d["target"], Student),
+        if d["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
+        obj = cls(
+            template=cls.load_template(d),
+            target=cls.load_target(d),
             title=d["title"],
             mod=d["mod"],
             execute_time=d["execute_time"],
@@ -279,3 +294,14 @@ class ScoreModification(ClassDataType):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.score_modification import ScoreModificationModel
+        return ScoreModificationModel.from_class_data(self)
+

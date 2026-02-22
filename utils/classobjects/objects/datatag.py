@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 
 from abc import ABC
-from typing import Any, Callable, Self
+from typing import Any, Callable, Self, override
 from ...basetypes import Base
 from ..basetype import ClassDataType, StringObjectDataKind
+
 
 
 
@@ -103,19 +104,19 @@ class DataTag(ClassDataType):
         DataTag.validate(self.key, self.data)
         return self
     
-    @staticmethod
-    def new_dummy():
-        return DataTag("dummy")
+    @classmethod
+    def new_dummy(cls) -> Self:
+        return cls("dummy")
 
-    @staticmethod
-    def from_string(string: str) -> DataTag:
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "从字符串中读取标签。"
         d = json.loads(string)
         key = d["key"]
         if not DataTag.registered(key):
             Base.log
         data = json.loads(d["data"])
-        return DataTag(key, data)
+        return cls(key, data)
     
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, DataTag):
@@ -125,6 +126,18 @@ class DataTag(ClassDataType):
     def is_same_type(self, other: DataTag) -> bool:
         "判断两个标签是否属于同一类型。"
         return self.key == other.key
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.datatag import DataTagModel
+        return DataTagModel.from_class_data(self)
+
+
     
 
 

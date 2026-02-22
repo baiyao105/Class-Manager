@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Self
+from typing import Any, Self, override
 
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
@@ -18,10 +18,10 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
     is_unrelated_data_type = True
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空的分数加减操作模板"
-        return ScoreModificationTemplate("dummy", 0, "dummy")
+        return cls("dummy", 0, "dummy")
 
     def __init__(
         self,
@@ -104,13 +104,13 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
             }
         ))
 
-    @staticmethod
-    def from_string(string: str):
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "将字符串转化为分数加减模板对象。"
         data: dict[str, Any] = json.loads(string)
-        if data["type"] != ScoreModificationTemplate.chunk_type_name:
-            raise TypeError(f"类型不匹配：{data['type']} != {ScoreModificationTemplate.chunk_type_name}")
-        obj = ScoreModificationTemplate(
+        if data["type"] != cls.chunk_type_name:
+            raise TypeError(f"类型不匹配：{data['type']} != {cls.chunk_type_name}")
+        obj = cls(
             key=data["key"],
             modification=data["modification"],
             title=data["title"],
@@ -128,3 +128,13 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.score_template import ScoreTemplateModel
+        return ScoreTemplateModel.from_class_data(self)

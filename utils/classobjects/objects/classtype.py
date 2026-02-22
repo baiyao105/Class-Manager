@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Literal, Self
+from typing import TYPE_CHECKING, Any, Literal, Self, override
 
 from ...consts import inf
 from ...basetypes import Base
 from ...algorithm import TemplateList, SupportsKeyOrdering, update_object_mapping
 
-from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
+from ..basetype import ClassDataType, ClassDataTypeUUID, DataProperty, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
@@ -25,10 +25,10 @@ class Class(ClassDataType, SupportsKeyOrdering):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空班级"
-        return Class("工具人班寄", "dummy", {}, "dummy", {}, {}, {})
+        return cls("工具人班寄", "dummy", {}, "dummy", {}, {}, {})
 
     def __init__(
         self,
@@ -186,6 +186,93 @@ class Class(ClassDataType, SupportsKeyOrdering):
             s.reset()
         self.refresh_uuid()
 
+
+    @staticmethod
+    def load_student_list(d: list[ClassDataTypeUUID[Student]]) \
+            -> list[Student]:
+        "从字符串列表加载学生列表，直接从一个uuid的列表中加载。"
+        from .student import Student
+        result: list[Student] = []
+        for s in d:
+            stu = ClassDataLoader.LoadUUID(s, Student)
+            assert stu, f"学生列表中有一项加载失败, uuid={s}"
+            result.append(stu)
+        return result
+
+
+    def dump_student_dict(self) -> dict[int, str]:
+        "将班级的学生字典转换为字符串列表。"
+        return {n: str(s.uuid) for n, s in self.students.items()}
+
+    @staticmethod
+    def load_student_dict(d: dict[str, Any]) -> dict[int, Student]:
+        "从字符串列表加载学生字典。"
+        from .student import Student
+        stu_dict: dict[int, ClassDataTypeUUID[Student]] = d["students"]
+        result: dict[int, Student] = {}
+        for n, s in stu_dict.items():
+            stu = ClassDataLoader.LoadUUID(s, Student)
+            assert stu, f"班级{d['uuid']}的学生{n}加载失败"
+            result[n] = stu
+        return result
+        
+    def dump_group_dict(self) -> dict[str, str]:
+        "将班级的小组字典转换为字符串列表。"
+        return {n: str(g.uuid) for n, g in self.groups.items()}
+    
+    @staticmethod
+    def load_group_dict(d: dict[str, Any]) -> dict[str, Group]:
+        "从字符串列表加载小组字典。"
+        from .group import Group
+        group_dict: dict[str, ClassDataTypeUUID[Group]] = d["groups"]
+        result: dict[str, Group] = {}
+        for n, g in group_dict.items():
+            group = ClassDataLoader.LoadUUID(g, Group)
+            assert group, f"班级{d['uuid']}的小组{n}加载失败"
+            result[n] = group
+        return result
+
+    def dump_cleaning_mapping(self) \
+        -> dict[int, dict[Literal["member", "leader"], list[str]]] | None:
+        "将班级的清理映射转换为字符串列表。"
+        return {
+            k: {t: [str(_s.uuid) for _s in s] for t, s in v.items()}
+            for k, v in self.cleaning_mapping.items()
+        } if self.cleaning_mapping else None
+    
+    
+    @staticmethod
+    def load_cleaning_mapping(d: dict[str, Any]) \
+        -> dict[int, dict[Literal["member", "leader"], list[Student]]]:
+        "从字符串列表加载清理映射。"
+        result: dict[int, dict[Literal["member", "leader"], list[Student]]] = {}
+        for k, v in d["cleaning_mapping"]:
+            k: int
+            v: dict[Literal["member", "leader"], list[ClassDataTypeUUID[Student]]]
+            result[k] = {}
+            for t, s in v.items():
+                item: dict[Literal["member", "leader"], list[Student]] \
+                    = {t: Class.load_student_list(s)}
+                result[k].update(item)
+
+        return result
+
+    def dump_homework_rules(self) -> list[tuple[str, str]]:
+        "将班级的作业规则转换为字符串列表。"
+        return [(n, h.to_string()) for n, h in self.homework_rules.items()]
+
+    @staticmethod
+    def load_homework_rules(d: dict[str, Any]) \
+        -> dict[str, HomeworkRule]:
+        "从字符串列表加载作业规则。"
+        from .homeworkrule import HomeworkRule
+        result: dict[str, HomeworkRule] = {}
+        for n, h in d["homework_rules"]:
+            rule = HomeworkRule.from_string(h)
+            assert rule, f"班级{d['uuid']}的作业规则{n}加载失败"
+            result[n] = rule
+        return result
+
     def to_string(self) -> StringObjectDataKind[Self]:
         "将班级对象转换为字符串。"
         if hasattr(self, "cleaing_mapping") and not hasattr(self, "cleaning_mapping"):
@@ -199,40 +286,34 @@ class Class(ClassDataType, SupportsKeyOrdering):
                 "key": self.key,
                 "name": self.name,
                 "owner": self.owner,
-                "students": [(s.num, str(s.uuid)) for s in self.students.values()],
-                "groups": [(g.key, str(g.uuid)) for g in self.groups.values()],
-                "cleaning_mapping": [
-                    (k, [(t, [str(_s.uuid) for _s in s]) for t, s in v.items()])
-                    for k, v in self.cleaning_mapping.items()
-                ]
-                if self.cleaning_mapping
-                else None,
-                "homework_rules": [(n, h.to_string()) for n, h in self.homework_rules.items()],
+                "students": self.dump_student_dict(),
+                "groups": self.dump_group_dict(),
+                "cleaning_mapping": self.dump_cleaning_mapping(),
+                "homework_rules": self.dump_homework_rules(),
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
         ))
 
-    @staticmethod
-    def from_string(string: str) -> Class:
+    @classmethod
+    def from_string(cls, string: str) -> Self:
         "从字符串加载班级对象。"
-        from .group import Group
-        from .homeworkrule import HomeworkRule
         from .student import Student
 
         d = json.loads(string)
-        if d["type"] != Class.chunk_type_name:
-            raise ValueError(f"类型不匹配：{d['type']} != {Class.chunk_type_name}")
-        obj = Class(
+        if d["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
+        students = {n: ClassDataLoader.LoadUUID(s, Student) for n, s in d["students"]}
+        assert all(students.values()), f"班级{d['uuid']}的学生{[n for n, s in students.items() if s is None]}加载失败"
+
+        obj = cls(
             name=d["name"],
             owner=d["owner"],
-            students={n: ClassDataLoader.LoadUUID(s, Student) for n, s in d["students"]},
+            students=cls.load_student_dict(d),
             key=d["key"],
-            groups={k: ClassDataLoader.LoadUUID(g, Group) for k, g in d["groups"]},
-            cleaning_mapping={
-                k: {t: [ClassDataLoader.LoadUUID(d, Student) for d in s] for t, s in v} for k, v in d["cleaning_mapping"]
-            },
-            homework_rules={n: HomeworkRule.from_string(h) for n, h in d["homework_rules"]},
+            groups=cls.load_group_dict(d),
+            cleaning_mapping=cls.load_cleaning_mapping(d),
+            homework_rules=cls.load_homework_rules(d),
         )
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
@@ -243,3 +324,13 @@ class Class(ClassDataType, SupportsKeyOrdering):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.classtype import ClassModel
+        return ClassModel.from_class_data(self)

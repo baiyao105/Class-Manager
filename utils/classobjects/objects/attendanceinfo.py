@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 from ...algorithm.types import update_object_mapping
 
-from ..basetype import ClassDataType, StringObjectDataKind
+from ..basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
@@ -22,10 +22,10 @@ class AttendanceInfo(ClassDataType):
     is_unrelated_data_type = False
     "是否是与其他班级数据类型无关联的数据类型"
 
-    @staticmethod
-    def new_dummy():
+    @classmethod
+    def new_dummy(cls) -> Self:
         "返回一个空考勤信息"
-        return AttendanceInfo()
+        return cls()
 
     def __init__(
         self,
@@ -85,42 +85,60 @@ class AttendanceInfo(ClassDataType):
         self.archive_uuid = ClassDataLoader.get_archive_uuid()
         "存档UUID"
 
+    def dump_student_list(self, student_list: list[Student]) -> list[str]:
+        "将学生列表转换为字符串列表。"
+        return [str(s.uuid) for s in student_list]
+    
+    @staticmethod
+    def load_student_list(d: list[ClassDataTypeUUID[Student]]) -> list[Student]:
+        "从字符串列表加载学生对象。"
+        from .student import Student
+        result: list[Student] = []
+        for s in d:
+            stu = ClassDataLoader.LoadUUID(s, Student)
+            assert stu is not None, f"出勤信息的学生{s}加载失败"
+            result.append(stu)
+        return result
+
+
     def to_string(self) -> StringObjectDataKind[Self]:
         "将考勤记录对象转为字符串。"
         return StringObjectDataKind(json.dumps(
             {
                 "type": self.chunk_type_name,
                 "target_class": self.target_class,
-                "is_early": [str(s.uuid) for s in self.is_early],
-                "is_late": [str(s.uuid) for s in self.is_late],
-                "is_late_more": [str(s.uuid) for s in self.is_late_more],
-                "is_absent": [str(s.uuid) for s in self.is_absent],
-                "is_leave": [str(s.uuid) for s in self.is_leave],
-                "is_leave_early": [str(s.uuid) for s in self.is_leave_early],
-                "is_leave_late": [str(s.uuid) for s in self.is_leave_late],
+                "is_early": self.dump_student_list(self.is_early),
+                "is_late": self.dump_student_list(self.is_late),
+                "is_late_more": self.dump_student_list(self.is_late_more),
+                "is_absent": self.dump_student_list(self.is_absent),
+                "is_leave": self.dump_student_list(self.is_leave),
+                "is_leave_early": self.dump_student_list(self.is_leave_early),
+                "is_leave_late": self.dump_student_list(self.is_leave_late),
                 "uuid": str(self.uuid),
                 "archive_uuid": str(self.archive_uuid),
             }
         ))
 
-    @staticmethod
-    def from_string(string: str) -> AttendanceInfo:
-        "从字符串加载出勤信息对象。"
-        from .student import Student
 
-        d = json.loads(string)
-        if d["type"] != AttendanceInfo.chunk_type_name:
-            raise ValueError(f"类型不匹配：{d['type']} != {AttendanceInfo.chunk_type_name}")
-        obj = AttendanceInfo(
+    @classmethod
+    def from_string(cls, string: str) -> Self:
+        "从字符串加载出勤信息对象。"
+        d: dict[str, Any] = json.loads(string)
+        if d["type"] != cls.chunk_type_name:
+            raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
+
+        obj = cls(
             target_class=d["target_class"],
-            is_early=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_early"]],
-            is_late=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_late"]],
-            is_late_more=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_late_more"]],
-            is_absent=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_absent"]],
-            is_leave=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_leave"]],
-            is_leave_early=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_leave_early"]],
-            is_leave_late=[ClassDataLoader.LoadUUID(s, Student) for s in d["is_leave_late"]],
+            is_early=cls.load_student_list(d["is_early"]),
+            is_late=cls.load_student_list(d["is_late"]),
+            is_late_more=cls.load_student_list(d["is_late_more"]),
+            is_absent=cls.load_student_list(d["is_absent"]),
+            is_leave=cls.load_student_list(d["is_leave"]),
+            is_leave_early=cls.load_student_list(d["is_leave_early"]),
+            is_leave_late=cls.load_student_list(d["is_leave_late"])
         )
+
+        
         obj.uuid = d["uuid"]
         obj.archive_uuid = d["archive_uuid"]
         return obj
@@ -143,3 +161,13 @@ class AttendanceInfo(ClassDataType):
         obj = self.from_string(string)
         update_object_mapping(self, obj.__dict__)
         return self
+
+    @override
+    def to_pydantic(self):
+        """
+        转换为Pydantic模型。
+
+        :return: Pydantic模型实例
+        """
+        from ..pydantic_loader.models.attendance_info import AttendanceInfoModel
+        return AttendanceInfoModel.from_class_data(self)
