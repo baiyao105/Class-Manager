@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any, Self, override
+from uuid import UUID
 
 from ...algorithm.types import update_object_mapping
 
@@ -90,12 +91,14 @@ class AttendanceInfo(ClassDataType):
         return [str(s.uuid) for s in student_list]
     
     @staticmethod
-    def load_student_list(d: list[ClassDataTypeUUID[Student]]) -> list[Student]:
-        "从字符串列表加载学生对象。"
+    def load_student_list(uuid_list: list[str]) -> list[Student]:
+        "从UUID字符串列表加载学生对象。"
         from .student import Student
         result: list[Student] = []
-        for s in d:
-            stu = ClassDataLoader.LoadUUID(s, Student)
+        for s in uuid_list:
+            stu = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(Student, UUID(s)), Student
+            )
             assert stu is not None, f"出勤信息的学生{s}加载失败"
             result.append(stu)
         return result

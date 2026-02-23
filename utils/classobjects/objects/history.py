@@ -73,16 +73,18 @@ class History(ClassDataType):
             raise TypeError(f"uuid.setter需要提供UUID，ClassDataTypeUUID或者str， 但提供了{type(value)}")
     
     def dump_classes(self) -> dict[str, str]:
-        "将班级字典转换为字符串字典。"
+        "将班级字典转换为UUID字符串字典。"
         return {k: str(v.uuid) for k, v in self.classes.items()}
 
     @staticmethod
-    def load_classes(d: dict[str, Any]) -> dict[str, Class]:
-        "从字符串字典加载班级对象。"
+    def load_classes(classes_data: dict[str, str]) -> dict[str, Class]:
+        "从UUID字符串字典加载班级对象。"
         from .classtype import Class
         result: dict[str, Class] = {}
-        for k, v in d["classes"].items():
-            cls = ClassDataLoader.LoadUUID(v, Class)
+        for k, v in classes_data.items():
+            cls = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(Class, UUID(v)), Class
+            )
             assert cls is not None, f"历史记录的班级{k}加载失败"
             result[k] = cls
         return result
@@ -102,7 +104,9 @@ class History(ClassDataType):
         for _class, time_key, day_uuid in d["weekdays"]:
             if _class not in result:
                 result[_class] = {}
-            item = ClassDataLoader.LoadUUID(day_uuid, DayRecord)
+            item = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(DayRecord, UUID(day_uuid)), DayRecord
+            )
             assert item is not None, f"历史记录的班级{_class}的时间{time_key}的记录加载失败"
             result[_class][time_key] = item
         return result
@@ -126,8 +130,8 @@ class History(ClassDataType):
         if d["type"] != cls.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
         obj = cls(
-            classes=cls.load_classes(d),
-            weekdays=cls.load_weekdays(d),
+            classes=cls.load_classes(d["classes"]),
+            weekdays=cls.load_weekdays(d["weekdays"]),
             save_time=d["time"],
         )
         obj.uuid = d["uuid"]

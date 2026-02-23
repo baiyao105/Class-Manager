@@ -241,7 +241,6 @@ class PydanticLoaderTest(unittest.TestCase):
         self.assertEqual(loaded.score, 100.0, "分数应该已更新")
 
     def runTest(self):
-        "运行所有测试"
         tests = [
             self.test_save_and_load_student,
             self.test_batch_save,

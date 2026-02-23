@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Self, override
+from typing import TYPE_CHECKING, Self, override
+from uuid import UUID
 
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
-from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
+from ..basetype import ClassDataType, ClassDataTypeUUID, DataProperty, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
 from .datatag import DataTag, TagSigned
 
@@ -134,12 +135,14 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         return [str(s.uuid) for s in self.members]
 
     @staticmethod
-    def load_members(d: dict[str, Any]) -> list[Student]:
-        "从字典加载小组的所有成员。"
+    def load_members(members_list: list[str]) -> list[Student]:
+        "从UUID字符串列表加载小组的所有成员。"
         from .student import Student
         members: list[Student] = []
-        for s in d["members"]:
-            item = ClassDataLoader.LoadUUID(s, Student)
+        for s in members_list:
+            item = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(Student, UUID(s)), Student
+            )
             assert item is not None, f"目标学生{s}加载失败"
             members.append(item)
         return members
@@ -149,22 +152,26 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         return [str(t.uuid) for t in self.tags]
     
     @staticmethod
-    def load_tags(d: dict[str, Any]) -> list[DataTag]:
-        "从字典加载小组的所有标签。"
+    def load_tags(tags_list: list[str]) -> list[DataTag]:
+        "从UUID字符串列表加载小组的所有标签。"
         from .datatag import DataTag
         tags: list[DataTag] = []
-        for t in d["tags"]:
-            item = ClassDataLoader.LoadUUID(t, DataTag)
+        for t in tags_list:
+            item = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(DataTag, UUID(t)), DataTag
+            )
             assert item is not None, f"目标标签{t}加载失败"
             tags.append(item)
         return tags
 
     @staticmethod
-    def load_leader(d: dict[str, Any]) -> Student:
-        "从字典加载小组的组长。"
+    def load_leader(leader_uuid: str) -> Student:
+        "从UUID字符串加载小组的组长。"
         from .student import Student
-        leader = ClassDataLoader.LoadUUID(d["leader"], Student)
-        assert leader is not None, f"目标组长{d['leader']}加载失败"
+        leader = ClassDataLoader.LoadUUID(
+            ClassDataTypeUUID(Student, UUID(leader_uuid)), Student
+        )
+        assert leader is not None, f"目标组长{leader_uuid}加载失败"
         return leader
 
     def to_string(self) -> StringObjectDataKind[Self]:
@@ -194,11 +201,11 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         obj = cls(
             key=data["key"],
             name=data["name"],
-            leader=cls.load_leader(data),
-            members=cls.load_members(data),
+            leader=cls.load_leader(data["leader"]),
+            members=cls.load_members(data["members"]),
             belongs_to=data["belongs_to"],
             further_desc=data["further_desc"],
-            tags=cls.load_tags(data)
+            tags=cls.load_tags(data["tags"])
         )
         obj.uuid = data["uuid"]
         obj.archive_uuid = data["archive_uuid"]

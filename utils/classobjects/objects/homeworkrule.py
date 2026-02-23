@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Self, override
+from typing import Self, override
+from uuid import UUID
 
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 
-from ..basetype import ClassDataType, StringObjectDataKind
+from ..basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
 from .scoremodtemplate import ScoreModificationTemplate
 
@@ -46,16 +47,18 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         self.archive_uuid = ClassDataLoader.get_archive_uuid()
     
     def dump_rules(self) -> dict[str, str]:
-        "将规则映射转换为字符串映射。"
+        "将规则映射转换为UUID字符串映射。"
         return {n: str(t.uuid) for n, t in self.rule_mapping.items()}
     
     @staticmethod
-    def load_rules(d: dict[str, Any]) -> dict[str, ScoreModificationTemplate]:
-        "从字符串映射加载规则映射。"
+    def load_rules(rules_data: dict[str, str]) -> dict[str, ScoreModificationTemplate]:
+        "从UUID字符串映射加载规则映射。"
         from .scoremodtemplate import ScoreModificationTemplate
         result: dict[str, ScoreModificationTemplate] = {}
-        for n, t in d.items():
-            item = ClassDataLoader.LoadUUID(t, ScoreModificationTemplate)
+        for n, t in rules_data.items():
+            item = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(ScoreModificationTemplate, UUID(t)), ScoreModificationTemplate
+            )
             assert item is not None, f"作业规则的规则{n}加载失败"
             result[n] = item
         return result

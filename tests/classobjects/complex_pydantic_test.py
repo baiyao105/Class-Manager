@@ -336,7 +336,6 @@ class ComplexPydanticTest(unittest.TestCase):
         self.assertEqual(sm_json["template_ref"]["uuid"]["uuid"], str(template.uuid), "加分记录的模板引用应该正确")
 
     def runTest(self):
-        "运行所有测试"
         self.test_group_with_student_refs()
         self.test_class_with_students_and_groups()
         self.test_score_modification_with_template_ref()

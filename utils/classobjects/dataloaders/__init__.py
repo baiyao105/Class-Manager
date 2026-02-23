@@ -6,7 +6,7 @@
 
 from typing import Literal, Optional
 
-from .dataloader import (
+from .sqlite_loader import (
     LoaderError,
     UserCanceledError,
     ObjectDataNotFoundError,
@@ -36,9 +36,10 @@ from .pydantic_loader import (
     DayRecordModel,
     HistoryModel,
 )
+from .pydantic_sqlite import PydanticSQLiteLoader
 from ..classdataloader import UserDataBase
 
-LoaderType = Literal["legacy", "pydantic"]
+LoaderType = Literal["legacy", "pydantic", "pydantic_sqlite"]
 _current_loader_type: LoaderType = "legacy"
 
 
@@ -46,7 +47,7 @@ def set_loader_type(loader_type: LoaderType) -> None:
     """
     设置全局加载器类型。
 
-    :param loader_type: 加载器类型，"legacy" 或 "pydantic"
+    :param loader_type: 加载器类型，"legacy"、"pydantic" 或 "pydantic_sqlite"
     """
     global _current_loader_type
     _current_loader_type = loader_type
@@ -71,7 +72,9 @@ def create_chunk(path: str, database: Optional[UserDataBase] = None) -> DataChun
     :param database: 绑定的数据库对象
     :return: DataChunk实例
     """
-    if _current_loader_type == "pydantic":
+    if _current_loader_type == "pydantic_sqlite":
+        return PydanticSQLiteLoader.get_chunk(path, database)  # type: ignore[arg-type]
+    elif _current_loader_type == "pydantic":
         return PydanticLoader.get_chunk(path, database)  # type: ignore[arg-type]
     else:
         return Chunk.get_chunk(path, database)  # type: ignore[arg-type]
@@ -92,6 +95,7 @@ __all__ = [
     "PydanticReference",
     "DataChunk",
     "PydanticLoader",
+    "PydanticSQLiteLoader",
     "PydanticLoaderError",
     "ModelNotFoundError",
     "DataNotFoundError",

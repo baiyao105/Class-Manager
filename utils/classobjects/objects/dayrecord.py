@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Self, override
+from typing import TYPE_CHECKING, Self, override
+from uuid import UUID
 
 from utils.algorithm import update_object_mapping
 
-from ..basetype import ClassDataType, StringObjectDataKind
+from ..basetype import ClassDataType, ClassDataTypeUUID, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
 
 if TYPE_CHECKING:
@@ -66,19 +67,23 @@ class DayRecord(ClassDataType):
         ))
 
     @staticmethod
-    def load_target_class(d: dict[str, Any]) -> Class:
-        "从字典加载目标班级对象。"
+    def load_target_class(class_uuid: str) -> Class:
+        "从UUID字符串加载目标班级对象。"
         from .classtype import Class
-        result = ClassDataLoader.LoadUUID(d["target_class"], Class)
-        assert result is not None, f"目标班级{d['target_class']}加载失败"
+        result = ClassDataLoader.LoadUUID(
+            ClassDataTypeUUID(Class, UUID(class_uuid)), Class
+        )
+        assert result is not None, f"目标班级{class_uuid}加载失败"
         return result
 
     @staticmethod
-    def load_attendance_info(d: dict[str, Any]) -> AttendanceInfo:
-        "从字典加载考勤信息对象。"
+    def load_attendance_info(attendance_uuid: str) -> AttendanceInfo:
+        "从UUID字符串加载考勤信息对象。"
         from .attendanceinfo import AttendanceInfo
-        result = ClassDataLoader.LoadUUID(d["attendance_info"], AttendanceInfo)
-        assert result is not None, f"考勤信息{d['attendance_info']}加载失败"
+        result = ClassDataLoader.LoadUUID(
+            ClassDataTypeUUID(AttendanceInfo, UUID(attendance_uuid)), AttendanceInfo
+        )
+        assert result is not None, f"考勤信息{attendance_uuid}加载失败"
         return result
 
     @classmethod
@@ -89,10 +94,10 @@ class DayRecord(ClassDataType):
         if data["type"] != cls.chunk_type_name:
             raise ValueError(f"类型不匹配：{data['type']} != {cls.chunk_type_name}")
         obj = cls(
-            target_class=cls.load_target_class(data),
+            target_class=cls.load_target_class(data["target_class"]),
             weekday=data["weekday"],
             create_utc=data["utc"],
-            attendance_info=cls.load_attendance_info(data),
+            attendance_info=cls.load_attendance_info(data["attendance_info"]),
         )
         obj.uuid = data["uuid"]
         obj.archive_uuid = data["archive_uuid"]

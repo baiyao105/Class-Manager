@@ -4,6 +4,7 @@ import copy
 import json
 import time
 from typing import TYPE_CHECKING, Any, Self, override
+from uuid import UUID
 
 from ...algorithm import SupportsKeyOrdering, update_object_mapping
 from ...basetypes import Base
@@ -432,14 +433,14 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         return [(h.execute_time_key, str(h.uuid)) for h in self.history.values() if h.executed]
 
     @staticmethod
-    def load_history(d: dict[str, Any]) -> dict[int, ScoreModification]:
-        "从数据字典加载学生的历史记录。"
+    def load_history(history_list: list[tuple[int, str]]) -> dict[int, ScoreModification]:
+        "从数据列表加载学生的历史记录。"
         from .scoremod import ScoreModification
         result: dict[int, ScoreModification] = {}
-        for k, v in d["history"]:
-            k: int
-            v: ClassDataTypeUUID[ScoreModification]
-            item = ClassDataLoader.LoadUUID(v, ScoreModification)
+        for k, v in history_list:
+            item = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(ScoreModification, UUID(v)), ScoreModification
+            )
             assert item is not None, f"目标的历史记录{k}加载失败"
             result[k] = item
         return result
@@ -449,14 +450,14 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         return [(a.time_key, str(a.uuid)) for a in self.achievements.values()]
 
     @staticmethod
-    def load_achievements(d: dict[str, Any]) -> dict[int, Achievement]:
-        "从数据字典加载学生的成就记录。"
+    def load_achievements(achievements_list: list[tuple[int, str]]) -> dict[int, Achievement]:
+        "从数据列表加载学生的成就记录。"
         from .achievement import Achievement
         result: dict[int, Achievement] = {}
-        for k, v in d["achievements"]:
-            k: int
-            v: ClassDataTypeUUID[Achievement]
-            item = ClassDataLoader.LoadUUID(v, Achievement)
+        for k, v in achievements_list:
+            item = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(Achievement, UUID(v)), Achievement
+            )
             assert item is not None, f"目标的成就记录{k}加载失败"
             result[k] = item
         return result
@@ -466,11 +467,13 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         return str(self.last_reset_info.uuid) if self._last_reset_info else None
     
     @staticmethod
-    def load_last_reset_info(d: dict[str, Any]) -> Student | None:
-        "从数据字典加载学生的上次重置信息。"
+    def load_last_reset_info(uuid_str: str | None) -> Student | None:
+        "从UUID字符串加载学生的上次重置信息。"
         from .student import Student
-        if "last_reset_info" in d and d["last_reset_info"] is not None:
-            return ClassDataLoader.LoadUUID(d["last_reset_info"], Student) 
+        if uuid_str is not None:
+            return ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(Student, UUID(uuid_str)), Student
+            ) 
         return None
 
     def dump_tags(self) -> list[str]:
@@ -478,13 +481,14 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
         return [str(t.uuid) for t in self.tags]
 
     @staticmethod
-    def load_tags(d: dict[str, Any]) -> list[DataTag]:
-        "从数据字典加载学生的标签。"
+    def load_tags(tags_list: list[str]) -> list[DataTag]:
+        "从数据列表加载学生的标签。"
         from .datatag import DataTag
         result: list[DataTag] = []
-        for t in d["tags"]:
-            t: ClassDataTypeUUID[DataTag]
-            item = ClassDataLoader.LoadUUID(t, DataTag)
+        for t in tags_list:
+            item = ClassDataLoader.LoadUUID(
+                ClassDataTypeUUID(DataTag, UUID(t)), DataTag
+            )
             assert item is not None, f"目标标签{t}加载失败"
             result.append(item)
         return result
@@ -527,17 +531,17 @@ class Student(ClassDataType, SupportsKeyOrdering, TagSigned):
             num=data["num"],
             score=cls.score_dtype(data["score"]),
             belongs_to=data["belongs_to"],
-            history=cls.load_history(data),
+            history=cls.load_history(data["history"]),
             last_reset=data["last_reset"],
             highest_score=data["highest_score"],
             lowest_score=data["lowest_score"],
-            achievements=cls.load_achievements(data),
+            achievements=cls.load_achievements(data["achievements"]),
             total_score=data["total_score"],
             highest_score_cause_time=data["highest_score_cause_time"],
             lowest_score_cause_time=data["lowest_score_cause_time"],
             belongs_to_group=data["belongs_to_group"],
-            last_reset_info=cls.load_last_reset_info(data),
-            tags=cls.load_tags(data)
+            last_reset_info=cls.load_last_reset_info(data.get("last_reset_info")),
+            tags=cls.load_tags(data["tags"])
         )
 
         obj.uuid = data["uuid"]

@@ -3,16 +3,17 @@ from __future__ import annotations
 import json
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, Self, override
+from typing import TYPE_CHECKING, Self, override
+from uuid import UUID
 
 from ...algorithm.types import update_object_mapping
 
 from ...basetypes import Base
 from ...consts import debug
 
-from ..basetype import ClassDataType, DataProperty, StringObjectDataKind
+from ..basetype import ClassDataType, ClassDataTypeUUID, DataProperty, StringObjectDataKind
 from ..classdataloader import ClassDataLoader
-from .scoremodtemplate import ScoreModificationTemplate  # 可以直接导入，这个没有依赖
+from .scoremodtemplate import ScoreModificationTemplate
 
 if TYPE_CHECKING:
     from .student import Student
@@ -233,19 +234,23 @@ class ScoreModification(ClassDataType):
             return False, "操作并未执行, 无需撤回"
 
     @staticmethod
-    def load_template(d: dict[str, Any]) -> ScoreModificationTemplate:
-        "从字典加载分数修改模板。"
+    def load_template(template_uuid: str) -> ScoreModificationTemplate:
+        "从UUID字符串加载分数修改模板。"
         from .scoremodtemplate import ScoreModificationTemplate
-        template = ClassDataLoader.LoadUUID(d["template"], ScoreModificationTemplate)
-        assert template is not None, f"目标模板{d['template']}加载失败"
+        template = ClassDataLoader.LoadUUID(
+            ClassDataTypeUUID(ScoreModificationTemplate, UUID(template_uuid)), ScoreModificationTemplate
+        )
+        assert template is not None, f"目标模板{template_uuid}加载失败"
         return template
     
     @staticmethod
-    def load_target(d: dict[str, Any]) -> Student:
-        "从字典加载分数修改记录的目标学生。"
+    def load_target(target_uuid: str) -> Student:
+        "从UUID字符串加载分数修改记录的目标学生。"
         from .student import Student
-        target = ClassDataLoader.LoadUUID(d["target"], Student)
-        assert target is not None, f"目标学生{d['target']}加载失败"
+        target = ClassDataLoader.LoadUUID(
+            ClassDataTypeUUID(Student, UUID(target_uuid)), Student
+        )
+        assert target is not None, f"目标学生{target_uuid}加载失败"
         return target
 
     def to_string(self) -> StringObjectDataKind[Self]:
@@ -275,8 +280,8 @@ class ScoreModification(ClassDataType):
         if d["type"] != cls.chunk_type_name:
             raise ValueError(f"类型不匹配：{d['type']} != {cls.chunk_type_name}")
         obj = cls(
-            template=cls.load_template(d),
-            target=cls.load_target(d),
+            template=cls.load_template(d["template"]),
+            target=cls.load_target(d["target"]),
             title=d["title"],
             mod=d["mod"],
             execute_time=d["execute_time"],

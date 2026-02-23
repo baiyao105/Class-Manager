@@ -157,7 +157,6 @@ class PydanticConversionTest(unittest.TestCase):
         self.assertEqual(db_data["num"], 123, "学号应该保留")
 
     def runTest(self):
-        "运行所有测试"
         self.test_student_to_pydantic()
         self.test_datatag_to_pydantic()
         self.test_group_to_pydantic()
