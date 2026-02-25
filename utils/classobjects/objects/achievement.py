@@ -52,6 +52,7 @@ class Achievement(ClassDataType):
         :param reach_time: 达成时间
         :param reach_time_key: 达成时间键值
         """
+        super().__init__()
         if reach_time is None:
             reach_time = Base.gettime()
         if reach_time_key is None:

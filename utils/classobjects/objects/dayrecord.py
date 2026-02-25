@@ -46,6 +46,7 @@ class DayRecord(ClassDataType):
         :param create_utc: 时间戳
         :param attendance_info: 考勤信息
         """
+        super().__init__()
         self.weekday = weekday
         self.utc = create_utc
         self.attendance_info = attendance_info

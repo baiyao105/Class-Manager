@@ -50,6 +50,7 @@ class Group(ClassDataType, SupportsKeyOrdering, TagSigned):
         :param belongs_to: 所属班级
         :param further_desc: 详细描述
         """
+        super().__init__()
 
         self._key = key
         self._name = name

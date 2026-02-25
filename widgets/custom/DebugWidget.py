@@ -15,7 +15,7 @@ from utils import (
     Thread,
     output_list,
     wait_until,
-    QWidget, QTimer, Qt, QTextEdit, Slot, QCloseEvent
+    QWidget, QTimer, Qt, QTextEdit, Slot, QCloseEvent, QComboBox
 )
 
 
@@ -66,6 +66,7 @@ class DebugWidget(DebugWindow.Ui_Form, MyWidget):
         self.textEdit.setPlaceholderText("输入命令...")
         self.textEdit.setFocus()
         self.comboBox.currentIndexChanged.connect(self.change_command)
+        self.comboBox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         cmds = [
             ("self.findstu()", "查找学生"),
             ("os._exit(0)", "原地爆炸"),
@@ -148,6 +149,27 @@ for i in range(100):
 )
 """,
 "添加学生"
+            ),
+            (
+"""\
+from utils.classobjects.objects import (
+    Class, Student, Group, ScoreModification,
+    Achievement, ScoreModificationTemplate, AchievementTemplate,
+    HomeworkRule, DayRecord, AttendanceInfo, DataTag
+)
+
+print("=== 实例追踪 ===")
+total = 0
+for cls in [Class, Student, Group, ScoreModification,
+            Achievement, ScoreModificationTemplate, AchievementTemplate,
+            HomeworkRule, DayRecord, AttendanceInfo, DataTag]:
+    count = len(cls.get_all_instances())
+    total += count
+    if count > 0:
+        print(f"{cls.__name__}: {count}")
+print(f"总计: {total}")
+""",
+"追踪所有实例"
             )
         ]
         self.comboBox.clear()

@@ -51,6 +51,7 @@ class AttendanceInfo(ClassDataType):
         :param is_leave_early: 早退的学生
         :param is_leave_late: 晚退的学生，特指某些"热爱学校"的人（直接点我名算了）
         """
+        super().__init__()
 
         if is_early is None:
             is_early = []

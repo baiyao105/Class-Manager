@@ -271,22 +271,25 @@ class DataSetModel(BasicUIModel, ClassDataSet, LogicModel):
     def save(self):
         "保存当前存档。"
         if self.last_save_from_action - time.time() < -3:
-            Chunk.loading_info["history_stage"] = "保存存档"
-            Chunk.loading_info["current_saving_obj_name"] = "存档"
-            Chunk.loading_info["current_saving_obj_current"] = 1
-            Chunk.loading_info["current_saving_obj_total"] = 1
-            Chunk.loading_info["total_percentage"] = 0
+            Chunk.reset_progress()
+            Chunk.update_progress(
+                stage="保存存档",
+                obj_name="存档",
+                current=1,
+                total=1,
+                percentage=0,
+            )
             loading_screen = LoadingScreenWidget(
                 self,
-                progress_condition=lambda: Chunk.loading_info["total_percentage"],
-                stage_desc_condition=lambda: Chunk.loading_info["history_stage"],
+                progress_condition=lambda: Chunk.get_progress().total_percentage,
+                stage_desc_condition=lambda: Chunk.get_progress().history_stage,
                 stage_progress_desc_condition=lambda: (
                     "保存" +
-                    Chunk.loading_info["current_saving_obj_name"] + 
+                    Chunk.get_progress().current_saving_obj_name + 
                     "（" +
-                    str(Chunk.loading_info["current_saving_obj_current"]) +
+                    str(Chunk.get_progress().current_saving_obj_current) +
                     "/" +
-                    str(Chunk.loading_info["current_saving_obj_total"]) +
+                    str(Chunk.get_progress().current_saving_obj_total) +
                     "）"
                 ))
             loading_screen.show()

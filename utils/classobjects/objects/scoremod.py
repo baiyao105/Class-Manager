@@ -58,6 +58,7 @@ class ScoreModification(ClassDataType):
         :param create_time: 创建时间
         :param executed: 是否已执行
         """
+        super().__init__()
         if create_time is None:
             create_time = Base.gettime()
         self.temp = template

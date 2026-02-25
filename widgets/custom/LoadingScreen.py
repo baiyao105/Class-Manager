@@ -59,6 +59,12 @@ class LoadingScreenWidget(MyWidget, LoadingScreen.Ui_Form):
             self.update_timer.start(100)
         super().show()
 
+
+    def close(self):
+        if self.update_timer.isActive():
+            self.update_timer.stop()
+        return super().close()
+
     @property
     def progress(self) -> Union[int, float]:
         return self._progress

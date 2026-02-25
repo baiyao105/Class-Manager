@@ -210,8 +210,13 @@ class PydanticSQLiteLoader(DataChunk):
             os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else self.current_path, exist_ok=True)
             conn = sqlite3.connect(db_path, check_same_thread=False)
             conn.row_factory = sqlite3.Row
+            
             conn.execute("PRAGMA foreign_keys = ON")
             conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
+            conn.execute("PRAGMA cache_size = -10000")
+            conn.execute("PRAGMA temp_store = MEMORY")
+            
             TableSchema.initialize_database(conn)
             self.connections[db_name] = conn
         return self.connections[db_name]
@@ -716,8 +721,13 @@ class PydanticSQLiteLoader(DataChunk):
             self.loading_set.discard(cache_key)
             self.operating_history_uuid = old_history_uuid
 
-    def save_object(self, obj: ClassDataType) -> None:
-        """保存对象到数据库"""
+    def save_object(self, obj: ClassDataType, commit_on_finished: bool = True, save_refs: bool = True) -> None:
+        """保存对象到数据库
+        
+        :param obj: 要保存的对象
+        :param commit_on_finished: 是否在保存完成后提交事务
+        :param save_refs: 是否保存引用的对象（默认为True，在保存所有对象时可以设为False）
+        """
         type_name = obj.chunk_type_name
 
         if self.is_batch_mode:
@@ -725,29 +735,35 @@ class PydanticSQLiteLoader(DataChunk):
             return
 
         conn = self.get_history_connection(self.operating_history_uuid)
-        self._save_to_db(conn, obj)
-        conn.commit()
+        self._save_to_db(conn, obj, save_refs)
+        if commit_on_finished:
+            conn.commit()
 
-    def _save_to_db(self, conn: sqlite3.Connection, obj: ClassDataType) -> None:
-        """保存对象到数据库"""
+    def _save_to_db(self, conn: sqlite3.Connection, obj: ClassDataType, save_refs: bool = True) -> None:
+        """保存对象到数据库
+        
+        :param conn: 数据库连接
+        :param obj: 要保存的对象
+        :param save_refs: 是否保存引用的对象
+        """
         type_name = obj.chunk_type_name
 
         if type_name == "Student":
-            self._save_student(conn, cast(Student, obj))
+            self._save_student(conn, cast(Student, obj), save_refs)
         elif type_name == "Class":
-            self._save_class(conn, cast(Class, obj))
+            self._save_class(conn, cast(Class, obj), save_refs)
         elif type_name == "Group":
-            self._save_group(conn, cast(Group, obj))
+            self._save_group(conn, cast(Group, obj), save_refs)
         elif type_name == "ScoreModification":
-            self._save_score_modification(conn, cast(ScoreModification, obj))
+            self._save_score_modification(conn, cast(ScoreModification, obj), save_refs)
         elif type_name == "ScoreModificationTemplate":
-            self._save_score_template(conn, cast(ScoreModificationTemplate, obj))
+            self._save_score_template(conn, cast(ScoreModificationTemplate, obj), save_refs)
         elif type_name == "Achievement":
-            self._save_achievement(conn, cast(Achievement, obj))    
+            self._save_achievement(conn, cast(Achievement, obj), save_refs)    
         elif type_name == "AchievementTemplate":
-            self._save_achievement_template(conn, cast(AchievementTemplate, obj))
+            self._save_achievement_template(conn, cast(AchievementTemplate, obj), save_refs)
         elif type_name == "DataTag":
-            self._save_data_tag(conn, cast(DataTag, obj))
+            self._save_data_tag(conn, cast(DataTag, obj), save_refs)
 
     def _find_parent_class_uuid(self, obj: ClassDataType) -> UUID | None:
         """查找对象所属的班级UUID"""
@@ -777,9 +793,13 @@ class PydanticSQLiteLoader(DataChunk):
             return UUID(row["uuid"])
         return None
 
-    def _save_data_tag(self, conn: sqlite3.Connection, tag: DataTag) -> None:
+    def _save_data_tag(self, conn: sqlite3.Connection, tag: DataTag, save_refs: bool = True) -> None:
         """
         保存数据标签到数据库。
+        
+        :param conn: 数据库连接
+        :param tag: 数据标签对象
+        :param save_refs: 是否保存引用的对象
         """
         conn.execute("""
             INSERT OR REPLACE INTO data_tags (uuid, key, data, updated_at)
@@ -790,9 +810,13 @@ class PydanticSQLiteLoader(DataChunk):
             json.dumps(tag.data) if tag.data else None,
         ))
 
-    def _save_student(self, conn: sqlite3.Connection, student: Student) -> None:
+    def _save_student(self, conn: sqlite3.Connection, student: Student, save_refs: bool = True) -> None:
         """
         保存学生到数据库。
+        
+        :param conn: 数据库连接
+        :param student: 学生对象
+        :param save_refs: 是否保存引用的对象
         """
 
         conn.execute("""
@@ -820,32 +844,45 @@ class PydanticSQLiteLoader(DataChunk):
         ))
 
         conn.execute("DELETE FROM student_tags WHERE student_uuid = ?", (str(student.uuid),))
-        for tag in student.tags:
-            conn.execute(
+        if student.tags:
+            tag_data = [(str(student.uuid), str(tag.uuid)) for tag in student.tags]
+            conn.executemany(
                 "INSERT OR IGNORE INTO student_tags (student_uuid, tag_uuid) VALUES (?, ?)",
-                (str(student.uuid), str(tag.uuid))
+                tag_data
             )
-            self.save_object(tag)
+            if save_refs:
+                for tag in student.tags:
+                    self.save_object(tag, save_refs=False)
 
         conn.execute("DELETE FROM student_achievements WHERE student_uuid = ?", (str(student.uuid),))
-        for ach in student.achievements.values():
-            conn.execute(
+        if student.achievements:
+            ach_data = [(str(student.uuid), str(ach.uuid)) for ach in student.achievements.values()]
+            conn.executemany(
                 "INSERT OR IGNORE INTO student_achievements (student_uuid, achievement_uuid) VALUES (?, ?)",
-                (str(student.uuid), str(ach.uuid))
+                ach_data
             )
-            self.save_object(ach)
+            if save_refs:
+                for ach in student.achievements.values():
+                    self.save_object(ach, save_refs=False)
 
         conn.execute("DELETE FROM student_score_mods WHERE student_uuid = ?", (str(student.uuid),))
-        for sm in student.history.values():
-            conn.execute(
+        if student.history:
+            sm_data = [(str(student.uuid), str(sm.uuid)) for sm in student.history.values()]
+            conn.executemany(
                 "INSERT OR IGNORE INTO student_score_mods (student_uuid, score_mod_uuid) VALUES (?, ?)",
-                (str(student.uuid), str(sm.uuid))
+                sm_data
             )
-            self.save_object(sm)
+            if save_refs:
+                for sm in student.history.values():
+                    self.save_object(sm, save_refs=False)
 
-    def _save_class(self, conn: sqlite3.Connection, cls: Class) -> None:
+    def _save_class(self, conn: sqlite3.Connection, cls: Class, save_refs: bool = True) -> None:
         """
         保存班级到数据库。
+        
+        :param conn: 数据库连接
+        :param cls: 班级对象
+        :param save_refs: 是否保存引用的对象
         """
         cleaning_mapping_json = json.dumps(cls.dump_cleaning_mapping()) if cls.cleaning_mapping else None
         homework_rules_json = json.dumps(cls.dump_homework_rules()) if cls.homework_rules else None
@@ -864,23 +901,35 @@ class PydanticSQLiteLoader(DataChunk):
         ))
 
         conn.execute("DELETE FROM class_students WHERE class_uuid = ?", (str(cls.uuid),))
-        for num, student in cls.students.items():
-            conn.execute(
+        if cls.students:
+            student_data = [(str(cls.uuid), num, str(student.uuid)) for num, student in cls.students.items()]
+            conn.executemany(
                 "INSERT OR REPLACE INTO class_students (class_uuid, student_num, student_uuid) VALUES (?, ?, ?)",
-                (str(cls.uuid), num, str(student.uuid))
+                student_data
             )
-            self.save_object(student)
+            if save_refs:
+                for student in cls.students.values():
+                    self.save_object(student, save_refs=False)
 
         conn.execute("DELETE FROM class_groups WHERE class_uuid = ?", (str(cls.uuid),))
-        for key, group in cls.groups.items():
-            conn.execute(
+        if cls.groups:
+            group_data = [(str(cls.uuid), key, str(group.uuid)) for key, group in cls.groups.items()]
+            conn.executemany(
                 "INSERT OR REPLACE INTO class_groups (class_uuid, group_key, group_uuid) VALUES (?, ?, ?)",
-                (str(cls.uuid), key, str(group.uuid))
+                group_data
             )
-            self.save_object(group)
+            if save_refs:
+                for group in cls.groups.values():
+                    self.save_object(group, save_refs=False)
 
-    def _save_group(self, conn: sqlite3.Connection, group: Group) -> None:
-        """保存小组到数据库"""
+    def _save_group(self, conn: sqlite3.Connection, group: Group, save_refs: bool = True) -> None:
+        """
+        保存小组到数据库
+        
+        :param conn: 数据库连接
+        :param group: 小组对象
+        :param save_refs: 是否保存引用的对象
+        """
         class_uuid = self._find_class_uuid_by_key(group.belongs_to)
         
         conn.execute("""
@@ -898,22 +947,31 @@ class PydanticSQLiteLoader(DataChunk):
         ))
 
         conn.execute("DELETE FROM group_members WHERE group_uuid = ?", (str(group.uuid),))
-        for member in group.members:
-            conn.execute(
+        if group.members:
+            member_data = [(str(group.uuid), str(member.uuid)) for member in group.members]
+            conn.executemany(
                 "INSERT OR IGNORE INTO group_members (group_uuid, student_uuid) VALUES (?, ?)",
-                (str(group.uuid), str(member.uuid))
+                member_data
             )
 
         conn.execute("DELETE FROM group_tags WHERE group_uuid = ?", (str(group.uuid),))
-        for tag in group.tags:
-            conn.execute(
+        if group.tags:
+            tag_data = [(str(group.uuid), str(tag.uuid)) for tag in group.tags]
+            conn.executemany(
                 "INSERT OR IGNORE INTO group_tags (group_uuid, tag_uuid) VALUES (?, ?)",
-                (str(group.uuid), str(tag.uuid))
+                tag_data
             )
+            if save_refs:
+                for tag in group.tags:
+                    self.save_object(tag, save_refs=False)
 
-    def _save_score_modification(self, conn: sqlite3.Connection, sm: ScoreModification) -> None:
+    def _save_score_modification(self, conn: sqlite3.Connection, sm: ScoreModification, save_refs: bool = True) -> None:
         """
         保存分数修改记录到数据库。
+        
+        :param conn: 数据库连接
+        :param sm: 分数修改记录对象
+        :param save_refs: 是否保存引用的对象
         """
         conn.execute("""
             INSERT OR REPLACE INTO score_modifications 
@@ -933,9 +991,14 @@ class PydanticSQLiteLoader(DataChunk):
             sm.create_time,
         ))
 
-    def _save_score_template(self, conn: sqlite3.Connection, template: ScoreModificationTemplate, order_index: int = 0) -> None:
+    def _save_score_template(self, conn: sqlite3.Connection, template: ScoreModificationTemplate, order_index: int = 0, save_refs: bool = True) -> None:
         """
         保存分数模板到数据库。
+        
+        :param conn: 数据库连接
+        :param template: 分数模板对象
+        :param order_index: 排序索引
+        :param save_refs: 是否保存引用的对象
         """
         conn.execute("""
             INSERT OR REPLACE INTO score_templates 
@@ -952,9 +1015,13 @@ class PydanticSQLiteLoader(DataChunk):
             order_index,
         ))
 
-    def _save_achievement(self, conn: sqlite3.Connection, ach: Achievement) -> None:
+    def _save_achievement(self, conn: sqlite3.Connection, ach: Achievement, save_refs: bool = True) -> None:
         """
         保存成就到数据库。
+        
+        :param conn: 数据库连接
+        :param ach: 成就对象
+        :param save_refs: 是否保存引用的对象
         """
         conn.execute("""
             INSERT OR REPLACE INTO achievements 
@@ -969,9 +1036,13 @@ class PydanticSQLiteLoader(DataChunk):
             ach.sound,
         ))
 
-    def _save_achievement_template(self, conn: sqlite3.Connection, template: AchievementTemplate) -> None:
+    def _save_achievement_template(self, conn: sqlite3.Connection, template: AchievementTemplate, save_refs: bool = True) -> None:
         """
         保存成就模板到数据库。
+        
+        :param conn: 数据库连接
+        :param template: 成就模板对象
+        :param save_refs: 是否保存引用的对象
         """
         score_rank_range = None
         if template.score_rank_down_limit is not None and template.score_rank_up_limit is not None:
@@ -1189,6 +1260,11 @@ class PydanticSQLiteLoader(DataChunk):
         :param clear_current: 是否清空当前状态，默认为False
         :param clear_histories: 是否清空所有历史记录，默认为False
         """
+        from ...datachunk import DataChunk
+
+        DataChunk.reset_progress()
+        DataChunk.update_progress(stage="准备保存", percentage=0.0)
+
         if clear_histories:
             for db_file in os.listdir(self.current_path):
                 if db_file.startswith("history_") and db_file.endswith(".db"):
@@ -1196,42 +1272,63 @@ class PydanticSQLiteLoader(DataChunk):
 
         conn = self.get_connection("current")
 
-        if save_history:
-            self.save_history(conn)
-
+        DataChunk.update_progress(stage="保存基本信息")
         self._save_main_info(conn)
 
-        with self.batch_mode():
-            for idx, template in enumerate(self.bound_db.templates.values()):
-                self._save_score_template(conn, template, idx)
-            for achievement in self.bound_db.achievements.values():
-                self.save_object(achievement)
-
-        conn.commit()
-
-        self.write_identifier()
-
-    def save_history(self, conn: sqlite3.Connection) -> None:
-        """
-        保存当前状态为历史记录。
-        """
-        from ...objects import History
-
-        history = History(self.bound_db.classes, self.bound_db.weekday_record)
-        if history.uuid is None:
-            return
-
-        conn.execute(
-            "INSERT OR REPLACE INTO histories (uuid, time) VALUES (?, ?)",
-            (str(history.uuid), history.time)
+        DataChunk.update_progress(stage="保存所有对象")
+        
+        from ...objects import (
+            Class, Student, Group, ScoreModification,
+            Achievement, ScoreModificationTemplate, AchievementTemplate,
+            HomeworkRule, DayRecord, AttendanceInfo, DataTag
         )
-
-        for cls_key, cls in history.classes.items():
-            conn.execute(
-                "INSERT OR REPLACE INTO history_classes (history_uuid, class_key, class_uuid) VALUES (?, ?, ?)",
-                (str(history.uuid), cls_key, str(cls.uuid))
+        
+        all_classes = [
+            Class, Student, Group, ScoreModification,
+            Achievement, ScoreModificationTemplate, AchievementTemplate,
+            HomeworkRule, DayRecord, AttendanceInfo, DataTag
+        ]
+        
+        saved_uuids: set[str] = set()
+        total_objects = sum(len(cls.get_all_instances()) for cls in all_classes)
+        saved_objects = 0
+        skipped_objects = 0
+    
+        DataChunk.update_progress()
+        for cls in all_classes:
+            instances = cls.get_all_instances()
+            if not instances:
+                continue
+            
+            DataChunk.update_progress(
+                obj_name=cls.__name__,
+                total=len(instances)
             )
-            self.save_object(cls)
+            
+            for idx, obj in enumerate(instances):
+                uuid_str = str(obj.uuid)
+                if uuid_str in saved_uuids:
+                    skipped_objects += 1
+                    continue
+                
+                saved_uuids.add(uuid_str)
+                DataChunk.update_progress(current=idx + 1)
+                DataChunk.update_progress(percentage=(saved_objects / total_objects) * 100.0)
+                self.save_object(obj, save_refs=False)
+                saved_objects += 1
+        
+        DataChunk.update_progress(stage="提交所有更改", obj_name="所有对象", current=0, total=saved_objects)
+
+        DataChunk.update_progress(percentage=100.0)
+        conn.commit()
+        self.write_identifier()
+        
+        from utils.basetypes import Base
+        Base.log(
+            "I",
+            f"保存完成：总对象数={total_objects}, 实际保存={saved_objects}, 跳过重复={skipped_objects}",
+            "PydanticSQLiteLoader.save_data"
+        )
 
     def _save_main_info(self, conn: sqlite3.Connection) -> None:
         """

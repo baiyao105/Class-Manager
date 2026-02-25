@@ -96,6 +96,7 @@ class AchievementTemplate(ClassDataType, SupportsKeyOrdering):
         :param sound: 成就达成时的音效
         :param icon: 成就图标（在提示中的）
         """
+        super().__init__()
 
         self.key = key
         self.name = name

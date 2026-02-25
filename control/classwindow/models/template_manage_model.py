@@ -127,11 +127,9 @@ class TemplateManageModel(MixinSuperType):
 
         def delete_template():
             assert self.template_listbox is not None, "过类型检查"
-            assert self.new_template_window is not None, "也是过类型检查"
 
             def _confirm_delete():
                 assert self.template_listbox is not None, "过类型检查"
-                assert self.new_template_window is not None, "也是过类型检查"
                 self.del_template(
                     list(self.modify_templates.keys())[
                         self.template_listbox.listWidget.currentRow()
@@ -152,8 +150,6 @@ class TemplateManageModel(MixinSuperType):
                )
                         
         def reset_missing():
-            assert self.template_listbox is not None, "过类型检查"
-            assert self.new_template_window is not None, "也是过类型检查"
             def _confirm_restore():
                 assert self.template_listbox is not None, "还是过类型检查"
                 self.reset_missing_defaults()
@@ -168,7 +164,6 @@ class TemplateManageModel(MixinSuperType):
             )
 
         def reset_all_defaults():
-            assert self.template_listbox is not None, "过类型检查"
             def _confirm_reset():
                 assert self.template_listbox is not None, "过类型检查"
                 self.reset_all_defaults()
@@ -181,7 +176,6 @@ class TemplateManageModel(MixinSuperType):
             )
 
         def reset_all_data():
-            assert self.template_listbox is not None, "过类型检查"
             def _confirm_reset():
                 assert self.template_listbox is not None, "过类型检查"
                 self.reset_all_data()

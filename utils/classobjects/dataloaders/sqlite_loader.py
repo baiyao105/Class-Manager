@@ -31,7 +31,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import Iterable
-from typing import Any, ClassVar, Dict, Optional, TypeVar, Union
+from typing import Any, Dict, Optional, TypeVar, Union
 
 from ...algorithm import Mutex
 from ...basetypes import Base
@@ -259,9 +259,6 @@ class Chunk(DataChunk):
 
   database_connections: dict[tuple[ClassDataTypeUUID[History] | None, str], sqlite3.Connection] = {}
   "数据库连接池，database_connection[(历史记录uuid,数据类型名)] = sqlite3.Connection"
-
-  loading_info: ClassVar[dict[str, Any]] = {}
-  "加载信息, 字典里面是啥自己开盲盒吧（懒得写了）"
 
   save_task_mutex: Mutex = Mutex()
   "保存任务互斥锁"
@@ -755,7 +752,7 @@ class Chunk(DataChunk):
     """
     with Chunk.save_task_mutex:
       DataObject.commit_changes(False)
-      Chunk.loading_info["total_percentage"] = 0.0
+      Chunk.reset_progress()
 
       try:
         if self.is_saving:
@@ -808,7 +805,7 @@ class Chunk(DataChunk):
           :param clear: 是否清理历史记录
           :param index: 当前保存的历史记录索引
           """
-          Chunk.loading_info["history_stage"] = f"保存历史记录（{index}/{total_history_count}）"
+          Chunk.update_progress(stage=f"保存历史记录（{index}/{total_history_count}）")
           if history_uuid:
             path = os.path.join(self.path, "Histories", history_uuid[:2], history_uuid[2:])
           else:
@@ -880,11 +877,10 @@ class Chunk(DataChunk):
           t = time.time()
           c = 0
           total = max(len(classes), 1)
-          Chunk.loading_info["current_saving_obj_name"] = "班级信息"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="班级信息", total=total)
           for _class in classes:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(_class, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -899,11 +895,10 @@ class Chunk(DataChunk):
           t = time.time()
           c = 0
           total = max(len(students), 1)
-          Chunk.loading_info["current_saving_obj_name"] = "学生信息"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="学生信息", total=total)
           for student in students:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(student, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -918,11 +913,10 @@ class Chunk(DataChunk):
           t = time.time()
           c = 0
           total = max(len(groups), 1)
-          Chunk.loading_info["current_saving_obj_name"] = "小组信息"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="小组信息", total=total)
           for group in groups:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(group, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -938,11 +932,10 @@ class Chunk(DataChunk):
           c = 0
           total = max(len(modifies), 1)
           self.commit_changes()
-          Chunk.loading_info["current_saving_obj_name"] = "分数修改记录"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="分数修改记录", total=total)
           for modify in modifies:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(modify, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -957,11 +950,10 @@ class Chunk(DataChunk):
           t = time.time()
           c = 0
           total = max(len(day_records), 1)
-          Chunk.loading_info["current_saving_obj_name"] = "成就记录"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="成就记录", total=total)
           for achievement in achievements:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(achievement, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -975,11 +967,10 @@ class Chunk(DataChunk):
           )
           t = time.time()
           c = 0
-          Chunk.loading_info["current_saving_obj_name"] = "分数修改模板"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="分数修改模板", total=total)
           for template in modify_templates:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(template, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -994,11 +985,10 @@ class Chunk(DataChunk):
           t = time.time()
           c = 0
           total = max(len(achivement_templates), 1)
-          Chunk.loading_info["current_saving_obj_name"] = "成就模板"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="成就模板", total=total)
           for template in achivement_templates:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(template, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -1013,11 +1003,10 @@ class Chunk(DataChunk):
           t = time.time()
           c = 0
           total = max(len(day_records), 1)
-          Chunk.loading_info["current_saving_obj_name"] = "每日记录"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="每日记录", total=total)
           for record in day_records:
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(record, self).save(path)
             c += 1
             total_saved_objects += 1
@@ -1032,11 +1021,10 @@ class Chunk(DataChunk):
           t = time.time()
           c = 0
           total = max(len(self.bound_db.current_day_attendance.values()), 1)
-          Chunk.loading_info["current_saving_obj_name"] = "当前出勤"
-          Chunk.loading_info["current_saving_obj_total"] = total
+          Chunk.update_progress(obj_name="当前出勤", total=total)
           for attendance_info in self.bound_db.current_day_attendance.values():
-            Chunk.loading_info["current_saving_obj_current"] = c
-            Chunk.loading_info["total_percentage"] += object_percentage
+            Chunk.update_progress(current=c)
+            Chunk.update_progress(percentage=total_saved_objects * object_percentage)
             DataObject(attendance_info, self).save(path)
             total_saved_objects += 1
             c += 1

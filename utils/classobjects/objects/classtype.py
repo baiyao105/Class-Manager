@@ -51,6 +51,7 @@ class Class(ClassDataType, SupportsKeyOrdering):
         :param cleaning_mapping: 打扫卫生人员的映射
         :param homework_rules: 作业规则
         """
+        super().__init__()
         self._name = name
         self._owner = owner
         self.groups = groups if isinstance(groups, dict) else groups.to_dict()

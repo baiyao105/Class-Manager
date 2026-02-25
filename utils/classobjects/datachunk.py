@@ -7,13 +7,30 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, TypeVar
+from dataclasses import dataclass
+from typing import TypeVar
 
 from .basetype import ClassDataType, ClassDataTypeUUID
 from .objects.history import History
 from .classdataset import UserDataBase
 
 T = TypeVar("T", bound=ClassDataType)
+
+
+@dataclass
+class SaveLoadStat:
+    """保存/加载进度信息"""
+    history_stage: str = ""
+    current_saving_obj_name: str = ""
+    current_saving_obj_current: int = 0
+    current_saving_obj_total: int = 0
+    total_percentage: float = 0.0
+    
+    def __repr__(self) -> str:
+        return f"SaveLoadStat(stage={self.history_stage!r}, obj_name={self.current_saving_obj_name!r}, current={self.current_saving_obj_current}/{self.current_saving_obj_total}, percentage={self.total_percentage})"
+
+
+_progress_stat: SaveLoadStat = SaveLoadStat()
 
 
 class DataChunk(ABC):
@@ -23,20 +40,56 @@ class DataChunk(ABC):
     提供统一的数据存储和加载接口，支持多种实现。
     """
 
+    @classmethod
+    def update_progress(
+        cls,
+        stage: str | None = None,
+        obj_name: str | None = None,
+        current: int | None = None,
+        total: int | None = None,
+        percentage: float | None = None,
+    ) -> None:
+        """
+        更新进度信息。
 
-    loading_info: ClassVar[dict[str, Any]] = {}
-    """
-    加载信息字典。
+        只更新显式传递的参数，未传递的参数保持不变。
 
-    用于存储加载/保存进度信息，供UI显示进度。
+        :param stage: 当前阶段描述
+        :param obj_name: 当前对象类型名称
+        :param current: 当前对象索引
+        :param total: 当前对象总数
+        :param percentage: 总进度百分比（如果为None，则不更新）
+        """
+        global _progress_stat
+        if stage is not None:
+            _progress_stat.history_stage = stage
+        if obj_name is not None:
+            _progress_stat.current_saving_obj_name = obj_name
+        if current is not None:
+            _progress_stat.current_saving_obj_current = current
+        if total is not None:
+            _progress_stat.current_saving_obj_total = total
+        if percentage is not None:
+            _progress_stat.total_percentage = percentage
+        
 
-    包含以下字段：
-    - history_stage: 当前保存阶段描述
-    - current_saving_obj_name: 当前保存的对象类型名称
-    - current_saving_obj_current: 当前保存的对象索引
-    - current_saving_obj_total: 当前保存的对象总数
-    - total_percentage: 总进度百分比
-    """
+    @classmethod
+    def get_progress(cls) -> SaveLoadStat:
+        """
+        获取当前进度信息。
+
+        :return: 当前进度信息
+        """
+        global _progress_stat
+        return _progress_stat
+
+    @classmethod
+    def reset_progress(cls) -> None:
+        """
+        重置进度信息。
+        """
+        global _progress_stat
+        _progress_stat = SaveLoadStat()
 
     @staticmethod
     @abstractmethod

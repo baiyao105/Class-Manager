@@ -29,7 +29,7 @@ import time
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, ClassVar, Iterator, Sequence, TypeVar, cast
+from typing import Any, Iterator, Sequence, TypeVar, cast
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -65,13 +65,6 @@ class PydanticLoader(DataChunk):
 
     _instance: PydanticLoader | None = None
     _lock = threading.Lock()
-
-    loading_info: ClassVar[dict[str, Any]] = {}
-    """
-    加载信息字典。
-
-    用于存储加载/保存进度信息，供UI显示进度。
-    """
 
     loaded_models: dict[
         tuple[ClassDataTypeUUID[History] | None, str, UUID],
@@ -912,7 +905,9 @@ class PydanticLoader(DataChunk):
         :param clear_current: 是否清理当前数据
         :param clear_histories: 是否清理历史数据
         """
-        self.loading_info["total_percentage"] = 0.0
+        from ...datachunk import DataChunk
+
+        DataChunk.reset_progress()
 
         if clear_histories:
             shutil.rmtree(self.current_path, ignore_errors=True)
@@ -982,7 +977,7 @@ class PydanticLoader(DataChunk):
             Student,
         )
 
-        self.loading_info["history_stage"] = f"保存历史记录（{index + 1}/{total_count}）"
+        DataChunk.update_progress(stage=f"保存历史记录（{index + 1}/{total_count}）")
 
         if history_uuid:
             path = os.path.join(self.current_path, "Histories", str(history_uuid)[:2], str(history_uuid)[2:])
@@ -1074,13 +1069,16 @@ class PydanticLoader(DataChunk):
         :param name: 对象类型名称
         :param percentage: 进度百分比
         """
+        from ...datachunk import DataChunk
+
         total = len(objects)
-        self.loading_info["current_saving_obj_name"] = name
-        self.loading_info["current_saving_obj_total"] = total
+        DataChunk.update_progress(
+            obj_name=name,
+            total=total,
+        )
 
         for i, obj in enumerate(objects):
-            self.loading_info["current_saving_obj_current"] = i + 1
-            self.loading_info["total_percentage"] += percentage
+            DataChunk.update_progress(current=i + 1)
             self.save_object(obj)
 
     def _save_main_info(self) -> None:

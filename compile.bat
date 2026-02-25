@@ -213,7 +213,6 @@ set cmd=pyinstaller main_old.py -w ^
         --add-data           "utils;utils" ^
         --add-data           "widgets;widgets" ^
         --add-data           "LICENSE;." ^
-        --add-data           "src;src" ^
         --add-data           "version;." ^
         --hidden-import      "PyQt6.QtWebEngine" ^
         --exclude-module     "PyQt5" ^

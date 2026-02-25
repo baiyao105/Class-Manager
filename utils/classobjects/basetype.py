@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Generic, Optional, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, Generic, Optional, Self, TypeVar
 from uuid import UUID, uuid4
 
 from pydantic_core import core_schema
@@ -148,11 +148,33 @@ class ClassDataType(ABC):
     class DataTypeError(RuntimeError):
         "数据类型的错误"
 
+    _instances: ClassVar[dict[type[ClassDataType], dict[int, ClassDataType]]] = {}
+    "所有子类的实例字典，key=子类类型，value=该子类的实例字典（使用id作为key）"
+
+    def __init_subclass__(cls, **kwargs: Any):
+        """
+        当创建子类时调用，为该子类在 _instances 中创建自己的实例字典。
+        """
+        super().__init_subclass__(**kwargs)
+        if cls not in ClassDataType._instances:
+            ClassDataType._instances[cls] = {}
+
     chunk_type_name: str
     "该班级数据类型的数据库名称。"
 
     is_unrelated_dtype: bool
     "该班级数据类型是否与其它班级数据类型无关。"
+
+    def __new__(cls, *args: Any, **kwargs: Any):
+        """
+        创建新实例，并在创建时注册到实例字典。
+        """
+        instance = super().__new__(cls)
+        
+        # 使用 id() 作为 key，在 __new__ 中直接注册
+        ClassDataType._instances[cls][id(instance)] = instance
+        
+        return instance
 
     def __init__(self, uuid: ClassDataTypeUUID[Self] | UUID | None = None):
         self._user_db_ref: Optional[UserDataBase] = None
@@ -224,6 +246,32 @@ class ClassDataType(ABC):
 
         else:
             raise TypeError(f"archive_uuid.setter需要提供UUID，ClassDataTypeUUID或者str， 但提供了{type(value)}")
+
+    def __del__(self):
+        """
+        对象被销毁时，从实例字典中移除自己。
+        """
+        if self.__class__ in ClassDataType._instances and id(self) in ClassDataType._instances[self.__class__]:
+            del ClassDataType._instances[self.__class__][id(self)]
+
+    @classmethod
+    def get_all_instances(cls) -> list[ClassDataType]:
+        """
+        获取该类的所有实例。
+
+        :return: 该类的所有实例列表
+        """
+        if cls not in ClassDataType._instances:
+            return []
+        return list(ClassDataType._instances[cls].values())
+
+    @classmethod
+    def clear_instances(cls) -> None:
+        """
+        清空该类的所有实例。
+        """
+        if cls in ClassDataType._instances:
+            ClassDataType._instances[cls].clear()
 
     def copy(self) -> Self:
         """

@@ -40,6 +40,7 @@ class HomeworkRule(ClassDataType, SupportsKeyOrdering):
         :param ruler: 规则制定者
         :param rule_mapping: 规则映射
         """
+        super().__init__()
         self.key = key
         self.subject_name = subject_name
         self.ruler = ruler

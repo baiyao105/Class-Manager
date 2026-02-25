@@ -42,6 +42,7 @@ class ScoreModificationTemplate(ClassDataType, SupportsKeyOrdering):
         :param cant_replace: 是否禁止替换
         :param is_visible: 是否可见
         """
+        super().__init__()
         self.key = key
         self._mod = modification
         self._title = title

@@ -65,6 +65,7 @@ class DataTag(ClassDataType):
         :param key: 标签的键
         :param data: 标签携带的数据，可选
         """
+        super().__init__()
         self.key = key
         self.data = data
         DataTag.validate(self.key, self.data)
