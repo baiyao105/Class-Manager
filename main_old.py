@@ -4,8 +4,7 @@ from control import ClassWindowModel
 from utils import QApplication, DEFAULT_CLASS_KEY, Base
 from utils.classobjects.dataloaders import set_loader_type
 
-
-mode = "pydantic_sqlite"
+mode = "legacy"
 
 set_loader_type(mode)
 

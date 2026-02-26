@@ -53,7 +53,6 @@ class GroupWidget(GroupWindow.Ui_Form, MyWidget):
         self.update_timer.start(100)
         self.main_window = dataset
         self.master_widget = master
-        self.listWidget_order: list[Student] = []
         for member in self.group.members:
             self.listWidget.addItem(
                 QListWidgetItem(f"{member.num}号 {member.name} {member.score}分")

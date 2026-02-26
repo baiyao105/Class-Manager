@@ -117,9 +117,9 @@ class ExceptionHandlerModel(_BaseClass):
 
         
     def handle_exception(self, 
-            exc_type: Type[BaseException] | None, 
-            exc_val: BaseException | None, 
-            exc_tb: TracebackType | None,
+            exc_type: Type[BaseException] | None = None,   # 问了吗, # type: ignore
+            exc_val: BaseException | None = None,
+            exc_tb: TracebackType | None = None,
             thread: threading.Thread | None = None
         ) -> None:
         """
@@ -128,6 +128,11 @@ class ExceptionHandlerModel(_BaseClass):
 
         :param excinfo: 异常信息。
         """
+        if isinstance(exc_type, tuple) and (exc_val is None and exc_tb is None and thread is None):  
+            # 从threading.excepthook里来的
+            exc_type: ThreadingExcInfo
+            exc_type, exc_val, exc_tb, thread = exc_type # type: ignore
+
         file_basename = os.path.basename(__file__)
         file_path = __file__.replace(os.getcwd(), "").lstrip("\\/")
         # 绑定上下文信息
@@ -143,10 +148,10 @@ class ExceptionHandlerModel(_BaseClass):
                 binding = binding.bind(thread=thread)
             binding.exception("Uncaught exception occurred", exc_info=exc_val)
         else:
-            Base.log_exc("捕获到异常", "exception_handler", exc=exc_val)
+            Base.log_exc("捕获到异常", "exception_handler", exc=exc_val) # type: ignore
         
         if self.show_exc_window_callback is not None:
-            self.show_exc_window_callback((exc_type, exc_val, exc_tb))
+            self.show_exc_window_callback((exc_type, exc_val, exc_tb)) # type: ignore
 
        
     def stop(self):

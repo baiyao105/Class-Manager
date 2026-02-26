@@ -5,24 +5,41 @@
 from __future__ import annotations
 
 import os
-import time
 import math
 import json
 import random
+from typing import Any, Generator, Callable
 import requests
 
-from utils.algorithm import Thread
+from utils.algorithm import Thread, steprange
 from utils.consts import runtime_flags
 from utils.basetypes import Base
 from utils.classobjects import ScoreModification, ScoreModificationTemplate
 from utils.functions import question_chooose
 from utils.qtconfig import (
-    Signal, Slot, QWidget, QPoint, QCoreApplication
+    Signal, Slot, QWidget, QPoint, QTimer,
+    Qt, QGuiApplication, QMoveEvent
 )
 
 from widgets import WTFWidget, AboutWidget, SettingWidget
 
 from .class_ui_model import MixinSuperType
+
+def run_animation(generator_func: Callable[[], Generator[int, None, None]]) -> None:
+    """
+    运行动画。
+    
+    :param generator_func: 生成器函数，每帧yield一个延迟时间（毫秒）
+    """
+    def next_step() -> None:
+        try:
+            delay = next(generator)
+            QTimer.singleShot(delay, next_step)
+        except StopIteration:
+            pass
+    
+    generator = generator_func()
+    next_step()
 
 class UserDisplayModel(MixinSuperType):
     """
@@ -43,11 +60,42 @@ class UserDisplayModel(MixinSuperType):
             save_path: str | None = None
         ):
         Base.log("D", "初始化UserDisplayModel", "UserDisplayModel.__init__")
+        self.gravity = 0.25
+        "重力模拟的重力加速度"
+        self.window_bounce_factor = 0.8
+        "窗口重力模拟碰到边缘的反弹系数"
+        self.mouse_velocity_factor = 1.6
+        "鼠标拖拽速度的系数"
+        self.gravity_enabled = False
+        "是否启用重力"
+        self.gravity_timer = QTimer(self)
+        "重力模拟的计时器"
+        self.gravity_timer.timeout.connect(self._update_gravity)
+        self.gravity_timer.setInterval(16)
+        self.drag_release_timer = QTimer(self)
+        "检测鼠标抓取和释放的计时器"
+        self.drag_release_timer.timeout.connect(self._check_mouse_release)
+        self.drag_release_timer.setInterval(50)
+        self.velocity_x = 0.0
+        "水平速度"
+        self.velocity_y = 0.0
+        "垂直速度"
+        self.is_dragging = False
+        "是否正在拖拽"
+        self.programmatic_move = False
+        "是否是代码操作的移动"
+        self.mouse_velocity_x = 0.0
+        "鼠标水平速度"
+        self.mouse_velocity_y = 0.0
+        "鼠标垂直速度"
+        self.last_window_pos = None
+        "上次窗口位置"
 
         self.about_window: AboutWidget | None = None
         "关于窗口"
         self.setting_window: SettingWidget | None = None
         "设置窗口"
+
         self.CardWidget_2.clicked.connect(
             lambda: Thread(target=self.refresh_hint_widget).start()
         )
@@ -131,24 +179,32 @@ class UserDisplayModel(MixinSuperType):
     @Slot(int)
     def slot_dont_click(self, style: int):
         "千万别点被点击时的接口"
-        style = random.randint(1, 7) if style == 0 else style
+        self.stop_gravity_mode()
+        style = random.randint(1, 11) if style == 0 else style
         self.log("I", f"按钮被点击，本次执行类型：{style}", "MainWindow.dont_click")
 
         if style == 1:
             os.startfile("https://www.bilibili.com/video/BV1GJ411x7h7/")
 
         elif style == 2:
-            for _ in range(1145):
-                self.move(random.randint(0, 1920), random.randint(0, 1080))
-            self.move(200, 100)
+            def anim() -> Generator[int, None, None]:
+                for _ in range(1145):
+                    self.move(random.randint(0, 1920), random.randint(0, 1080))
+                    yield 2
+                self.move(200, 100)
+            
+            run_animation(anim)
 
         elif style == 3:
-            for i in range(114):
-                x, y = self.geometry().topLeft().x(), self.geometry().topLeft().y()
-                move = int(1.2 ** (i // 5))
-                self.move(x, y + move)
-                time.sleep(0.01)
-            self.move(200, 100)
+            def anim() -> Generator[int, None, None]:
+                for i in range(114):
+                    x, y = self.geometry().topLeft().x(), self.geometry().topLeft().y()
+                    move = int(1.2 ** (i // 5))
+                    self.move(x, y + move)
+                    yield 10
+                self.move(200, 100)
+            
+            run_animation(anim)
 
         elif style == 4:
             for _ in range(8):
@@ -179,12 +235,16 @@ class UserDisplayModel(MixinSuperType):
                 self.geometry().topLeft().x(),
                 self.geometry().topLeft().y(),
             )
-            for i in range(1, 360 * 10, 3):
-                x = int(math.sin(math.radians(i)) * 30 * i / 360 * 4)
-                y = int(math.cos(math.radians(i)) * 30 * i / 360 * 4)
-                self.move(orig_x + int(x), orig_y + int(y))
-                time.sleep(0.01)
-            self.move(200, 100)
+            
+            def anim() -> Generator[int, None, None]:
+                for i in range(1, 360 * 5, 3):
+                    x = int(math.sin(math.radians(i)) * 30 * i / 360 * 4)
+                    y = int(math.cos(math.radians(i)) * 30 * i / 360 * 4)
+                    self.move(orig_x + int(x), orig_y + int(y))
+                    yield 2
+                self.move(200, 100)
+            
+            run_animation(anim)
 
         elif style == 7:
             orig_pos: dict[QWidget, QPoint] = {}
@@ -192,21 +252,92 @@ class UserDisplayModel(MixinSuperType):
                 obj: QWidget
                 orig_pos[obj] = obj.geometry().topLeft()
 
-            for i in range(200):
-                for obj in self.findChildren(QWidget):
-                    obj.move(
-                        random.randint(0, self.width() // 2),
-                        random.randint(0, self.height() // 2),
-                    )
-                QCoreApplication.processEvents()
-                time.sleep(0.01)
+            def anim() -> Generator[int, None, None]:
+                for _ in range(200):
+                    for obj in self.findChildren(QWidget):
+                        obj.move(
+                            random.randint(0, self.width() // 2),
+                            random.randint(0, self.height() // 2),
+                        )
+                    yield 20
 
-            for obj in self.findChildren(QWidget):
-                try:
-                    obj.move(orig_pos[obj].x(), orig_pos[obj].y())
-                except KeyError:
-                    pass
-    
+                for obj in self.findChildren(QWidget):
+                    try:
+                        obj.move(orig_pos[obj].x(), orig_pos[obj].y())
+                    except KeyError:
+                        pass
+            
+            run_animation(anim)
+
+        elif style == 8:
+            
+            def anim() -> Generator[int, None, None]:
+                colors = [
+                    "#FFFFFF", "#FF8080", "#FFFF80", "#80FF80",
+                    "#80FFFF", "#8080FF", "#FF80FF", "#FFFFFF"
+                ]
+                
+                orig_style = self.styleSheet()
+                steps = 10
+                for i in range(len(colors) - 1):
+                    start_color = colors[i]
+                    end_color = colors[i + 1]
+                    r_steps = steprange(int(start_color[1:3], base=16), int(end_color[1:3], base=16), steps)
+                    g_steps = steprange(int(start_color[3:5], base=16), int(end_color[3:5], base=16), steps)
+                    b_steps = steprange(int(start_color[5:7], base=16), int(end_color[5:7], base=16), steps)
+                    for r, g, b in zip(r_steps, g_steps, b_steps):
+                        color = f"#{int(r):02X}{int(g):02X}{int(b):02X}"
+                        self.setStyleSheet(f"background-color: {color};")
+                        yield 20
+                
+                self.setStyleSheet(orig_style)
+            
+            run_animation(anim)
+
+        elif style == 9:
+            orig_x, orig_y = self.geometry().x(), self.geometry().y()
+            
+            def anim() -> Generator[int, None, None]:
+                for _ in range(100):
+                    offset_x = random.randint(-10, 10)
+                    offset_y = random.randint(-10, 10)
+                    self.move(orig_x + offset_x, orig_y + offset_y)
+                    yield 20
+                self.move(orig_x, orig_y)
+            
+            run_animation(anim)
+
+        elif style == 10:
+            orig_geometry = self.geometry()
+            
+            def anim() -> Generator[int, None, None]:
+                for i in range(30):
+                    scale = 1.0 + 0.3 * math.sin(i * 0.5)
+                    new_width = int(orig_geometry.width() * scale)
+                    new_height = int(orig_geometry.height() * scale)
+                    
+                    center_x = orig_geometry.x() + orig_geometry.width() // 2
+                    center_y = orig_geometry.y() + orig_geometry.height() // 2
+                    
+                    self.setGeometry(
+                        center_x - new_width // 2,
+                        center_y - new_height // 2,
+                        new_width,
+                        new_height
+                    )
+                    yield 20
+                
+                self.setGeometry(orig_geometry)
+            
+            run_animation(anim)
+
+        elif style == 11:
+            self.information("要来力", "你有没有好奇为什么窗口可以浮起来？这难道不是违反物理学的吗？")
+            self.velocity_x = random.randint(-15, 15)
+            self.velocity_y = random.randint(-15, 15)
+            self.enable_gravity()
+            
+     
     
     def about_this(self):
         """
@@ -224,7 +355,135 @@ class UserDisplayModel(MixinSuperType):
         self.setting_window = SettingWidget(setting=self, master=self)
         self.setting_window.show()
 
+    def _update_gravity(self) -> None:
+        """
+        更新重力模拟结果。
+        """
+        if not self.gravity_enabled or self.is_dragging:
+            return
+        
+        self.velocity_y += self.gravity
+        
+        orig_x = self.x() + self.velocity_x
+        orig_y = self.y() + self.velocity_y
+        
+        screen_geometry = QGuiApplication.primaryScreen().availableGeometry()
+        screen_width = screen_geometry.width()
+        screen_height = screen_geometry.height()
+        screen_x = screen_geometry.x()
+        screen_y = screen_geometry.y()
+        
+        window_width = self.width()
+        window_height = self.height()
+        
+        if orig_x <= screen_x:
+            orig_x = screen_x
+            self.velocity_x = -self.velocity_x * self.window_bounce_factor
+        elif orig_x >= screen_x + screen_width - window_width:
+            orig_x = screen_x + screen_width - window_width
+            self.velocity_x = -self.velocity_x * self.window_bounce_factor
+        
+        if orig_y <= screen_y:
+            orig_y = screen_y
+            self.velocity_y = -self.velocity_y * self.window_bounce_factor
+        elif orig_y >= screen_y + screen_height - window_height:
+            orig_y = screen_y + screen_height - window_height
+            self.velocity_y = -self.velocity_y * self.window_bounce_factor
+        
+        self.programmatic_move = True
+        self.move(int(orig_x), int(orig_y))
+
+    def move(self, *args: Any, **kwargs: Any) -> None:
+        self.programmatic_move = True
+        super().move(*args, **kwargs)
+
+    def setGeometry(self, *args: Any, **kwargs: Any) -> None:
+        self.programmatic_move = True
+        super().setGeometry(*args, **kwargs)
+
+    def enable_gravity(self, initial_velocity_x: float = 0.0, initial_velocity_y: float = 0.0) -> None:
+        """
+        启用重力模拟模式。
+        
+        :param initial_velocity_x: 初始水平速度
+        :param initial_velocity_y: 初始垂直速度
+        """
+        self.velocity_x = initial_velocity_x
+        self.velocity_y = initial_velocity_y
+        self.gravity_enabled = True
+        self.gravity_timer.start()
+        Base.log("I", f"重力模式已启用，初始速度：vx={self.velocity_x:.2f}, vy={self.velocity_y:.2f}", "UserDisplayModel.enable_gravity")
+
+    def disable_gravity(self) -> None:
+        """
+        禁用重力模拟模式。
+        """
+        self.gravity_enabled = False
+        self.gravity_timer.stop()
+        self.velocity_x = 0.0
+        self.velocity_y = 0.0
+        Base.log("I", "重力模式已禁用", "UserDisplayModel.disable_gravity")
+
+    def stop_gravity_mode(self) -> None:
+        """
+        停止重力模拟模式。
+        """
+        self.disable_gravity()
+
+    def moveEvent(self, event: QMoveEvent) -> None:
+        """
+        窗口移动事件。
+        
+        这里用于检测窗口拖动。
+        """
+        if self.programmatic_move:
+            self.programmatic_move = False
+            super().moveEvent(event)
+            return
+
+        if self.gravity_enabled:
+            left_pressed = QGuiApplication.mouseButtons() & Qt.MouseButton.LeftButton
+
+            if left_pressed:
+                if not self.is_dragging:
+                    self.is_dragging = True
+                    self.last_window_pos = self.pos()
+                    self.drag_release_timer.start()
+                    Base.log("I", f"用户拖动开始，位置: {self.last_window_pos.x()}, {self.last_window_pos.y()}", "UserDisplayModel.moveEvent")
+                else:
+                    current_pos = self.pos()
+                    if self.last_window_pos:
+                        self.mouse_velocity_x = current_pos.x() - self.last_window_pos.x()
+                        self.mouse_velocity_y = current_pos.y() - self.last_window_pos.y()
+                        Base.log("I", f"拖动中，速度: vx={self.mouse_velocity_x:.2f}, vy={self.mouse_velocity_y:.2f}", "UserDisplayModel.moveEvent")
+                    self.last_window_pos = current_pos
+            else:
+                if self.is_dragging:
+                    self._end_dragging()
+
+        super().moveEvent(event)
+
+    def _check_mouse_release(self) -> None:
+        """
+        检查鼠标是否释放。
+        """
+        left_pressed = QGuiApplication.mouseButtons() & Qt.MouseButton.LeftButton
+        if not left_pressed and self.is_dragging:
+            self._end_dragging()
+
+    def _end_dragging(self) -> None:
+        """
+        结束拖动。
+        """
+        if self.is_dragging:
+            self.is_dragging = False
+            self.drag_release_timer.stop()
+            self.velocity_x = self.mouse_velocity_x * self.mouse_velocity_factor
+            self.velocity_y = self.mouse_velocity_y * self.mouse_velocity_factor
+            Base.log("I", f"用户拖动结束，继承速度：vx={self.velocity_x:.2f}, vy={self.velocity_y:.2f}", "UserDisplayModel._end_dragging")
+
     def stop(self):
+        self.stop_gravity_mode()
         widgets: list[QWidget | None] = [
             self.setting_window,
             self.about_window

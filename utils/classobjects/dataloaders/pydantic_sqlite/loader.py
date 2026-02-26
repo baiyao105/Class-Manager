@@ -188,7 +188,7 @@ class PydanticSQLiteLoader(DataChunk):
         """
         检查标识符文件是否存在。
         
-        :return: 如果标识符文件存在返回 True，否则返回 False
+        :return: 标识符文件是否存在
         """
         identifier_path = os.path.join(self.current_path, IDENTIFIER_FILE)
         if not os.path.isfile(identifier_path):
@@ -739,21 +739,40 @@ class PydanticSQLiteLoader(DataChunk):
         if commit_on_finished:
             conn.commit()
 
-    def _save_to_db(self, conn: sqlite3.Connection, obj: ClassDataType, save_refs: bool = True) -> None:
+    def _save_to_db(
+        self, 
+        conn: sqlite3.Connection, 
+        obj: ClassDataType, 
+        save_refs: bool = True,
+        student_tags_data: list[tuple[str, str]] | None = None,
+        student_achievements_data: list[tuple[str, str]] | None = None,
+        student_score_mods_data: list[tuple[str, str]] | None = None,
+        class_students_data: list[tuple[str, int, str]] | None = None,
+        class_groups_data: list[tuple[str, str, str]] | None = None,
+        group_members_data: list[tuple[str, str]] | None = None,
+        group_tags_data: list[tuple[str, str]] | None = None
+    ) -> None:
         """保存对象到数据库
         
         :param conn: 数据库连接
         :param obj: 要保存的对象
         :param save_refs: 是否保存引用的对象
+        :param student_tags_data: 学生标签关系数据收集列表
+        :param student_achievements_data: 学生成就关系数据收集列表
+        :param student_score_mods_data: 学生分数修改关系数据收集列表
+        :param class_students_data: 班级学生关系数据收集列表
+        :param class_groups_data: 班级小组关系数据收集列表
+        :param group_members_data: 小组成员关系数据收集列表
+        :param group_tags_data: 小组标签关系数据收集列表
         """
         type_name = obj.chunk_type_name
 
         if type_name == "Student":
-            self._save_student(conn, cast(Student, obj), save_refs)
+            self._save_student(conn, cast(Student, obj), save_refs, student_tags_data, student_achievements_data, student_score_mods_data)
         elif type_name == "Class":
-            self._save_class(conn, cast(Class, obj), save_refs)
+            self._save_class(conn, cast(Class, obj), save_refs, class_students_data, class_groups_data)
         elif type_name == "Group":
-            self._save_group(conn, cast(Group, obj), save_refs)
+            self._save_group(conn, cast(Group, obj), save_refs, group_members_data, group_tags_data)
         elif type_name == "ScoreModification":
             self._save_score_modification(conn, cast(ScoreModification, obj), save_refs)
         elif type_name == "ScoreModificationTemplate":
@@ -810,13 +829,24 @@ class PydanticSQLiteLoader(DataChunk):
             json.dumps(tag.data) if tag.data else None,
         ))
 
-    def _save_student(self, conn: sqlite3.Connection, student: Student, save_refs: bool = True) -> None:
+    def _save_student(
+        self, 
+        conn: sqlite3.Connection, 
+        student: Student, 
+        save_refs: bool = True,
+        student_tags_data: list[tuple[str, str]] | None = None,
+        student_achievements_data: list[tuple[str, str]] | None = None,
+        student_score_mods_data: list[tuple[str, str]] | None = None
+    ) -> None:
         """
         保存学生到数据库。
         
         :param conn: 数据库连接
         :param student: 学生对象
         :param save_refs: 是否保存引用的对象
+        :param student_tags_data: 学生标签关系数据收集列表
+        :param student_achievements_data: 学生成就关系数据收集列表
+        :param student_score_mods_data: 学生分数修改关系数据收集列表
         """
 
         conn.execute("""
@@ -843,46 +873,61 @@ class PydanticSQLiteLoader(DataChunk):
             str(student.last_reset_info.uuid) if student.last_reset_info else None,
         ))
 
-        conn.execute("DELETE FROM student_tags WHERE student_uuid = ?", (str(student.uuid),))
         if student.tags:
-            tag_data = [(str(student.uuid), str(tag.uuid)) for tag in student.tags]
-            conn.executemany(
-                "INSERT OR IGNORE INTO student_tags (student_uuid, tag_uuid) VALUES (?, ?)",
-                tag_data
-            )
+            if student_tags_data is not None:
+                student_tags_data.extend([(str(student.uuid), str(tag.uuid)) for tag in student.tags])
+            else:
+                tag_data = [(str(student.uuid), str(tag.uuid)) for tag in student.tags]
+                conn.executemany(
+                    "INSERT OR REPLACE INTO student_tags (student_uuid, tag_uuid) VALUES (?, ?)",
+                    tag_data
+                )
             if save_refs:
                 for tag in student.tags:
                     self.save_object(tag, save_refs=False)
 
-        conn.execute("DELETE FROM student_achievements WHERE student_uuid = ?", (str(student.uuid),))
         if student.achievements:
-            ach_data = [(str(student.uuid), str(ach.uuid)) for ach in student.achievements.values()]
-            conn.executemany(
-                "INSERT OR IGNORE INTO student_achievements (student_uuid, achievement_uuid) VALUES (?, ?)",
-                ach_data
-            )
+            if student_achievements_data is not None:
+                student_achievements_data.extend([(str(student.uuid), str(ach.uuid)) for ach in student.achievements.values()])
+            else:
+                ach_data = [(str(student.uuid), str(ach.uuid)) for ach in student.achievements.values()]
+                conn.executemany(
+                    "INSERT OR REPLACE INTO student_achievements (student_uuid, achievement_uuid) VALUES (?, ?)",
+                    ach_data
+                )
             if save_refs:
                 for ach in student.achievements.values():
                     self.save_object(ach, save_refs=False)
 
-        conn.execute("DELETE FROM student_score_mods WHERE student_uuid = ?", (str(student.uuid),))
         if student.history:
-            sm_data = [(str(student.uuid), str(sm.uuid)) for sm in student.history.values()]
-            conn.executemany(
-                "INSERT OR IGNORE INTO student_score_mods (student_uuid, score_mod_uuid) VALUES (?, ?)",
-                sm_data
-            )
+            if student_score_mods_data is not None:
+                student_score_mods_data.extend([(str(student.uuid), str(sm.uuid)) for sm in student.history.values()])
+            else:
+                sm_data = [(str(student.uuid), str(sm.uuid)) for sm in student.history.values()]
+                conn.executemany(
+                    "INSERT OR REPLACE INTO student_score_mods (student_uuid, score_mod_uuid) VALUES (?, ?)",
+                    sm_data
+                )
             if save_refs:
                 for sm in student.history.values():
                     self.save_object(sm, save_refs=False)
 
-    def _save_class(self, conn: sqlite3.Connection, cls: Class, save_refs: bool = True) -> None:
+    def _save_class(
+        self, 
+        conn: sqlite3.Connection, 
+        cls: Class, 
+        save_refs: bool = True,
+        class_students_data: list[tuple[str, int, str]] | None = None,
+        class_groups_data: list[tuple[str, str, str]] | None = None
+    ) -> None:
         """
         保存班级到数据库。
         
         :param conn: 数据库连接
         :param cls: 班级对象
         :param save_refs: 是否保存引用的对象
+        :param class_students_data: 班级学生关系数据收集列表
+        :param class_groups_data: 班级小组关系数据收集列表
         """
         cleaning_mapping_json = json.dumps(cls.dump_cleaning_mapping()) if cls.cleaning_mapping else None
         homework_rules_json = json.dumps(cls.dump_homework_rules()) if cls.homework_rules else None
@@ -900,35 +945,48 @@ class PydanticSQLiteLoader(DataChunk):
             homework_rules_json,
         ))
 
-        conn.execute("DELETE FROM class_students WHERE class_uuid = ?", (str(cls.uuid),))
         if cls.students:
-            student_data = [(str(cls.uuid), num, str(student.uuid)) for num, student in cls.students.items()]
-            conn.executemany(
-                "INSERT OR REPLACE INTO class_students (class_uuid, student_num, student_uuid) VALUES (?, ?, ?)",
-                student_data
-            )
+            if class_students_data is not None:
+                class_students_data.extend([(str(cls.uuid), num, str(student.uuid)) for num, student in cls.students.items()])
+            else:
+                student_data = [(str(cls.uuid), num, str(student.uuid)) for num, student in cls.students.items()]
+                conn.executemany(
+                    "INSERT OR REPLACE INTO class_students (class_uuid, student_num, student_uuid) VALUES (?, ?, ?)",
+                    student_data
+                )
             if save_refs:
                 for student in cls.students.values():
                     self.save_object(student, save_refs=False)
 
-        conn.execute("DELETE FROM class_groups WHERE class_uuid = ?", (str(cls.uuid),))
         if cls.groups:
-            group_data = [(str(cls.uuid), key, str(group.uuid)) for key, group in cls.groups.items()]
-            conn.executemany(
-                "INSERT OR REPLACE INTO class_groups (class_uuid, group_key, group_uuid) VALUES (?, ?, ?)",
-                group_data
-            )
+            if class_groups_data is not None:
+                class_groups_data.extend([(str(cls.uuid), key, str(group.uuid)) for key, group in cls.groups.items()])
+            else:
+                group_data = [(str(cls.uuid), key, str(group.uuid)) for key, group in cls.groups.items()]
+                conn.executemany(
+                    "INSERT OR REPLACE INTO class_groups (class_uuid, group_key, group_uuid) VALUES (?, ?, ?)",
+                    group_data
+                )
             if save_refs:
                 for group in cls.groups.values():
                     self.save_object(group, save_refs=False)
 
-    def _save_group(self, conn: sqlite3.Connection, group: Group, save_refs: bool = True) -> None:
+    def _save_group(
+        self, 
+        conn: sqlite3.Connection, 
+        group: Group, 
+        save_refs: bool = True,
+        group_members_data: list[tuple[str, str]] | None = None,
+        group_tags_data: list[tuple[str, str]] | None = None
+    ) -> None:
         """
         保存小组到数据库
         
         :param conn: 数据库连接
         :param group: 小组对象
         :param save_refs: 是否保存引用的对象
+        :param group_members_data: 小组成员关系数据收集列表
+        :param group_tags_data: 小组标签关系数据收集列表
         """
         class_uuid = self._find_class_uuid_by_key(group.belongs_to)
         
@@ -946,21 +1004,25 @@ class PydanticSQLiteLoader(DataChunk):
             group.further_desc,
         ))
 
-        conn.execute("DELETE FROM group_members WHERE group_uuid = ?", (str(group.uuid),))
         if group.members:
-            member_data = [(str(group.uuid), str(member.uuid)) for member in group.members]
-            conn.executemany(
-                "INSERT OR IGNORE INTO group_members (group_uuid, student_uuid) VALUES (?, ?)",
-                member_data
-            )
+            if group_members_data is not None:
+                group_members_data.extend([(str(group.uuid), str(member.uuid)) for member in group.members])
+            else:
+                member_data = [(str(group.uuid), str(member.uuid)) for member in group.members]
+                conn.executemany(
+                    "INSERT OR REPLACE INTO group_members (group_uuid, student_uuid) VALUES (?, ?)",
+                    member_data
+                )
 
-        conn.execute("DELETE FROM group_tags WHERE group_uuid = ?", (str(group.uuid),))
         if group.tags:
-            tag_data = [(str(group.uuid), str(tag.uuid)) for tag in group.tags]
-            conn.executemany(
-                "INSERT OR IGNORE INTO group_tags (group_uuid, tag_uuid) VALUES (?, ?)",
-                tag_data
-            )
+            if group_tags_data is not None:
+                group_tags_data.extend([(str(group.uuid), str(tag.uuid)) for tag in group.tags])
+            else:
+                tag_data = [(str(group.uuid), str(tag.uuid)) for tag in group.tags]
+                conn.executemany(
+                    "INSERT OR REPLACE INTO group_tags (group_uuid, tag_uuid) VALUES (?, ?)",
+                    tag_data
+                )
             if save_refs:
                 for tag in group.tags:
                     self.save_object(tag, save_refs=False)
@@ -1277,6 +1339,8 @@ class PydanticSQLiteLoader(DataChunk):
 
         DataChunk.update_progress(stage="保存所有对象")
         
+        conn.execute("PRAGMA foreign_keys = OFF")
+        
         from ...objects import (
             Class, Student, Group, ScoreModification,
             Achievement, ScoreModificationTemplate, AchievementTemplate,
@@ -1293,6 +1357,14 @@ class PydanticSQLiteLoader(DataChunk):
         total_objects = sum(len(cls.get_all_instances()) for cls in all_classes)
         saved_objects = 0
         skipped_objects = 0
+        
+        student_tags_data: list[tuple[str, str]] = []
+        student_achievements_data: list[tuple[str, str]] = []
+        student_score_mods_data: list[tuple[str, str]] = []
+        class_students_data: list[tuple[str, int, str]] = []
+        class_groups_data: list[tuple[str, str, str]] = []
+        group_members_data: list[tuple[str, str]] = []
+        group_tags_data: list[tuple[str, str]] = []
     
         DataChunk.update_progress()
         for cls in all_classes:
@@ -1306,16 +1378,68 @@ class PydanticSQLiteLoader(DataChunk):
             )
             
             for idx, obj in enumerate(instances):
-                uuid_str = str(obj.uuid)
+                uuid_str = obj._uuid_str if hasattr(obj, '_uuid_str') else str(obj.uuid)
+                if not hasattr(obj, '_uuid_str'):
+                    obj._uuid_str = uuid_str
+                
                 if uuid_str in saved_uuids:
                     skipped_objects += 1
                     continue
                 
                 saved_uuids.add(uuid_str)
-                DataChunk.update_progress(current=idx + 1)
-                DataChunk.update_progress(percentage=(saved_objects / total_objects) * 100.0)
-                self.save_object(obj, save_refs=False)
+                
+                if idx % 100 == 0:
+                    DataChunk.update_progress(current=idx + 1)
+                    DataChunk.update_progress(percentage=(saved_objects / total_objects) * 100.0)
+                
+                self._save_to_db(
+                    conn, obj, save_refs=False,
+                    student_tags_data=student_tags_data,
+                    student_achievements_data=student_achievements_data,
+                    student_score_mods_data=student_score_mods_data,
+                    class_students_data=class_students_data,
+                    class_groups_data=class_groups_data,
+                    group_members_data=group_members_data,
+                    group_tags_data=group_tags_data
+                )
                 saved_objects += 1
+            
+            DataChunk.update_progress(current=len(instances))
+            DataChunk.update_progress(percentage=(saved_objects / total_objects) * 100.0)
+        
+        DataChunk.update_progress(stage="保存关系数据", obj_name="关系数据", current=0, total=8)
+        
+        if student_tags_data:
+            conn.executemany("INSERT OR REPLACE INTO student_tags (student_uuid, tag_uuid) VALUES (?, ?)", student_tags_data)
+        DataChunk.update_progress(current=1)
+        
+        if student_achievements_data:
+            conn.executemany("INSERT OR REPLACE INTO student_achievements (student_uuid, achievement_uuid) VALUES (?, ?)", student_achievements_data)
+        DataChunk.update_progress(current=2)
+        
+        if student_score_mods_data:
+            conn.executemany("INSERT OR REPLACE INTO student_score_mods (student_uuid, score_mod_uuid) VALUES (?, ?)", student_score_mods_data)
+        DataChunk.update_progress(current=3)
+        
+        if class_students_data:
+            conn.executemany("INSERT OR REPLACE INTO class_students (class_uuid, student_num, student_uuid) VALUES (?, ?, ?)", class_students_data)
+        DataChunk.update_progress(current=4)
+        
+        if class_groups_data:
+            conn.executemany("INSERT OR REPLACE INTO class_groups (class_uuid, group_key, group_uuid) VALUES (?, ?, ?)", class_groups_data)
+        DataChunk.update_progress(current=5)
+        
+        if group_members_data:
+            conn.executemany("INSERT OR REPLACE INTO group_members (group_uuid, student_uuid) VALUES (?, ?)", group_members_data)
+        DataChunk.update_progress(current=6)
+        
+        if group_tags_data:
+            conn.executemany("INSERT OR REPLACE INTO group_tags (group_uuid, tag_uuid) VALUES (?, ?)", group_tags_data)
+        DataChunk.update_progress(current=7)
+        
+        DataChunk.update_progress(current=8)
+        
+        conn.execute("PRAGMA foreign_keys = ON")
         
         DataChunk.update_progress(stage="提交所有更改", obj_name="所有对象", current=0, total=saved_objects)
 

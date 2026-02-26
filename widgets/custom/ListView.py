@@ -8,7 +8,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Any, Sequence, Tuple, TypeAlias, Union, overload
 
-from utils import Thread, Base, ClassDataSet as steprange, wait_until, steprange
+from utils import Thread, Base, wait_until, steprange
 from utils.qtconfig import (
     Signal, QWidget, QListWidgetItem, QListWidget, QPropertyAnimation,
     QColor, QRect, QVBoxLayout, QPushButton, QAbstractItemView, QEventLoop,
