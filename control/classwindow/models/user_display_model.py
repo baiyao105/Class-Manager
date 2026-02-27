@@ -11,7 +11,7 @@ import random
 from typing import Any, Generator, Callable
 import requests
 
-from utils.algorithm import Thread, steprange
+from utils.algorithm import steprange
 from utils.consts import runtime_flags
 from utils.basetypes import Base
 from utils.classobjects import ScoreModification, ScoreModificationTemplate
@@ -20,6 +20,7 @@ from utils.qtconfig import (
     Signal, Slot, QWidget, QPoint, QTimer,
     Qt, QGuiApplication, QMoveEvent
 )
+from utils.profiler import profile
 
 from widgets import WTFWidget, AboutWidget, SettingWidget
 
@@ -95,9 +96,7 @@ class UserDisplayModel(MixinSuperType):
         self.setting_window: SettingWidget | None = None
         "设置窗口"
 
-        self.CardWidget_2.clicked.connect(
-            lambda: Thread(target=self.refresh_hint_widget).start()
-        )
+        self.refresh_hint_widget()
         self.signal_dont_click.connect(self.slot_dont_click)
         self.signal_refresh_hint_widget.connect(self.slot_refresh_hint_widget)
         self.pushButton.clicked.connect(self.dont_click)
@@ -110,6 +109,7 @@ class UserDisplayModel(MixinSuperType):
 
 
 
+    @profile("refresh_hint_widget")
     def refresh_hint_widget(self, mode: int = 0):
         """
         刷新提示
@@ -180,6 +180,7 @@ class UserDisplayModel(MixinSuperType):
         self.signal_dont_click.emit(style)
 
     @Slot(int)
+    @profile("slot_dont_click")
     def slot_dont_click(self, style: int):
         "千万别点被点击时的接口"
         self.stop_gravity_mode()
@@ -358,6 +359,7 @@ class UserDisplayModel(MixinSuperType):
         self.setting_window = SettingWidget(setting=self, master=self)
         self.setting_window.show()
 
+    @profile("_update_gravity")
     def _update_gravity(self) -> None:
         """
         更新重力模拟结果。
@@ -439,6 +441,7 @@ class UserDisplayModel(MixinSuperType):
         """
         self.disable_gravity()
 
+    @profile("moveEvent")
     def moveEvent(self, event: QMoveEvent) -> None:
         """
         窗口移动事件。

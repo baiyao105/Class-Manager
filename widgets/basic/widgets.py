@@ -3,13 +3,14 @@ import time
 from typing import Any, Union, Tuple, Optional, Callable
 from qfluentwidgets import InfoBarIcon, InfoBarPosition, InfoBar # type: ignore
 
-from utils.qtconfig import (QPushButton, QWidget, QColor, Property, 
-                            QIcon, QPixmap, QGraphicsOpacityEffect, 
-                            QPropertyAnimation, QCoreApplication, 
-                            QEvent, QPaintEvent, QPainter, 
-                            QRectF, QPen, Qt, QListWidget, 
-                            QListWidgetItem, QMainWindow, QVBoxLayout, 
-                            QMessageBox, QTimer, QEasingCurve, QEnterEvent)
+from utils.qtconfig import (
+    QPushButton, QWidget, QColor, Property, 
+    QIcon, QPixmap,  QPropertyAnimation, QCoreApplication, 
+    QEvent, QPaintEvent, QPainter, 
+    QRectF, QPen, Qt, QListWidget, 
+    QListWidgetItem, QMainWindow, QVBoxLayout, 
+    QMessageBox, QTimer, QEasingCurve, QEnterEvent
+)
 from utils.classobjects import Student, Group
 from utils.functions.sounds import play_sound
 
@@ -85,12 +86,6 @@ class ObjectButton(QPushButton):
                 % self._opacity,
             )
         )
-
-    def setOpacity(self, opacity: float):
-        op = QGraphicsOpacityEffect()
-        op.setOpacity(opacity)
-        self.setGraphicsEffect(op)
-        self.setAutoFillBackground(True)
 
     def flash(self, start: Tuple[int, int, int], end: Tuple[int, int, int], duration: int):
         """

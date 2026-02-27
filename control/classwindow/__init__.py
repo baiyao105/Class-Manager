@@ -5,9 +5,31 @@
 
 
 from .models import BasicUIModel, ClassUIModel, ClassWindowModel
+from .models import (
+    UpdateWidgetModel, 
+    OperationModel, 
+    ObjectInfoModel,
+    TemplateManageModel, 
+    TipViewerModel,
+    ActionHistoryModel,
+    AnimatedBackgroundModel,
+    FastCommandModel,
+    LogDisplayModel,
+    UserDisplayModel
+)
 
 __all__ = [
     "BasicUIModel",
     "ClassUIModel",
-    "ClassWindowModel"
+    "ClassWindowModel",
+    "UpdateWidgetModel",
+    "OperationModel",
+    "ObjectInfoModel",
+    "TemplateManageModel",
+    "TipViewerModel",
+    "ActionHistoryModel",
+    "AnimatedBackgroundModel",
+    "FastCommandModel",
+    "LogDisplayModel",
+    "UserDisplayModel"
 ]

@@ -72,6 +72,8 @@ class UpdateWidgetModel(ObjectInfoModel):
         "按钮动画组"
         self.running_btns_anim_group: QParallelAnimationGroup = QParallelAnimationGroup()
         "运行中的按钮动画组"
+        self.psutil_process = psutil.Process(os.getpid())
+        "缓存的psutil进程对象，避免重复创建"
         self.updator_thread: UpdateThread = UpdateThread(self)
         self.update_label_timer = QTimer(self)
         self.update_label_timer.timeout.connect(self.update_labels)
@@ -200,7 +202,7 @@ class UpdateWidgetModel(ObjectInfoModel):
         self.label_8.setText(f"{time.time() - self.create_time:.3f} s")
         self.label_9.setText(f"{threading.active_count()}")
         self.label_10.setText(
-            str(round(psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024, 1)) + " MB"
+            str(round(self.psutil_process.memory_info().rss / 1024 / 1024, 1)) + " MB"
         )
         self.label_11.setText(
             (f"{self.class_obs.tps:.2f}/"
@@ -400,7 +402,6 @@ class UpdateThread(QThread):
                     f"{self.lastest_score[stu.num] - stu.score:.1f}分？犯天条了？",
                     "UpdateThread.run",
                 )
-            time.sleep(0.002)
 
     def update_grp_btns(self):
         "更新主界面的小组按钮"

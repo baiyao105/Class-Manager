@@ -62,7 +62,8 @@ class AnimatedBackgroundModel(MixinSuperType):
         self.default_bg_video_path = os.path.join("audio", "video", "default", "background.mp4")
         "默认背景视频路径"
         Base.log("D", f"将窗口透明度设置为{self.opacity}", "AnimatedBackgroundModel.__init__")
-        self.setWindowOpacity(self.opacity)
+        if self.opacity < 1.0: 
+            self.setWindowOpacity(self.opacity)
 
 
 
@@ -73,7 +74,7 @@ class AnimatedBackgroundModel(MixinSuperType):
 
         if not os.path.isfile("background.mp4"):
             Base.log(
-                "W", "没有找到视频文件，将使用默认动态背景", "ObjectInfoModel.read_video"
+                "W", "没有找到视频文件，将使用默认动态背景", "AnimatedBackgroundModel.read_video"
             )
             if os.path.isfile(self.default_bg_video_path):
                 if os.path.isdir(self.default_bg_video_path):
@@ -99,7 +100,7 @@ class AnimatedBackgroundModel(MixinSuperType):
             self.capture = cv2.VideoCapture(self.bg_video_path)
             last_frame_time = time.time()
             video_fps = self.capture.get(cv2.CAP_PROP_FPS)
-            Base.log("I", f"视频解析完成，帧率：{video_fps}", "ObjectInfoModel.read_video")
+            Base.log("I", f"视频解析完成，帧率：{video_fps}", "AnimatedBackgroundModel.read_video")
             while self.is_running and self.use_animate_background:
 
                 if time.time() - self.video_framerate_update_time >= 1:
@@ -129,7 +130,7 @@ class AnimatedBackgroundModel(MixinSuperType):
             wait_until(lambda: self.use_animate_background)
 
         if self.should_stop:
-            Base.log("I", "self.should_stop = True，将停止读取视频流", "ObjectInfoModel.read_video")
+            Base.log("I", "self.should_stop = True，将停止读取视频流", "AnimatedBackgroundModel.read_video")
     
     
     def paintEvent(self, event: QPaintEvent):
@@ -137,7 +138,6 @@ class AnimatedBackgroundModel(MixinSuperType):
         处理窗口绘制事件，渲染背景图像或视频帧
         """
         
-        event.accept()
 
         t = time.time()
         if time.time() - self.framerate_update_time >= 1:
@@ -201,6 +201,8 @@ class AnimatedBackgroundModel(MixinSuperType):
         t5 = time.time()
 
         t6 = time.time()
+
+        super().paintEvent(event)
 
         v = self.window_info.video.last_paint_event
         v.data_reading = t2 - t
