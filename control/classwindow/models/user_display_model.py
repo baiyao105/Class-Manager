@@ -70,16 +70,16 @@ class UserDisplayModel(MixinSuperType):
         "是否启用重力"
         self.gravity_timer = QTimer(self)
         "重力模拟的计时器"
-        self.gravity_timer.timeout.connect(self._update_gravity)
-        self.gravity_timer.setInterval(16)
         self.drag_release_timer = QTimer(self)
         "检测鼠标抓取和释放的计时器"
-        self.drag_release_timer.timeout.connect(self._check_mouse_release)
-        self.drag_release_timer.setInterval(50)
         self.velocity_x = 0.0
         "水平速度"
         self.velocity_y = 0.0
         "垂直速度"
+        self.current_x = 0.0
+        "当前x坐标"
+        self.current_y = 0.0
+        "当前y坐标"
         self.is_dragging = False
         "是否正在拖拽"
         self.programmatic_move = False
@@ -90,7 +90,6 @@ class UserDisplayModel(MixinSuperType):
         "鼠标垂直速度"
         self.last_window_pos = None
         "上次窗口位置"
-
         self.about_window: AboutWidget | None = None
         "关于窗口"
         self.setting_window: SettingWidget | None = None
@@ -104,6 +103,10 @@ class UserDisplayModel(MixinSuperType):
         self.pushButton.clicked.connect(self.dont_click)
         self.pushButton_3.clicked.connect(self.about_this)
         self.pushButton_4.clicked.connect(self.open_setting_window)
+        self.gravity_timer.timeout.connect(self._update_gravity)
+        self.gravity_timer.setInterval(16)
+        self.drag_release_timer.timeout.connect(self._check_mouse_release)
+        self.drag_release_timer.setInterval(50)
 
 
 
@@ -362,10 +365,9 @@ class UserDisplayModel(MixinSuperType):
         if not self.gravity_enabled or self.is_dragging:
             return
         
-        self.velocity_y += self.gravity
         
-        orig_x = self.x() + self.velocity_x
-        orig_y = self.y() + self.velocity_y
+        orig_x = self.current_x + self.velocity_x
+        orig_y = self.current_y + self.velocity_y
         
         screen_geometry = QGuiApplication.primaryScreen().availableGeometry()
         screen_width = screen_geometry.width()
@@ -375,7 +377,7 @@ class UserDisplayModel(MixinSuperType):
         
         window_width = self.width()
         window_height = self.height()
-        
+
         if orig_x <= screen_x:
             orig_x = screen_x
             self.velocity_x = -self.velocity_x * self.window_bounce_factor
@@ -390,8 +392,13 @@ class UserDisplayModel(MixinSuperType):
             orig_y = screen_y + screen_height - window_height
             self.velocity_y = -self.velocity_y * self.window_bounce_factor
         
+        self.velocity_y += self.gravity
+
         self.programmatic_move = True
+
         self.move(int(orig_x), int(orig_y))
+        self.current_x = orig_x
+        self.current_y = orig_y
 
     def move(self, *args: Any, **kwargs: Any) -> None:
         self.programmatic_move = True
@@ -410,6 +417,8 @@ class UserDisplayModel(MixinSuperType):
         """
         self.velocity_x = initial_velocity_x
         self.velocity_y = initial_velocity_y
+        self.current_x = self.x()
+        self.current_y = self.y()
         self.gravity_enabled = True
         self.gravity_timer.start()
         Base.log("I", f"重力模式已启用，初始速度：vx={self.velocity_x:.2f}, vy={self.velocity_y:.2f}", "UserDisplayModel.enable_gravity")
@@ -480,6 +489,8 @@ class UserDisplayModel(MixinSuperType):
             self.drag_release_timer.stop()
             self.velocity_x = self.mouse_velocity_x * self.mouse_velocity_factor
             self.velocity_y = self.mouse_velocity_y * self.mouse_velocity_factor
+            self.current_x = self.x()
+            self.current_y = self.y()
             Base.log("I", f"用户拖动结束，继承速度：vx={self.velocity_x:.2f}, vy={self.velocity_y:.2f}", "UserDisplayModel._end_dragging")
 
     def stop(self):
