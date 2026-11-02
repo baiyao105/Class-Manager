@@ -14,6 +14,7 @@ from loguru import logger
 from PySide6.QtCore import Property, QObject, QSize, Signal, Slot
 from PySide6.QtQml import qmlRegisterType
 from PySide6.QtWidgets import QApplication
+from RinUI import RinUIWindow
 
 from config.class_config import ClassConfigManager
 from config.constants import APP_DESCRIPTION, APP_NAME, APP_VERSION
@@ -21,7 +22,6 @@ from config.global_config import GlobalConfigManager
 from core.database import db_manager
 from core.models.achievement import Achievement
 from core.models.student import Student, StudentStatus
-from RinUI import RinUIWindow
 from utils.basic_dirs import DATA, ensure_dirs
 
 log_dir = Path("logs")

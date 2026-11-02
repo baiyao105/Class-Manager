@@ -102,8 +102,8 @@ filterwarnings = [
 markers = [
   "gui: marks tests as GUI tests",
   "integration: marks tests as integration tests",
-  "unit: marks tests as unit tests",
-  'slow: marks tests as slow (deselect with "-m not slow")'
+  'slow: marks tests as slow (deselect with "-m not slow")',
+  "unit: marks tests as unit tests"
 ]
 minversion = "7.0"
 python_classes = ["Test*"]
